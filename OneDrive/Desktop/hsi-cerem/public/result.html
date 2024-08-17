@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - Southern Vascular Awareness Campaign</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .progress-container {
+            width: 80%;
+            max-width: 300px;
+            margin: 30px auto;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0;
+            height: 30px;
+            background-color: #ff0000;
+            transition: width 0.5s ease;
+        }
+
+        #progress-text {
+            margin-top: 10px;
+            font-size: 1.5rem;
+        }
+
+        video {
+            display: none;
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Campaign Progress</h1>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div id="progress-text">0%</div>
+        <video id="video" controls>
+            <source src="C:\Users\admin\OneDrive\Desktop\AI\hsi-cere\public\SVC.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progress-text');
+        const video = document.getElementById('video');
+
+        socket.on('updateProgress', (progress) => {
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${progress.toFixed(2)}%`;
+
+            if (progress >= 100) {
+                video.style.display = 'block';
+                video.play();
+                if (video.requestFullscreen) {
+                    video.requestFullscreen();
+                } else if (video.webkitRequestFullscreen) { /* Safari */
+                    video.webkitRequestFullscreen();
+                } else if (video.msRequestFullscreen) { /* IE11 */
+                    video.msRequestFullscreen();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
