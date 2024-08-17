@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - Southern Vascular Awareness Campaign</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .progress-container {
+            width: 80%;
+            max-width: 300px;
+            margin: 30px auto;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0;
+            height: 30px;
+            background-color: #ff0000;
+            transition: width 0.5s ease;
+        }
+
+        #progress-text {
+            margin-top: 10px;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Campaign Progress</h1>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div id="progress-text">0%</div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progress-text');
+
+        socket.on('updateProgress', (progress) => {
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${progress.toFixed(2)}%`;
+        });
+    </script>
+</body>
+</html>
