@@ -14,15 +14,11 @@ import {
   Leaf,
   Bean,
   Flame,
-  Flower2,
-  MapPin,
-  CloudSun,
-  FileText,
-  Target
+  Flower2
 } from 'lucide-react';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   // Map plantType string back to category icon
   const getPlantIcon = (plantType) => {
@@ -92,11 +88,10 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           <h3 className="section-title">{t('results.diseaseInfo')}</h3>
         </div>
 
-        {/* Disease Title Card */}
         {(() => {
           // Robust handling for AI ignoring word limits
           let displayTitle = result.disease || t('results.unknownDisease');
-          let extraDescription = result.additionalNotes || result.analysisSummary || result.description || "";
+          let extraDescription = result.additionalNotes || result.analysisSummary || result.analysis_summary || result.description || result.summary || result.justification || "";
 
           // If title is clearly a sentence and we have no additional notes, split them
           if (typeof displayTitle === 'string' && displayTitle.length > 40 && !extraDescription) {
@@ -141,6 +136,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
           return (
             <>
+              {/* Disease Title Card */}
               <div className="disease-title-card">
                 <div className="disease-name-section">
                   <h2 className="disease-name">
@@ -172,6 +168,17 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                 )}
               </div>
 
+              {/* Idea Utama Card - Shows AI's reasoning/justification */}
+              {(extraDescription || result.additionalNotes) && (
+                <div className="idea-utama-card fade-in">
+                  <div className="idea-header">
+                    <Target size={18} />
+                    <span>{t('results.keyIdea')}</span>
+                  </div>
+                  <p className="idea-content">{extraDescription || result.additionalNotes}</p>
+                </div>
+              )}
+
               {/* Status Card - Prominent */}
               {result.healthStatus && (
                 <div className={`status-banner ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`}>
@@ -184,17 +191,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                       {t(`results.${(result.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
                     </span>
                   </div>
-                </div>
-              )}
-
-              {/* Analysis Overview / Key Idea */}
-              {extraDescription && (
-                <div className="analysis-overview-card fade-in">
-                  <div className="overview-header">
-                    <Target size={18} />
-                    <span>{t('results.keyIdea')}</span>
-                  </div>
-                  <p className="overview-content">{extraDescription}</p>
                 </div>
               )}
             </>
@@ -250,12 +246,12 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                 <div className="detail-text">
                   <span className="detail-label">
                     {result.nutritionalIssues?.hasDeficiency
-                      ? t('results.primaryCause')
+                      ? (language === 'ms' ? 'Punca Utama' : 'Primary Cause')
                       : t('results.pathogenType')}
                   </span>
                   <span className="detail-value">
                     {result.nutritionalIssues?.hasDeficiency
-                      ? t('results.nutrientDeficiencyType')
+                      ? (language === 'ms' ? 'Kekurangan Nutrien' : 'Nutrient Deficiency')
                       : result.pathogenType.charAt(0).toUpperCase() + result.pathogenType.slice(1).toLowerCase()}
                   </span>
                 </div>
@@ -271,43 +267,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                 <div className="detail-text">
                   <span className="detail-label">{t('results.fungusSpecies')}</span>
                   <span className="detail-value">{result.fungusType}</span>
-                </div>
-              </div>
-            )}
-
-            {/* --- Malaysian Context Section --- */}
-            {result.malaysianContext?.variety && (
-              <div className="detail-item">
-                <div className="detail-icon variety-icon">
-                  <Sprout size={20} />
-                </div>
-                <div className="detail-text">
-                  <span className="detail-label">{t('results.localVariety')}</span>
-                  <span className="detail-value">{result.malaysianContext.variety}</span>
-                </div>
-              </div>
-            )}
-
-            {result.malaysianContext?.region && (
-              <div className="detail-item">
-                <div className="detail-icon region-icon">
-                  <MapPin size={20} />
-                </div>
-                <div className="detail-text">
-                  <span className="detail-label">{t('results.keyRegions')}</span>
-                  <span className="detail-value">{result.malaysianContext.region}</span>
-                </div>
-              </div>
-            )}
-
-            {result.malaysianContext?.seasonalConsideration && (
-              <div className="detail-item">
-                <div className="detail-icon season-icon">
-                  <CloudSun size={20} />
-                </div>
-                <div className="detail-text">
-                  <span className="detail-label">{t('results.seasonalAdvice')}</span>
-                  <span className="detail-value">{result.malaysianContext.seasonalConsideration}</span>
                 </div>
               </div>
             )}
@@ -433,22 +392,14 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           margin: 0 0 4px 0;
           font-weight: 700;
           line-height: 1.3;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
 
         .scientific-name {
-          font-size: 0.8rem;
+          font-size: 0.85rem;
           color: #6B7280;
           margin: 0;
           font-style: italic;
           font-weight: 500;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
 
         /* Severity Badge */
@@ -480,6 +431,52 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .badge-unknown {
           background: #F3F4F6;
           color: #6B7280;
+        }
+
+        /* Idea Utama Card - AI Justification */
+        .idea-utama-card {
+          background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+          padding: 16px;
+          border-radius: 12px;
+          border: 2px solid #3B82F6;
+          margin-bottom: 12px;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+          animation: fade-in 0.5s ease-out;
+        }
+
+        .idea-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #1E40AF;
+          margin-bottom: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .idea-header svg {
+          color: #3B82F6;
+        }
+
+        .idea-content {
+          font-size: 0.95rem;
+          color: #1E3A8A;
+          line-height: 1.6;
+          margin: 0;
+          font-weight: 500;
+        }
+
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         /* Status Banner */
@@ -610,21 +607,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .fungus-icon {
           background: #FCE7F3;
           color: #DB2777;
-        }
-
-        .variety-icon {
-          background: #D1FAE5;
-          color: #059669;
-        }
-
-        .region-icon {
-          background: #E0E7FF;
-          color: #4F46E5;
-        }
-
-        .season-icon {
-          background: #FFEDD5;
-          color: #EA580C;
         }
 
         .detail-text {
@@ -777,36 +759,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         .nutrition-referral-note:hover {
           background-color: #D1FAE5;
-        }
-
-        /* Analysis Overview Card */
-        .analysis-overview-card {
-          background: white;
-          padding: 16px;
-          border-radius: 12px;
-          border: 1px solid #E5E7EB;
-          margin-bottom: 12px;
-          border-left: 4px solid var(--color-primary);
-        }
-
-        .overview-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.875rem;
-          font-weight: 700;
-          color: var(--color-primary-dark);
-          margin-bottom: 8px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .overview-content {
-          font-size: 0.95rem;
-          color: #4B5563;
-          line-height: 1.5;
-          margin: 0;
-          font-weight: 500;
         }
 
       `}</style>
