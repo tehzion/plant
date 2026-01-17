@@ -49,7 +49,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                 <strong className="alert-title">{t('results.nutrientDeficiencyDetected')}</strong>
                 {nutritionalIssues?.severity && (
                   <span className={`severity-badge ${getSeverityColor(nutritionalIssues.severity)}`}>
-                    {nutritionalIssues.severity}
+                    {t(`results.sev${toTitleCase(nutritionalIssues.severity).replace(/\s+/g, '')}`)}
                   </span>
                 )}
               </div>
@@ -83,7 +83,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                       <span className="nutrient-name">{toTitleCase(nutrientName)}</span>
                       {severity && (
                         <span className={`chip-severity ${getSeverityColor(severity)}`}>
-                          {severity}
+                          {t(`results.sev${toTitleCase(severity).replace(/\s+/g, '')}`)}
                         </span>
                       )}
                     </div>
@@ -111,7 +111,15 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                         <Pill size={18} />
                       </div>
                       <span className="fertilizer-name">
-                        {toTitleCase(rec.fertilizerName || rec.product || rec.name || rec.type || (language === 'ms' ? 'Baja Disyorkan' : 'Recommended Fertilizer'))}
+                        {(() => {
+                          const rawName = rec.fertilizerName || rec.product || rec.name;
+                          if (rawName && rawName.toLowerCase() !== 'chemical' && rawName.toLowerCase() !== 'organic' && rawName.toLowerCase() !== 'kimia' && rawName.toLowerCase() !== 'organik') {
+                            return toTitleCase(rawName);
+                          }
+                          // If generic name, use translated type
+                          const typeKey = rec.type?.toLowerCase() === 'organic' ? 'organicFertilizer' : 'chemicalFertilizer';
+                          return t(`results.${typeKey}`);
+                        })()}
                       </span>
                     </div>
                     <div className="fertilizer-details">

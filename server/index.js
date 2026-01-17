@@ -629,7 +629,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
     }]
   },
   "fertilizerRecommendations": [{
-    "fertilizerName": "${isMalay ? 'Nama Baja (WAJIB: Cth: NPK 15-15-15, Urea). JANGAN GUNA "Kimia" atau kosong.' : 'Fertilizer Name (REQUIRED: e.g. NPK 15-15-15, Urea). DO NOT use "Chemical" or leave blank.'}",
+    "fertilizerName": "${isMalay ? 'Nama Baja Spesifik (WAJIB: Cth: NPK 15-15-15, Urea, Baja Organik Ayam, MOP). JANGAN sesekali guna perkataan "Kimia" atau "Organik" sahaja.' : 'Specific Fertilizer Name (REQUIRED: e.g. NPK 15-15-15, Urea, Chicken Manure, MOP). NEVER use generic "Chemical" or "Organic" as the name.'}",
     "type": "Organic/Chemical",
     "applicationMethod": "${isMalay ? 'Cara aplikasi' : 'Application method'}",
     "frequency": "${isMalay ? 'Kekerapan' : 'Frequency'}",
