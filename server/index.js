@@ -595,7 +595,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
   "disease": "${isMalay ? 'Senaraikan isu yang dikesan. JIKA SIHAT, tulis "Tiada Masalah Dikesan".' : 'List detected issues. IF HEALTHY, write "No Issues Detected".'}",
   "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat' : 'Healthy/Unhealthy'}",
-  "severity": "${isMalay ? 'Ringan/Sederhana/Teruk/Tiada' : 'Mild/Moderate/Severe/None'}",
+  "severity": "mild/moderate/severe",
   "confidence": 85,
   "plantType": "${isMalay ? 'Nama Biasa Malaysia (Nama Saintifik) - Cth: Cili (Capsicum annuum). WAJIB berikan nama biasa.' : 'Malaysian Common Name (Scientific Name) - e.g. Chili (Capsicum annuum). MUST provide common name.'}",
   "malaysianContext": {
@@ -606,7 +606,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
   "pathogenType": "Fungal/Bacterial/Viral/Pest/Environmental/Multiple/None",
   "symptoms": ["${exampleSymptom}"],
   "immediateActions": ["${isMalay ? 'Tindakan segera 1' : 'Immediate action 1'}"],
-  "treatments": ["${isMalay ? 'Rawatan dengan produk Malaysia' : 'Treatment with Malaysian products'}"],
+  "treatments": ["${isMalay ? 'Rawatan (Fokus bahan aktif sahaja, JANGAN sebut kedai/pembekal)' : 'Treatment (Focus on active ingredients only, DO NOT mention shops/suppliers)'}"],
   "prevention": ["${isMalay ? 'Pencegahan untuk iklim Malaysia' : 'Prevention for Malaysian climate'}"],
   "healthyCarePlan": {
     "dailyCare": ["${isMalay ? 'Siram awal pagi' : 'Water early morning'}"],
