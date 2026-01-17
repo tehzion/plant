@@ -558,7 +558,6 @@ Government Agencies: ${MALAYSIA_SUPPLIERS.govtAgencies.slice(0, 3).join(', ')}`;
 You provide practical, actionable advice tailored to Malaysian farmers, considering:
 - Local climate and monsoon seasons
 - Readily available Malaysian fertilizer brands
-- Local agricultural supply chains
 - Malaysian government agricultural extension services
 - Regional variations across Peninsula, Sabah, and Sarawak`
             },
@@ -590,6 +589,7 @@ CRITICAL ANALYSIS REQUIREMENTS:
 6. Reference Malaysian agricultural standards where applicable
 7. Avoid generic advice; be specific to the identified plant species.
 8. DO NOT use emojis in any text fields. Use plain text only.
+9. DO NOT mention specific stores, suppliers, or companies (e.g., Baja Kimia Malaysia) in the text. Only mention the product name or active ingredient.
 
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
