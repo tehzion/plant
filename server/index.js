@@ -599,6 +599,7 @@ CRITICAL ANALYSIS REQUIREMENTS:
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
   "disease": "${isMalay ? 'IDENTIFIER RINGKAS (MAX 3 PATAH PERKATAAN). Cth: "Kulat Daun", "Reput Buah", "Tiada Masalah". DILARANG tulis ayat panjang di sini.' : 'SHORT IDENTIFIER (MAX 3 WORDS). e.g. "Leaf Rust", "Fruit Rot", "No Issues". DO NOT write long sentences here.'}",
+  "additionalNotes": "${isMalay ? 'IDEA UTAMA (WAJIB): Berikan huraian mesra pengguna tentang bagaimana anggaran dibuat (Cth: "Kami perhatikan daun anda hijau dan tiada tanda serangga, kami anggarkan ia sihat 90%"). Beri galakan. (MAX 2-3 ayat).' : 'KEY IDEA (MANDATORY): Provide a user-friendly explanation of how the estimate was made (e.g. "We noticed your leaves are green and pest-free, so we estimate it is 90% healthy"). Keep it friendly and encouraging. (MAX 2-3 sentences).'}",
   "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat (WAJIB selari dengan severity)' : 'Healthy/Unhealthy (MUST align with severity)'}",
   "severity": "${isMalay ? 'mild (untuk Sihat) / moderate / severe (untuk Tidak Sihat)' : 'mild (for Healthy) / moderate / severe (for Unhealthy)'}",
   "confidence": 85,
@@ -646,8 +647,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
     "estimatedYieldLoss": "${isMalay ? 'Anggaran kehilangan hasil jika tidak dirawat' : 'Estimated yield loss if untreated'}",
     "treatmentCost": "${isMalay ? 'Anggaran kos rawatan (RM)' : 'Estimated treatment cost (RM)'}",
     "roi": "${isMalay ? 'Pulangan pelaburan dijangka' : 'Expected return on investment'}"
-  },
-  "additionalNotes": "${isMalay ? 'IDEA UTAMA & HURAIAN: Berikan huraian mesra pengguna tentang bagaimana anggaran dibuat (Cth: "Kami perhatikan daun anda hijau dan tiada tanda serangga, kami anggarkan ia sihat 90%"). Jangan terlalu teknikal, beri galakan.' : 'KEY IDEA & DESCRIPTION: Provide a user-friendly explanation of how the estimate was made (e.g., "We noticed your leaves are green and pest-free, so we estimate it is 90% healthy"). Keep it friendly and encouraging, not overly technical.'}"
+  }
 }
 
 IMPORTANT RULES:

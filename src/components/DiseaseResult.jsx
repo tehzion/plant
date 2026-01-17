@@ -96,7 +96,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         {(() => {
           // Robust handling for AI ignoring word limits
           let displayTitle = result.disease || t('results.unknownDisease');
-          let extraDescription = result.additionalNotes || "";
+          let extraDescription = result.additionalNotes || result.analysisSummary || result.description || "";
 
           // If title is clearly a sentence and we have no additional notes, split them
           if (typeof displayTitle === 'string' && displayTitle.length > 40 && !extraDescription) {
@@ -195,6 +195,12 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     <span>{t('results.keyIdea')}</span>
                   </div>
                   <p className="overview-content">{extraDescription}</p>
+                  {result.confidence && (
+                    <div className="confidence-indicator" style={{ marginTop: '8px', fontSize: '0.8rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle size={14} color="#10B981" />
+                      <span>{t('results.confidence')}: {result.confidence}%</span>
+                    </div>
+                  )}
                 </div>
               )}
             </>
