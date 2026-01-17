@@ -77,7 +77,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                 {nutritionalIssues.deficientNutrients.map((item, index) => {
                   const nutrientName = typeof item === 'string' ? item : (item?.nutrient || 'Unknown');
                   const severity = typeof item === 'object' && item?.severity ? item.severity : null;
-                  
+
                   return (
                     <div key={index} className="nutrient-chip">
                       <span className="nutrient-name">{toTitleCase(nutrientName)}</span>
@@ -110,7 +110,9 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                       <div className="fertilizer-icon-circle">
                         <Pill size={18} />
                       </div>
-                      <span className="fertilizer-name">{toTitleCase(rec.type || rec.product || 'Fertilizer')}</span>
+                      <span className="fertilizer-name">
+                        {toTitleCase(rec.product || rec.name || rec.type || (language === 'ms' ? 'Baja Disyorkan' : 'Recommended Fertilizer'))}
+                      </span>
                     </div>
                     <div className="fertilizer-details">
                       <div className="detail-row">
