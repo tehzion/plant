@@ -195,12 +195,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     <span>{t('results.keyIdea')}</span>
                   </div>
                   <p className="overview-content">{extraDescription}</p>
-                  {result.confidence && (
-                    <div className="confidence-indicator" style={{ marginTop: '8px', fontSize: '0.8rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle size={14} color="#10B981" />
-                      <span>{t('results.confidence')}: {result.confidence}%</span>
-                    </div>
-                  )}
                 </div>
               )}
             </>
