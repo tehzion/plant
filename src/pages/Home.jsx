@@ -93,17 +93,29 @@ const Home = () => {
   // Server Status State
   const [serverStatus, setServerStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
 
-  // Check server health on mount
+  // Check server health on mount with retry logic for Render cold starts
   useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 12; // 12 * 5s = 60 seconds max wait
+
     const checkHealth = async () => {
       try {
+        setServerStatus('checking'); // Show connecting state
         await checkServerHealth();
-        setServerStatus('online');
+        setServerStatus('online'); // Success
       } catch (error) {
-        console.warn('Server offline, enabling demo mode');
-        setServerStatus('offline');
+        attempts++;
+        if (attempts < maxAttempts) {
+          // Retry after 5 seconds
+          setTimeout(checkHealth, 5000);
+        } else {
+          // Give up after max attempts
+          console.warn('Server offline after retries, enabling demo mode');
+          setServerStatus('offline');
+        }
       }
     };
+
     checkHealth();
   }, []);
 
@@ -501,9 +513,9 @@ const Home = () => {
 
           {/* Server Status Banner - Compact */}
           <div className="server-status-minimal mt-sm fade-in">
-            <div className={`status-dot ${serverStatus === 'offline' ? 'bg-orange' : 'bg-green'}`}></div>
+            <div className={`status-dot ${serverStatus === 'offline' ? 'bg-orange' : serverStatus === 'checking' ? 'bg-yellow blink' : 'bg-green'}`}></div>
             <span className="status-text-minimal">
-              {serverStatus === 'offline' ? t('home.demoMode') : t('home.onlineStatus')}
+              {serverStatus === 'offline' ? t('home.demoMode') : serverStatus === 'checking' ? t('home.connecting') : t('home.onlineStatus')}
             </span>
           </div>
 

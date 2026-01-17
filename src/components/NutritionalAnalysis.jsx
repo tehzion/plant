@@ -111,7 +111,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                         <Pill size={18} />
                       </div>
                       <span className="fertilizer-name">
-                        {toTitleCase(rec.product || rec.name || rec.type || (language === 'ms' ? 'Baja Disyorkan' : 'Recommended Fertilizer'))}
+                        {toTitleCase(rec.fertilizerName || rec.product || rec.name || rec.type || (language === 'ms' ? 'Baja Disyorkan' : 'Recommended Fertilizer'))}
                       </span>
                     </div>
                     <div className="fertilizer-details">

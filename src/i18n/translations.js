@@ -67,6 +67,7 @@ export const translations = {
             diseaseEncyclopedia: 'Disease Encyclopedia',
             demoMode: 'Demo Mode',
             onlineStatus: 'Online',
+            connecting: 'Connecting...',
 
             // Dashboard
             scanPlant: 'Scan Plant',
@@ -448,6 +449,7 @@ export const translations = {
             leafDescription: 'Untuk ketepatan yang lebih baik, tambah foto dekat daun yang terjejas',
             continue: 'Teruskan',
             quickScan: 'Imbasan Pantas',
+            connecting: 'Menyambung...',
             selectCategory: 'Pilih Kategori Tumbuhan',
             selectCategorySubtitle: 'Pilih jenis tanaman untuk pengesanan penyakit yang tepat',
             selectScale: 'Pilih Skala Ladang',

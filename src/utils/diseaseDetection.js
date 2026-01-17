@@ -154,7 +154,11 @@ export const analyzePlantDisease = async (
 export const checkServerHealth = async () => {
   try {
     const response = await fetch(`${API_URL}/api/health`);
+    if (!response.ok) throw new Error('Network response was not ok');
+
     const data = await response.json();
+    if (data.status !== 'ok') throw new Error('Server status is not ok');
+
     return data;
   } catch (error) {
     throw new Error('Backend server is not reachable');
