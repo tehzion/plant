@@ -101,7 +101,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                 <h4 className="subsection-title">{t('results.fertilizerRecommendations')}</h4>
               </div>
               <p className="subsection-description">
-                Baja dan suplemen yang dirumus khas untuk memulihkan kesihatan tanaman anda
+                {t('results.fertilizerDesc')}
               </p>
               <div className="fertilizers-list">
                 {validRecommendations.map((rec, index) => (
@@ -125,15 +125,15 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                     <div className="fertilizer-details">
                       <div className="detail-row">
                         <span className="detail-label">{t('results.application')}:</span>
-                        <span className="detail-value">{rec.application || rec.applicationMethod || 'As directed'}</span>
+                        <span className="detail-value">{rec.application || rec.applicationMethod || t('results.asDirected')}</span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">{t('results.frequency')}:</span>
-                        <span className="detail-value">{rec.frequency || 'As needed'}</span>
+                        <span className="detail-value">{rec.frequency || t('results.asNeeded')}</span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">{t('results.amount')}:</span>
-                        <span className="detail-value">{rec.amount || rec.dosage || 'Follow package instructions'}</span>
+                        <span className="detail-value">{rec.amount || rec.dosage || t('results.followInstructions')}</span>
                       </div>
                     </div>
                   </div>

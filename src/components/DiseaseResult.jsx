@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Map plantType string back to category icon
   const getPlantIcon = (plantType) => {
@@ -246,12 +246,12 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                 <div className="detail-text">
                   <span className="detail-label">
                     {result.nutritionalIssues?.hasDeficiency
-                      ? (language === 'ms' ? 'Punca Utama' : 'Primary Cause')
+                      ? t('results.primaryCause')
                       : t('results.pathogenType')}
                   </span>
                   <span className="detail-value">
                     {result.nutritionalIssues?.hasDeficiency
-                      ? (language === 'ms' ? 'Kekurangan Nutrien' : 'Nutrient Deficiency')
+                      ? t('results.nutrientDeficiencyType')
                       : result.pathogenType.charAt(0).toUpperCase() + result.pathogenType.slice(1).toLowerCase()}
                   </span>
                 </div>

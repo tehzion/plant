@@ -214,6 +214,7 @@ export const translations = {
             // Disease Info
             plantType: 'Plant Type',
             disease: 'Disease',
+            unknownDisease: 'Unknown Issue',
             estimatedAge: 'Estimated Age',
             pathogenType: 'Pathogen Type',
             fungusSpecies: 'Fungus Species',
@@ -314,6 +315,10 @@ export const translations = {
             application: 'Application',
             frequency: 'Frequency',
             amount: 'Amount',
+            fertilizerDesc: 'Fertilizers and supplements specially formulated to restore your plant\'s health',
+            asDirected: 'As directed',
+            asNeeded: 'As needed',
+            followInstructions: 'Follow package instructions',
         },
 
         encyclopedia: {
@@ -623,6 +628,7 @@ export const translations = {
             // Disease Info
             plantType: 'Jenis Tumbuhan',
             disease: 'Penyakit',
+            unknownDisease: 'Masalah Tidak Dikenali',
             estimatedAge: 'Anggaran Umur',
             pathogenType: 'Jenis Patogen',
             fungusSpecies: 'Spesies Kulat',
@@ -729,6 +735,10 @@ export const translations = {
             application: 'Cara Guna',
             frequency: 'Kekerapan',
             amount: 'Jumlah',
+            fertilizerDesc: 'Baja dan suplemen yang dirumus khas untuk memulihkan kesihatan tanaman anda',
+            asDirected: 'Seperti yang diarahkan',
+            asNeeded: 'Mengikut keperluan',
+            followInstructions: 'Ikut arahan pakej',
         },
 
         encyclopedia: {
