@@ -15,12 +15,16 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
       'Pineapple': 12000,// ~10k-14k plants/acre
       'Corn': 20000,     // ~18k-24k plants/acre
       'Rubber': 190,     // ~180-200 trees/acre
+      'Palm/Rubber': 130,// ~120-140 trees/acre (mixed)
       'Palm Oil': 55,    // ~50-60 trees/acre
-      'Vegetables': 0    // Too variable
+      'Vegetables': 0,   // Too variable
+      'Fruits': 0,       // Too variable
+      'Rice': 0,         // Too variable
+      'Weed Control': 0  // Not applicable
     };
 
     const density = densityMap[category] || 50; // Default estimate
-    if (density === 0) return 'Cannot estimate (varies)';
+    if (density === 0) return 'Berbeza mengikut jenis tanaman';
 
     return Math.round(acres * density).toLocaleString();
   };
@@ -29,12 +33,12 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
     {
       id: 'acre',
       icon: <Map size={40} color="#16A34A" />,
-      name: t('home.hectareScale'),
-      description: t('home.hectareDesc'),
-      details: t('home.hectareDetail'),
+      name: t('home.acreScale'),
+      description: t('home.acreDesc'),
+      details: t('home.acreDetail'),
       hasQuantity: true,
-      quantityLabel: t('home.enterHectares'),
-      quantityUnit: t('home.hectares'),
+      quantityLabel: t('home.enterAcres'),
+      quantityUnit: t('home.acres'),
       inputType: 'number'
     },
     {
@@ -101,7 +105,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
                   />
                   <span className="unit-label">{scale.quantityUnit}</span>
                 </div>
-                {/* Estimation Display for Acre/Hectare */}
+                {/* Estimation Display for Acre/Ekar */}
                 {scale.id === 'acre' && quantity > 0 && selectedCategory && (
                   <div className="estimation-info">
                     {t('home.estimatedTrees')} {calculateEstimatedTrees(selectedCategory, quantity)}
@@ -159,7 +163,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
           cursor: pointer;
           transition: all var(--transition-base);
           font-family: var(--font-family);
-          min-height: 180px; /* Consistent baseline height */
+          min-height: 180px;
           height: auto;
           width: 100%;
         }
@@ -186,13 +190,13 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
         }
 
         .scale-icon {
-          font-size: 1rem; /* Reset font size for SVG */
+          font-size: 1rem;
           margin-bottom: var(--space-xs);
           transition: transform var(--transition-base);
           display: flex;
           align-items: center;
           justify-content: center;
-          height: 50px; /* Fixed height for consistency */
+          height: 50px;
           width: 50px;
           background: #F3F4F6;
           border-radius: 50%;

@@ -55,27 +55,6 @@ const Results = () => {
     additionalNotes: scan.additionalNotes
   };
 
-  const calculateEstimatedTrees = (category, acres) => {
-    // Estimations based on typical planting density per acre
-    const densityMap = {
-      'Durian': 35,      // ~30-40 trees/acre
-      'Coconut': 60,     // ~50-70 trees/acre
-      'Banana': 500,     // ~400-600 plants/acre
-      'Cocoa': 450,      // ~400-500 trees/acre
-      'Pepper': 700,     // ~600-800 vines/acre
-      'Pineapple': 12000,// ~10k-14k plants/acre
-      'Corn': 20000,     // ~18k-24k plants/acre
-      'Rubber': 190,     // ~180-200 trees/acre
-      'Palm Oil': 55,    // ~50-60 trees/acre
-      'Vegetables': 0    // Too variable
-    };
-
-    const density = densityMap[category] || 50;
-    if (density === 0) return 'Varied';
-
-    return Math.round(acres * density).toLocaleString();
-  };
-
   const handleScanAgain = () => {
     navigate('/?scan=true');
   };
@@ -302,74 +281,26 @@ ${t('pdf.generatedBy')}
                 </svg>
               </div>
               <div className="metadata-content">
-                <span className="metadata-label">{t('home.selectScale')}</span>
+                <span className="metadata-label">{t('results.scale')}</span>
                 <span className="metadata-value">
-                  {(scan.farmScale === 'hectare' || scan.farmScale === 'acre') && t('home.hectareScale')}
+                  {scan.farmScale === 'acre' && t('home.acreScale')}
                   {scan.farmScale === 'tree' && t('home.treeScale')}
                   {scan.farmScale === 'personal' && t('home.personalScale')}
                   {!scan.farmScale && t('results.notSpecified')}
+                  {scan.scaleQuantity && Number(scan.scaleQuantity) > 0 && (
+                    <span style={{ fontWeight: 'normal', color: '#6B7280', fontSize: '0.9em' }}>
+                      {' '}({scan.scaleQuantity}{' '}
+                      {scan.farmScale === 'acre' ? t('home.acres') :
+                        scan.farmScale === 'tree' ? (language === 'ms' ? 'Pokok' : 'Trees') :
+                          (language === 'ms' ? 'Tanaman' : 'Plants')})
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
 
-            {/* Quantity - Only if exists */}
-            {(scan.farmScale === 'acre' || scan.farmScale === 'hectare') && scan.scaleQuantity && Number(scan.scaleQuantity) > 0 && (
-              <div className="metadata-item highlight">
-                <div className="metadata-icon quantity-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                  </svg>
-                </div>
-                <div className="metadata-content">
-                  <span className="metadata-label">{t('common.quantity')}</span>
-                  <span className="metadata-value primary">
-                    {Number(scan.scaleQuantity)} {language === 'ms' ? 'Ekar' : 'Acres'}
-                  </span>
-                </div>
-              </div>
-            )}
 
-            {/* Tree Quantity - For tree scale */}
-            {scan.farmScale === 'tree' && scan.scaleQuantity && Number(scan.scaleQuantity) > 0 && (
-              <div className="metadata-item highlight">
-                <div className="metadata-icon trees-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2L12 22"></path>
-                    <path d="M5 8C5 8 7 6 12 6C17 6 19 8 19 8"></path>
-                    <path d="M5 12C5 12 7 10 12 10C17 10 19 12 19 12"></path>
-                    <path d="M5 16C5 16 7 14 12 14C17 14 19 16 19 16"></path>
-                  </svg>
-                </div>
-                <div className="metadata-content">
-                  <span className="metadata-label">{t('home.trees')}</span>
-                  <span className="metadata-value primary">
-                    {Number(scan.scaleQuantity)} {language === 'ms' ? 'Pokok' : 'Trees'}
-                  </span>
-                </div>
-              </div>
-            )}
 
-            {/* Estimated Trees - Only for acre/hectare scale */}
-            {(scan.farmScale === 'acre' || scan.farmScale === 'hectare') && scan.scaleQuantity && Number(scan.scaleQuantity) > 0 && (
-              <div className="metadata-item highlight">
-                <div className="metadata-icon trees-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2L12 22"></path>
-                    <path d="M5 8C5 8 7 6 12 6C17 6 19 8 19 8"></path>
-                    <path d="M5 12C5 12 7 10 12 10C17 10 19 12 19 12"></path>
-                    <path d="M5 16C5 16 7 14 12 14C17 14 19 16 19 16"></path>
-                  </svg>
-                </div>
-                <div className="metadata-content">
-                  <span className="metadata-label">{t('home.estimatedTrees')}</span>
-                  <span className="metadata-value primary">
-                    ~{calculateEstimatedTrees(scan.category, Number(scan.scaleQuantity))}
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Date & Time */}
             <div className="metadata-item">
@@ -540,8 +471,9 @@ ${t('pdf.generatedBy')}
         }
 
         .metadata-item.highlight {
-          background: linear-gradient(135deg, rgba(95, 168, 62, 0.08) 0%, rgba(95, 168, 62, 0.03) 100%);
-          border: 1px solid rgba(95, 168, 62, 0.2);
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          border: 2px solid #86efac;
+          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
         }
 
         .metadata-item.location-item {
@@ -614,8 +546,10 @@ ${t('pdf.generatedBy')}
         }
 
         .metadata-value.primary {
-          color: var(--color-primary);
-          font-size: 1.125rem;
+          color: #166534;
+          font-size: 1.75rem;
+          font-weight: 700;
+          letter-spacing: -0.5px;
         }
 
         .metadata-time {

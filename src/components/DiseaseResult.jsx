@@ -16,7 +16,9 @@ import {
   Flame,
   Flower2,
   MapPin,
-  CloudSun
+  CloudSun,
+  FileText,
+  Target
 } from 'lucide-react';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
@@ -89,46 +91,108 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         </div>
 
         {/* Disease Title Card */}
-        <div className="disease-title-card">
-          <div className="disease-name-section">
-            <h2 className="disease-name">
-              {typeof result.disease === 'string' ? result.disease.split('(')[0]?.trim() : (result.disease || t('results.unknownDisease'))}
-            </h2>
-            {result.disease?.includes('(') && (
-              <p className="scientific-name">
-                {result.disease.match(/\(([^)]+)\)/)?.[1]}
-              </p>
-            )}
+        {(() => {
+          // Robust handling for AI ignoring word limits
+          let displayTitle = result.disease || t('results.unknownDisease');
+          let extraDescription = result.additionalNotes || "";
 
-            {/* Validated nutrient deficiency note */}
-            {result.nutritionalIssues?.hasDeficiency && (
-              <div className="nutrition-referral-note">
-                <Sprout size={14} />
-                <span>{t('results.seeNutritionTab')}</span>
+          // If title is clearly a sentence and we have no additional notes, split them
+          if (typeof displayTitle === 'string' && displayTitle.length > 40 && !extraDescription) {
+            // Priority 1: Split by punctuation
+            const punctuationParts = displayTitle.split(/[.!?]/);
+            if (punctuationParts.length > 1) {
+              displayTitle = punctuationParts[0].trim() + (punctuationParts[0].endsWith('.') ? '' : '.');
+              extraDescription = punctuationParts.slice(1).join('.').trim();
+            } else {
+              // Priority 2: Split by common explanatory keywords (Malay & English)
+              const splitKeywords = [
+                ' akibat ', ' kerana ', ' disebabkan ', ' berpunca ',
+                ' due to ', ' caused by ', ' because ', ' results from ',
+                ' pada ', ' yang ', ' in ', ' on '
+              ];
+
+              let splitIndex = -1;
+              let foundKeyword = '';
+
+              for (const kw of splitKeywords) {
+                const idx = displayTitle.toLowerCase().indexOf(kw);
+                if (idx !== -1 && (splitIndex === -1 || idx < splitIndex)) {
+                  splitIndex = idx;
+                  foundKeyword = kw;
+                }
+              }
+
+              if (splitIndex !== -1) {
+                // Split at the keyword, keeping the keyword as part of the description
+                const titlePart = displayTitle.substring(0, splitIndex).trim();
+                const descPart = displayTitle.substring(splitIndex).trim();
+
+                displayTitle = titlePart;
+                extraDescription = descPart;
+              } else if (displayTitle.length > 60) {
+                // Priority 3: Brute force split if no keywords or punctuation found
+                displayTitle = displayTitle.substring(0, 50) + "...";
+                extraDescription = result.disease; // Keep original in description
+              }
+            }
+          }
+
+          return (
+            <>
+              <div className="disease-title-card">
+                <div className="disease-name-section">
+                  <h2 className="disease-name">
+                    {typeof displayTitle === 'string' ? displayTitle.split('(')[0]?.trim() : displayTitle}
+                  </h2>
+                  {displayTitle?.includes('(') && (
+                    <p className="scientific-name">
+                      {displayTitle.match(/\(([^)]+)\)/)?.[1]}
+                    </p>
+                  )}
+
+                  {/* Validated nutrient deficiency note */}
+                  {result.nutritionalIssues?.hasDeficiency && (
+                    <div className="nutrition-referral-note">
+                      <Sprout size={14} />
+                      <span>{t('results.seeNutritionTab')}</span>
+                    </div>
+                  )}
+                </div>
+                {result.severity && (
+                  <span className={`severity-badge ${getSeverityBadgeClass(result.severity)}`}>
+                    {t(`results.${(result.severity || 'unknown').toLowerCase()}`)}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-          {result.severity && (
-            <span className={`severity-badge ${getSeverityBadgeClass(result.severity)}`}>
-              {t(`results.${(result.severity || 'unknown').toLowerCase()}`)}
-            </span>
-          )}
-        </div>
 
-        {/* Status Card - Prominent */}
-        {result.healthStatus && (
-          <div className={`status-banner ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`}>
-            <div className="status-icon-wrapper">
-              {isHealthy ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
-            </div>
-            <div className="status-content">
-              <span className="status-label">{t('results.status')}</span>
-              <span className="status-value">
-                {t(`results.${(result.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
-              </span>
-            </div>
-          </div>
-        )}
+              {/* Status Card - Prominent */}
+              {result.healthStatus && (
+                <div className={`status-banner ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`}>
+                  <div className="status-icon-wrapper">
+                    {isHealthy ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
+                  </div>
+                  <div className="status-content">
+                    <span className="status-label">{t('results.status')}</span>
+                    <span className="status-value">
+                      {t(`results.${(result.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Analysis Overview / Key Idea */}
+              {extraDescription && (
+                <div className="analysis-overview-card fade-in">
+                  <div className="overview-header">
+                    <Target size={18} />
+                    <span>{t('results.keyIdea')}</span>
+                  </div>
+                  <p className="overview-content">{extraDescription}</p>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* Demo Mode Warning */}
         {result.additionalNotes && (result.additionalNotes.toLowerCase().includes('demo') || result.additionalNotes.toLowerCase().includes('simulated') || result.additionalNotes.toLowerCase().includes('fallback')) && (
@@ -362,14 +426,22 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           margin: 0 0 4px 0;
           font-weight: 700;
           line-height: 1.3;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         .scientific-name {
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           color: #6B7280;
           margin: 0;
           font-style: italic;
           font-weight: 500;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         /* Severity Badge */
@@ -698,6 +770,36 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         .nutrition-referral-note:hover {
           background-color: #D1FAE5;
+        }
+
+        /* Analysis Overview Card */
+        .analysis-overview-card {
+          background: white;
+          padding: 16px;
+          border-radius: 12px;
+          border: 1px solid #E5E7EB;
+          margin-bottom: 12px;
+          border-left: 4px solid var(--color-primary);
+        }
+
+        .overview-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: var(--color-primary-dark);
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .overview-content {
+          font-size: 0.95rem;
+          color: #4B5563;
+          line-height: 1.5;
+          margin: 0;
+          font-weight: 500;
         }
 
       `}</style>

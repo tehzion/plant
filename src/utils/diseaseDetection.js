@@ -69,7 +69,8 @@ export const analyzePlantDisease = async (
   treeImageBase64,
   category,
   leafImageBase64 = null,
-  language = 'en'
+  language = 'en',
+  location = null
 ) => {
   try {
     const response = await fetch(`${API_URL}/api/analyze`, {
@@ -81,7 +82,8 @@ export const analyzePlantDisease = async (
         treeImage: treeImageBase64,
         category,
         leafImage: leafImageBase64,
-        language
+        language,
+        location
       })
     });
 

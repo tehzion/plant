@@ -156,7 +156,8 @@ const Home = () => {
         // Fetch Location Name
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}`);
         const geoData = await geoRes.json();
-        const city = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.district || geoData.address.state || 'Unknown Location';
+        const addr = geoData.address;
+        const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.state || 'Malaysia';
         setUserLocationName(city);
 
         // Fetch Weather
@@ -378,16 +379,8 @@ const Home = () => {
       const leafImageBase64 = selectedLeafImage ? await imageToBase64(selectedLeafImage) : null;
 
       await performStep(1, 2000);
-      const result = await analyzePlantDisease(
-        treeImageBase64,
-        selectedCategory || 'Vegetables',
-        leafImageBase64,
-        language
-      );
 
-      await performStep(2, 1000);
-
-      // Wait for location if checking hasn't finished
+      // Wait for location and process locationName BEFORE analysis
       const location = await locationPromise;
       let locationName = '';
 
@@ -398,18 +391,27 @@ const Home = () => {
 
           // Collect detailed location info
           const address = data.address;
+          const city = address.city || address.town || address.village || address.municipality || address.county || address.state_district;
           const locationParts = [
-            address.suburb || address.neighbourhood,
-            address.city || address.town || address.village,
-            address.district,
+            city,
             address.state
           ].filter(Boolean); // Remove empty values
 
-          locationName = locationParts.join(', ');
+          locationName = locationParts.length > 0 ? locationParts.join(', ') : (address.state || address.country || 'Malaysia');
         } catch (e) {
           console.error("Geocoding failed", e);
         }
       }
+
+      const result = await analyzePlantDisease(
+        treeImageBase64,
+        selectedCategory || 'Vegetables',
+        leafImageBase64,
+        language,
+        locationName // Location name is now defined
+      );
+
+      await performStep(2, 1000);
 
       // Create thumbnails for local storage (Max 400px to save space)
       const treeImageThumbnail = await imageToBase64(selectedImage, 400);
@@ -698,10 +700,10 @@ const Home = () => {
               color: var(--color-text-primary);
               /* Enforce 2 lines max with ellipsis for consistency */
               display: -webkit-box;
-              -webkit-line-clamp: 2;
+              -webkit-line-clamp: 1;
               -webkit-box-orient: vertical;
               overflow: hidden;
-              min-height: 2.8em; /* Approximate height for 2 lines to ensure alignment */
+              min-height: 1.2em; /* Reduced for 1 line */
             }
 
             .scan-meta {

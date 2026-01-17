@@ -12,12 +12,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
   // Get scale-specific recommendations
   const getScaleRecommendation = () => {
     switch (farmScale) {
-      case 'hectare':
+      case 'acre':
         return {
           title: t('results.bulkQuantitiesTitle'),
           note: t('results.bulkQuantitiesNote'),
           icon: <Map size={20} className="scale-icon" />,
-          label: t('home.hectareScale')
+          label: t('home.acreScale')
         };
       case 'tree':
         return {

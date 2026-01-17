@@ -559,7 +559,8 @@ You provide practical, actionable advice tailored to Malaysian farmers, consider
 - Local climate and monsoon seasons
 - Readily available Malaysian fertilizer brands
 - Malaysian government agricultural extension services
-- Regional variations across Peninsula, Sabah, and Sarawak`
+- Regional variations across Peninsula, Sabah, and Sarawak
+- Specific city or district characteristics when provided (e.g., rainfall in Kuching, soil in Cameron Highlands)`
             },
             {
                 role: 'user',
@@ -567,11 +568,13 @@ You provide practical, actionable advice tailored to Malaysian farmers, consider
                     {
                         type: 'text',
                         text: `${enhancedContext}
+📍 ${isMalay ? 'LOKASI' : 'LOCATION'}: ${userLocation || 'Malaysia'}
+
 CRITICAL: You must provide the response STRICTLY in ${isMalay ? 'BAHASA MELAYU' : 'ENGLISH'}. Do not mix languages.
 
 ${identificationInstruction}
 
-${isMalay ? 'Analisis tumbuhan ini untuk penyakit, perosak, dan isu pemakanan dengan fokus kepada konteks Malaysia.' : 'Analyze this plant for diseases, pests, and nutritional issues with focus on Malaysian context.'}
+${isMalay ? 'Analisis tumbuhan ini untuk penyakit, perosak, dan isu pemakanan dengan fokus kepada konteks lokasi tersebut di Malaysia.' : 'Analyze this plant for diseases, pests, and nutritional issues with focus on that specific Malaysian location context.'}
 
 ${leafImage ? (isMalay ? `PENTING: Dua gambar telah diberikan:
 1. Gambar penuh tumbuhan (konteks keseluruhan)
@@ -582,9 +585,9 @@ ${leafImage ? (isMalay ? `PENTING: Dua gambar telah diberikan:
 
 CRITICAL ANALYSIS REQUIREMENTS:
 1. Identify the specific disease or deficiency. IF HEALTHY, STATE "HEALTHY". DO NOT INVENT DISEASES.
-2. Consider Malaysian climate and current monsoon season
+2. Consider climate and current monsoon season for the specific location provided
 3. Recommend locally available fertilizers/treatments ONLY if relevant to this specific plant.
-4. Provide location-specific advice for Malaysia
+4. Provide location-specific advice for the user's city/region if provided, otherwise for general Malaysia.
 5. Include preventive measures suitable for tropical climate
 6. Reference Malaysian agricultural standards where applicable
 7. Avoid generic advice; be specific to the identified plant species.
@@ -593,7 +596,7 @@ CRITICAL ANALYSIS REQUIREMENTS:
 
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
-  "disease": "${isMalay ? 'Senaraikan isu yang dikesan. JIKA SIHAT, tulis "Tiada Masalah Dikesan".' : 'List detected issues. IF HEALTHY, write "No Issues Detected".'}",
+  "disease": "${isMalay ? 'IDENTIFIER RINGKAS (MAX 3 PATAH PERKATAAN). Cth: "Kulat Daun", "Reput Buah", "Tiada Masalah". DILARANG tulis ayat panjang di sini.' : 'SHORT IDENTIFIER (MAX 3 WORDS). e.g. "Leaf Rust", "Fruit Rot", "No Issues". DO NOT write long sentences here.'}",
   "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat' : 'Healthy/Unhealthy'}",
   "severity": "mild/moderate/severe",
   "confidence": 85,
@@ -642,7 +645,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
     "treatmentCost": "${isMalay ? 'Anggaran kos rawatan (RM)' : 'Estimated treatment cost (RM)'}",
     "roi": "${isMalay ? 'Pulangan pelaburan dijangka' : 'Expected return on investment'}"
   },
-  "additionalNotes": "${isMalay ? 'Nota tambahan khusus untuk Malaysia' : 'Additional Malaysia-specific notes'}"
+  "additionalNotes": "${isMalay ? 'HURAIAN PENUH: Berikan penerangan terperinci tentang punca, keadaan tumbuhan, dan analisis visual di sini secara mendalam. Tulis dalam ayat yang lengkap dan profesional.' : 'FULL DESCRIPTION: Provide a detailed explanation of the cause, plant condition, and deep visual analysis here. Write in complete, professional sentences.'}"
 }
 
 IMPORTANT RULES:

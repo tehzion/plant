@@ -5,7 +5,7 @@ const SpecificProductRecommendations = ({ products, farmScale }) => {
 
   const getScaleBadge = () => {
     switch (farmScale) {
-      case 'hectare':
+      case 'acre':
         return { icon: <Map size={16} />, text: 'Bulk quantities recommended' };
       case 'tree':
         return { icon: <TreeDeciduous size={16} />, text: 'Per tree application' };
