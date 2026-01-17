@@ -593,12 +593,14 @@ CRITICAL ANALYSIS REQUIREMENTS:
 7. Avoid generic advice; be specific to the identified plant species.
 8. DO NOT use emojis in any text fields. Use plain text only.
 9. DO NOT mention specific stores, suppliers, or companies (e.g., Baja Kimia Malaysia) in the text. Only mention the product name or active ingredient.
+10. CONSISTENCY RULE: If "healthStatus" is "Healthy", then "severity" MUST be "mild" and "disease" MUST be "No Issues" (or Tiada Masalah). NEVER combine "Healthy" with "Severe" or "Unhealthy".
+11. FRIENDLY & CONCISE JUSTIFICATION: In "additionalNotes", provide a short, friendly justification of the estimate/decision (e.g., "We estimate your plant is healthy because the leaves show vibrant green growth without signs of pests"). DO NOT be overly technical; keep it simple and encouraging (MAX 2-3 sentences). This summary is seen as "Idea Utama" by the user.
 
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
   "disease": "${isMalay ? 'IDENTIFIER RINGKAS (MAX 3 PATAH PERKATAAN). Cth: "Kulat Daun", "Reput Buah", "Tiada Masalah". DILARANG tulis ayat panjang di sini.' : 'SHORT IDENTIFIER (MAX 3 WORDS). e.g. "Leaf Rust", "Fruit Rot", "No Issues". DO NOT write long sentences here.'}",
-  "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat' : 'Healthy/Unhealthy'}",
-  "severity": "mild/moderate/severe",
+  "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat (WAJIB selari dengan severity)' : 'Healthy/Unhealthy (MUST align with severity)'}",
+  "severity": "${isMalay ? 'mild (untuk Sihat) / moderate / severe (untuk Tidak Sihat)' : 'mild (for Healthy) / moderate / severe (for Unhealthy)'}",
   "confidence": 85,
   "plantType": "${isMalay ? 'Nama Biasa Malaysia (Nama Saintifik) - Cth: Cili (Capsicum annuum). WAJIB berikan nama biasa.' : 'Malaysian Common Name (Scientific Name) - e.g. Chili (Capsicum annuum). MUST provide common name.'}",
   "malaysianContext": {
@@ -645,7 +647,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
     "treatmentCost": "${isMalay ? 'Anggaran kos rawatan (RM)' : 'Estimated treatment cost (RM)'}",
     "roi": "${isMalay ? 'Pulangan pelaburan dijangka' : 'Expected return on investment'}"
   },
-  "additionalNotes": "${isMalay ? 'HURAIAN PENUH: Berikan penerangan terperinci tentang punca, keadaan tumbuhan, dan analisis visual di sini secara mendalam. Tulis dalam ayat yang lengkap dan profesional.' : 'FULL DESCRIPTION: Provide a detailed explanation of the cause, plant condition, and deep visual analysis here. Write in complete, professional sentences.'}"
+  "additionalNotes": "${isMalay ? 'IDEA UTAMA & HURAIAN: Berikan huraian mesra pengguna tentang bagaimana anggaran dibuat (Cth: "Kami perhatikan daun anda hijau dan tiada tanda serangga, kami anggarkan ia sihat 90%"). Jangan terlalu teknikal, beri galakan.' : 'KEY IDEA & DESCRIPTION: Provide a user-friendly explanation of how the estimate was made (e.g., "We noticed your leaves are green and pest-free, so we estimate it is 90% healthy"). Keep it friendly and encouraging, not overly technical.'}"
 }
 
 IMPORTANT RULES:

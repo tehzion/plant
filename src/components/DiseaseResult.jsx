@@ -61,7 +61,9 @@ const DiseaseResult = ({ result, image, leafImage }) => {
     }
   };
 
-  const isHealthy = result.healthStatus?.toLowerCase() === 'healthy';
+  const isHealthy = result.healthStatus?.toLowerCase() === 'healthy' ||
+    result.disease?.toLowerCase().includes('tiada masalah') ||
+    result.disease?.toLowerCase().includes('no issues');
 
   return (
     <div className="disease-result">
@@ -158,9 +160,14 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     </div>
                   )}
                 </div>
-                {result.severity && (
+                {!isHealthy && result.severity && (
                   <span className={`severity-badge ${getSeverityBadgeClass(result.severity)}`}>
                     {t(`results.${(result.severity || 'unknown').toLowerCase()}`)}
+                  </span>
+                )}
+                {isHealthy && (
+                  <span className={`severity-badge badge-mild`}>
+                    {t('results.low')}
                   </span>
                 )}
               </div>
