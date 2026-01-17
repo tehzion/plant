@@ -14,11 +14,12 @@ import {
   Leaf,
   Bean,
   Flame,
-  Flower2
+  Flower2,
+  Target
 } from 'lucide-react';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   // Map plantType string back to category icon
   const getPlantIcon = (plantType) => {
@@ -767,4 +768,3 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 };
 
 export default DiseaseResult;
-
