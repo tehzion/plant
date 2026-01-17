@@ -546,8 +546,8 @@ Government Agencies: ${MALAYSIA_SUPPLIERS.govtAgencies.slice(0, 3).join(', ')}`;
         // If PlantNet failed, we rely on the AI model as the Primary Backup for identification
         const identificationInstruction = !plantNetResult
             ? (isMalay
-                ? "PENTING: Identifikasi spesies tumbuhan ini dengan tepat. PlantNet gagal, jadi anda adalah model sandaran utama. Berikan nama tempatan Malaysia."
-                : "IMPORTANT: Identify this plant species accurately. PlantNet failed, so you are the primary backup model. Provide the Malaysian local name.")
+                ? "PENTING: Identifikasi spesies tumbuhan ini dengan tepat. PlantNet gagal, jadi anda adalah model sandaran utama. Berikan 'Nama Tempatan (Nama Saintifik)'."
+                : "IMPORTANT: Identify this plant species accurately. PlantNet failed, so you are the primary backup model. Provide 'Common Name (Scientific Name)'.")
             : "";
 
         const messages = [
@@ -597,7 +597,7 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
   "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat' : 'Healthy/Unhealthy'}",
   "severity": "${isMalay ? 'Ringan/Sederhana/Teruk/Tiada' : 'Mild/Moderate/Severe/None'}",
   "confidence": 85,
-  "plantType": "${isMalay ? 'Nama Biasa Malaysia (Contoh: Cili, Terung). Jika tidak pasti, gunakan nama saintifik.' : 'Malaysian Common Name (e.g. Chili, Eggplant). Use scientific name if unsure.'}",
+  "plantType": "${isMalay ? 'Nama Biasa Malaysia (Nama Saintifik) - Cth: Cili (Capsicum annuum). WAJIB berikan nama biasa.' : 'Malaysian Common Name (Scientific Name) - e.g. Chili (Capsicum annuum). MUST provide common name.'}",
   "malaysianContext": {
     "variety": "${isMalay ? 'Varieti tempatan (Hanya jika yakin, jangan teka)' : 'Local variety (Only if confident, do not guess)'}",
     "region": "${isMalay ? 'Kawasan penanaman utama' : 'Main growing regions'}",
