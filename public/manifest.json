@@ -1,0 +1,22 @@
+{
+    "name": "SEA Plant Disease Detector",
+    "short_name": "Plant Detector",
+    "description": "AI-powered plant disease detection for Southeast Asian crops",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F5F7F5",
+    "theme_color": "#2D5016",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "type": "image/png",
+            "sizes": "192x192"
+        },
+        {
+            "src": "icon-512.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        }
+    ]
+}
