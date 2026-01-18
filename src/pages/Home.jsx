@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useReducer, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { Camera, ShoppingBag, BookOpen, Clock, Droplets, Globe, Bug, FlaskConical, CloudSun, MapPin, Sun, CloudRain, Snowflake, CloudLightning, CheckCircle, AlertTriangle, Leaf, Sprout, ScanLine, AlertCircle, Info, Wifi, WifiOff } from 'lucide-react';
+import { Camera, ShoppingBag, BookOpen, Clock, Droplets, Globe, Bug, FlaskConical, CloudSun, MapPin, Sun, CloudRain, Snowflake, CloudLightning, CheckCircle, AlertTriangle, Leaf, Sprout, ScanLine, AlertCircle, Info, Wifi, WifiOff, BarChart3 } from 'lucide-react';
 import { imageToBase64, analyzePlantDisease, checkServerHealth } from '../utils/diseaseDetection';
 import { saveScan, getScanHistory } from '../utils/localStorage';
 import CameraUpload from '../components/CameraUpload';
