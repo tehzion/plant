@@ -92,9 +92,11 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         {(() => {
           // Robust handling for AI ignoring word limits
           let displayTitle = result.disease || t('results.unknownDisease');
-          let extraDescription = result.additionalNotes || result.analysisSummary || result.analysis_summary || result.description || result.summary || result.justification || "";
+          // Don't apply default fallbacks yet - we want to try splitting the title first if no specific notes exist
+          let extraDescription = result.additionalNotes || result.analysisSummary || result.analysis_summary || result.description || result.summary || result.justification;
 
           // If title is clearly a sentence and we have no additional notes, split them
+          // Note: We check !extraDescription to ensuring we don't overwrite existing AI notes
           if (typeof displayTitle === 'string' && displayTitle.length > 40 && !extraDescription) {
             // Priority 1: Split by punctuation
             const punctuationParts = displayTitle.split(/[.!?]/);
@@ -130,7 +132,8 @@ const DiseaseResult = ({ result, image, leafImage }) => {
               } else if (displayTitle.length > 60) {
                 // Priority 3: Brute force split if no keywords or punctuation found
                 displayTitle = displayTitle.substring(0, 50) + "...";
-                extraDescription = result.disease; // Keep original in description
+                // Only if we truly have nothing else, we might use the full title as description, 
+                // but usually better to rely on the default fallback in the render selection
               }
             }
           }
@@ -169,16 +172,16 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                 )}
               </div>
 
-              {/* Idea Utama Card - Shows AI's reasoning/justification */}
-              {(extraDescription || result.additionalNotes) && (
-                <div className="idea-utama-card fade-in">
-                  <div className="idea-header">
-                    <Target size={18} />
-                    <span>{t('results.keyIdea')}</span>
-                  </div>
-                  <p className="idea-content">{extraDescription || result.additionalNotes}</p>
+              {/* Idea Utama Card - Primary Justification (Forced Visible) */}
+              <div className="idea-utama-card">
+                <div className="idea-header">
+                  <Target size={18} />
+                  <span>{t('results.keyIdea')}</span>
                 </div>
-              )}
+                <p className="idea-content">
+                  {extraDescription || result.additionalNotes || (isHealthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning'))}
+                </p>
+              </div>
 
               {/* Status Card - Prominent */}
               {result.healthStatus && (
@@ -393,14 +396,22 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           margin: 0 0 4px 0;
           font-weight: 700;
           line-height: 1.3;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         .scientific-name {
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           color: #6B7280;
           margin: 0;
           font-style: italic;
           font-weight: 500;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         /* Severity Badge */
@@ -434,7 +445,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           color: #6B7280;
         }
 
-        /* Idea Utama Card - AI Justification */
+        /* Idea Utama Card - Premium Design */
         .idea-utama-card {
           background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
           padding: 16px;
@@ -672,28 +683,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           margin-bottom: 0;
         }
 
-        @media (max-width: 768px) {
-          .disease-info-container {
-            padding: 16px;
-          }
-
-          .section-title {
-            font-size: 1.125rem;
-          }
-
-          .disease-name {
-            font-size: 1.125rem;
-          }
-
-          .details-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .detail-item {
-            padding: 10px;
-          }
-        }
-
         /* Demo Mode Warning */
         .demo-mode-warning {
           display: flex;
@@ -762,6 +751,27 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           background-color: #D1FAE5;
         }
 
+        @media (max-width: 768px) {
+          .disease-info-container {
+            padding: 16px;
+          }
+
+          .section-title {
+            font-size: 1.125rem;
+          }
+
+          .disease-name {
+            font-size: 1.125rem;
+          }
+
+          .details-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .detail-item {
+            padding: 10px;
+          }
+        }
       `}</style>
     </div>
   );

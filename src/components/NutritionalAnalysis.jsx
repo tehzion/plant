@@ -112,13 +112,37 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                       </div>
                       <span className="fertilizer-name">
                         {(() => {
-                          const rawName = rec.fertilizerName || rec.product || rec.name;
-                          if (rawName && rawName.toLowerCase() !== 'chemical' && rawName.toLowerCase() !== 'organic' && rawName.toLowerCase() !== 'kimia' && rawName.toLowerCase() !== 'organik') {
+                          const rawName = rec.fertilizerName || rec.product || rec.name || '';
+                          const normalizedName = rawName.toLowerCase().trim();
+                          
+                          // List of generic names to filter out (expanded)
+                          const genericNames = [
+                            'chemical', 'kimia', 'baja kimia',
+                            'organic', 'organik', 'baja organik',
+                            'fertilizer', 'baja',
+                            'compound', 'kompaun'
+                          ];
+                          
+                          // Check if the name is too generic
+                          const isGeneric = genericNames.includes(normalizedName) || 
+                                          normalizedName.length < 3 ||
+                                          normalizedName === 'n/a' ||
+                                          normalizedName === '-';
+                          
+                          if (!isGeneric && rawName) {
                             return toTitleCase(rawName);
                           }
-                          // If generic name, use translated type
-                          const typeKey = rec.type?.toLowerCase() === 'organic' ? 'organicFertilizer' : 'chemicalFertilizer';
-                          return t(`results.${typeKey}`);
+                          
+                          // Fallback: use type-based translation with more specific naming
+                          const recType = rec.type?.toLowerCase();
+                          if (recType === 'organic' || recType === 'organik') {
+                            return t('results.organicFertilizer');
+                          } else if (recType === 'chemical' || recType === 'kimia') {
+                            return t('results.chemicalFertilizer');
+                          }
+                          
+                          // Ultimate fallback
+                          return t('results.generalFertilizer');
                         })()}
                       </span>
                     </div>
@@ -144,336 +168,6 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
         </>
       )}
 
-      <style>{`
-        .nutritional-analysis {
-          background: #FAFAFA;
-          padding: 20px;
-          border-radius: 16px;
-          margin-bottom: 24px;
-        }
-
-        .section-header-centered {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 16px;
-        }
-
-        .section-title {
-          font-size: 1.25rem;
-          color: #1F2937;
-          margin: 0;
-          text-align: center;
-          font-weight: 700;
-        }
-
-        /* Healthy Status Card */
-        .healthy-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: white;
-          padding: 16px;
-          border-radius: 12px;
-          border: 1px solid #E5E7EB;
-        }
-
-        .healthy-icon {
-          width: 40px;
-          height: 40px;
-          background: #D1FAE5;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #10B981;
-          flex-shrink: 0;
-        }
-
-        .healthy-content {
-          flex: 1;
-        }
-
-        .healthy-title {
-          font-size: 1rem;
-          font-weight: 600;
-          color: #065F46;
-          margin: 0 0 4px 0;
-        }
-
-        .healthy-subtitle {
-          font-size: 0.85rem;
-          color: #047857;
-          margin: 0;
-        }
-
-        /* Deficiency Alert */
-        .deficiency-alert {
-          display: flex;
-          gap: 12px;
-          padding: 16px;
-          border-radius: 12px;
-          border: 1px solid;
-          background: white;
-          margin-bottom: 12px;
-        }
-
-        .deficiency-alert.severity-mild {
-          border-color: #FCD34D;
-        }
-
-        .deficiency-alert.severity-moderate {
-          border-color: #FB923C;
-        }
-
-        .deficiency-alert.severity-severe {
-          border-color: #F87171;
-        }
-
-        .alert-icon-wrapper {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #F3F4F6;
-          flex-shrink: 0;
-        }
-
-        .severity-mild .alert-icon-wrapper {
-          background: #FEF3C7;
-          color: #D97706;
-        }
-
-        .severity-moderate .alert-icon-wrapper {
-          background: #FED7AA;
-          color: #EA580C;
-        }
-
-        .severity-severe .alert-icon-wrapper {
-          background: #FECACA;
-          color: #DC2626;
-        }
-
-        .alert-content {
-          flex: 1;
-        }
-
-        .alert-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-          margin-bottom: 6px;
-        }
-
-        .alert-title {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: #1F2937;
-        }
-
-        .severity-badge {
-          font-size: 0.7rem;
-          font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .severity-badge.mild {
-          background: #FEF3C7;
-          color: #92400E;
-        }
-
-        .severity-badge.moderate {
-          background: #FFEDD5;
-          color: #9A3412;
-        }
-
-        .severity-badge.severe {
-          background: #FEE2E2;
-          color: #991B1B;
-        }
-
-        .alert-description {
-          font-size: 0.85rem;
-          color: #6B7280;
-          margin: 0;
-          line-height: 1.5;
-        }
-
-        .symptoms-list {
-          margin: 6px 0 0 0;
-          padding-left: 18px;
-          font-size: 0.85rem;
-          color: #6B7280;
-        }
-
-        .symptoms-list li {
-          margin-bottom: 3px;
-        }
-
-        /* Subsections */
-        .nutrients-section,
-        .fertilizer-section {
-          background: white;
-          padding: 16px;
-          border-radius: 12px;
-          border: 1px solid #E5E7EB;
-          margin-bottom: 12px;
-        }
-
-        .subsection-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-
-        .subsection-icon {
-          color: var(--color-primary);
-        }
-
-        .subsection-title {
-          font-size: 1rem;
-          font-weight: 600;
-          color: #1F2937;
-          margin: 0;
-        }
-
-        .subsection-description {
-          font-size: 0.85rem;
-          color: #6B7280;
-          margin: 0 0 12px 0;
-          line-height: 1.4;
-        }
-
-        /* Nutrients Grid */
-        .nutrients-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .nutrient-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: #F9FAFB;
-          padding: 6px 12px;
-          border-radius: 16px;
-          border: 1px solid #E5E7EB;
-        }
-
-        .nutrient-name {
-          font-size: 0.85rem;
-          font-weight: 500;
-          color: #1F2937;
-        }
-
-        .chip-severity {
-          font-size: 0.7rem;
-          font-weight: 600;
-          padding: 2px 6px;
-          border-radius: 8px;
-        }
-
-        .chip-severity.mild {
-          background: #FEF3C7;
-          color: #92400E;
-        }
-
-        .chip-severity.moderate {
-          background: #FFEDD5;
-          color: #9A3412;
-        }
-
-        .chip-severity.severe {
-          background: #FEE2E2;
-          color: #991B1B;
-        }
-
-        /* Fertilizers List */
-        .fertilizers-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .fertilizer-card {
-          background: #F9FAFB;
-          padding: 12px;
-          border-radius: 8px;
-          border: 1px solid #E5E7EB;
-        }
-
-        .fertilizer-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 8px;
-        }
-
-        .fertilizer-icon-circle {
-          width: 32px;
-          height: 32px;
-          background: white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--color-primary);
-          flex-shrink: 0;
-        }
-
-        .fertilizer-name {
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: #1F2937;
-        }
-
-        .fertilizer-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          padding-left: 42px;
-        }
-
-        .detail-row {
-          font-size: 0.85rem;
-          color: #6B7280;
-          display: flex;
-          gap: 6px;
-        }
-
-        .detail-label {
-          font-weight: 500;
-          color: #4B5563;
-          flex-shrink: 0;
-        }
-
-        .detail-value {
-          flex: 1;
-        }
-
-        @media (max-width: 768px) {
-          .nutritional-analysis {
-            padding: 16px;
-          }
-
-          .section-title {
-            font-size: 1.125rem;
-          }
-
-          .deficiency-alert {
-            flex-direction: row;
-            align-items: flex-start;
-          }
-        }
-      `}</style>
     </div>
   );
 };

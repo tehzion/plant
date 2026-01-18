@@ -236,6 +236,7 @@ export const translations = {
             organic: 'Organic',
             chemicalFertilizer: 'Chemical Fertilizer',
             organicFertilizer: 'Organic Fertilizer',
+            generalFertilizer: 'Fertilizer',
             localVariety: 'Local Variety',
             keyRegions: 'Key Regions',
             seasonalAdvice: 'Seasonal Advice',
@@ -319,6 +320,10 @@ export const translations = {
             asDirected: 'As directed',
             asNeeded: 'As needed',
             followInstructions: 'Follow package instructions',
+            defaultHealthyReasoning: 'Our AI analysis shows that your plant appears vibrant and free from visible pathogens or stress markers. Continue your current care routine to maintain this health.',
+            defaultUnhealthyReasoning: 'Based on the visual symptoms like discoloration or lesions, our AI has identified potential stressors. We recommend following the treatment steps below to restore your plant\'s health.',
+            chemicalFertilizer: 'Chemical Fertilizer',
+            organicFertilizer: 'Organic Fertilizer',
         },
 
         encyclopedia: {
@@ -739,6 +744,11 @@ export const translations = {
             asDirected: 'Seperti yang diarahkan',
             asNeeded: 'Mengikut keperluan',
             followInstructions: 'Ikut arahan pakej',
+            defaultHealthyReasoning: 'Analisis AI kami menunjukkan tanaman anda kelihatan cergas dan bebas daripada patogen atau tanda-tanda tekanan yang jelas. Teruskan penjagaan sedia ada untuk mengekalkan kesihatan ini.',
+            defaultUnhealthyReasoning: 'Berdasarkan gejala visual seperti perubahan warna atau kecederaan pada tisu, AI kami telah mengenal pasti potensi masalah. Kami mengesyorkan anda mengikuti langkah rawatan di bawah untuk memulihkan kesihatan tanaman anda.',
+            chemicalFertilizer: 'Baja Kimia',
+            organicFertilizer: 'Baja Organik',
+            generalFertilizer: 'Baja',
         },
 
         encyclopedia: {
