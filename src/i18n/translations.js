@@ -42,6 +42,8 @@ export const translations = {
             encyclopedia: 'Encyclopedia',
             profile: 'Profile',
             about: 'About',
+            terms: 'Terms of Use',
+            privacy: 'Privacy Policy',
         },
 
         // Home Page
@@ -76,6 +78,7 @@ export const translations = {
             scanDesc: 'Detect diseases instantly',
             userGuide: 'User Guide',
             shop: 'Shop',
+            statistics: 'Statistics',
             greetingMorning: 'Good Morning',
             greetingAfternoon: 'Good Afternoon',
             greetingEvening: 'Good Evening',
@@ -461,6 +464,8 @@ export const translations = {
             encyclopedia: 'Ensiklopedia',
             profile: 'Profil',
             about: 'Tentang',
+            terms: 'Terma Penggunaan',
+            privacy: 'Dasar Privasi',
         },
 
         // Home Page
@@ -495,6 +500,7 @@ export const translations = {
             scanDesc: 'Kesan penyakit serta-merta',
             userGuide: 'Panduan Pengguna',
             shop: 'Kedai',
+            statistics: 'Statistik',
             greetingMorning: 'Selamat Pagi',
             greetingAfternoon: 'Selamat Petang',
             greetingEvening: 'Selamat Malam',

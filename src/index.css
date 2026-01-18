@@ -1305,9 +1305,52 @@ p {
   padding-top: 8px;
 }
 
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: #6B7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+  min-width: 60px;
+}
+
+.nav-item:hover {
+  background: #F9FAFB;
+}
+
+.nav-item.active {
+  color: var(--color-primary);
+}
+
+.nav-item.active .nav-item-icon {
+  color: var(--color-primary);
+}
+
+.nav-item-icon {
+  color: #9CA3AF;
+  transition: color 0.2s ease;
+}
+
+.nav-item.active .nav-item-icon {
+  color: var(--color-primary);
+}
+
 
 .main-content {
   flex: 1;
+  padding-bottom: 80px; /* Space for bottom nav on mobile */
+}
+
+@media (min-width: 769px) {
+  .main-content {
+    padding-bottom: 0; /* Remove on desktop */
+  }
 }
 
 @media (min-width: 769px) {

@@ -11,6 +11,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 
 
 const Home = lazy(() => import('./pages/Home'));
+const Results = lazy(() => import('./pages/Results'));
 const History = lazy(() => import('./pages/History'));
 const Encyclopedia = lazy(() => import('./pages/Encyclopedia'));
 const Login = lazy(() => import('./pages/Login'));
@@ -150,7 +151,6 @@ const AppHeader = ({ isHome }) => {
 const BottomNav = () => {
     const location = useLocation();
     const { t } = useLanguage();
-    const isHome = location.pathname === '/';
 
     const isActive = (path) => {
         if (path === '/') {
@@ -158,11 +158,6 @@ const BottomNav = () => {
         }
         return location.pathname.startsWith(path);
     };
-
-    // Hide bottom nav on homepage
-    if (isHome) {
-        return null;
-    }
 
     return (
         <nav className="bottom-nav">

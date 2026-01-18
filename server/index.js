@@ -584,17 +584,25 @@ ${leafImage ? (isMalay ? `PENTING: Dua gambar telah diberikan:
 
 
 CRITICAL ANALYSIS REQUIREMENTS:
-1. Identify the specific disease or deficiency. IF HEALTHY, STATE "HEALTHY". DO NOT INVENT DISEASES.
-2. Consider climate and current monsoon season for the specific location provided
+1. Identify the specific disease or deficiency. IF HEALTHY, STATE "HEALTHY" or "Sihat". DO NOT INVENT DISEASES.
+2. Consider climate and current monsoon season for the specific location provided.
 3. Recommend locally available fertilizers/treatments ONLY if relevant to this specific plant.
 4. Provide location-specific advice for the user's city/region if provided, otherwise for general Malaysia.
-5. Include preventive measures suitable for tropical climate
-6. Reference Malaysian agricultural standards where applicable
+5. Include preventive measures suitable for tropical climate.
+6. Reference Malaysian agricultural standards where applicable.
 7. Avoid generic advice; be specific to the identified plant species.
 8. DO NOT use emojis in any text fields. Use plain text only.
-9. DO NOT mention specific stores, suppliers, or companies (e.g., Baja Kimia Malaysia) in the text. Only mention the product name or active ingredient.
-10. CONSISTENCY RULE: If "healthStatus" is "Healthy", then "severity" MUST be "mild" and "disease" MUST be "No Issues" (or Tiada Masalah). NEVER combine "Healthy" with "Severe" or "Unhealthy".
-11. FRIENDLY & CONCISE JUSTIFICATION: In "additionalNotes", provide a short, friendly justification of the estimate/decision (e.g., "We estimate your plant is healthy because the leaves show vibrant green growth without signs of pests"). DO NOT be overly technical; keep it simple and encouraging (MAX 2-3 sentences). This summary is seen as "Idea Utama" by the user.
+9. DO NOT mention specific stores, suppliers, or companies in the text. Only mention the product name or active ingredient.
+10. CONSISTENCY RULE: If "healthStatus" is "Healthy"/"Sihat", then "severity" MUST be "mild" and "disease" MUST be "No Issues" or "Tiada Masalah". NEVER combine "Healthy" with "Severe" or "Unhealthy".
+11. MANDATORY JUSTIFICATION: In "additionalNotes", provide a short, friendly justification (e.g., "We estimate your plant is healthy because the leaves show vibrant green growth without signs of pests"). DO NOT be overly technical; keep it simple and encouraging (MAX 2-3 sentences). This is displayed as "Idea Utama" to the user.
+12. CRITICAL - FERTILIZER NAMES: In "fertilizerRecommendations", ALWAYS provide SPECIFIC product names (e.g., "NPK 15-15-15", "Urea 46%", "Baja Organik Ayam", "MOP (Muriate of Potash)"). NEVER use generic words like "Chemical", "Organic", "Kimia", "Organik", "Fertilizer", or "Baja" as the fertilizerName. If you don't know a specific product, use descriptive names like "NPK Compound 12-12-17" or "Poultry Manure Organic".
+13. CRITICAL - ARRAY POPULATION: ALL array fields (symptoms, immediateActions, treatments, prevention, dailyCare, weeklyCare, monthlyCare, bestPractices) MUST contain at least 2-4 items. DO NOT leave arrays empty or with single items.
+14. CRITICAL - NUTRIENT DEFICIENCY: If you identify ANY nutrient deficiency (yellowing, stunted growth, leaf discoloration), you MUST:
+    - Set "nutritionalIssues.hasDeficiency": true
+    - Fill "nutritionalIssues.deficientNutrients" array with detailed objects
+    - Set "pathogenType" to "Environmental" or "Nutritional"
+    - Provide "fertilizerRecommendations" array with 2-3 specific fertilizers
+15. HEALTHY PLANTS CARE: If plant is healthy, you MUST still provide "healthyCarePlan" with complete dailyCare, weeklyCare, monthlyCare, and bestPractices arrays (minimum 3 items each).
 
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
@@ -652,14 +660,18 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 
 IMPORTANT RULES:
 - Only diagnose what you clearly see in the images
-- Use Malaysian fertilizer brands and products
+- Use Malaysian fertilizer brands and products with SPECIFIC names (NPK 15-15-15, not "Chemical")
 - Consider current monsoon season in recommendations
 - Provide realistic cost estimates in Malaysian Ringgit (RM)
 - Reference local government support where appropriate
 - Be honest if you're uncertain - better to recommend expert consultation
 - All advice must be practical and implementable in Malaysian conditions
-- CRITICAL: If you diagnose a nutrient deficiency (e.g., 'Kekurangan Kalsium'), you MUST set 'hasDeficiency': true and fill the 'nutritionalIssues' object with details. The 'Pemakanan' tab relies on this data.
-- CRITICAL: For nutrient deficiencies, set 'pathogenType' to "Environmental/Nutritional" and DO NOT identify a visual fungus type unless a secondary infection is clearly visible.`
+- CRITICAL: If you diagnose a nutrient deficiency (e.g., 'Kekurangan Kalsium'), you MUST set 'hasDeficiency': true and fill the 'nutritionalIssues' object with COMPLETE details including deficientNutrients array. The 'Pemakanan' tab relies on this data.
+- CRITICAL: For nutrient deficiencies, set 'pathogenType' to "Environmental" or "Nutritional" and DO NOT identify a fungus type unless a secondary infection is clearly visible.
+- CRITICAL: ALWAYS populate arrays with MULTIPLE items (2-4 minimum). Single-item arrays or empty arrays are NOT acceptable.
+- CRITICAL: For healthy plants, ALWAYS provide healthyCarePlan with complete dailyCare, weeklyCare, monthlyCare, and bestPractices (3+ items each).
+- CRITICAL: additionalNotes is MANDATORY - never leave it empty. Provide a friendly 2-3 sentence justification.
+- CRITICAL: fertilizerRecommendations must use SPECIFIC product names, never generic words like "Chemical" or "Organic".`
                     },
                     {
                         type: 'image_url',

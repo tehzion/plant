@@ -93,29 +93,17 @@ const Home = () => {
   // Server Status State
   const [serverStatus, setServerStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
 
-  // Check server health on mount with retry logic for Render cold starts
+  // Check server health on mount
   useEffect(() => {
-    let attempts = 0;
-    const maxAttempts = 12; // 12 * 5s = 60 seconds max wait
-
     const checkHealth = async () => {
       try {
-        setServerStatus('checking'); // Show connecting state
         await checkServerHealth();
-        setServerStatus('online'); // Success
+        setServerStatus('online');
       } catch (error) {
-        attempts++;
-        if (attempts < maxAttempts) {
-          // Retry after 5 seconds
-          setTimeout(checkHealth, 5000);
-        } else {
-          // Give up after max attempts
-          console.warn('Server offline after retries, enabling demo mode');
-          setServerStatus('offline');
-        }
+        console.warn('Server offline, enabling demo mode');
+        setServerStatus('offline');
       }
     };
-
     checkHealth();
   }, []);
 
@@ -156,8 +144,7 @@ const Home = () => {
         // Fetch Location Name
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${loc.lat}&lon=${loc.lng}`);
         const geoData = await geoRes.json();
-        const addr = geoData.address;
-        const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.state || 'Malaysia';
+        const city = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.district || geoData.address.state || 'Unknown Location';
         setUserLocationName(city);
 
         // Fetch Weather
@@ -379,8 +366,16 @@ const Home = () => {
       const leafImageBase64 = selectedLeafImage ? await imageToBase64(selectedLeafImage) : null;
 
       await performStep(1, 2000);
+      const result = await analyzePlantDisease(
+        treeImageBase64,
+        selectedCategory || 'Vegetables',
+        leafImageBase64,
+        language
+      );
 
-      // Wait for location and process locationName BEFORE analysis
+      await performStep(2, 1000);
+
+      // Wait for location if checking hasn't finished
       const location = await locationPromise;
       let locationName = '';
 
@@ -391,27 +386,18 @@ const Home = () => {
 
           // Collect detailed location info
           const address = data.address;
-          const city = address.city || address.town || address.village || address.municipality || address.county || address.state_district;
           const locationParts = [
-            city,
+            address.suburb || address.neighbourhood,
+            address.city || address.town || address.village,
+            address.district,
             address.state
           ].filter(Boolean); // Remove empty values
 
-          locationName = locationParts.length > 0 ? locationParts.join(', ') : (address.state || address.country || 'Malaysia');
+          locationName = locationParts.join(', ');
         } catch (e) {
           console.error("Geocoding failed", e);
         }
       }
-
-      const result = await analyzePlantDisease(
-        treeImageBase64,
-        selectedCategory || 'Vegetables',
-        leafImageBase64,
-        language,
-        locationName // Location name is now defined
-      );
-
-      await performStep(2, 1000);
 
       // Create thumbnails for local storage (Max 400px to save space)
       const treeImageThumbnail = await imageToBase64(selectedImage, 400);
@@ -513,12 +499,22 @@ const Home = () => {
             </button>
           </div>
 
-          {/* Server Status Banner - Compact */}
-          <div className="server-status-minimal mt-sm fade-in">
-            <div className={`status-dot ${serverStatus === 'offline' ? 'bg-orange' : serverStatus === 'checking' ? 'bg-yellow blink' : 'bg-green'}`}></div>
-            <span className="status-text-minimal">
-              {serverStatus === 'offline' ? t('home.demoMode') : serverStatus === 'checking' ? t('home.connecting') : t('home.onlineStatus')}
-            </span>
+          {/* Server Status Banner */}
+          <div className={`server-status-banner ${serverStatus === 'offline' ? 'status-demo' : 'status-live'} mt-sm fade-in`}>
+            {serverStatus === 'offline' ? (
+              <>
+                <WifiOff size={16} />
+                <span>{language === 'ms' ? 'Mod Demo: Data Simulasi Aktif' : 'Demo Mode: Simulated Data Active'}</span>
+              </>
+            ) : serverStatus === 'online' ? (
+              <>
+                <Wifi size={16} />
+                <span>{language === 'ms' ? 'Sistem Dalam Talian' : 'System Online'}</span>
+              </>
+            ) : (
+              // Invisible spacer while checking to prevent layout jump
+              <span style={{ opacity: 0 }}>...</span>
+            )}
           </div>
 
           {/* Recent Activity Section - Moved Up */}
@@ -535,23 +531,7 @@ const Home = () => {
                       <img src={scan.image} alt={scan.disease} />
                     </div>
                     <div className="scan-details">
-                      <h4 className="scan-disease">
-                        {(() => {
-                          // Clean up and parse the disease string
-                          const raw = scan.disease || '';
-                          // Split by comma or ampersand
-                          const parts = raw.split(/[&,]/).map(s => s.trim()).filter(Boolean);
-
-                          if (parts.length > 1) {
-                            return (
-                              <span>
-                                {parts[0]} <span style={{ fontSize: '0.8em', color: 'var(--color-primary)', fontWeight: '500' }}>+{parts.length - 1}</span>
-                              </span>
-                            );
-                          }
-                          return raw;
-                        })()}
-                      </h4>
+                      <h4 className="scan-disease">{scan.disease}</h4>
                       <p className="scan-meta">
                         {scan.plantType} • {new Date(scan.timestamp).toLocaleDateString()}
                       </p>
@@ -638,6 +618,15 @@ const Home = () => {
               <div className="tile-icon"><ShoppingBag size={28} /></div>
               <span className="tile-label">{t('home.shop')}</span>
             </button>
+            <button onClick={() => setModalConfig({
+              isOpen: true,
+              title: t('home.statistics') || 'Statistics',
+              message: t('common.comingSoon'),
+              type: 'alert'
+            })} className="action-tile secondary-tile bounce-in delay-150 stats-tile">
+              <div className="tile-icon"><BarChart3 size={28} /></div>
+              <span className="tile-label">{t('home.statistics') || 'Statistics'}</span>
+            </button>
             <button onClick={() => navigate('/guide')} className="action-tile secondary-tile bounce-in delay-200">
               <div className="tile-icon"><Info size={28} /></div>
               <span className="tile-label">{language === 'ms' ? 'Info Utama' : 'Key Info'}</span>
@@ -700,10 +689,10 @@ const Home = () => {
               color: var(--color-text-primary);
               /* Enforce 2 lines max with ellipsis for consistency */
               display: -webkit-box;
-              -webkit-line-clamp: 1;
+              -webkit-line-clamp: 2;
               -webkit-box-orient: vertical;
               overflow: hidden;
-              min-height: 1.2em; /* Reduced for 1 line */
+              min-height: 2.8em; /* Approximate height for 2 lines to ensure alignment */
             }
 
             .scan-meta {
@@ -735,33 +724,28 @@ const Home = () => {
             .status-at-risk, .status-warning { color: #EAB308; }
             .status-unhealthy, .status-danger { color: #EF4444; }
 
-            .server-status-minimal {
-              display: inline-flex;
+            .server-status-banner {
+              display: flex;
               align-items: center;
-              gap: 6px;
-              padding: 4px 10px;
-              background: rgba(255, 255, 255, 0.5);
-              border-radius: 20px;
-              font-size: 0.75rem;
+              justify-content: center;
+              gap: 8px;
+              padding: 8px 12px;
+              border-radius: var(--radius-md);
+              font-size: 0.8rem;
               font-weight: 600;
-              margin: 0 auto; /* Center it */
-              width: fit-content;
+              transition: all 0.3s ease;
             }
 
-            .status-dot {
-              width: 8px;
-              height: 8px;
-              border-radius: 50%;
+            .status-demo {
+              background-color: #FEF3C7;
+              color: #D97706;
+              border: 1px solid #FCD34D;
             }
 
-            .bg-green { background-color: #10B981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
-            .bg-orange { background-color: #F59E0B; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
-
-            .status-text-minimal {
-              color: var(--color-text-secondary);
-              letter-spacing: 0.5px;
-              text-transform: uppercase;
-              font-size: 0.7rem;
+            .status-live {
+              background-color: #D1FAE5;
+              color: #059669;
+              border: 1px solid #6EE7B7;
             }
           `}</style>
 
