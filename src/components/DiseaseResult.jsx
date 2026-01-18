@@ -15,7 +15,7 @@ import {
   Bean,
   Flame,
   Flower2,
-  Target
+  Info
 } from 'lucide-react';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
@@ -95,20 +95,35 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           // Don't apply default fallbacks yet - we want to try splitting the title first if no specific notes exist
           let extraDescription = result.additionalNotes || result.analysisSummary || result.analysis_summary || result.description || result.summary || result.justification;
 
-          // If title is clearly a sentence and we have no additional notes, split them
-          // Note: We check !extraDescription to ensuring we don't overwrite existing AI notes
-          if (typeof displayTitle === 'string' && displayTitle.length > 40 && !extraDescription) {
-            // Priority 1: Split by punctuation
-            const punctuationParts = displayTitle.split(/[.!?]/);
-            if (punctuationParts.length > 1) {
-              displayTitle = punctuationParts[0].trim() + (punctuationParts[0].endsWith('.') ? '' : '.');
-              extraDescription = punctuationParts.slice(1).join('.').trim();
-            } else {
-              // Priority 2: Split by common explanatory keywords (Malay & English)
+          // If title is clearly a sentence, split it to extract the core explanation
+          // We do this even if additionalNotes exists, merging the extracted explanation into Idea Utama
+          if (typeof displayTitle === 'string' && displayTitle.length > 40) {
+            // Priority 1: Split by ", " if followed by explanation keywords (e.g., "pada permukaan, kemungkinan besar...")
+            // This is specific to the user's request case
+            if (displayTitle.includes(', ')) {
+              const commaParts = displayTitle.split(', ');
+              // Check if 2nd part starts with explanatory words
+              const explanatoryStart = ['kemungkinan', 'likely', 'disebabkan', 'caused', 'berpunca', 'due to'];
+              const potentialExplanation = commaParts.slice(1).join(', ').trim();
+
+              if (explanatoryStart.some(keyword => potentialExplanation.toLowerCase().startsWith(keyword))) {
+                displayTitle = commaParts[0].trim();
+                const extractedExplanation = potentialExplanation.charAt(0).toUpperCase() + potentialExplanation.slice(1);
+
+                // Prepend to existing description (this makes it the primary "Idea Utama")
+                extraDescription = extraDescription
+                  ? `${extractedExplanation}\n\n${extraDescription}`
+                  : extractedExplanation;
+              }
+            }
+
+            // Priority 2: Split by common explanatory keywords if no comma split occurred
+            // Only proceed if length is still long (meaning Priority 1 didn't already shorten it)
+            if (displayTitle.length > 40) {
               const splitKeywords = [
                 ' akibat ', ' kerana ', ' disebabkan ', ' berpunca ',
                 ' due to ', ' caused by ', ' because ', ' results from ',
-                ' pada ', ' yang ', ' in ', ' on '
+                ' yang ', ' in ', ' on '
               ];
 
               let splitIndex = -1;
@@ -123,17 +138,18 @@ const DiseaseResult = ({ result, image, leafImage }) => {
               }
 
               if (splitIndex !== -1) {
-                // Split at the keyword, keeping the keyword as part of the description
+                // Split at the keyword
                 const titlePart = displayTitle.substring(0, splitIndex).trim();
                 const descPart = displayTitle.substring(splitIndex).trim();
 
-                displayTitle = titlePart;
-                extraDescription = descPart;
-              } else if (displayTitle.length > 60) {
-                // Priority 3: Brute force split if no keywords or punctuation found
-                displayTitle = displayTitle.substring(0, 50) + "...";
-                // Only if we truly have nothing else, we might use the full title as description, 
-                // but usually better to rely on the default fallback in the render selection
+                // Only apply split if the resulting title is reasonable
+                if (titlePart.length > 5) {
+                  displayTitle = titlePart;
+                  const formattedDesc = descPart.charAt(0).toUpperCase() + descPart.slice(1);
+                  extraDescription = extraDescription
+                    ? `${formattedDesc}\n\n${extraDescription}`
+                    : formattedDesc;
+                }
               }
             }
           }
@@ -160,27 +176,23 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     </div>
                   )}
                 </div>
-                {!isHealthy && result.severity && (
-                  <span className={`severity-badge ${getSeverityBadgeClass(result.severity)}`}>
-                    {t(`results.${(result.severity || 'unknown').toLowerCase()}`)}
-                  </span>
-                )}
-                {isHealthy && (
-                  <span className={`severity-badge badge-mild`}>
-                    {t('results.low')}
-                  </span>
-                )}
+                {/* Severity badge removed from here - moved to Status Card */}
               </div>
 
               {/* Idea Utama Card - Primary Justification (Forced Visible) */}
+              {/* Idea Utama Card - Primary Justification (Forced Visible) */}
               <div className="idea-utama-card">
-                <div className="idea-header">
-                  <Target size={18} />
-                  <span>{t('results.keyIdea')}</span>
+                <div className="idea-header-row">
+                  <div className="idea-icon-wrapper">
+                    <Info size={18} />
+                  </div>
+                  <span className="idea-header">{t('results.keyIdea')}</span>
                 </div>
-                <p className="idea-content">
-                  {extraDescription || result.additionalNotes || (isHealthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning'))}
-                </p>
+                <div className="idea-content-wrapper">
+                  <p className="idea-content">
+                    {extraDescription || result.additionalNotes || (isHealthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning'))}
+                  </p>
+                </div>
               </div>
 
               {/* Status Card - Prominent */}
@@ -194,6 +206,16 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     <span className="status-value">
                       {t(`results.${(result.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
                     </span>
+
+                    {/* Severity display moved here */}
+                    {!isHealthy && result.severity && (
+                      <div className="status-severity-container" style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                        <span className="status-label">{t('results.severity')}</span>
+                        <span className={`status-value severity-text ${getSeverityBadgeClass(result.severity)}`} style={{ fontSize: '1rem', display: 'block' }}>
+                          {t(`results.${(result.severity || 'unknown').toLowerCase()}`)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -372,112 +394,78 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           font-weight: 700;
         }
 
-        /* Disease Title Card */
+        /* Disease Title Card (Maklumat Penyakit) */
         .disease-title-card {
           background: white;
-          padding: 16px;
+          padding: 20px;
           border-radius: 12px;
           border: 1px solid #E5E7EB;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 12px;
-        }
-
-        .disease-name-section {
-          flex: 1;
-          min-width: 0;
+          gap: 16px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         .disease-name {
-          font-size: 1.25rem;
-          color: #1F2937;
+          font-size: 1.1rem;
+          color: #111827;
           margin: 0 0 4px 0;
           font-weight: 700;
-          line-height: 1.3;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+          line-height: 1.4;
         }
 
-        .scientific-name {
-          font-size: 0.8rem;
-          color: #6B7280;
-          margin: 0;
-          font-style: italic;
-          font-weight: 500;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        /* Severity Badge */
-        .severity-badge {
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 0.7rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          flex-shrink: 0;
-        }
-
-        .badge-mild {
-          background: #FEF3C7;
-          color: #D97706;
-        }
-
-        .badge-moderate {
-          background: #FFEDD5;
-          color: #C2410C;
-        }
-
-        .badge-severe {
-          background: #FEE2E2;
-          color: #B91C1C;
-        }
-
-        .badge-unknown {
-          background: #F3F4F6;
-          color: #6B7280;
-        }
-
-        /* Idea Utama Card - Premium Design */
+        /* Idea Utama Card - Blue Style */
         .idea-utama-card {
-          background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+          display: flex;
+          flex-direction: column; 
+          gap: 8px;
           padding: 16px;
           border-radius: 12px;
-          border: 2px solid #3B82F6;
-          margin-bottom: 12px;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
-          animation: fade-in 0.5s ease-out;
+          background: #EFF6FF; /* Light blue bg */
+          border: 1px solid #3B82F6; /* Blue border */
+          margin-bottom: 24px;
+        }
+        
+        /* Inner wrapper for icon + label row */
+        .idea-header-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .idea-icon-wrapper {
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          color: #2563EB; /* Strong blue */
+          flex-shrink: 0;
+          border-radius: 0;
         }
 
         .idea-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
           font-size: 0.75rem;
           font-weight: 700;
-          color: #1E40AF;
-          margin-bottom: 10px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          color: #2563EB; /* Strong blue */
         }
 
-        .idea-header svg {
-          color: #3B82F6;
+        .idea-content-wrapper {
+          flex: 1;
         }
 
         .idea-content {
-          font-size: 0.95rem;
-          color: #1E3A8A;
-          line-height: 1.6;
+          font-size: 0.9rem;
+          color: #374151;
+          line-height: 1.5;
           margin: 0;
-          font-weight: 500;
+          font-weight: 400;
         }
 
         @keyframes fade-in {
@@ -761,7 +749,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           }
 
           .disease-name {
-            font-size: 1.125rem;
+            font-size: 1.1rem;
           }
 
           .details-grid {

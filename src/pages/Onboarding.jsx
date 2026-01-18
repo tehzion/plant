@@ -214,6 +214,43 @@ const Onboarding = () => {
                 .fade-in {
                     animation: fadeIn 0.4s ease-out;
                 }
+                
+                /* Mobile optimizations */
+                @media (max-width: 768px) {
+                    .onboarding-card {
+                        padding: 32px 24px;   /* Reduced from 40px */
+                    }
+                    
+                    .icon-container {
+                        width: 100px;         /* Reduced from 120px */
+                        height: 100px;
+                        margin-bottom: 24px;  /* Reduced from 32px */
+                    }
+                    
+                    .step-icon {
+                        font-size: 3.5rem;    /* Reduced from 4rem */
+                    }
+                    
+                    .step-title {
+                        font-size: 1.35rem;   /* Reduced from var(--font-size-2xl) */
+                        margin-bottom: 16px;  /* Reduced from 24px */
+                    }
+                    
+                    .step-desc {
+                        min-height: 60px;     /* Reduced from 80px */
+                        margin-bottom: 24px;  /* Reduced from 32px */
+                        font-size: 0.9rem;    /* Slightly smaller */
+                    }
+                    
+                    .dots-indicator {
+                        margin-bottom: 24px;  /* Reduced from 32px */
+                    }
+                    
+                    .nav-btn {
+                        padding: 12px 20px;   /* Reduced from 12px 24px */
+                        font-size: 0.9rem;    /* Slightly smaller */
+                    }
+                }
             `}</style>
         </div>
     );

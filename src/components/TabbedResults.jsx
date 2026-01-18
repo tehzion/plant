@@ -2,7 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 
 const TabbedResults = ({ tabs }) => {
   const [activeTab, setActiveTab] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [hasScrolled, setHasScrolled] = useState(false);
   const tabsRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Check scroll position
+  const checkScroll = () => {
+    if (tabsRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setHasScrolled(scrollLeft > 50);
+    }
+  };
 
   // Auto-scroll active tab into view
   useEffect(() => {
@@ -18,10 +30,27 @@ const TabbedResults = ({ tabs }) => {
     }
   }, [activeTab]);
 
+  // Listen to scroll events
+  useEffect(() => {
+    const tabsElement = tabsRef.current;
+    if (tabsElement) {
+      tabsElement.addEventListener('scroll', checkScroll);
+      checkScroll(); // Initial check
+      return () => tabsElement.removeEventListener('scroll', checkScroll);
+    }
+  }, []);
+
   return (
     <div className="tabbed-results">
       {/* Tab Headers - Sticky & Scrollable */}
-      <div className="tab-headers-container">
+      <div 
+        ref={containerRef}
+        className={`tab-headers-container ${
+          canScrollLeft ? 'can-scroll-left' : ''
+        } ${
+          hasScrolled ? 'scrolled' : ''
+        }`}
+      >
         <div className="tab-headers" ref={tabsRef}>
           {tabs.map((tab, index) => (
             <button
@@ -56,18 +85,78 @@ const TabbedResults = ({ tabs }) => {
 
         .tab-headers-container {
           position: sticky;
-          top: 0; /* Align with top if needed, or offset */
+          top: 0;
           z-index: 100;
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(10px);
           border-bottom: 1px solid rgba(0,0,0,0.05);
           box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-          margin-bottom: var(--space-md);
+          margin-bottom: var(--space-sm);
           /* Negative margins to span full width of container if inside filtered View */
-          margin-left: -var(--space-md);
-          margin-right: -var(--space-md);
-          padding-left: var(--space-md);
-          padding-right: var(--space-md);
+          margin-left: calc(-1 * var(--space-sm));
+          margin-right: calc(-1 * var(--space-sm));
+          padding-left: var(--space-sm);
+          padding-right: var(--space-sm);
+          overflow: hidden; /* Ensure mask stays within bounds */
+        }
+        
+        /* Gradient Masks for Scroll Hints - Both Sides */
+        .tab-headers-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 24px;
+            background: linear-gradient(to left, rgba(255,255,255,0), rgba(255,255,255,0.95));
+            pointer-events: none;
+            z-index: 101;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .tab-headers-container.can-scroll-left::before {
+            opacity: 1;
+        }
+
+        .tab-headers-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 60px;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.95));
+            pointer-events: none;
+            z-index: 101;
+        }
+        
+        /* Animated scroll hint chevron */
+        .tab-headers-container::after {
+            content: '›';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--color-primary);
+            animation: pulse-chevron 2s ease-in-out infinite;
+        }
+        
+        .tab-headers-container.scrolled::after {
+            opacity: 0.3;
+            animation: none;
+        }
+        
+        @keyframes pulse-chevron {
+            0%, 100% { 
+                opacity: 0.4;
+                transform: translateX(0);
+            }
+            50% { 
+                opacity: 1;
+                transform: translateX(4px);
+            }
         }
 
         .tab-headers {
@@ -76,7 +165,8 @@ const TabbedResults = ({ tabs }) => {
           scrollbar-width: none; /* Hide scrollbar Firefox */
           -ms-overflow-style: none; /* Hide scrollbar IE/Edge */
           gap: var(--space-md);
-          padding: 0 var(--space-xs);
+          padding: 0 80px 0 var(--space-xs); /* Increased right padding to show peek */
+          scroll-padding: 0 80px 0 0; /* Ensure proper scroll snap */
         }
 
         .tab-headers::-webkit-scrollbar {
@@ -89,17 +179,17 @@ const TabbedResults = ({ tabs }) => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: var(--space-md) var(--space-sm);
+          padding: 10px 8px; /* Smaller padding */
           background: transparent;
           border: none;
           color: var(--color-text-light);
           font-family: var(--font-family);
-          font-size: var(--font-size-sm);
+          font-size: 0.75rem; /* Smaller font */
           font-weight: 500;
           cursor: pointer;
           position: relative;
           transition: all 0.3s ease;
-          min-width: 80px; /* Readable touch target */
+          min-width: 70px; /* Smaller min-width */
         }
 
         .tab-content-wrapper {
@@ -136,7 +226,7 @@ const TabbedResults = ({ tabs }) => {
         }
 
         .tab-icon {
-          font-size: 1.25rem;
+          font-size: 1.1rem; /* Smaller icons */
           display: flex;
           align-items: center;
         }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Camera, Image, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 
-const CameraUpload = ({ onImageCapture, disabled }) => {
+const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     const { t } = useLanguage();
     const [preview, setPreview] = useState(null);
     const fileInputRef = useRef(null);
@@ -11,6 +11,21 @@ const CameraUpload = ({ onImageCapture, disabled }) => {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const videoRef = useRef(null);
     const streamRef = useRef(null);
+
+    // Sync preview with prop
+    useEffect(() => {
+        if (currentImage) {
+            if (typeof currentImage === 'string') {
+                setPreview(currentImage);
+            } else if (currentImage instanceof File) {
+                const reader = new FileReader();
+                reader.onload = (e) => setPreview(e.target.result);
+                reader.readAsDataURL(currentImage);
+            }
+        } else {
+            setPreview(null);
+        }
+    }, [currentImage]);
 
     const startCamera = async () => {
         try {

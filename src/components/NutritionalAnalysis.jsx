@@ -168,6 +168,368 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
         </>
       )}
 
+      <style>{`
+        .nutritional-analysis {
+          width: 100%;
+        }
+
+        /* Container matching other sections */
+        .nutritional-analysis > * {
+          background: #FAFAFA;
+          padding: 20px;
+          border-radius: 16px;
+          margin-bottom: 24px;
+        }
+
+        .section-header-centered {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 16px;
+          background: transparent !important;
+          padding: 0 !important;
+        }
+
+        .section-title {
+          font-size: 1.25rem;
+          color: #1F2937;
+          margin: 0;
+          text-align: center;
+          font-weight: 700;
+        }
+
+        /* Healthy Card - Consistent with other sections */
+        .healthy-card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 20px;
+          border-radius: 12px;
+          background: white !important;
+          border: 1px solid #E5E7EB;
+          max-width: 500px;
+          margin: 0 auto;
+        }
+
+        .healthy-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #D1FAE5;
+          color: #10B981;
+          flex-shrink: 0;
+        }
+
+        .healthy-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .healthy-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #065F46;
+          margin: 0;
+        }
+
+        .healthy-subtitle {
+          font-size: 0.875rem;
+          color: #6B7280;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        /* Deficiency Alert */
+        .deficiency-alert {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          padding: 20px;
+          border-radius: 12px;
+          border: 2px solid;
+          margin-bottom: 16px;
+        }
+
+        .deficiency-alert.severity-mild {
+          background: #FEF3C7;
+          border-color: #FCD34D;
+        }
+
+        .deficiency-alert.severity-moderate {
+          background: #FFEDD5;
+          border-color: #FB923C;
+        }
+
+        .deficiency-alert.severity-severe {
+          background: #FEE2E2;
+          border-color: #F87171;
+        }
+
+        .alert-icon-wrapper {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: white;
+          flex-shrink: 0;
+        }
+
+        .severity-mild .alert-icon-wrapper {
+          color: #D97706;
+        }
+
+        .severity-moderate .alert-icon-wrapper {
+          color: #EA580C;
+        }
+
+        .severity-severe .alert-icon-wrapper {
+          color: #DC2626;
+        }
+
+        .alert-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .alert-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .alert-title {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #1F2937;
+        }
+
+        .severity-badge {
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .severity-badge.mild {
+          background: #FCD34D;
+          color: #92400E;
+        }
+
+        .severity-badge.moderate {
+          background: #FB923C;
+          color: #9A3412;
+        }
+
+        .severity-badge.severe {
+          background: #F87171;
+          color: #991B1B;
+        }
+
+        .alert-description {
+          font-size: 0.9rem;
+          color: #4B5563;
+          line-height: 1.6;
+          margin: 0;
+        }
+
+        .symptoms-list {
+          margin: 8px 0 0 0;
+          padding-left: 20px;
+          color: #4B5563;
+          font-size: 0.875rem;
+          line-height: 1.6;
+        }
+
+        .symptoms-list li {
+          margin-bottom: 4px;
+        }
+
+        /* Nutrients Section */
+        .nutrients-section {
+          background: white;
+          padding: 20px;
+          border-radius: 12px;
+          border: 1px solid #E5E7EB;
+          margin-bottom: 16px;
+        }
+
+        .subsection-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .subsection-icon {
+          color: var(--color-primary);
+        }
+
+        .subsection-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1F2937;
+          margin: 0;
+        }
+
+        .nutrients-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .nutrient-chip {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 14px;
+          background: #F3F4F6;
+          border: 1px solid #E5E7EB;
+          border-radius: 20px;
+          font-size: 0.875rem;
+        }
+
+        .nutrient-name {
+          font-weight: 600;
+          color: #1F2937;
+        }
+
+        .chip-severity {
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .chip-severity.mild {
+          background: #FEF3C7;
+          color: #92400E;
+        }
+
+        .chip-severity.moderate {
+          background: #FFEDD5;
+          color: #9A3412;
+        }
+
+        .chip-severity.severe {
+          background: #FEE2E2;
+          color: #991B1B;
+        }
+
+        /* Fertilizer Section */
+        .fertilizer-section {
+          background: white;
+          padding: 20px;
+          border-radius: 12px;
+          border: 1px solid #E5E7EB;
+        }
+
+        .subsection-description {
+          font-size: 0.875rem;
+          color: #6B7280;
+          margin: 0 0 16px 0;
+          line-height: 1.5;
+        }
+
+        .fertilizers-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .fertilizer-card {
+          background: #F9FAFB;
+          padding: 16px;
+          border-radius: 10px;
+          border: 1px solid #E5E7EB;
+        }
+
+        .fertilizer-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .fertilizer-icon-circle {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #DBEAFE;
+          color: #3B82F6;
+          flex-shrink: 0;
+        }
+
+        .fertilizer-name {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #1F2937;
+          flex: 1;
+        }
+
+        .fertilizer-details {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .detail-row {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+          font-size: 0.875rem;
+        }
+
+        .detail-label {
+          font-weight: 600;
+          color: #6B7280;
+          min-width: 90px;
+        }
+
+        .detail-value {
+          color: #374151;
+          flex: 1;
+        }
+
+        @media (max-width: 768px) {
+          .nutritional-analysis > * {
+            padding: 16px;
+          }
+
+          .section-title {
+            font-size: 1.125rem;
+          }
+
+          .healthy-card {
+            max-width: 100%;
+          }
+
+          .deficiency-alert {
+            padding: 16px;
+          }
+
+          .nutrients-section,
+          .fertilizer-section {
+            padding: 16px;
+          }
+        }
+      `}</style>
     </div>
   );
 };

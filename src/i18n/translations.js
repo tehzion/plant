@@ -44,6 +44,11 @@ export const translations = {
             about: 'About',
             terms: 'Terms of Use',
             privacy: 'Privacy Policy',
+            shop: 'Shop',
+        },
+
+        settings: {
+            guide: 'User Guide',
         },
 
         // Home Page
@@ -59,11 +64,17 @@ export const translations = {
             selectCategory: 'Select Plant Category',
             selectCategorySubtitle: 'Choose the specific crop type for accurate disease detection',
             selectScale: 'Select your farming scale for tailored recommendations',
+            scaleTitle: 'Select Farm Scale',
             selectScaleSubtitle: 'Tell us your farm size for accurate product recommendations',
             analyzePlant: 'Analyze Plant',
+            analyzeButton: 'Analyze Plant',
             analyzing: 'Analyzing Your Plant...',
             analyzingDesc: 'Our AI is examining the images and identifying any issues',
             processingImages: 'Processing images',
+            stepProcessing: 'Processing your image...',
+            stepAI: 'AI is analyzing patterns...',
+            stepFinalizing: 'Finalizing diagnosis...',
+            didYouKnow: 'Did you know?',
             detectingPlantType: 'Detecting plant type',
             analyzingHealth: 'Analyzing health status',
             generatingRecommendations: 'Generating recommendations',
@@ -107,9 +118,18 @@ export const translations = {
             tip4Title: 'Balanced Fertilizing',
             tip4Desc: 'Avoid over-fertilizing; excess nutrients can burn plant roots.',
 
+            // Services & Statistics
+            services: 'Services',
+            statisticsDesc: 'View your scan analysis trends',
+            keyInfo: 'Key Info',
+
             // Progress Steps
             step1: 'Upload Photo',
+            step1Title: 'Upload Plant Photo',
+            step1Desc: 'Take a clear photo of your plant showing any visible symptoms',
             step2: 'Plant Details',
+            step2Title: 'Plant Details',
+            step2Desc: 'Select your crop type and farm scale',
             step3: 'Analyzing',
             step4: 'Completion',
 
@@ -123,13 +143,22 @@ export const translations = {
             // Farm Scale
             acreScale: 'Acre / Ekar Scale Farming',
             acreDesc: 'Large commercial farms (1+ acres/ekar)',
-            acreDetail: 'Bulk quantities, wholesale pricing',
+            acreDetail: 'Bulk quantity, wholesale price',
             treeScale: 'Tree-by-Tree',
-            treeDesc: 'Small orchards or plantations',
-            treeDetail: 'Per tree calculations',
+            treeDesc: 'Small orchard or farm',
+            treeDetail: 'Calculation per tree',
             personalScale: 'Personal/Home Garden',
-            personalDesc: 'Backyard or hobby farming',
-            personalDetail: 'Small quantities, retail',
+            personalDesc: 'Backyard or hobby',
+            personalDetail: 'Small quantity, retail',
+
+            // Quantity Inputs
+            enterAcres: 'Enter Acreage',
+            enterTrees: 'Number of Trees',
+            enterPlants: 'Number of Plants',
+            acres: 'Acres',
+            trees: 'Trees',
+            plants: 'Plants',
+            estimatedTrees: 'Estimated Trees:',
             selectScaleSubtitle: 'Tell us your farm size for accurate product recommendations',
             enterAcres: 'Enter size in acres / ekar:',
             enterTrees: 'Enter number of trees:',
@@ -267,13 +296,6 @@ export const translations = {
             plantIsHealthy: 'Plant is Healthy!',
             keepUpGoodWork: 'Keep up the good work! Your plant is in great condition.',
 
-            // Nutrition
-            noDeficiency: 'No Nutritional Deficiencies Detected',
-            noDeficiencyMessage: 'Your plant appears to have adequate nutrition. Continue with regular fertilization schedule.',
-            nutritionalIssues: 'Nutritional Deficiencies',
-            fertilizerRecommendations: 'Fertilizer Recommendations',
-            nutrientDeficiencyDetected: 'Nutrient Deficiency Detected',
-            lackingNutrients: 'Lacking Nutrients',
 
             // Products
             recommendedProducts: 'Recommended Products for Your Issue',
@@ -286,6 +308,11 @@ export const translations = {
             fertilizerRecommendations: 'Recommended Fertilizers & Supplements',
             noDeficiency: 'No Nutritional Deficiencies Detected',
             noDeficiencyMessage: 'Your plant appears to have adequate nutrition. Continue with regular fertilization schedule.',
+            nutrientDeficiencyDetected: 'Nutrient Deficiency Detected',
+            lackingNutrients: 'Lacking Nutrients:',
+            product: 'Product:',
+            dosage: 'Dosage:',
+            howToApply: 'How to Apply:',
 
             // Products
             diseaseControlProducts: 'Disease & Pest Control Products',
@@ -373,6 +400,7 @@ export const translations = {
             scanHistory: 'Scan History',
             clearAll: 'Clear All',
             clearConfirm: 'Are you sure you want to clear all scan history?',
+            confirmDeleteSingle: 'Delete this scan?',
             noHistory: 'No Scan History',
             noHistoryMessage: 'Your scanned plants will appear here',
             scanFirstPlant: 'Scan Your First Plant',
@@ -421,6 +449,54 @@ export const translations = {
             step3Title: 'Get Treatment',
             step3Desc: 'Receive expert advice, product recommendations, and care tips.',
         },
+
+        // Terms of Use
+        terms: {
+            title: 'Terms of Use',
+            introTitle: '1. Introduction',
+            introContent: 'Welcome to Smart Plant Diseases & Advisor. By accessing or using our application, you agree to be bound by these Terms of Use ("Terms"). These Terms are governed by and construed in accordance with the laws of Malaysia.',
+            eligibilityTitle: '2. Eligibility',
+            eligibilityContent: 'This Service is intended for use by individuals located in Malaysia. If you access the Service from outside Malaysia, you do so at your own risk and are responsible for compliance with the laws of your jurisdiction.',
+            useTitle: '3. Use of Service',
+            useContent: 'Our service provides AI-based plant disease analysis. While we strive for accuracy, the results are for informational purposes only and should not replace professional agricultural advice from certified agronomists in Malaysia.',
+            useList1: 'You agree to use the app only for lawful purposes under Malaysian law.',
+            useList2: 'You will not use the service to diagnose regulated pests or diseases without reporting to the Department of Agriculture Malaysia if required.',
+            useList3: 'You are responsible for the images you upload and must own the rights to them.',
+            ipTitle: '4. Intellectual Property',
+            ipContent: 'All content, features, and functionality of the App (including but not limited to AI models, design, and software) are the exclusive property of Smart Plant Diseases & Advisor and are protected by Malaysian copyright and intellectual property laws.',
+            liabilityTitle: '5. Limitation of Liability',
+            liabilityContent: 'To the fullest extent permitted by Malaysian law, Smart Plant Diseases & Advisor shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of the Service.',
+            changesTitle: '6. Changes to Terms',
+            changesContent: 'We reserve the right to modify these terms at any time. We will notify users of any significant changes. Continued use of the app constitutes acceptance of new terms.',
+            contactTitle: '7. Contact Us',
+            contactContent: 'For any inquiries regarding these Terms, please contact us at support@smartplant.my.',
+        },
+
+        // Privacy Policy
+        privacy: {
+            title: 'Privacy Policy',
+            complianceTitle: '1. Compliance with PDPA',
+            complianceContent: 'We are committed to protecting your personal data in accordance with the Personal Data Protection Act 2010 (PDPA) of Malaysia. This notice explains how we collect, use, and process your personal information.',
+            collectTitle: '2. Information We Collect',
+            collectContent: 'We collect information necessary to provide our plant diagnosis service:',
+            collectImagesLabel: 'Images:',
+            collectImagesText: 'Photos you upload for analysis.',
+            collectDeviceLabel: 'Device Data:',
+            collectDeviceText: 'Technical information to improve app stability.',
+            collectUsageLabel: 'Usage Data:',
+            collectUsageText: 'Information about how you interact with our service.',
+            useTitle: '3. How We Use Information',
+            useContent: 'We use your data to:',
+            useList1: 'Provide and improve AI disease analysis.',
+            useList2: 'Personalize your user experience.',
+            useList3: 'Comply with legal obligations under Malaysian law.',
+            storageTitle: '4. Data Storage & Security',
+            storageContent: 'Your scan history is stored locally on your device using encryption. We implement reasonable security measures to protect your data from unauthorized access, loss, or misuse.',
+            thirdPartyTitle: '5. Third-Party Disclosures',
+            thirdPartyContent: 'We do not sell your personal data. We may share data with service providers who assist our operations, subject to confidentiality agreements and compliance with PDPA.',
+            contactTitle: '6. Contact Us',
+            contactContent: 'If you have any questions about this Privacy Policy, please contact our support team at support@smartplant.my.',
+        },
     },
 
     ms: {
@@ -466,6 +542,11 @@ export const translations = {
             about: 'Tentang',
             terms: 'Terma Penggunaan',
             privacy: 'Dasar Privasi',
+            shop: 'Kedai',
+        },
+
+        settings: {
+            guide: 'Panduan Pengguna',
         },
 
         // Home Page
@@ -482,11 +563,17 @@ export const translations = {
             selectCategory: 'Pilih Kategori Tumbuhan',
             selectCategorySubtitle: 'Pilih jenis tanaman untuk pengesanan penyakit yang tepat',
             selectScale: 'Pilih Skala Ladang',
+            scaleTitle: 'Pilih Skala Ladang',
             selectScaleSubtitle: 'Beritahu kami saiz ladang untuk cadangan produk yang tepat',
             analyzePlant: 'Analisis Tumbuhan',
+            analyzeButton: 'Analisis Tumbuhan',
             analyzing: 'Menganalisis Tumbuhan Anda...',
             analyzingDesc: 'AI kami sedang memeriksa imej dan mengenal pasti sebarang masalah',
             processingImages: 'Memproses imej',
+            stepProcessing: 'Memproses imej anda...',
+            stepAI: 'AI sedang menganalisis corak...',
+            stepFinalizing: 'Menyiapkan diagnosis...',
+            didYouKnow: 'Adakah anda tahu?',
             detectingPlantType: 'Mengesan jenis tumbuhan',
             analyzingHealth: 'Menganalisis status kesihatan',
             generatingRecommendations: 'Menjana cadangan',
@@ -529,9 +616,18 @@ export const translations = {
             tip4Title: 'Pembajaan Seimbang',
             tip4Desc: 'Elakkan pembajaan berlebihan; nutrien berlebihan boleh merosakkan akar.',
 
+            // Services & Statistics
+            services: 'Perkhidmatan',
+            statisticsDesc: 'Lihat trend analisis imbasan anda',
+            keyInfo: 'Info Utama',
+
             // Progress Steps
             step1: 'Muat Naik Foto',
+            step1Title: 'Muat Naik Foto Tumbuhan',
+            step1Desc: 'Ambil foto yang jelas menunjukkan sebarang gejala yang kelihatan',
             step2: 'Butiran Tumbuhan',
+            step2Title: 'Butiran Tumbuhan',
+            step2Desc: 'Pilih jenis tanaman dan skala ladang anda',
             step3: 'Menganalisis',
             step4: 'Selesai',
 
@@ -552,6 +648,15 @@ export const translations = {
             personalScale: 'Taman Peribadi/Rumah',
             personalDesc: 'Taman belakang rumah atau hobi',
             personalDetail: 'Kuantiti kecil, runcit',
+
+            // Quantity Inputs
+            enterAcres: 'Masukkan Ekar',
+            enterTrees: 'Bilangan Pokok',
+            enterPlants: 'Bilangan Tumbuhan',
+            acres: 'Ekar',
+            trees: 'Pokok',
+            plants: 'Tumbuhan',
+            estimatedTrees: 'Anggaran Pokok:',
             enterAcres: 'Masukkan saiz dalam acre / ekar:',
             enterTrees: 'Masukkan bilangan pokok:',
             enterPlants: 'Masukkan bilangan tanaman:', // or 'tumbuhan'
@@ -689,13 +794,6 @@ export const translations = {
             plantIsHealthy: 'Tumbuhan Sihat!',
             keepUpGoodWork: 'Teruskan usaha anda! Tumbuhan anda berada dalam keadaan yang baik.',
 
-            // Nutrition
-            noDeficiency: 'Tiada Kekurangan Nutrien Dikesan',
-            noDeficiencyMessage: 'Tumbuhan anda mempunyai nutrien yang mencukupi. Teruskan dengan jadual pembajaan biasa.',
-            nutritionalIssues: 'Kekurangan Nutrien',
-            fertilizerRecommendations: 'Cadangan Baja',
-            nutrientDeficiencyDetected: 'Kekurangan Nutrien Dikesan',
-            lackingNutrients: 'Kekurangan Nutrien',
 
             // Products
             recommendedProducts: 'Produk yang Disyorkan untuk Masalah Anda',
@@ -845,6 +943,54 @@ export const translations = {
             step2Desc: 'AI pintar kami mengimbas imej untuk mengenal pasti kemungkinan penyakit dengan segera.',
             step3Title: 'Dapatkan Rawatan',
             step3Desc: 'Terima nasihat pakar, cadangan produk, dan tips penjagaan.',
+        },
+
+        // Terma Penggunaan
+        terms: {
+            title: 'Terma Penggunaan',
+            introTitle: '1. Pengenalan',
+            introContent: 'Selamat datang ke Smart Plant Diseases & Advisor. Dengan mengakses atau menggunakan aplikasi kami, anda bersetuju untuk terikat dengan Terma Penggunaan ("Terma") ini. Terma ini dikawal dan ditafsirkan mengikut undang-undang Malaysia.',
+            eligibilityTitle: '2. Kelayakan',
+            eligibilityContent: 'Perkhidmatan ini bertujuan untuk digunakan oleh individu yang berada di Malaysia. Jika anda mengakses Perkhidmatan dari luar Malaysia, anda melakukannya atas risiko anda sendiri dan bertanggungjawab untuk mematuhi undang-undang bidang kuasa anda.',
+            useTitle: '3. Penggunaan Perkhidmatan',
+            useContent: 'Perkhidmatan kami menyediakan analisis penyakit tumbuhan berasaskan AI. Walaupun kami berusaha untuk ketepatan, keputusan adalah untuk tujuan maklumat sahaja dan tidak sepatutnya menggantikan nasihat pertanian profesional daripada ahli agronomi bertauliah di Malaysia.',
+            useList1: 'Anda bersetuju untuk menggunakan aplikasi hanya untuk tujuan yang sah di bawah undang-undang Malaysia.',
+            useList2: 'Anda tidak akan menggunakan perkhidmatan untuk mendiagnosis perosak atau penyakit terkawal tanpa melapor kepada Jabatan Pertanian Malaysia jika diperlukan.',
+            useList3: 'Anda bertanggungjawab terhadap imej yang anda muat naik dan mesti memiliki hak ke atasnya.',
+            ipTitle: '4. Harta Intelek',
+            ipContent: 'Semua kandungan, ciri, dan fungsi Aplikasi (termasuk tetapi tidak terhad kepada model AI, reka bentuk, dan perisian) adalah hak milik eksklusif Smart Plant Diseases & Advisor dan dilindungi oleh undang-undang hak cipta dan harta intelek Malaysia.',
+            liabilityTitle: '5. Had Liabiliti',
+            liabilityContent: 'Sejauh yang dibenarkan oleh undang-undang Malaysia, Smart Plant Diseases & Advisor tidak akan bertanggungjawab ke atas sebarang kerosakan tidak langsung, sampingan, khas, berbangkit, atau punitif yang timbul daripada atau berkaitan dengan penggunaan Perkhidmatan anda.',
+            changesTitle: '6. Perubahan Terma',
+            changesContent: 'Kami berhak untuk mengubah suai terma ini pada bila-bila masa. Kami akan memaklumkan pengguna tentang sebarang perubahan ketara. Penggunaan berterusan aplikasi merupakan penerimaan terma baharu.',
+            contactTitle: '7. Hubungi Kami',
+            contactContent: 'Untuk sebarang pertanyaan mengenai Terma ini, sila hubungi kami di support@smartplant.my.',
+        },
+
+        // Dasar Privasi
+        privacy: {
+            title: 'Dasar Privasi',
+            complianceTitle: '1. Pematuhan dengan PDPA',
+            complianceContent: 'Kami komited untuk melindungi data peribadi anda mengikut Akta Perlindungan Data Peribadi 2010 (PDPA) Malaysia. Notis ini menerangkan cara kami mengumpul, menggunakan, dan memproses maklumat peribadi anda.',
+            collectTitle: '2. Maklumat yang Kami Kumpul',
+            collectContent: 'Kami mengumpul maklumat yang diperlukan untuk menyediakan perkhidmatan diagnosis tumbuhan kami:',
+            collectImagesLabel: 'Imej:',
+            collectImagesText: 'Foto yang anda muat naik untuk analisis.',
+            collectDeviceLabel: 'Data Peranti:',
+            collectDeviceText: 'Maklumat teknikal untuk meningkatkan kestabilan aplikasi.',
+            collectUsageLabel: 'Data Penggunaan:',
+            collectUsageText: 'Maklumat tentang cara anda berinteraksi dengan perkhidmatan kami.',
+            useTitle: '3. Bagaimana Kami Menggunakan Maklumat',
+            useContent: 'Kami menggunakan data anda untuk:',
+            useList1: 'Menyediakan dan meningkatkan analisis penyakit AI.',
+            useList2: 'Memperibadikan pengalaman pengguna anda.',
+            useList3: 'Mematuhi kewajipan undang-undang di bawah undang-undang Malaysia.',
+            storageTitle: '4. Penyimpanan & Keselamatan Data',
+            storageContent: 'Sejarah imbasan anda disimpan secara tempatan pada peranti anda menggunakan penyulitan. Kami melaksanakan langkah keselamatan yang munasabah untuk melindungi data anda daripada akses tanpa izin, kehilangan, atau penyalahgunaan.',
+            thirdPartyTitle: '5. Pendedahan Pihak Ketiga',
+            thirdPartyContent: 'Kami tidak menjual data peribadi anda. Kami mungkin berkongsi data dengan penyedia perkhidmatan yang membantu operasi kami, tertakluk kepada perjanjian kerahsiaan dan pematuhan PDPA.',
+            contactTitle: '6. Hubungi Kami',
+            contactContent: 'Jika anda mempunyai sebarang soalan mengenai Dasar Privasi ini, sila hubungi pasukan sokongan kami di support@smartplant.my.',
         },
     },
 };

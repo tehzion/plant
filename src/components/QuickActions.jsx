@@ -50,10 +50,10 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
           background: rgba(255, 255, 255, 0.8);
           backdrop-filter: blur(10px);
           border: 1px solid rgba(0,0,0,0.05);
-          border-radius: var(--radius-2xl);
+          border-radius: var(--radius-lg); /* Less rounded on mobile */
           box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-          margin: var(--space-sm) 0 var(--space-md); /* Reduced margins */
-          padding: var(--space-sm);
+          margin: 0 0 var(--space-sm); /* Smaller margins */
+          padding: 8px; /* Smaller padding */
         }
 
         .actions-container {
@@ -70,15 +70,15 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
           align-items: center;
           justify-content: center;
           gap: 4px;
-          padding: 10px 4px;
+          padding: 8px 4px; /* Smaller padding */
           border: none;
           background: transparent;
           color: var(--color-text-secondary);
           font-family: var(--font-family);
-          font-size: var(--font-size-xs);
+          font-size: 0.7rem; /* Smaller font */
           font-weight: 600;
           cursor: pointer;
-          border-radius: var(--radius-lg);
+          border-radius: var(--radius-md);
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -126,6 +126,11 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
           align-items: center;
           justify-content: center;
           margin-bottom: 2px;
+        }
+        
+        .icon svg {
+          width: 18px; /* Smaller icons on mobile */
+          height: 18px;
         }
 
         @media (max-width: 480px) {

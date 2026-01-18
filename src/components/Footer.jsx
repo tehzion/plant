@@ -1,7 +1,9 @@
 import { useLocation, Link } from 'react-router-dom';
+import { useLanguage } from '../i18n/i18n.jsx';
 
 const Footer = () => {
     const location = useLocation();
+    const { t } = useLanguage();
     const isHome = location.pathname === '/';
 
     return (
@@ -9,9 +11,9 @@ const Footer = () => {
             <div className="container">
                 {isHome && (
                     <div className="footer-links">
-                        <Link to="/terms">Terms of Use</Link>
+                        <Link to="/terms">{t('nav.terms')}</Link>
                         <span className="separator">•</span>
-                        <Link to="/privacy">Privacy Policy</Link>
+                        <Link to="/privacy">{t('nav.privacy')}</Link>
                     </div>
                 )}
                 <p>

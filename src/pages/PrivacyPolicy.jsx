@@ -81,7 +81,7 @@ const PrivacyPolicy = () => {
 
                 {/* Header */}
                 <div className="legal-page-header">
-                    <h2 className="page-title">Privacy Policy</h2>
+                    <h2 className="page-title">{t('privacy.title')}</h2>
                     <p className="page-subtitle">
                         Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
@@ -89,24 +89,63 @@ const PrivacyPolicy = () => {
 
                 {/* Content Sections */}
                 <div className="legal-content-wrapper">
-                    {sections.map((section) => (
-                        <div key={section.id} id={section.id} className="legal-section-card">
-                            <div className="legal-section-header">
-                                <div className="legal-icon-badge">{section.icon}</div>
-                                <h3 className="legal-section-title">{section.title}</h3>
-                            </div>
-                            <p className="legal-section-text">{section.content}</p>
-                            {section.list && (
-                                <ul className="legal-list">
-                                    {section.list.map((item, idx) => (
-                                        <li key={idx}>
-                                            {item.label && <strong>{item.label}</strong>} {item.text}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
+                    <div id="compliance" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Shield size={20} /></div>
+                            <h3 className="legal-section-title">{t('privacy.complianceTitle')}</h3>
                         </div>
-                    ))}
+                        <p className="legal-section-text">{t('privacy.complianceContent')}</p>
+                    </div>
+
+                    <div id="information" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Database size={20} /></div>
+                            <h3 className="legal-section-title">{t('privacy.collectTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('privacy.collectContent')}</p>
+                        <ul className="legal-list">
+                            <li><strong>{t('privacy.collectImagesLabel')}</strong> {t('privacy.collectImagesText')}</li>
+                            <li><strong>{t('privacy.collectDeviceLabel')}</strong> {t('privacy.collectDeviceText')}</li>
+                            <li><strong>{t('privacy.collectUsageLabel')}</strong> {t('privacy.collectUsageText')}</li>
+                        </ul>
+                    </div>
+
+                    <div id="usage" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Bell size={20} /></div>
+                            <h3 className="legal-section-title">{t('privacy.useTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('privacy.useContent')}</p>
+                        <ul className="legal-list">
+                            <li>{t('privacy.useList1')}</li>
+                            <li>{t('privacy.useList2')}</li>
+                            <li>{t('privacy.useList3')}</li>
+                        </ul>
+                    </div>
+
+                    <div id="storage" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Lock size={20} /></div>
+                            <h3 className="legal-section-title">{t('privacy.storageTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('privacy.storageContent')}</p>
+                    </div>
+
+                    <div id="third-party" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Users size={20} /></div>
+                            <h3 className="legal-section-title">{t('privacy.thirdPartyTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('privacy.thirdPartyContent')}</p>
+                    </div>
+
+                    <div id="contact" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Mail size={20} /></div>
+                            <h3 className="legal-section-title">{t('privacy.contactTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('privacy.contactContent')}</p>
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -116,7 +155,7 @@ const PrivacyPolicy = () => {
                         © {new Date().getFullYear()} Smart Plant Diseases & Advisor
                     </p>
                     <p className="footer-subtext">
-                        Dengan bangganya dibuat di MALAYSIA 🇲🇾
+                        {t('footer.copyright')} 🇲🇾
                     </p>
                 </div>
             </div>

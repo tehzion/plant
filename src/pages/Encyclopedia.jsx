@@ -179,17 +179,28 @@ const Encyclopedia = () => {
         }
 
         .category-wrapper {
-            /* Mask overflow for nice fade effect on edges if scrollable */
             position: relative;
+        }
+
+        .category-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 12px;
+            width: 48px;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1));
+            pointer-events: none;
         }
         
         .category-filter {
           display: flex;
           gap: 12px;
           overflow-x: auto;
-          padding: 4px 4px 12px 4px;
+          padding: 4px 60px 12px 4px;
           scrollbar-width: none;
           -ms-overflow-style: none;
+          scroll-behavior: smooth;
         }
         
         .category-filter::-webkit-scrollbar {
@@ -277,6 +288,51 @@ const Encyclopedia = () => {
             .diseases-grid {
                  grid-template-columns: repeat(3, 1fr);
                  gap: 24px;
+            }
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .encyclopedia-header {
+                padding-top: 16px;    /* Reduced from 24px */
+                margin-bottom: 20px;  /* Reduced from 24px */
+            }
+            
+            .page-title {
+                font-size: 1.4rem;    /* Reduced from 1.75rem */
+            }
+            
+            .page-subtitle {
+                font-size: 0.9rem;    /* Reduced from 1rem */
+            }
+            
+            .controls-card {
+                padding: 20px;        /* Reduced from 24px */
+                margin-bottom: 24px;  /* Reduced from 32px */
+                border-radius: 20px;  /* Slightly smaller */
+            }
+            
+            .search-input {
+                padding: 14px 20px 14px 52px;  /* Reduced from 16px */
+                font-size: 0.95rem;   /* Reduced from 1rem */
+            }
+            
+            .filter-btn {
+                padding: 8px 16px;    /* Reduced from 10px 20px */
+                font-size: 0.85rem;   /* Reduced from 0.9rem */
+            }
+            
+            .results-info {
+                font-size: 0.85rem;   /* Reduced from 0.9rem */
+                margin-bottom: 12px;  /* Reduced from 16px */
+            }
+            
+            .no-results h3 {
+                font-size: 1.15rem;   /* Reduced from 1.25rem */
+            }
+            
+            .no-results p {
+                font-size: 0.9rem;    /* Slightly reduced */
             }
         }
       `}</style>

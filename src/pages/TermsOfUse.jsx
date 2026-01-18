@@ -67,7 +67,7 @@ const TermsOfUse = () => {
 
                 {/* Header */}
                 <div className="legal-page-header">
-                    <h2 className="page-title">Terms of Use</h2>
+                    <h2 className="page-title">{t('terms.title')}</h2>
                     <p className="page-subtitle">
                         Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
@@ -75,22 +75,66 @@ const TermsOfUse = () => {
 
                 {/* Content Sections */}
                 <div className="legal-content-wrapper">
-                    {sections.map((section) => (
-                        <div key={section.id} id={section.id} className="legal-section-card">
-                            <div className="legal-section-header">
-                                <div className="legal-icon-badge">{section.icon}</div>
-                                <h3 className="legal-section-title">{section.title}</h3>
-                            </div>
-                            <p className="legal-section-text">{section.content}</p>
-                            {section.list && (
-                                <ul className="legal-list">
-                                    {section.list.map((item, idx) => (
-                                        <li key={idx}>{item}</li>
-                                    ))}
-                                </ul>
-                            )}
+                    <div id="introduction" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><FileText size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.introTitle')}</h3>
                         </div>
-                    ))}
+                        <p className="legal-section-text">{t('terms.introContent')}</p>
+                    </div>
+
+                    <div id="eligibility" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Shield size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.eligibilityTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('terms.eligibilityContent')}</p>
+                    </div>
+
+                    <div id="use-of-service" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><AlertCircle size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.useTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('terms.useContent')}</p>
+                        <ul className="legal-list">
+                            <li>{t('terms.useList1')}</li>
+                            <li>{t('terms.useList2')}</li>
+                            <li>{t('terms.useList3')}</li>
+                        </ul>
+                    </div>
+
+                    <div id="intellectual-property" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Scale size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.ipTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('terms.ipContent')}</p>
+                    </div>
+
+                    <div id="limitation" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><AlertCircle size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.liabilityTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('terms.liabilityContent')}</p>
+                    </div>
+
+                    <div id="changes" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><RefreshCw size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.changesTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('terms.changesContent')}</p>
+                    </div>
+
+                    <div id="contact" className="legal-section-card">
+                        <div className="legal-section-header">
+                            <div className="legal-icon-badge"><Mail size={20} /></div>
+                            <h3 className="legal-section-title">{t('terms.contactTitle')}</h3>
+                        </div>
+                        <p className="legal-section-text">{t('terms.contactContent')}</p>
+                    </div>
                 </div>
 
                 {/* Footer */}
@@ -100,7 +144,7 @@ const TermsOfUse = () => {
                         © {new Date().getFullYear()} Smart Plant Diseases & Advisor
                     </p>
                     <p className="footer-subtext">
-                        Dengan bangganya dibuat di MALAYSIA 🇲🇾
+                        {t('footer.copyright')} 🇲🇾
                     </p>
                 </div>
             </div>

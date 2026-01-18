@@ -65,6 +65,8 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
     }
   ];
 
+  const selectedScaleData = scales.find(s => s.id === selected);
+
   return (
     <div className="farm-scale-selector">
       <h3 className="selector-title">{t('home.selectScale')}</h3>
@@ -88,34 +90,34 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
                 <div className="selected-indicator">✓</div>
               )}
             </button>
-
-            {/* Quantity Input */}
-            {selected === scale.id && scale.hasQuantity && (
-              <div className="quantity-input-container fade-in">
-                <label className="quantity-label">{scale.quantityLabel}</label>
-                <div className="input-with-unit">
-                  <input
-                    type={scale.inputType}
-                    value={quantity || ''}
-                    onChange={(e) => onQuantityChange(e.target.value)}
-                    placeholder="0"
-                    className="quantity-input"
-                    min="1"
-                    disabled={disabled}
-                  />
-                  <span className="unit-label">{scale.quantityUnit}</span>
-                </div>
-                {/* Estimation Display for Acre/Ekar */}
-                {scale.id === 'acre' && quantity > 0 && selectedCategory && (
-                  <div className="estimation-info">
-                    {t('home.estimatedTrees')} {calculateEstimatedTrees(selectedCategory, quantity)}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         ))}
       </div>
+
+      {/* Selected Scale Input Section - Rendered below grid */}
+      {selectedScaleData && selectedScaleData.hasQuantity && (
+        <div className="quantity-input-container fade-in mt-md">
+          <label className="quantity-label">{selectedScaleData.quantityLabel}</label>
+          <div className="input-with-unit">
+            <input
+              type={selectedScaleData.inputType}
+              value={quantity || ''}
+              onChange={(e) => onQuantityChange(e.target.value)}
+              placeholder="0"
+              className="quantity-input"
+              min="1"
+              disabled={disabled}
+            />
+            <span className="unit-label">{selectedScaleData.quantityUnit}</span>
+          </div>
+          {/* Estimation Display for Acre/Ekar */}
+          {selected === 'acre' && quantity > 0 && selectedCategory && (
+            <div className="estimation-info">
+              {t('home.estimatedTrees')} {calculateEstimatedTrees(selectedCategory, quantity)}
+            </div>
+          )}
+        </div>
+      )}
 
       <style>{`
         .farm-scale-selector {

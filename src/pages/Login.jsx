@@ -298,12 +298,39 @@ const Login = () => {
 
                 @media (max-width: 480px) {
                     .login-card {
-                        padding: 24px;
+                        padding: 24px 20px;   /* Reduced from 40px */
                         border-radius: 20px;
                     }
                     
                     .login-title {
-                        font-size: 1.5rem;
+                        font-size: 1.4rem;    /* Reduced from 1.5rem */
+                    }
+                    
+                    .login-subtitle {
+                        font-size: 0.9rem;    /* Reduced from 1rem */
+                    }
+                    
+                    .form-label {
+                        font-size: 0.85rem;   /* Reduced from 0.9rem */
+                    }
+                    
+                    .form-input {
+                        padding: 12px 16px 12px 44px;  /* Reduced from 14px */
+                        font-size: 0.9rem;    /* Reduced from 1rem */
+                    }
+                    
+                    .login-btn {
+                        padding: 14px;        /* Reduced from 16px */
+                        font-size: 0.95rem;   /* Reduced from 1rem */
+                    }
+                    
+                    .social-btn {
+                        padding: 12px;        /* Reduced from 14px */
+                        font-size: 0.9rem;    /* Reduced from 0.95rem */
+                    }
+                    
+                    .login-footer {
+                        font-size: 0.9rem;    /* Reduced from 0.95rem */
                     }
                 }
             `}</style>

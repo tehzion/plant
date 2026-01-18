@@ -127,11 +127,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
           <p className="section-subtitle">
             {scaleInfo.title}
           </p>
-          {scaleInfo.note && (
-            <div className="scale-note">
-              <Lightbulb size={16} className="note-icon" /> {scaleInfo.note}
-            </div>
-          )}
 
           <div className="products-grid">
             {products.nutrition.map((product, index) => renderProductCard(product, index))}

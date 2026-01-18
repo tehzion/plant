@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Microscope, Search, Pill, Shield } from 'lucide-react';
 
@@ -112,25 +113,25 @@ const DiseaseCard = ({ disease }) => {
         {showModal ? t('encyclopedia.close') : t('encyclopedia.showMore')}
       </button>
 
-      {showModal && (
+      {showModal && createPortal(
         <div className="mobile-modal-only">
-          <div 
+          <div
             className="modal-overlay"
             onClick={(e) => {
               e.stopPropagation();
               setShowModal(false);
             }}
           >
-            <div 
-              className="modal-content fade-in" 
+            <div
+              className="modal-content fade-in"
               onClick={e => e.stopPropagation()}
             >
-              <button 
-                className="close-btn" 
+              <button
+                className="close-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowModal(false);
-                }} 
+                }}
                 aria-label={t('encyclopedia.close')}
               >×</button>
 
@@ -181,21 +182,10 @@ const DiseaseCard = ({ disease }) => {
                   </ul>
                 </div>
               </div>
-
-              <div className="modal-footer">
-                <button 
-                  className="btn btn-primary w-full" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowModal(false);
-                  }}
-                >
-                  {t('common.close') || 'Close'}
-                </button>
-              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <style>{`
@@ -263,14 +253,14 @@ const DiseaseCard = ({ disease }) => {
           width: 100%;
         }
 
-        /* Modal Styles */
+        /* Modal Styles - Global Scope via Portal */
         .mobile-modal-only {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          z-index: 9999;
+          z-index: 99999; /* Ensure it's above everything */
         }
         
         .modal-overlay {
@@ -280,13 +270,14 @@ const DiseaseCard = ({ disease }) => {
           width: 100vw;
           height: 100vh;
           background: rgba(0, 0, 0, 0.5);
-          z-index: 9999;
+          z-index: 99999;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: var(--space-md);
           animation: fadeIn 0.2s ease-out;
           pointer-events: auto;
+          backdrop-filter: blur(2px);
         }
 
         .modal-content {
@@ -294,15 +285,15 @@ const DiseaseCard = ({ disease }) => {
           border-radius: var(--radius-xl);
           width: 100%;
           max-width: 500px;
-          max-height: 85vh;
+          max-height: 85vh; /* Safe max height */
           position: relative;
           display: flex;
           flex-direction: column;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
           animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          z-index: 10000;
+          z-index: 100000;
           overflow: hidden;
-          margin: auto; /* Center in viewport */
+          margin: auto;
         }
 
         .close-btn {
@@ -317,8 +308,8 @@ const DiseaseCard = ({ disease }) => {
           z-index: 10;
           padding: 8px;
           line-height: 1;
-          width: 40px;
-          height: 40px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -336,7 +327,7 @@ const DiseaseCard = ({ disease }) => {
         }
 
         .modal-header {
-          padding: var(--space-lg) var(--space-lg) var(--space-md);
+          padding: var(--space-lg) var(--space-2xl) var(--space-md) var(--space-lg);
           border-bottom: 1px solid var(--color-border-light);
         }
 
@@ -344,21 +335,18 @@ const DiseaseCard = ({ disease }) => {
           font-size: var(--font-size-2xl);
           color: var(--color-primary-dark);
           margin-bottom: var(--space-xs);
+          padding-right: 20px;
         }
 
         .modal-scroll {
           padding: var(--space-lg);
-          padding-bottom: var(--space-xl); /* Standardize bottom spacing */
+          padding-bottom: var(--space-2xl);
           overflow-y: auto;
           flex: 1;
+          -webkit-overflow-scrolling: touch;
         }
 
-        .modal-footer {
-          padding: var(--space-xl) var(--space-lg); /* Increased top/bottom padding */
-          border-top: 1px solid var(--color-border-light);
-          background: white; /* Ensure background matches */
-        }
-
+        /* Info Sections */
         .info-section {
           margin-bottom: var(--space-lg);
         }
@@ -425,7 +413,7 @@ const DiseaseCard = ({ disease }) => {
           }
         }
 
-        /* Desktop improvements for modal */
+        /* Desktop improvements */
         @media (min-width: 1024px) {
           .modal-content {
             max-width: 800px;
@@ -442,6 +430,11 @@ const DiseaseCard = ({ disease }) => {
 
           .info-list {
             padding-left: var(--space-xl);
+          }
+
+          /* Force hide mobile modal on desktop even if rendered */
+          .mobile-modal-only {
+            display: none !important;
           }
         }
       `}</style>

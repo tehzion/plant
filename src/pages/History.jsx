@@ -264,12 +264,56 @@ const History = () => {
                 }
 
                 @media (max-width: 768px) {
-                    .page-title {
-                        font-size: 1.5rem;
+                    .history-header {
+                        padding-top: 16px;    /* Reduced from 24px */
+                        margin-bottom: 20px;  /* Reduced from 32px */
                     }
                     
-                    .history-header {
-                        margin-bottom: 24px;
+                    .page-title {
+                        font-size: 1.4rem;    /* Reduced from 1.5rem */
+                    }
+                    
+                    .header-icon {
+                        width: 24px;          /* Reduced from 28px */
+                        height: 24px;
+                    }
+                    
+                    .clear-btn {
+                        font-size: 0.85rem;   /* Reduced from 0.9rem */
+                        padding: 8px 14px;    /* Reduced from 8px 16px */
+                    }
+                    
+                    .group-title {
+                        font-size: 0.85rem;   /* Reduced from 0.9rem */
+                        margin-bottom: 12px;  /* Reduced from 16px */
+                    }
+                    
+                    .history-group {
+                        margin-bottom: 24px;  /* Reduced from 32px */
+                    }
+                    
+                    .empty-icon-wrapper {
+                        width: 100px;         /* Reduced from 120px */
+                        height: 100px;
+                        margin-bottom: 20px;  /* Reduced from 24px */
+                    }
+                    
+                    .empty-icon {
+                        width: 56px;          /* Reduced from 64px */
+                        height: 56px;
+                    }
+                    
+                    .empty-state h3 {
+                        font-size: 1.3rem;    /* Reduced from 1.5rem */
+                    }
+                    
+                    .empty-state p {
+                        font-size: 0.9rem;    /* Reduced from 1rem */
+                    }
+                    
+                    .scan-btn {
+                        padding: 12px 24px;   /* Reduced from 14px 28px */
+                        font-size: 0.95rem;   /* Reduced from 1rem */
                     }
                 }
             `}</style>

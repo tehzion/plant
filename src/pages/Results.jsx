@@ -247,11 +247,6 @@ ${t('pdf.generatedBy')}
           onSaveHistory={handleSaveHistory}
         />
 
-
-
-        {/* Tabbed Results */}
-        <TabbedResults tabs={tabs} />
-
         {/* Scan Metadata Card - Modern Design */}
         <div className="scan-metadata-card">
           <div className="metadata-grid">
@@ -282,19 +277,34 @@ ${t('pdf.generatedBy')}
                   {scan.farmScale === 'personal' && t('home.personalScale')}
                   {!scan.farmScale && t('results.notSpecified')}
                   {scan.scaleQuantity && Number(scan.scaleQuantity) > 0 && (
-                    <span style={{ fontWeight: 'normal', color: '#6B7280', fontSize: '0.9em' }}>
-                      {' '}({scan.scaleQuantity}{' '}
-                      {scan.farmScale === 'acre' ? t('home.acres') :
-                        scan.farmScale === 'tree' ? (language === 'ms' ? 'Pokok' : 'Trees') :
-                          (language === 'ms' ? 'Tanaman' : 'Plants')})
-                    </span>
+                    <div style={{ fontWeight: 'normal', color: '#6B7280', fontSize: '0.9em', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span>
+                        ({scan.scaleQuantity}{' '}
+                        {scan.farmScale === 'acre' ? t('home.acres') :
+                          scan.farmScale === 'tree' ? (language === 'ms' ? 'Pokok' : 'Trees') :
+                            (language === 'ms' ? 'Tanaman' : 'Plants')})
+                      </span>
+                      {/* Show Estimated Trees for Acre Scale */}
+                      {scan.farmScale === 'acre' && (
+                        <span style={{ color: '#059669', fontWeight: '600', fontSize: '0.9em' }}>
+                          ≈ {(() => {
+                            const densityMap = {
+                              'Durian': 35, 'Coconut': 60, 'Banana': 500, 'Cocoa': 450,
+                              'Pepper': 700, 'Pineapple': 12000, 'Corn': 20000, 'Rubber': 190,
+                              'Palm/Rubber': 130, 'Palm Oil': 55, 'Vegetables': 0, 'Fruits': 0,
+                              'Rice': 0, 'Weed Control': 0
+                            };
+                            const density = densityMap[scan.category] || 50;
+                            if (density === 0) return '';
+                            return `${Math.round(scan.scaleQuantity * density).toLocaleString()} ${t('home.trees')}`;
+                          })()}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </span>
               </div>
             </div>
-
-
-
 
             {/* Date & Time */}
             <div className="metadata-item">
@@ -354,20 +364,24 @@ ${t('pdf.generatedBy')}
             )}
           </div>
         </div>
+
+        {/* Tabbed Results */}
+        <TabbedResults tabs={tabs} />
+
       </div>
 
       <style>{`
         .results {
           min-height: 100vh;
           background: var(--color-bg-secondary);
-          padding-top: var(--space-md); /* Reduced from space-2xl */
+          padding-top: var(--space-sm); /* Much smaller top padding on mobile */
           padding-bottom: 24px;
         }
 
         .container {
           max-width: 600px; /* Constrain to mobile width for app feel */
           margin: 0 auto;
-          padding: 0 var(--space-md);
+          padding: 0 var(--space-sm); /* Smaller padding on mobile */
         }
 
         .results-error {
@@ -439,27 +453,29 @@ ${t('pdf.generatedBy')}
         }
 
         .scan-metadata-card {
-          margin-top: var(--space-lg);
-          background: white;
-          border-radius: var(--radius-lg);
-          padding: var(--space-lg);
-          box-shadow: var(--shadow-sm);
-          border: 1px solid var(--color-border);
+          margin-bottom: var(--space-lg);
+          margin-top: 0;
+          background: transparent;
+          padding: 0;
+          box-shadow: none;
+          border: none;
         }
 
         .metadata-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: var(--space-lg);
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 12px;
         }
 
         .metadata-item {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          padding: 12px;
-          border-radius: var(--radius-md);
-          background: var(--color-bg-secondary);
+          padding: 16px;
+          border-radius: 12px;
+          background: white;
+          border: 1px solid #E5E7EB;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           transition: all 0.2s ease;
           position: relative;
         }
@@ -475,8 +491,8 @@ ${t('pdf.generatedBy')}
         }
 
         .metadata-icon {
-          width: 40px;
-          height: 40px;
+          width: 36px; /* Smaller icons */
+          height: 36px;
           border-radius: 50%;
           display: flex;
           align-items: center;
