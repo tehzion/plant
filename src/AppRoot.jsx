@@ -160,10 +160,10 @@ const BottomNav = () => {
         return location.pathname.startsWith(path);
     };
 
-    // Hide bottom nav on homepage
-    if (isHome) {
-        return null;
-    }
+    // Bottom nav visible on all pages
+    // if (isHome) {
+    //    return null;
+    // }
 
     return (
         <nav className="bottom-nav">
