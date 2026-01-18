@@ -103,16 +103,36 @@ const DiseaseCard = ({ disease }) => {
 
       <button
         className="expand-btn btn btn-secondary"
-        onClick={() => setShowModal(!showModal)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowModal(!showModal);
+        }}
       >
         {showModal ? t('encyclopedia.close') : t('encyclopedia.showMore')}
       </button>
 
       {showModal && (
         <div className="mobile-modal-only">
-          <div className="modal-overlay">
-            <div className="modal-content fade-in" onClick={e => e.stopPropagation()}>
-              <button className="close-btn" onClick={() => setShowModal(false)} aria-label={t('encyclopedia.close')}>×</button>
+          <div 
+            className="modal-overlay"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowModal(false);
+            }}
+          >
+            <div 
+              className="modal-content fade-in" 
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                className="close-btn" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowModal(false);
+                }} 
+                aria-label={t('encyclopedia.close')}
+              >×</button>
 
               <div className="modal-header">
                 <h3 className="modal-title">{name}</h3>
@@ -163,7 +183,13 @@ const DiseaseCard = ({ disease }) => {
               </div>
 
               <div className="modal-footer">
-                <button className="btn btn-primary w-full" onClick={() => setShowModal(false)}>
+                <button 
+                  className="btn btn-primary w-full" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowModal(false);
+                  }}
+                >
                   {t('common.close') || 'Close'}
                 </button>
               </div>
@@ -238,13 +264,22 @@ const DiseaseCard = ({ disease }) => {
         }
 
         /* Modal Styles */
+        .mobile-modal-only {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 9999;
+        }
+        
         .modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.4);
+          background: rgba(0, 0, 0, 0.5);
           z-index: 9999;
           display: flex;
           align-items: center;
@@ -263,24 +298,41 @@ const DiseaseCard = ({ disease }) => {
           position: relative;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
           animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           z-index: 10000;
           overflow: hidden;
+          margin: auto; /* Center in viewport */
         }
 
         .close-btn {
           position: absolute;
           top: 16px;
           right: 16px;
-          background: none;
+          background: rgba(0, 0, 0, 0.05);
           border: none;
-          font-size: 24px;
-          color: var(--color-text-light);
+          font-size: 28px;
+          color: var(--color-text-secondary);
           cursor: pointer;
           z-index: 10;
-          padding: 4px;
+          padding: 8px;
           line-height: 1;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+        
+        .close-btn:hover {
+          background: rgba(0, 0, 0, 0.1);
+          color: var(--color-text-primary);
+        }
+        
+        .close-btn:active {
+          transform: scale(0.95);
         }
 
         .modal-header {
