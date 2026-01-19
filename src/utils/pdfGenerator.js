@@ -60,7 +60,9 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text(t('pdf.title'), pageWidth / 2, 20, { align: 'center' });
+    doc.text(t('common.appTitle'), pageWidth / 2, 20, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(t('common.appSlogan'), pageWidth / 2, 28, { align: 'center' });
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');

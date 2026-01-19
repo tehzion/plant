@@ -16,7 +16,10 @@ const AppHeader = ({ isHome }) => {
         <div className={`app-header ${isHome ? 'is-home' : ''}`}>
             <div className="header-content">
                 <Link to="/" className="logo-link">
-                    <h1 className="app-logo">🌿 Smart Plant Diseases & Advisor</h1>
+                    <div className="logo-container">
+                        <h1 className="app-logo">🌿 {t('common.appTitle')}</h1>
+                        <span className="app-slogan">{t('common.appSlogan')}</span>
+                    </div>
                 </Link>
 
                 {/* Desktop Navigation */}
@@ -68,12 +71,26 @@ const AppHeader = ({ isHome }) => {
                     text-decoration: none;
                 }
 
+                .logo-container {
+                    display: flex;
+                    flex-direction: column;
+                }
+
                 .app-logo {
                     font-size: var(--font-size-xl);
                     font-weight: 700;
                     color: var(--color-primary-dark);
                     margin: 0;
                     white-space: nowrap;
+                    line-height: 1.1;
+                }
+
+                .app-slogan {
+                    font-size: var(--font-size-xs);
+                    color: var(--color-text-secondary);
+                    font-weight: 500;
+                    margin-left: 2.2rem; /* Align with text after emoji */
+                    letter-spacing: 0.5px;
                 }
 
                 .desktop-nav {

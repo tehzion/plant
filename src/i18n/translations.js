@@ -45,6 +45,8 @@ export const translations = {
             dateLocale: 'en-MY',
             unknownLocation: 'Unknown Location',
             locationNA: 'Location N/A',
+            appTitle: 'Agropreneur',
+            appSlogan: 'Cultivating Smarter Futures',
         },
 
         // Legacy Footer (if needed) or Global
@@ -83,6 +85,12 @@ export const translations = {
             selectScale: 'Select your farming scale for tailored recommendations',
             scaleTitle: 'Select Farm Scale',
             selectScaleSubtitle: 'Tell us your farm size for accurate product recommendations',
+
+            // Steps
+            step1Title: 'Upload Plant Photo',
+            step1Desc: 'Take a clear photo of your plant showing any visible symptoms',
+            step2Title: 'Select Plant Category',
+            step2Desc: 'Choose the specific crop type for accurate disease detection',
             analyzePlant: 'Analyze Plant',
             analyzeButton: 'Analyze Plant',
             analyzing: 'Analyzing Your Plant...',
@@ -731,6 +739,12 @@ export const translations = {
             plants: 'Tumbuhan',
             estimatedTrees: 'Anggaran Pokok:',
             selectScaleSubtitle: 'Beritahu kami saiz ladang untuk cadangan produk yang tepat',
+
+            // Steps
+            step1Title: 'Muat Naik Foto Tumbuhan',
+            step1Desc: 'Ambil foto yang jelas menunjukkan gejala yang kelihatan',
+            step2Title: 'Pilih Kategori Tumbuhan',
+            step2Desc: 'Pilih jenis tanaman khusus untuk pengesanan penyakit yang tepat',
             variableEstimate: 'Bergantung pada jenis tanaman',
 
             // Errors (Konteks Pertanian Malaysia)

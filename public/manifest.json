@@ -1,6 +1,6 @@
 {
-    "name": "SEA Plant Disease Detector",
-    "short_name": "Plant Detector",
+    "name": "Agropreneur - AI Agriculture Advisor",
+    "short_name": "Agropreneur",
     "description": "AI-powered plant disease detection for Southeast Asian crops",
     "start_url": "/",
     "display": "standalone",

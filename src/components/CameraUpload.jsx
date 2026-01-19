@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Image, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
+import { compressImage } from '../utils/imageCompressor';
 
 const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     const { t } = useLanguage();
@@ -90,22 +91,38 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
             return;
         }
 
-        // Validate file size (max 10MB)
+        // Initial size check (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
             alert(t('common.errorImageSize'));
             return;
         }
 
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setPreview(e.target.result);
-        };
-        reader.readAsDataURL(file);
+        try {
+            // Compress Image (Resize to max 1280px, Quality 0.8)
+            const compressedFile = await compressImage(file, {
+                maxWidth: 1280,
+                maxHeight: 1280,
+                quality: 0.8
+            });
 
-        // Pass file to parent
-        if (onImageCapture) {
-            onImageCapture(file);
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setPreview(e.target.result);
+            };
+            reader.readAsDataURL(compressedFile);
+
+            // Pass compressed file to parent
+            if (onImageCapture) {
+                onImageCapture(compressedFile);
+            }
+        } catch (error) {
+            console.error("Image compression failed:", error);
+            // Fallback: Use original file if compression fails
+            const reader = new FileReader();
+            reader.onload = (e) => setPreview(e.target.result);
+            reader.readAsDataURL(file);
+            if (onImageCapture) onImageCapture(file);
         }
     };
 
