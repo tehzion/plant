@@ -80,6 +80,20 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// TEMPORARY DEBUG: Check Environment Variables Safely
+app.get('/api/test-env', (req, res) => {
+    res.json({
+        message: 'Environment Check',
+        timestamp: new Date().toISOString(),
+        env_vars: {
+            // Check if keys are present (DO NOT RETURN VALUES)
+            OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'Present (Length: ' + process.env.OPENAI_API_KEY.length + ')' : 'MISSING',
+            PLANTNET_API_KEY: process.env.PLANTNET_API_KEY ? 'Present (Length: ' + process.env.PLANTNET_API_KEY.length + ')' : 'MISSING',
+            NODE_ENV: process.env.NODE_ENV
+        }
+    });
+});
+
 // General AI Question Endpoint (Cached)
 app.post('/api/ask', async (req, res, next) => {
     try {
