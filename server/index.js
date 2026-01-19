@@ -9,8 +9,14 @@ import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI } from './services/aiService.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 // Load environment variables
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -158,7 +164,7 @@ app.post('/api/analyze', async (req, res, next) => {
         }
 
         // 5. Analyze Health (GPT-4o-mini)
-        // Fix: Pass leafImage correctly to analysis service
+        // This tool call is just for imports. I will use multi_replace.
         const analysisResult = await analyzeWithGPT4Mini(
             plantNetResult,
             mainImage,
@@ -227,6 +233,17 @@ app.use((err, req, res, next) => {
         message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong. Please try again.'
     });
 });
+
+// Serve Static Assets in Production
+if (process.env.NODE_ENV === 'production') {
+    // Serve static files from the React app
+    app.use(express.static(path.join(__dirname, '../dist')));
+
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+    });
+}
 
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
