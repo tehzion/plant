@@ -245,8 +245,13 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
-app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-    console.log(`🛡️ Security Headers: Enabled`);
-    console.log(`🧠 AI Cache: Enabled`);
-});
+// Only start server if NOT on Vercel (Vercel handles it as a serverless function)
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`✅ Server running on http://localhost:${PORT}`);
+        console.log(`🛡️ Security Headers: Enabled`);
+        console.log(`🧠 AI Cache: Enabled`);
+    });
+}
+
+export default app;
