@@ -358,8 +358,10 @@ const DiseaseCard = ({ disease }) => {
         .section-title-wrapper {
           display: flex;
           align-items: center;
+          justify-content: flex-start; /* Standardize to left */
           gap: 10px;
           margin-bottom: var(--space-sm);
+          /* Force Re-deploy */
         }
 
         .section-icon {
@@ -378,6 +380,7 @@ const DiseaseCard = ({ disease }) => {
           font-size: var(--font-size-lg);
           color: var(--color-primary-dark);
           margin: 0;
+          text-align: left; /* Standardize to left */
           font-weight: 600;
         }
 
