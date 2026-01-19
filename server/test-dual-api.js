@@ -16,11 +16,11 @@ async function testHealth() {
     try {
         const response = await fetch(`${API_URL}/api/health`);
         const data = await response.json();
-        
+
         console.log('  Status:', data.status);
         console.log('  PlantNet Enabled:', data.plantNetEnabled ? '✅' : '❌');
         console.log('  OpenAI Enabled:', data.openAIEnabled ? '✅' : '❌');
-        
+
         if (data.plantNetEnabled && data.openAIEnabled) {
             console.log('  ✅ Health check passed!\n');
             return true;
@@ -40,7 +40,7 @@ async function testAnalyze() {
     console.log('📋 Test 2: Analysis Endpoint');
     console.log('  ℹ️  This test requires uploading an image from the frontend');
     console.log('  ℹ️  You can test it by using the web app\n');
-    
+
     // Example of what the request should look like:
     console.log('  Example request format:');
     console.log(`  POST ${API_URL}/api/analyze`);
@@ -57,12 +57,12 @@ async function runTests() {
     console.log('═'.repeat(50));
     console.log('  Dual-API System Test Suite');
     console.log('═'.repeat(50) + '\n');
-    
+
     const healthPassed = await testHealth();
-    
+
     if (healthPassed) {
         await testAnalyze();
-        
+
         console.log('═'.repeat(50));
         console.log('✅ System is ready for use!');
         console.log('═'.repeat(50));
@@ -83,7 +83,7 @@ async function runTests() {
         console.log('     cd server && npm run dev');
         console.log('  2. Check .env file has both API keys:');
         console.log('     OPENAI_API_KEY=sk-...');
-        console.log('     PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue');
+        console.log('     PLANTNET_API_KEY=2b10...');
         console.log('  3. Install dependencies if needed:');
         console.log('     npm install\n');
     }

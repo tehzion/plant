@@ -237,7 +237,7 @@ Your plant disease detection system now uses **PlantNet + GPT-4o Text** working 
 ### ✅ Backend Changes
 
 1. **`server/.env`** - UPDATED
-   - Added: `PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue`
+   - Added: `PLANTNET_API_KEY=2b10...`
 
 2. **`server/index.js`** - COMPLETELY REWRITTEN
    - PlantNet API integration
@@ -645,7 +645,7 @@ User uploads plant images (1-2 photos)
 
 1. **Environment Variables Set:**
    - ✅ `OPENAI_API_KEY` - GPT-4o access
-   - ✅ `PLANTNET_API_KEY` - PlantNet access (2b1043fL6rSigfYKfGUeFdue)
+   - ✅ `PLANTNET_API_KEY` - PlantNet access (2b10...)
 
 2. **Dependencies Added:**
    - ✅ `form-data` - For PlantNet image upload

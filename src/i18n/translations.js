@@ -553,6 +553,14 @@ export const translations = {
             contactContent: 'For any inquiries regarding these Terms, please contact us at support@smartplant.my.',
         },
 
+        // Feedback
+        feedback: {
+            helpful: 'Was this helpful?',
+            yes: 'Yes',
+            no: 'No',
+            thankYou: 'Thank you for your feedback!',
+        },
+
         // Privacy Policy
         privacy: {
             title: 'Privacy Policy',
@@ -817,7 +825,7 @@ export const translations = {
             peribahasa: [
                 'Jadilah seperti padi - semakin berisi, semakin tunduk',
                 'Jangan jadi seperti lalang - semakin tinggi, semakin kosong',
-                'Bertani yang baik memerlukan kesabaran dan penjagaan',
+                'Petani yang baik memerlukan kesabaran dan penjagaan',
                 'Setiap tanaman sihat bermula dengan penjagaan yang betul',
                 'Akar yang kuat menghasilkan tanaman yang kuat',
                 'Baja terbaik adalah bayang-bayang petani',
@@ -1163,6 +1171,14 @@ export const translations = {
             thirdPartyContent: 'Kami tidak menjual data peribadi anda. Kami mungkin berkongsi data dengan penyedia perkhidmatan yang membantu operasi kami, tertakluk kepada perjanjian kerahsiaan dan pematuhan PDPA.',
             contactTitle: '6. Hubungi Kami',
             contactContent: 'Jika anda mempunyai sebarang soalan mengenai Dasar Privasi ini, sila hubungi pasukan sokongan kami di support@smartplant.my.',
+        },
+
+        // Feedback
+        feedback: {
+            helpful: 'Adakah ini membantu?',
+            yes: 'Ya',
+            no: 'Tidak',
+            thankYou: 'Terima kasih atas maklum balas anda!',
         },
     },
 };

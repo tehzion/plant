@@ -90,28 +90,30 @@ export const logTrainingData = async (data) => {
 };
 
 /**
- * Log user feedback
- * @param {Object} data 
- * @param {string} data.scanId
- * @param {number} data.rating
- * @param {string} data.comment
+ * Log user feedback for a scan
+ * @param {Object} feedbackData
+ * @param {string} feedbackData.scanId - The scan ID
+ * @param {number} feedbackData.rating - Rating (1-5)
+ * @param {string} feedbackData.comment - Optional comment
+ * @param {string} feedbackData.correction - Optional correction
  */
-export const logFeedback = async (data) => {
+export const logFeedback = async (feedbackData) => {
     try {
         const now = new Date();
-        const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-        const LOG_FILE = path.join(DATASET_DIR, `feedback_log_${dateStr}.jsonl`);
+        const dateStr = now.toISOString().split('T')[0];
+        const FEEDBACK_FILE = path.join(DATASET_DIR, `feedback_log_${dateStr}.jsonl`);
 
-        const logEntry = {
-            timestamp: now.toISOString(),
-            ...data
+        const feedbackEntry = {
+            ...feedbackData,
+            timestamp: now.toISOString()
         };
 
-        const logString = JSON.stringify(logEntry) + '\n';
-        await fs.promises.appendFile(LOG_FILE, logString);
+        const logString = JSON.stringify(feedbackEntry) + '\n';
+        await fs.promises.appendFile(FEEDBACK_FILE, logString);
 
-        console.log(`⭐ Feedback logged for ID: ${data.scanId}`);
+        console.log(`💬 Feedback logged for scan: ${feedbackData.scanId}`);
         return true;
+
     } catch (error) {
         console.error('❌ Feedback logging failed:', error);
         return false;

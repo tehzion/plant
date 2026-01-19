@@ -164,7 +164,7 @@ app.post('/api/analyze', async (req, res, next) => {
         }
 
         // 5. Analyze Health (GPT-4o-mini)
-        // This tool call is just for imports. I will use multi_replace.
+
         const analysisResult = await analyzeWithGPT4Mini(
             plantNetResult,
             mainImage,
@@ -208,22 +208,7 @@ app.post('/api/analyze', async (req, res, next) => {
     }
 });
 
-app.post('/api/feedback', async (req, res, next) => {
-    try {
-        const { scanId, rating, comment } = req.body;
 
-        if (!scanId || !rating) {
-            return res.status(400).json({ error: 'Missing required fields' });
-        }
-
-        await logFeedback({ scanId, rating, comment });
-        res.json({ status: 'ok', message: 'Feedback received' });
-    } catch (error) {
-        // Non-critical endpoint, verify error but don't crash flow usually
-        console.error('Feedback error:', error);
-        res.status(500).json({ error: 'Failed to process feedback' });
-    }
-});
 
 // Global Error Handler
 app.use((err, req, res, next) => {

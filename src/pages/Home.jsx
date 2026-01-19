@@ -111,14 +111,18 @@ const Home = () => {
   useEffect(() => {
     if (viewMode === 'dashboard' && !locationName) {
       const initData = async () => {
+        // Optimistic Update: Show KL weather immediately while locating
+        // This prevents the "--°C" flash or hang if GPS is slow
+        if (!weatherTemp) {
+          fetchWeather(3.1412, 101.6865);
+          setLocationName('Malaysia');
+        }
+
+        // Now try to get real location in background
         const loc = await getLocation();
         if (loc) {
+          // Update with real location if found
           fetchWeather(loc.lat, loc.lng);
-        } else {
-          // Fallback to Kuala Lumpur if location denied/fails
-          console.log("Location failed, using default (KL)");
-          fetchWeather(3.1412, 101.6865);
-          setLocationName('Kuala Lumpur'); // Default display
         }
       };
       initData();
