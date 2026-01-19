@@ -3,7 +3,8 @@ import { ThumbsUp, ThumbsDown, Send, Check } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n';
 // Note: We'll assume the API call happens here or passed as prop. 
 // For simplicity, we'll implement the fetch here or use a util.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+// Use environment variable or relative path for production
+const API_URL = (import.meta.env.VITE_API_URL || '') + '/api';
 
 const FeedbackWidget = ({ scanId, className = '' }) => {
     const { t } = useLanguage();

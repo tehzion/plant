@@ -1,6 +1,9 @@
 // Plant Disease Detection - Backend API Integration
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+// In production (Render/Vercel), we want relative paths (e.g. /api/analyze) 
+// so the frontend talks to the backend on the same domain.
+// In local dev, we might need localhost:3002 if not using a proxy.
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * Convert image file to base64, resizing it to optimal dimensions for smart analysis
