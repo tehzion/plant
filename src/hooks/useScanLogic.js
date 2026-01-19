@@ -69,9 +69,9 @@ export const useScanLogic = () => {
         const performAnalyze = async (location, locationName) => {
             dispatch({ type: 'START_ANALYSIS' });
 
-            // TIMEOUT PROTECTION: 20 seconds max
+            // TIMEOUT PROTECTION: 60 seconds max (increased for cold starts/dual-model latency)
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Analysis timed out')), 20000)
+                setTimeout(() => reject(new Error('Analysis timed out')), 60000)
             );
 
             const analysisTask = async () => {

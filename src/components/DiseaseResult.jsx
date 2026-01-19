@@ -171,8 +171,13 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                       <span>
 
                         <strong>{result.identification.scientificName}</strong>
+                        {result.identification.commonNames && result.identification.commonNames.length > 0 && (
+                          <span style={{ fontWeight: 'normal', marginLeft: '4px', color: '#4B5563' }}>
+                            ({result.identification.commonNames[0]})
+                          </span>
+                        )}
                         <span style={{ opacity: 0.8, marginLeft: '4px' }}>
-                          ({result.identification.confidence}%)
+                          {result.identification.confidence}%
                         </span>
                       </span>
                     </div>
