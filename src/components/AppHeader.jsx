@@ -17,8 +17,11 @@ const AppHeader = ({ isHome }) => {
             <div className="header-content">
                 <Link to="/" className="logo-link">
                     <div className="logo-container">
-                        <h1 className="app-logo">🌿 {t('common.appTitle')}</h1>
-                        <span className="app-slogan">{t('common.appSlogan')}</span>
+                        <img
+                            src="/assets/kanb-logo.png"
+                            alt={t('common.appTitle')}
+                            className="app-logo-image"
+                        />
                     </div>
                 </Link>
 
@@ -49,7 +52,7 @@ const AppHeader = ({ isHome }) => {
                     z-index: 100;
                     background: white;
                     border-bottom: 2px solid var(--color-border-light);
-                    padding: var(--space-md) var(--space-lg);
+                    padding: 12px var(--space-lg); /* Slightly reduced padding */
                 }
 
                 /* Mobile: Hide header on Home page */
@@ -73,24 +76,13 @@ const AppHeader = ({ isHome }) => {
 
                 .logo-container {
                     display: flex;
-                    flex-direction: column;
+                    align-items: center;
                 }
 
-                .app-logo {
-                    font-size: var(--font-size-xl);
-                    font-weight: 700;
-                    color: var(--color-primary-dark);
-                    margin: 0;
-                    white-space: nowrap;
-                    line-height: 1.1;
-                }
-
-                .app-slogan {
-                    font-size: var(--font-size-xs);
-                    color: var(--color-text-secondary);
-                    font-weight: 500;
-                    margin-left: 2.2rem; /* Align with text after emoji */
-                    letter-spacing: 0.5px;
+                .app-logo-image {
+                    height: 60px; /* Good size for header */
+                    width: auto;
+                    object-fit: contain;
                 }
 
                 .desktop-nav {
