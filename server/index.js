@@ -246,7 +246,8 @@ app.use((err, req, res, next) => {
     console.error('🔥 Global Error:', err.stack);
     res.status(500).json({
         error: 'Internal Server Error',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong. Please try again.'
+        message: err.message, // TEMPORARY DEBUG: Expose real error
+        stack: err.stack // TEMPORARY DEBUG: Expose stack
     });
 });
 
