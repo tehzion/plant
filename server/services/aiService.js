@@ -77,8 +77,8 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
     try {
         console.log('🔍 Using backup identification method...');
 
-        // Try gpt-5-nano first, fallback to gpt-4o-mini
-        let model = 'gpt-5-nano';
+        // Try gpt-4o-mini first (Fast & Latest)
+        let model = 'gpt-4o-mini';
         let response;
 
         try {
@@ -118,9 +118,9 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                 temperature: 0.3
             });
         } catch (primaryError) {
-            // Fallback to gpt-4.1-mini if gpt-5-nano fails
+            // Fallback to gpt-3.5-turbo if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'gpt-4.1-mini';
+            model = 'gpt-3.5-turbo';
 
             response = await openai.chat.completions.create({
                 model: model,
@@ -501,8 +501,8 @@ IMPORTANT RULES:
             });
         }
 
-        // Call GPT with model fallback (gpt-5-nano primary, gpt-4o-mini backup)
-        let model = 'gpt-5-nano';
+        // Call GPT with model fallback (gpt-4o-mini primary, gpt-3.5-turbo backup)
+        let model = 'gpt-4o-mini';
         let response;
 
         try {
@@ -514,9 +514,9 @@ IMPORTANT RULES:
                 temperature: 0.7,
             });
         } catch (primaryError) {
-            // Fallback to gpt-4.1-mini if gpt-5-nano fails
+            // Fallback to gpt-3.5-turbo if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'gpt-4.1-mini';
+            model = 'gpt-3.5-turbo';
 
             response = await openai.chat.completions.create({
                 model: model,
