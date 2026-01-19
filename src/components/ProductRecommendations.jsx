@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getProductRecommendations, suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
+import PartnerCarousel from './PartnerCarousel';
 import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Lightbulb, Building2, Phone, Mail, MessageCircle, ArrowRight } from 'lucide-react';
 
 const ProductRecommendations = ({ plantType, disease, farmScale }) => {
@@ -180,6 +181,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
           </div>
         </div>
       </div>
+
+      {/* Partner Carousel */}
+      <PartnerCarousel />
 
       <style>{`
         .product-recommendations-container {

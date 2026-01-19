@@ -401,6 +401,7 @@ export const translations = {
             tanAgroDesc: 'One-stop farming solutions with agricultural supplies, fertilizers, pest control, and plant nutrients',
             browseProductsAction: 'Browse Products →',
             ourTrustedSuppliers: 'Our Trusted Suppliers',
+            ourPartners: 'Our Global Partners',
 
             // Healthy Care Plan
             healthyPlantTitle: 'Healthy Plant Care Guide',
@@ -960,8 +961,9 @@ export const translations = {
             // Suppliers
             guanChongDesc: 'Pemborong pertanian yang menawarkan baja, agrokimia, dan perkhidmatan pembajaan khusus',
             tanAgroDesc: 'Penyelesaian pertanian sehenti dengan bekalan pertanian, baja, kawalan perosak, dan nutrien tumbuhan',
-            browseProductsAction: 'Lihat Produk →',
+            browseProductsAction: 'Layari Produk →',
             ourTrustedSuppliers: 'Pembekal Dipercayai Kami',
+            ourPartners: 'Rakan Kongsi Global Kami',
 
             // Healthy Care Plan
             healthyPlantTitle: 'Panduan Penjagaan Tumbuhan Sihat',
