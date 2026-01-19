@@ -195,28 +195,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
 
 // ... internal helpers ...
 
-/**
- * Analyze plant with GPT-5 Nano (optimized for Malaysia)
- */
-export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation) {
-    // ... [No changes to logging here] ...
-    console.log(`🌿 PlantNet Data Used: ${plantNetResult ? 'Yes' : 'No'}`);
-    if (plantNetResult) {
-        console.log(`   - Species: ${plantNetResult.scientificName}`);
-        console.log(`   - Confidence: ${plantNetResult.score}`);
-    }
 
-    // ... [Start of main try block] ...
-    try {
-        console.log('🤖 Analyzing plant health...');
-        const isMalay = language === 'ms';
-        const malaysiaCropInfo = getMalaysiaCropInfo(plantNetResult, category);
-
-        // ... [Context building logic omitted for brevity as it is unchanged] ...
-        // We need to fetch the file content again to inject the updated logic without overwriting the complex context generation
-        // For partial replacement, we will target the actual API call block below
-    } catch (err) { throw err; }
-}
 
 /**
  * Get Malaysia-specific crop information
