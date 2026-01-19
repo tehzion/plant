@@ -53,7 +53,9 @@ const Results = () => {
     treatments: scan.treatments,
     prevention: scan.prevention,
     healthyCarePlan: scan.healthyCarePlan,
-    additionalNotes: scan.additionalNotes
+    additionalNotes: scan.additionalNotes,
+    identification: scan.identification,
+    identificationSource: scan.identificationSource
   };
 
   const handleScanAgain = () => {

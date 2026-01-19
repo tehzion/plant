@@ -164,6 +164,20 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     </p>
                   )}
 
+                  {/* Species Identification (PlantNet) */}
+                  {result.identification && (
+                    <div className="species-id-info" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
+                      <Leaf size={14} color="#059669" />
+                      <span>
+                        <span style={{ color: '#059669', fontWeight: '600', marginRight: '4px' }}>{result.identificationSource || 'PlantNet'}:</span>
+                        <strong>{result.identification.scientificName}</strong>
+                        <span style={{ opacity: 0.8, marginLeft: '4px' }}>
+                          ({result.identification.confidence}%)
+                        </span>
+                      </span>
+                    </div>
+                  )}
+
                   {/* Validated nutrient deficiency note */}
                   {result.nutritionalIssues?.hasDeficiency && (
                     <div className="nutrition-referral-note">
