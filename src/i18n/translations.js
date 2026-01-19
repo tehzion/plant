@@ -97,7 +97,13 @@ export const translations = {
             analyzingDesc: 'Our system is examining the images and identifying any issues',
             processingImages: 'Processing images',
             stepProcessing: 'Processing your image...',
+            stepProcessing: 'Processing your image...',
             stepSmart: 'Analyzing patterns...',
+
+            // Error Boundary
+            errorBoundaryTitle: 'Something went wrong',
+            errorBoundaryMessage: 'Please refresh the page to try again.',
+            errorBoundaryButton: 'Refresh Page',
             stepFinalizing: 'Finalizing diagnosis...',
             didYouKnow: 'Did you know?',
             detectingPlantType: 'Detecting plant type',
@@ -645,7 +651,13 @@ export const translations = {
             analyzingDesc: 'Sistem kami sedang memeriksa imej dan mengenal pasti sebarang masalah',
             processingImages: 'Memproses imej',
             stepProcessing: 'Memproses imej anda...',
+            stepProcessing: 'Memproses imej anda...',
             stepSmart: 'Menganalisis corak...',
+
+            // Error Boundary
+            errorBoundaryTitle: 'Ada sesuatu yang tidak kena',
+            errorBoundaryMessage: 'Sila muat semula halaman untuk mencuba lagi.',
+            errorBoundaryButton: 'Muat Semula Halaman',
             stepFinalizing: 'Menyiapkan diagnosis...',
             didYouKnow: 'Adakah anda tahu?',
             detectingPlantType: 'Mengesan jenis tumbuhan',

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData } from './utils/dataCollector.js';
@@ -19,6 +20,7 @@ const aiCache = new NodeCache({ stdTTL: 86400 });
 
 // Security & Config
 app.use(helmet()); // Add security headers
+app.use(compression()); // Compress all responses
 app.use(cors({
     origin: '*',
     credentials: true,
