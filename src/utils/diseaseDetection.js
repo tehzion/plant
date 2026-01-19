@@ -94,14 +94,15 @@ export const analyzePlantDisease = async (
       const errorData = await response.json().catch(() => ({}));
 
       if (response.status === 429) {
-        throw new Error(errorData.error || 'Too many requests. Please try again later.');
+        throw new Error(errorData.message || errorData.error || 'Too many requests. Please try again later.');
       }
 
       if (response.status === 500) {
-        throw new Error(errorData.error || 'Server error. Please try again.');
+        // Use backend message if available (for debugging), otherwise generic
+        throw new Error(errorData.message || errorData.error || 'Server error. Please try again.');
       }
 
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
