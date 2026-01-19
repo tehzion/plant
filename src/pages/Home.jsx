@@ -114,6 +114,11 @@ const Home = () => {
         const loc = await getLocation();
         if (loc) {
           fetchWeather(loc.lat, loc.lng);
+        } else {
+          // Fallback to Kuala Lumpur if location denied/fails
+          console.log("Location failed, using default (KL)");
+          fetchWeather(3.1412, 101.6865);
+          setLocationName('Kuala Lumpur'); // Default display
         }
       };
       initData();
