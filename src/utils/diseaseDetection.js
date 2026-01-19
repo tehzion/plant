@@ -1,6 +1,6 @@
 // Plant Disease Detection - Backend API Integration
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
 /**
  * Convert image file to base64, resizing it to optimal dimensions for smart analysis

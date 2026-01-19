@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
-import { logTrainingData } from './utils/dataCollector.js';
+import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI } from './services/aiService.js';
 
 // Load environment variables
@@ -92,6 +92,27 @@ app.post('/api/ask', async (req, res, next) => {
     }
 });
 
+// Feedback Endpoint
+app.post('/api/feedback', async (req, res, next) => {
+    try {
+        const { scanId, rating, comment, correction } = req.body;
+
+        if (!scanId || !rating) {
+            return res.status(400).json({ error: 'scanId and rating are required' });
+        }
+
+        const success = await logFeedback({ scanId, rating, comment, correction });
+
+        if (success) {
+            res.json({ message: 'Feedback received' });
+        } else {
+            res.status(500).json({ error: 'Failed to log feedback' });
+        }
+    } catch (error) {
+        next(error);
+    }
+});
+
 // Main Analysis Endpoint
 app.post('/api/analyze', async (req, res, next) => {
     try {
@@ -149,6 +170,7 @@ app.post('/api/analyze', async (req, res, next) => {
 
         const finalResult = {
             ...analysisResult,
+            description: analysisResult.additionalNotes, // Map for PDF compatibility
             identification: plantNetResult,
             identificationSource
         };
@@ -173,8 +195,27 @@ app.post('/api/analyze', async (req, res, next) => {
 
         res.json(finalResult);
 
+        // ... (previous code)
+
     } catch (error) {
         next(error);
+    }
+});
+
+app.post('/api/feedback', async (req, res, next) => {
+    try {
+        const { scanId, rating, comment } = req.body;
+
+        if (!scanId || !rating) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        await logFeedback({ scanId, rating, comment });
+        res.json({ status: 'ok', message: 'Feedback received' });
+    } catch (error) {
+        // Non-critical endpoint, verify error but don't crash flow usually
+        console.error('Feedback error:', error);
+        res.status(500).json({ error: 'Failed to process feedback' });
     }
 });
 

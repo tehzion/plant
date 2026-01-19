@@ -9,8 +9,6 @@ const History = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
     const [groupedScans, setGroupedScans] = useState(getGroupedScans());
-    const [filter, setFilter] = useState('all');
-
 
     const handleDelete = (id) => {
         if (window.confirm(t('history.confirmDeleteSingle') || 'Delete this scan?')) {
@@ -264,11 +262,13 @@ const History = () => {
                 }
 
                 @media (max-width: 768px) {
+                    /* History Header */
                     .history-header {
                         padding-top: 16px;    /* Reduced from 24px */
                         margin-bottom: 20px;  /* Reduced from 32px */
                     }
                     
+                    /* Page Title */
                     .page-title {
                         font-size: 1.4rem;    /* Reduced from 1.5rem */
                     }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
 import { useScanLogic } from '../hooks/useScanLogic';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -39,7 +39,7 @@ export const ScanProvider = ({ children }) => {
     }, [location.pathname]);
 
     // Enhanced Actions wrapper
-    const wrappedActions = {
+    const wrappedActions = useMemo(() => ({
         ...logicActions,
         performAnalyze: async (loc, locName) => {
             try {
@@ -75,7 +75,7 @@ export const ScanProvider = ({ children }) => {
             }
         },
         dismissNotification: () => setNotification(null)
-    };
+    }), [logicActions, navigate, t]);
 
     return (
         <ScanContext.Provider value={{ state, actions: wrappedActions, notification }}>

@@ -260,6 +260,8 @@ export const translations = {
             notRecorded: 'Not recorded',
             notSaved: 'Not saved',
             noQuantityData: 'No quantity data',
+            aboutDisease: 'About This Condition',
+            causes: 'Causes & Conditions',
 
             // Tabs
             diseaseInfo: 'Disease Info',
@@ -598,6 +600,11 @@ export const translations = {
             location: 'Lokasi',
             step: 'Langkah',
             of: 'daripada',
+            appTitle: 'Agropreneur',
+            appSlogan: 'Mencorak Masa Depan',
+            locationNA: 'Lokasi N/A',
+            unknownLocation: 'Lokasi Tidak Diketahui', // Should add these too for safety
+
             comingSoon: 'Ciri akan datang!',
             authFeatureComingSoon: 'Ciri pengesahan akan datang!',
             alreadyHaveAccount: 'Sudah mempunyai akaun?',
@@ -821,6 +828,8 @@ export const translations = {
             notRecorded: 'Tidak direkod',
             notSaved: 'Tidak disimpan',
             noQuantityData: 'Tiada data kuantiti',
+            aboutDisease: 'Mengenai Keadaan Ini',
+            causes: 'Punca & Keadaan',
 
             // Tabs
             diseaseInfo: 'Maklumat Penyakit',
@@ -829,6 +838,9 @@ export const translations = {
             treatment: 'Rawatan',
             nutrition: 'Pemakanan',
             products: 'Produk',
+            healthyCarePlan: 'Pelan Penjagaan Sihat',
+            growthAndMaintenance: 'Pertumbuhan & Penyelenggaraan',
+            fertilizersAndNutrition: 'Baja & Nutrisi',
 
             // Quick Actions
             scanAgain: 'Imbas Lagi',

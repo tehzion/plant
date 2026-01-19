@@ -12,8 +12,10 @@ const AppHeader = ({ isHome }) => {
         return location.pathname.startsWith(path);
     };
 
+    const isHistory = location.pathname === '/history';
+
     return (
-        <div className={`app-header ${isHome ? 'is-home' : ''}`}>
+        <div className={`app-header ${isHome ? 'is-home' : ''} ${isHistory ? 'is-history' : ''}`}>
             <div className="header-content">
                 <Link to="/" className="logo-link">
                     <div className="logo-container">
@@ -55,12 +57,7 @@ const AppHeader = ({ isHome }) => {
                     padding: 12px var(--space-lg); /* Slightly reduced padding */
                 }
 
-                /* Mobile: Hide header on Home page */
-                @media (max-width: 768px) {
-                    .app-header.is-home {
-                        display: none;
-                    }
-                }
+                /* Mobile: AppHeader is now visible on all pages including Home */
 
                 .header-content {
                     max-width: 1200px;
@@ -80,9 +77,16 @@ const AppHeader = ({ isHome }) => {
                 }
 
                 .app-logo-image {
-                    height: 60px; /* Good size for header */
+                    height: 80px; /* Reduced from 120px per user feedback */
                     width: auto;
                     object-fit: contain;
+                    mix-blend-mode: multiply; /* Hides white background */
+                }
+
+                @media (max-width: 768px) {
+                     .app-logo-image {
+                        height: 60px; /* Smaller per user request */
+                    }
                 }
 
                 .desktop-nav {

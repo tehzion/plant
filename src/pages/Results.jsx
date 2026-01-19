@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getScanById } from '../utils/localStorage';
 import { imageToBase64 } from '../utils/diseaseDetection';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -11,6 +11,7 @@ import TreatmentRecommendations from '../components/TreatmentRecommendations';
 import NutritionalAnalysis from '../components/NutritionalAnalysis';
 import ProductRecommendations from '../components/ProductRecommendations';
 import HealthyCarePlan from '../components/HealthyCarePlan';
+import FeedbackWidget from '../components/FeedbackWidget'; // Added
 import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
@@ -359,6 +360,9 @@ ${t('pdf.generatedBy')}
 
         {/* Tabbed Results */}
         <TabbedResults tabs={tabs} />
+
+        {/* User Feedback Widget */}
+        <FeedbackWidget scanId={scan.id} />
 
       </div>
 

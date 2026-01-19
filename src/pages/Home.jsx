@@ -52,10 +52,8 @@ const Home = () => {
     return () => { isMounted.current = false; };
   }, [scanState.loading, scanState.scanStartTime, scanActions]);
 
-  // Force dashboard view whenever location changes (e.g. clicking Home nav)
-  useEffect(() => {
-    setViewMode('dashboard');
-  }, [routerLocation]); // This fixes the "stuck on scan" issue when clicking Home
+  // View mode is now fully synchronized with URL params.
+
 
   // No auto-reset on mount needed - allows background scanning to continue.
   // If scan is running, ScanContext handles it and NotificationToast shows status.
@@ -122,13 +120,24 @@ const Home = () => {
     }
   }, [viewMode]); // Keep location fetch separate to avoid re-fetching on scan updates
 
-  // Check URL params for scan trigger
+  // URL-DRIVEN VIEW MODES (Fixes 'Imbas Lagi' and Race Conditions)
   useEffect(() => {
-    if (searchParams.get('scan') === 'true') {
-      setViewMode('scan');
-      setSearchParams({});
+    const isScanMode = searchParams.get('scan') === 'true';
+
+    if (isScanMode) {
+      // Provide a stable way to enter scan mode that breaks loops
+      if (viewMode !== 'scan') {
+        scanActions.resetScan();
+        scanActions.setStep(1);
+        setViewMode('scan');
+      }
+    } else {
+      // Default to dashboard if no scan param
+      if (viewMode !== 'dashboard') {
+        setViewMode('dashboard');
+      }
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, viewMode, scanActions]);
 
   // Peribahasa Logic (Analysis UI)
   useEffect(() => {
@@ -150,14 +159,21 @@ const Home = () => {
 
   // Handlers
   const handleStartScan = () => {
-    setViewMode('scan');
-    // Only reset to step 1 if we aren't currently analyzing a scan
-    if (!scanState.loading) {
-      scanActions.setStep(1);
-    }
+    setSearchParams({ scan: 'true' });
   };
 
   const handleResetAndClose = () => {
+    const exit = () => {
+      scanActions.resetScan();
+      setSearchParams({});
+    };
+
+    // UX Improvement: If on Step 1 and no image selected, exit immediately without confirmation
+    if (scanState.currentStep === 1 && !scanState.selectedImage) {
+      exit();
+      return;
+    }
+
     setModalConfig({
       isOpen: true,
       title: t('home.confirmExit'),
@@ -165,10 +181,7 @@ const Home = () => {
       type: 'confirm',
       confirmText: t('common.exit'),
       cancelText: t('common.continueScan'),
-      onConfirm: () => {
-        scanActions.resetScan();
-        setViewMode('dashboard');
-      }
+      onConfirm: exit
     });
   };
 
