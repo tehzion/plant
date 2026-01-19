@@ -47,6 +47,19 @@ export const translations = {
             locationNA: 'Location N/A',
             appTitle: 'Agropreneur',
             appSlogan: 'Cultivating Smarter Futures',
+
+            // Cities
+            'Johor Bahru': 'Johor Bahru',
+            'Kuala Lumpur': 'Kuala Lumpur',
+            'Malaysia': 'Malaysia',
+            'Seremban': 'Seremban',
+            'Petaling Jaya': 'Petaling Jaya',
+            'Shah Alam': 'Shah Alam',
+            'Ipoh': 'Ipoh',
+            'George Town': 'George Town',
+            'Melaka': 'Melaka',
+            'Kota Kinabalu': 'Kota Kinabalu',
+            'Kuching': 'Kuching',
         },
 
         // Legacy Footer (if needed) or Global
@@ -602,6 +615,19 @@ export const translations = {
             of: 'daripada',
             appTitle: 'Agropreneur',
             appSlogan: 'Mencorak Masa Depan',
+
+            // Bandar
+            'Johor Bahru': 'Johor Bahru',
+            'Kuala Lumpur': 'Kuala Lumpur',
+            'Malaysia': 'Malaysia',
+            'Seremban': 'Seremban',
+            'Petaling Jaya': 'Petaling Jaya',
+            'Shah Alam': 'Shah Alam',
+            'Ipoh': 'Ipoh',
+            'George Town': 'George Town',
+            'Melaka': 'Melaka',
+            'Kota Kinabalu': 'Kota Kinabalu',
+            'Kuching': 'Kuching',
             locationNA: 'Lokasi N/A',
             unknownLocation: 'Lokasi Tidak Diketahui', // Should add these too for safety
 
