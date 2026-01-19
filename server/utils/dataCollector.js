@@ -88,3 +88,32 @@ export const logTrainingData = async (data) => {
         return false; // Don't crash the app if logging fails
     }
 };
+
+/**
+ * Log user feedback
+ * @param {Object} data 
+ * @param {string} data.scanId
+ * @param {number} data.rating
+ * @param {string} data.comment
+ */
+export const logFeedback = async (data) => {
+    try {
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const LOG_FILE = path.join(DATASET_DIR, `feedback_log_${dateStr}.jsonl`);
+
+        const logEntry = {
+            timestamp: now.toISOString(),
+            ...data
+        };
+
+        const logString = JSON.stringify(logEntry) + '\n';
+        await fs.promises.appendFile(LOG_FILE, logString);
+
+        console.log(`⭐ Feedback logged for ID: ${data.scanId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Feedback logging failed:', error);
+        return false;
+    }
+};
