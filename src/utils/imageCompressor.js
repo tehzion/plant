@@ -49,7 +49,6 @@ export const compressImage = async (file, { maxWidth = 1200, maxHeight = 1200, q
                         lastModified: Date.now(),
                     });
 
-                    console.log(`📉 Compressed: ${(file.size / 1024).toFixed(1)}KB -> ${(newFile.size / 1024).toFixed(1)}KB`);
                     resolve(newFile);
                 }, 'image/jpeg', quality);
             };
