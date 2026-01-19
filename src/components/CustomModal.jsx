@@ -1,51 +1,53 @@
 import { X } from 'lucide-react';
+import { useLanguage } from '../i18n/i18n.jsx';
 
 const CustomModal = ({ isOpen, onClose, onConfirm, title, message, type = 'alert', confirmText, cancelText }) => {
-    if (!isOpen) return null;
+  const { t } = useLanguage();
+  if (!isOpen) return null;
 
-    const handleConfirm = () => {
-        if (onConfirm) onConfirm();
-        onClose();
-    };
+  const handleConfirm = () => {
+    if (onConfirm) onConfirm();
+    onClose();
+  };
 
-    const handleCancel = () => {
-        onClose();
-    };
+  const handleCancel = () => {
+    onClose();
+  };
 
-    return (
-        <>
-            <div className="modal-overlay" onClick={handleCancel} />
-            <div className="modal-container">
-                <div className="modal-card">
-                    <button className="modal-close" onClick={handleCancel}>
-                        <X size={24} />
-                    </button>
+  return (
+    <>
+      <div className="modal-overlay" onClick={handleCancel} />
+      <div className="modal-container">
+        <div className="modal-card">
+          <button className="modal-close" onClick={handleCancel}>
+            <X size={24} />
+          </button>
 
-                    <div className="modal-content">
-                        <h3 className="modal-title">{title}</h3>
-                        <p className="modal-message">{message}</p>
-                    </div>
+          <div className="modal-content">
+            <h3 className="modal-title">{title}</h3>
+            <p className="modal-message">{message}</p>
+          </div>
 
-                    <div className="modal-actions">
-                        {type === 'confirm' ? (
-                            <>
-                                <button className="modal-btn modal-btn-primary" onClick={handleCancel}>
-                                    {cancelText || 'Continue'}
-                                </button>
-                                <button className="modal-btn modal-btn-danger" onClick={handleConfirm}>
-                                    {confirmText || 'Exit'}
-                                </button>
-                            </>
-                        ) : (
-                            <button className="modal-btn modal-btn-primary" onClick={handleConfirm}>
-                                OK
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+          <div className="modal-actions">
+            {type === 'confirm' ? (
+              <>
+                <button className="modal-btn modal-btn-primary" onClick={handleCancel}>
+                  {cancelText || t('common.continue')}
+                </button>
+                <button className="modal-btn modal-btn-danger" onClick={handleConfirm}>
+                  {confirmText || t('common.exit')}
+                </button>
+              </>
+            ) : (
+              <button className="modal-btn modal-btn-primary" onClick={handleConfirm}>
+                {t('common.ok')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
-            <style>{`
+      <style>{`
         .modal-overlay {
           position: fixed;
           top: 0;
@@ -195,8 +197,8 @@ const CustomModal = ({ isOpen, onClose, onConfirm, title, message, type = 'alert
           }
         }
       `}</style>
-        </>
-    );
+    </>
+  );
 };
 
 export default CustomModal;

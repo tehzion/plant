@@ -17,7 +17,7 @@ const Footer = () => {
                     </div>
                 )}
                 <p>
-                    &copy; {new Date().getFullYear()} Dengan bangganya dibuat di MALAYSIA <span className="my-badge">MY</span>
+                    &copy; {new Date().getFullYear()} {t('common.madeInMY')} <span className="my-badge">MY</span>
                 </p>
             </div>
 

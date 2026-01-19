@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { MapPin, Trash2 } from 'lucide-react';
+import { MapPin, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 const ScanHistoryCard = ({ scan, onDelete }) => {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString(language === 'ms' ? 'ms-MY' : 'en-US', {
+    return date.toLocaleDateString(t('common.dateLocale') || 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -50,19 +50,37 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
         />
         <div className="scan-info">
           <h4 className="scan-disease">{scan.disease}</h4>
-          {scan.plantType && (
-            <p className="scan-plant-type">{scan.plantType}</p>
-          )}
-          <div className="scan-meta">
-            <span className="scan-date">{formatDate(scan.timestamp)}</span>
-            <span className={`badge ${getSeverityBadgeClass(scan.severity)}`}>
-              {t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}
-            </span>
+          <div className="scan-meta-group">
+            <p className="scan-meta-text">
+              {(() => {
+                const pType = scan.plantType || '';
+                const translated = t(`home.category${pType.charAt(0).toUpperCase() + pType.slice(1).toLowerCase()}`);
+                return (translated.includes('home.category') ? pType : translated).toUpperCase();
+              })()}
+              <span className="meta-separator">•</span>
+              <span className="meta-date">{formatDate(scan.timestamp)}</span>
+            </p>
+
+            <div className="scan-badge-row">
+              <span className={`status-badge-mini ${scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat' ? 'status-healthy' : 'status-unhealthy'}`}>
+                {scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat' ?
+                  <CheckCircle size={10} strokeWidth={3} /> :
+                  <AlertTriangle size={10} strokeWidth={3} />
+                }
+                {t(`results.${(scan.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
+              </span>
+
+              {scan.severity && (
+                <span className={`badge-severity ${getSeverityBadgeClass(scan.severity)}`}>
+                  {t(`results.${(scan.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.severity}
+                </span>
+              )}
+            </div>
           </div>
           {scan.locationName && (
             <p className="scan-location">
               <MapPin size={14} className="location-icon" />
-              {scan.locationName}
+              {t(scan.locationName)}
             </p>
           )}
         </div>
@@ -126,32 +144,41 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
           font-weight: 700;
         }
 
-        .scan-plant-type {
+        .scan-meta-group {
+          margin-bottom: 8px;
+        }
+
+        .scan-meta-text {
           font-size: 0.8rem;
           color: #6B7280;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
           font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .scan-meta {
           display: flex;
           align-items: center;
-          gap: 8px;
-          margin-bottom: 4px;
+          gap: 6px;
         }
 
-        .scan-date {
-          font-size: 0.85rem;
-          color: #9CA3AF;
-          white-space: nowrap;
+        .meta-separator {
+          color: #D1D5DB;
         }
+
+        .meta-date {
+          font-weight: 400;
+          color: #9CA3AF;
+        }
+
+        .scan-badge-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
 
         .scan-location {
           font-size: 0.85rem;
           color: #6B7280;
-          margin: 6px 0 0 0;
+          margin: 4px 0 0 0;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;

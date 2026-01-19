@@ -3,7 +3,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
- * Convert image file to base64, resizing it to optimal dimensions for AI analysis
+ * Convert image file to base64, resizing it to optimal dimensions for smart analysis
  * @param {File} file - Image file
  * @param {number} maxWidth - Maximum width/height dimension (default 1024px)
  * @returns {Promise<string>} Base64 encoded image
@@ -121,7 +121,7 @@ export const analyzePlantDisease = async (
 
     // Deterministic Confidence Score (Simulation)
     // Generates a stable score based on the image content (base64 length + first 100 chars)
-    // This ensures the same image always gets the same score (simulating real AI consistency)
+    // This ensures the same image always gets the same score (simulating real system consistency)
     const imageHash = (treeImageBase64?.length || 0) + (treeImageBase64?.substring(0, 100)?.split('').reduce((a, b) => a + b.charCodeAt(0), 0) || 0);
     const outputScore = 0.85 + ((imageHash % 140) / 1000); // Maps to 0.85 - 0.99 range
 
@@ -141,9 +141,7 @@ export const analyzePlantDisease = async (
       healthStatus: language === 'ms' ? 'Tidak Sihat' : 'Unhealthy', // Local DB only has diseases
       productRecommendations: recommendations,
       description: language === 'ms' ? (randomDisease.causes?.ms || '') : (randomDisease.causes?.en || ''),
-      productRecommendations: recommendations,
-      description: language === 'ms' ? (randomDisease.causes?.ms || '') : (randomDisease.causes?.en || ''),
-      additionalNotes: "Demo Mode / Simulated Data",
+      additionalNotes: language === 'ms' ? 'Mod Demo / Data Simulasi' : 'Demo Mode / Simulated Data',
       image: treeImageBase64 // Echo back the image
     };
   }

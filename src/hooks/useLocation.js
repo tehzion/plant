@@ -35,11 +35,11 @@ export const useLocation = () => {
                             geoData.address.village ||
                             geoData.address.district ||
                             geoData.address.state ||
-                            'Unknown Location';
+                            'common.unknownLocation';
                         setLocationName(city);
                     } catch (e) {
                         console.error("Geocoding failed", e);
-                        setLocationName('Unknown Location');
+                        setLocationName('common.unknownLocation');
                     }
 
                     setIsLocating(false);
@@ -50,7 +50,7 @@ export const useLocation = () => {
                     setError(err.message);
 
                     // Fallback
-                    setLocationName('Location N/A');
+                    setLocationName('common.locationNA');
                     setIsLocating(false);
                     resolve(null);
                 },

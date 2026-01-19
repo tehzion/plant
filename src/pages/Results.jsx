@@ -11,8 +11,7 @@ import TreatmentRecommendations from '../components/TreatmentRecommendations';
 import NutritionalAnalysis from '../components/NutritionalAnalysis';
 import ProductRecommendations from '../components/ProductRecommendations';
 import HealthyCarePlan from '../components/HealthyCarePlan';
-import SpecificProductRecommendations from '../components/SpecificProductRecommendations';
-import { Search, Pill, Sprout, ShoppingBag } from 'lucide-react';
+import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
 const Results = () => {
@@ -281,8 +280,8 @@ ${t('pdf.generatedBy')}
                       <span>
                         ({scan.scaleQuantity}{' '}
                         {scan.farmScale === 'acre' ? t('home.acres') :
-                          scan.farmScale === 'tree' ? (language === 'ms' ? 'Pokok' : 'Trees') :
-                            (language === 'ms' ? 'Tanaman' : 'Plants')})
+                          scan.farmScale === 'tree' ? t('home.trees') :
+                            t('home.plants')})
                       </span>
                       {/* Show Estimated Trees for Acre Scale */}
                       {scan.farmScale === 'acre' && (
@@ -306,6 +305,35 @@ ${t('pdf.generatedBy')}
               </div>
             </div>
 
+            {/* Location */}
+            {scan.locationName && scan.locationName !== 'N/A' && (
+              <div className="metadata-item">
+                <div className="metadata-icon location-icon">
+                  <MapPin size={20} />
+                </div>
+                <div className="metadata-content">
+                  <span className="metadata-label">{t('common.location')}</span>
+                  <span className="metadata-value">{scan.locationName}</span>
+                  {scan.location && (
+                    <span className="metadata-coords">
+                      {scan.location.lat?.toFixed(4)}, {scan.location.lng?.toFixed(4)}
+                    </span>
+                  )}
+                </div>
+                {scan.location && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="map-link-small"
+                    title={t('results.viewOnMap')}
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Date & Time */}
             <div className="metadata-item">
               <div className="metadata-icon date-icon">
@@ -319,49 +347,13 @@ ${t('pdf.generatedBy')}
               <div className="metadata-content">
                 <span className="metadata-label">{t('common.date')}</span>
                 <span className="metadata-value">
-                  {new Date(scan.timestamp).toLocaleDateString()}
+                  {new Date(scan.timestamp).toLocaleDateString(t('common.dateLocale') || 'en-US')}
                   <span className="metadata-time">
                     {new Date(scan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </span>
               </div>
             </div>
-
-            {/* Location - Only if exists */}
-            {scan.location && (
-              <div className="metadata-item location-item">
-                <div className="metadata-icon location-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                  </svg>
-                </div>
-                <div className="metadata-content">
-                  <span className="metadata-label">{t('common.location')}</span>
-                  <span className="metadata-value">
-                    {scan.locationName || `${scan.location.lat.toFixed(4)}, ${scan.location.lng.toFixed(4)}`}
-                    {scan.locationName && (
-                      <span className="metadata-coords">
-                        {scan.location.lat.toFixed(4)}, {scan.location.lng.toFixed(4)}
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="map-link"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
-                </a>
-              </div>
-            )}
           </div>
         </div>
 
@@ -463,13 +455,13 @@ ${t('pdf.generatedBy')}
 
         .metadata-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(4, 1fr); /* Force 4 columns on desktop */
           gap: 12px;
         }
 
         .metadata-item {
           display: flex;
-          align-items: flex-start;
+          align-items: center; /* Better vertical balance */
           gap: 12px;
           padding: 16px;
           border-radius: 12px;
@@ -478,6 +470,7 @@ ${t('pdf.generatedBy')}
           box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           transition: all 0.2s ease;
           position: relative;
+          height: 100%; /* Consistent height */
         }
 
         .metadata-item.highlight {
@@ -538,18 +531,19 @@ ${t('pdf.generatedBy')}
         }
 
         .metadata-label {
-          font-size: var(--font-size-xs);
-          font-weight: 600;
+          font-size: 10px; /* Sharper label */
+          font-weight: 700;
           color: var(--color-text-secondary);
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          margin-bottom: 2px;
         }
 
         .metadata-value {
           font-size: var(--font-size-base);
-          font-weight: 600;
+          font-weight: 700;
           color: var(--color-text-primary);
-          line-height: 1.4;
+          line-height: 1.25;
           display: flex;
           flex-direction: column;
           gap: 2px;
@@ -570,10 +564,34 @@ ${t('pdf.generatedBy')}
         }
 
         .metadata-coords {
-          font-size: var(--font-size-xs);
-          font-weight: 400;
+          font-size: 10px;
+          font-weight: 500;
           color: var(--color-text-secondary);
-          font-family: 'Courier New', monospace;
+          opacity: 0.7;
+          margin-top: 2px;
+        }
+
+        .map-link-small {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #F3F4F6;
+          color: var(--color-primary);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          transition: all 0.2s ease;
+          border: 1px solid #E5E7EB;
+        }
+
+        .map-link-small:hover {
+          background: var(--color-primary);
+          color: white;
+          transform: scale(1.1);
         }
 
         .map-link {
@@ -601,15 +619,21 @@ ${t('pdf.generatedBy')}
           transform: scale(0.95);
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 991px) {
           .metadata-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: var(--space-md);
           }
           
           .health-banner {
             flex-direction: row;
             text-align: left;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .metadata-grid {
+            grid-template-columns: 1fr;
           }
         }
 
@@ -647,7 +671,7 @@ ${t('pdf.generatedBy')}
           }
         }
       `}</style>
-    </div>
+    </div >
   );
 };
 

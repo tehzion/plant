@@ -85,7 +85,7 @@ const Encyclopedia = () => {
 
         {/* Results Count */}
         <div className="results-info">
-          <p>{filteredDiseases.length} {t('encyclopedia.disease')}{filteredDiseases.length !== 1 ? 's' : ''} {t('encyclopedia.found')}</p>
+          <p>{filteredDiseases.length} {filteredDiseases.length === 1 ? t('encyclopedia.disease') : t('encyclopedia.diseases')} {t('encyclopedia.found')}</p>
         </div>
 
         {/* Disease Cards */}
@@ -100,7 +100,7 @@ const Encyclopedia = () => {
                 <Search size={48} strokeWidth={1.5} />
               </div>
               <h3>{t('encyclopedia.noResults')}</h3>
-              <p>Try adjusting your search or filters</p>
+              <p>{t('encyclopedia.filterHint')}</p>
             </div>
           )}
         </div>

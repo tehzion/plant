@@ -35,17 +35,17 @@ export const getProductRecommendations = (plantType, disease) => {
     // Default recommendations for all plants
     const defaultNutrition = [
         {
-            name: "N-P-K 15-15-15 Dashboard Fertilizer",
+            name: "results.prodNPKName",
             count: "50kg",
-            description: "Balanced fertilizer for general growth and maintenance of all plant types.",
+            description: "results.prodNPKDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         },
         {
-            name: "Humax Liquid Bio-Stimulant",
+            name: "results.prodHumaxName",
             count: "1L",
-            description: "Enhances root development and nutrient uptake efficiency.",
+            description: "results.prodHumaxDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
         }
@@ -78,49 +78,49 @@ export const getProductRecommendations = (plantType, disease) => {
 
     if (diseaseLower.includes('blast') || diseaseLower.includes('mold') || diseaseLower.includes('mildew')) {
         recommendations.diseaseControl.push({
-            name: "Azoxystrobin + Difenoconazole 325SC",
+            name: "results.prodAzoxyName",
             count: "250ml",
-            description: "Broad-spectrum systemic fungicide for blast, sheath blight, and mildews.",
+            description: "results.prodAzoxyDesc",
             supplier: "tanAgro",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         });
     } else if (diseaseLower.includes('bacteria') || diseaseLower.includes('wilt') || diseaseLower.includes('canker') || diseaseLower.includes('rot')) {
         recommendations.diseaseControl.push({
-            name: "Copper Hydroxide 77WP",
+            name: "results.prodCopperName",
             count: "500g",
-            description: "Bactericide/Fungicide for bacterial spots, cankers, and wilts.",
+            description: "results.prodCopperDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
         });
     } else if (diseaseLower.includes('rust') || diseaseLower.includes('spot') || diseaseLower.includes('anthracnose')) {
         recommendations.diseaseControl.push({
-            name: "Mancozeb 80WP Fungicide",
+            name: "results.prodMancozebName",
             count: "1kg",
-            description: "Contact fungicide for leaf spots, rusts, and anthracnose.",
+            description: "results.prodMancozebDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         });
     } else if (diseaseLower.includes('insect') || diseaseLower.includes('bug') || diseaseLower.includes('mite') || diseaseLower.includes('thrip') || diseaseLower.includes('worm') || diseaseLower.includes('larva') || diseaseLower.includes('fly') || diseaseLower.includes('beetle')) {
         recommendations.diseaseControl.push({
-            name: "Abamectin 1.8EC Insecticide",
+            name: "results.prodAbamectinName",
             count: "500ml",
-            description: "Effective insecticide/miticide for mites, leaf miners, and thrips.",
+            description: "results.prodAbamectinDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
         });
         recommendations.diseaseControl.push({
-            name: "Cypermethrin 5.5EC Insecticide",
+            name: "results.prodCyperName",
             count: "1L",
-            description: "Broad-spectrum contact insecticide for beetles, caterpillars, and general pests.",
+            description: "results.prodCyperDesc",
             supplier: "tanAgro",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         });
     } else if (diseaseLower.includes('virus') || diseaseLower.includes('mosaic')) {
         recommendations.diseaseControl.push({
-            name: "Imidacloprid 18.3SL",
+            name: "results.prodImidacName",
             count: "250ml",
-            description: "Controls aphids and whiteflies (vectors) that transmit viral diseases.",
+            description: "results.prodImidacDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
@@ -130,9 +130,9 @@ export const getProductRecommendations = (plantType, disease) => {
     // Add generic disease control if still empty for a diseased plant (ONLY if not abiotic)
     if (recommendations.diseaseControl.length === 0 && !isAbiotic) {
         recommendations.diseaseControl.push({
-            name: "Chlorothalonil 500SC",
+            name: "results.prodChloroName",
             count: "1L",
-            description: "Broad-spectrum preventive fungicide for common fungal diseases.",
+            description: "results.prodChloroDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
             tanAgroUrl: "https://www.tanagro.com.my/category/"

@@ -43,13 +43,11 @@ const TabbedResults = ({ tabs }) => {
   return (
     <div className="tabbed-results">
       {/* Tab Headers - Sticky & Scrollable */}
-      <div 
+      <div
         ref={containerRef}
-        className={`tab-headers-container ${
-          canScrollLeft ? 'can-scroll-left' : ''
-        } ${
-          hasScrolled ? 'scrolled' : ''
-        }`}
+        className={`tab-headers-container ${canScrollLeft ? 'can-scroll-left' : ''
+          } ${hasScrolled ? 'scrolled' : ''
+          }`}
       >
         <div className="tab-headers" ref={tabsRef}>
           {tabs.map((tab, index) => (
@@ -174,29 +172,29 @@ const TabbedResults = ({ tabs }) => {
         }
 
         .tab-header {
-          flex: 0 0 auto; /* Don't shrink */
+          flex: 0 0 auto;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 10px 8px; /* Smaller padding */
+          padding: 12px 16px;
           background: transparent;
           border: none;
-          color: var(--color-text-light);
+          color: #94A3B8; /* Slate-400 for inactive */
           font-family: var(--font-family);
-          font-size: 0.75rem; /* Smaller font */
+          font-size: 0.9rem;
           font-weight: 500;
           cursor: pointer;
           position: relative;
-          transition: all 0.3s ease;
-          min-width: 70px; /* Smaller min-width */
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .tab-content-wrapper {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding-bottom: 6px; /* Space for underline */
+            gap: 8px;
+            padding: 4px 0;
+            position: relative;
+            z-index: 1;
         }
 
         .tab-header:hover {
@@ -211,30 +209,35 @@ const TabbedResults = ({ tabs }) => {
         .active-indicator {
             position: absolute;
             bottom: 0;
-            left: 0;
-            width: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%; /* Shorter underline */
             height: 3px;
             background: var(--color-primary);
-            border-top-left-radius: 3px;
-            border-top-right-radius: 3px;
+            border-radius: 3px 3px 0 0;
             animation: expand 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes expand {
-            from { transform: scaleX(0); }
-            to { transform: scaleX(1); }
+            from { transform: translateX(-50%) scaleX(0); }
+            to { transform: translateX(-50%) scaleX(1); }
         }
 
         .tab-icon {
-          font-size: 1.1rem; /* Smaller icons */
           display: flex;
           align-items: center;
+          justify-content: center;
+          transition: transform 0.3s ease;
+        }
+
+        .tab-header.active .tab-icon {
+          transform: scale(1.1);
         }
 
         .tab-badge {
-          position: absolute;
-          top: 6px;
-          right: -4px;
+          position: relative;
+          top: -8px;
+          margin-left: -4px;
           background: var(--color-severe);
           color: white;
           font-size: 10px;

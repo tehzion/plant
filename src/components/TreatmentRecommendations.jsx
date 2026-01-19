@@ -94,17 +94,17 @@ const TreatmentRecommendations = ({ result }) => {
                 <div className="section-icon">{section.icon}</div>
                 <h4 className="section-subtitle">{section.title}</h4>
               </div>
-              <svg 
+              <svg
                 className={`chevron ${expandedSections[section.key] ? 'expanded' : ''}`}
-                width="20" 
-                height="20" 
-                viewBox="0 0 20 20" 
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
                 fill="none"
               >
-                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            
+
             {expandedSections[section.key] && (
               <div className="section-content">
                 {section.listType === 'ol' ? (
@@ -130,7 +130,7 @@ const TreatmentRecommendations = ({ result }) => {
       {result.additionalNotes && (
         <div className="additional-notes">
           <p className="notes-text">
-            <strong>Nota:</strong> {result.additionalNotes}
+            <strong>{t('common.note')}:</strong> {result.additionalNotes}
           </p>
         </div>
       )}

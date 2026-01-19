@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
   ScanLine, AlertCircle, Leaf
@@ -17,7 +17,7 @@ import CustomModal from '../components/CustomModal';
 import { useGreeting } from '../hooks/useGreeting';
 import { useLocation } from '../hooks/useLocation';
 import { useWeather } from '../hooks/useWeather';
-import { useScanLogic } from '../hooks/useScanLogic';
+import { useScanContext } from '../context/ScanContext';
 
 // UI Components
 import HeroSection from '../components/home/HeroSection';
@@ -30,13 +30,36 @@ import ServicesGrid from '../components/home/ServicesGrid';
 const Home = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const routerLocation = useRouterLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Custom Hooks
   const { getGreeting } = useGreeting();
   const { location, locationName, isLocating, getLocation, setLocationName } = useLocation();
   const { weatherTemp, weatherIcon, fetchWeather } = useWeather();
-  const { state: scanState, actions: scanActions } = useScanLogic();
+  const { state: scanState, actions: scanActions } = useScanContext();
+  const isMounted = useRef(true);
+
+  // Track mounted state
+  useEffect(() => {
+    isMounted.current = true;
+
+    // STALE SCAN CHECK: If returning to page and scan is old (>15s), auto-reset
+    if (scanState.loading && scanState.scanStartTime && (Date.now() - scanState.scanStartTime > 15000)) {
+      scanActions.resetScan();
+    }
+
+    return () => { isMounted.current = false; };
+  }, [scanState.loading, scanState.scanStartTime, scanActions]);
+
+  // Force dashboard view whenever location changes (e.g. clicking Home nav)
+  useEffect(() => {
+    setViewMode('dashboard');
+  }, [routerLocation]); // This fixes the "stuck on scan" issue when clicking Home
+
+  // No auto-reset on mount needed - allows background scanning to continue.
+  // If scan is running, ScanContext handles it and NotificationToast shows status.
+  // User sees Dashboard by default.
 
   const {
     selectedImage, selectedLeafImage, selectedCategory, selectedScale, scaleQuantity,
@@ -77,12 +100,18 @@ const Home = () => {
       .catch(() => setServerStatus('offline'));
   }, []);
 
-  // Initialize Dashboard Data
+  // Initialize and Update Dashboard Data
   useEffect(() => {
     if (viewMode === 'dashboard') {
+      // Refresh scan history whenever dashboard is active or scan completes
       const history = getScanHistory();
       setRecentScans(history.slice(0, 4));
+    }
+  }, [viewMode, loading]); // Added loading to auto-refresh history after background scan
 
+  // Initial Location & Weather
+  useEffect(() => {
+    if (viewMode === 'dashboard' && !locationName) {
       const initData = async () => {
         const loc = await getLocation();
         if (loc) {
@@ -91,7 +120,7 @@ const Home = () => {
       };
       initData();
     }
-  }, [viewMode, getLocation, fetchWeather]);
+  }, [viewMode]); // Keep location fetch separate to avoid re-fetching on scan updates
 
   // Check URL params for scan trigger
   useEffect(() => {
@@ -122,14 +151,17 @@ const Home = () => {
   // Handlers
   const handleStartScan = () => {
     setViewMode('scan');
-    scanActions.setStep(1);
+    // Only reset to step 1 if we aren't currently analyzing a scan
+    if (!scanState.loading) {
+      scanActions.setStep(1);
+    }
   };
 
   const handleResetAndClose = () => {
     setModalConfig({
       isOpen: true,
       title: t('home.confirmExit'),
-      message: t('home.confirmExitMessage') || 'Anda akan kehilangan kemajuan imbasan semasa.',
+      message: t('home.confirmExitMessage'),
       type: 'confirm',
       confirmText: t('common.exit'),
       cancelText: t('common.continueScan'),
@@ -156,40 +188,24 @@ const Home = () => {
       // Start Analysis
       try {
         const scanId = await scanActions.performAnalyze(location, locationName);
-        if (scanId) navigate(`/results/${scanId}`);
+        if (isMounted.current && scanId) navigate(`/results/${scanId}`);
       } catch (e) {
         // Error handled in hook
       }
     }
   };
 
-  const handleQuickScan = async () => {
-    if (!selectedImage) {
-      scanActions.setError(t('home.errorNoImage'));
-      return;
-    }
-    if (!selectedCategory) {
-      scanActions.setCategory('Vegetables');
-    }
-    scanActions.setStep(3);
-    try {
-      const scanId = await scanActions.performAnalyze(location, locationName);
-      if (scanId) navigate(`/results/${scanId}`);
-    } catch (e) {
-      // Error handled in hook
-    }
-  };
 
   const handleLocationClick = () => {
-    setLocationName('Locating...');
+    setLocationName(t('common.locating'));
     getLocation().then(loc => loc && fetchWeather(loc.lat, loc.lng));
   };
 
   const handleFeatureStub = (featureName) => {
     setModalConfig({
       isOpen: true,
-      title: featureName || "Coming Soon",
-      message: t('common.comingSoon') || "This feature is currently under development.",
+      title: featureName || t('common.comingSoonTitle'),
+      message: t('common.featureUnderDev'),
       type: 'alert'
     });
   };
@@ -264,29 +280,68 @@ const Home = () => {
       />
 
       <div className="container">
-        {loading ? (
-          <div className="scanning-overlay">
-            <div className="pulse-ring"></div>
-            <div className="scanning-content">
-              <div className="scanning-icon-wrapper"><ScanLine size={48} className="scanning-icon-animate" /></div>
-              <h2>{t('home.analyzing')}</h2>
-              <p className="analyzing-step-text">
-                {analyzingStep === 0 && t('home.stepProcessing')}
-                {analyzingStep === 1 && t('home.stepAI')}
-                {analyzingStep === 2 && t('home.stepFinalizing')}
-              </p>
-              <div className="analysis-progress-bar"><div className="analysis-progress-fill" style={{ width: `${((analyzingStep + 1) / 3) * 100}%` }}></div></div>
-              <div className="peribahasa-container fade-in-slow">
-                <p className="peribahasa-text">"{currentPeribahasa}"</p>
-                <span className="peribahasa-label">{t('home.didYouKnow')}</span>
+        {(loading || currentStep === 3) ? (
+          <div className="loading-overlay">
+            <div className="loading-card">
+              <div className="loading-spinner-circle"></div>
+
+              <h2 className="loading-title">
+                {analyzingStep === 0 && (t('home.stepProcessing') || t('home.stepSmart'))}
+                {analyzingStep === 1 && t('onboarding.step2Title')}
+                {analyzingStep === 2 && t('home.generating')}
+              </h2>
+
+              <div className="quote-box">
+                <span className="quote-icon-left">"</span>
+                <p className="quote-text">{currentPeribahasa}</p>
+                <span className="quote-icon-right">"</span>
               </div>
+
+              <div className="dots-indicator">
+                <div className={`dot ${analyzingStep >= 0 ? 'active' : ''}`}></div>
+                <div className={`dot ${analyzingStep >= 1 ? 'active' : ''}`}></div>
+                <div className={`dot ${analyzingStep >= 2 ? 'active' : ''}`}></div>
+              </div>
+
+              <button
+                onClick={handleResetAndClose}
+                style={{
+                  marginTop: '24px',
+                  background: 'none',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '9999px',
+                  padding: '8px 24px',
+                  color: '#6B7280',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#9CA3AF';
+                  e.currentTarget.style.color = '#374151';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = '#D1D5DB';
+                  e.currentTarget.style.color = '#6B7280';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <span style={{ fontSize: '1.2em', lineHeight: '1' }}>×</span> {t('common.cancel')}
+              </button>
             </div>
           </div>
         ) : (
           <>
-            <ProgressStepper currentStep={currentStep} steps={steps} onStepClick={(step) => {
-              if (step < currentStep) scanActions.setStep(step);
-            }} />
+            <div style={{ marginTop: '24px' }}>
+              <ProgressStepper currentStep={currentStep} steps={steps} onStepClick={(step) => {
+                if (step < currentStep) scanActions.setStep(step);
+              }} />
+            </div>
 
             {error && (
               <div className="error-banner bounce-in">
@@ -299,9 +354,14 @@ const Home = () => {
             <div className="step-content slide-up">
               {currentStep === 1 && (
                 <div className="step-wrapper">
-                  <div className="step-header mb-lg mt-md">
-                    <h2>{t('home.step1Title')}</h2>
-                    <p>{t('home.step1Desc')}</p>
+                  <div className="leaf-card-header mb-lg mt-xl">
+                    <div className="leaf-icon-circle">
+                      <ScanLine size={24} />
+                    </div>
+                    <div className="leaf-card-text">
+                      <h2 className="mb-xs">{t('home.step1Title')}</h2>
+                      <p>{t('home.step1Desc')}</p>
+                    </div>
                   </div>
 
                   {/* Main Image Upload */}
@@ -334,67 +394,23 @@ const Home = () => {
                     <button className="btn btn-primary" onClick={handleNextStep} disabled={!selectedImage}>{t('common.next')}</button>
                   </div>
 
-                  <style>{`
-                    .leaf-upload-card {
-                      background: white;
-                      border-radius: var(--radius-lg);
-                      padding: 24px;
-                      box-shadow: var(--shadow-md);
-                      border: 1px solid var(--color-border-light);
-                    }
 
-                    .leaf-card-header {
-                      display: flex;
-                      align-items: flex-start;
-                      gap: 16px;
-                      margin-bottom: 20px;
-                    }
-
-                    .leaf-icon-circle {
-                      width: 40px;
-                      height: 40px;
-                      border-radius: 50%;
-                      background: var(--color-primary-light);
-                      color: var(--color-primary);
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      flex-shrink: 0;
-                    }
-
-                    .leaf-card-text h3 {
-                      font-size: 1.1rem;
-                      margin: 0 0 4px 0;
-                      color: var(--color-text-primary);
-                    }
-
-                    .leaf-card-text p {
-                      font-size: 0.9rem;
-                      margin: 0;
-                      color: var(--color-text-secondary);
-                      line-height: 1.4;
-                    }
-
-                    .fade-in-delayed {
-                      animation: fadeIn 0.6s ease;
-                    }
-                  `}</style>
                 </div>
               )}
 
               {currentStep === 2 && (
                 <div className="step-wrapper">
-                  <div className="step-header">
+                  <div className="step-header mb-lg mt-xl">
                     <h2>{t('home.step2Title')}</h2>
                     <p>{t('home.step2Desc')}</p>
                   </div>
                   <PlantCategorySelector
-                    selectedCategory={selectedCategory}
+                    selected={selectedCategory}
                     onSelect={scanActions.setCategory}
                   />
 
                   <div className="scale-selection-section mt-md">
-                    <h3>{t('home.scaleTitle')}</h3>
+
                     <FarmScaleSelector
                       selected={selectedScale}
                       onSelect={scanActions.setScale}
@@ -408,14 +424,6 @@ const Home = () => {
                     <button className="btn btn-secondary" onClick={scanActions.prevStep}>{t('common.back')}</button>
                     <button className="btn btn-primary" onClick={handleNextStep}>{t('home.analyzeButton')}</button>
                   </div>
-
-                  {selectedImage && selectedCategory && (
-                    <div className="quick-scan-prompt mt-md">
-                      <button className="btn btn-text" onClick={handleQuickScan}>
-                        <ScanLine size={16} /> {t('home.quickScan')}
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

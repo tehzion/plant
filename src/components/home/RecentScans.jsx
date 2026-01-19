@@ -21,21 +21,41 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                             <div className="scan-details">
                                 <h4 className="scan-disease" title={scan.disease}>{scan.disease}</h4>
                                 <p className="scan-meta">
-                                    {scan.plantType} • {new Date(scan.timestamp).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {(() => {
+                                        const pType = scan.plantType || '';
+                                        const translated = t(`home.category${pType.charAt(0).toUpperCase() + pType.slice(1).toLowerCase()}`);
+                                        const finalName = translated.includes('home.category') ? pType : translated;
+                                        return finalName.toUpperCase();
+                                    })()} • {new Date(scan.timestamp).toLocaleDateString(t('common.dateLocale') || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </p>
-                                {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== 'Location N/A' && (
+                                {scan.locationName && scan.locationName !== 'N/A' && !scan.locationName.includes('N/A') && (
                                     <p className="scan-location">
-                                        <MapPin size={12} strokeWidth={1.5} /> {scan.locationName}
+                                        <MapPin size={12} strokeWidth={1.5} /> {t(scan.locationName)}
                                     </p>
                                 )}
-                                <div className={`scan-status-info status-${scan.healthStatus?.toLowerCase()}`}>
-                                    <span className="status-icon">
-                                        {scan.healthStatus?.toLowerCase() === 'healthy' ?
-                                            <CheckCircle size={14} className="text-green-600" strokeWidth={1.5} /> :
-                                            <AlertTriangle size={14} className="text-red-500" strokeWidth={1.5} />
-                                        }
-                                    </span>
-                                    <span className="status-text">{scan.healthStatus}</span>
+                                <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                    <div className={`status-badge-mini ${scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat' ? 'status-healthy' : 'status-unhealthy'}`}>
+                                        <span className="status-icon" style={{ display: 'flex' }}>
+                                            {(scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat') ?
+                                                <CheckCircle size={10} strokeWidth={3} /> :
+                                                <AlertTriangle size={10} strokeWidth={3} />
+                                            }
+                                        </span>
+                                        <span className="status-text">{t(`results.${(scan.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.healthStatus}</span>
+                                    </div>
+
+                                    {scan.severity && (
+                                        <div className={`badge-severity ${(() => {
+                                            switch (scan.severity?.toLowerCase()) {
+                                                case 'mild': return 'badge-mild';
+                                                case 'moderate': return 'badge-moderate';
+                                                case 'severe': return 'badge-severe';
+                                                default: return '';
+                                            }
+                                        })()}`}>
+                                            {t(`results.${(scan.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.severity}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

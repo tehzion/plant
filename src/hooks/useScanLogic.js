@@ -23,13 +23,13 @@ const scanReducer = (state, action) => {
         case 'SET_STEP':
             return { ...state, currentStep: action.payload, error: '' };
         case 'START_ANALYSIS':
-            return { ...state, loading: true, error: '', analyzingStep: 0 };
+            return { ...state, loading: true, error: '', analyzingStep: 0, scanStartTime: Date.now() };
         case 'UPDATE_ANALYZING_STEP':
             return { ...state, analyzingStep: action.payload };
         case 'COMPLETE_ANALYSIS':
-            return { ...state, loading: false, analyzingStep: 0 };
+            return { ...state, loading: false, analyzingStep: 0, scanStartTime: 0 };
         case 'SET_ERROR':
-            return { ...state, error: action.payload, loading: false };
+            return { ...state, error: action.payload, loading: false, scanStartTime: 0 };
         case 'RESET_SCAN':
             return { ...initialScanState };
         default:
@@ -46,7 +46,8 @@ const initialScanState = {
     currentStep: 1,
     loading: false,
     error: '',
-    analyzingStep: 0
+    analyzingStep: 0,
+    scanStartTime: 0
 };
 
 export const useScanLogic = () => {
@@ -68,14 +69,19 @@ export const useScanLogic = () => {
         const performAnalyze = async (location, locationName) => {
             dispatch({ type: 'START_ANALYSIS' });
 
-            const performStep = (stepIndex, duration) => {
-                return new Promise(resolve => {
-                    dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: stepIndex });
-                    setTimeout(resolve, duration);
-                });
-            };
+            // TIMEOUT PROTECTION: 20 seconds max
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Analysis timed out')), 20000)
+            );
 
-            try {
+            const analysisTask = async () => {
+                const performStep = (stepIndex, duration) => {
+                    return new Promise(resolve => {
+                        dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: stepIndex });
+                        setTimeout(resolve, duration);
+                    });
+                };
+
                 await performStep(0, 1500);
                 const treeImageBase64 = await imageToBase64(state.selectedImage);
                 const leafImageBase64 = state.selectedLeafImage ? await imageToBase64(state.selectedLeafImage) : null;
@@ -110,10 +116,15 @@ export const useScanLogic = () => {
 
                 dispatch({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;
+            };
 
+            try {
+                return await Promise.race([analysisTask(), timeoutPromise]);
             } catch (err) {
                 console.error('Analysis error:', err);
                 dispatch({ type: 'SET_ERROR', payload: err.message || t('home.errorAnalysis') });
+                // If it was a timeout, we want to reset or stay in step 2?
+                // Probably stay in step 2 so user can retry.
                 dispatch({ type: 'SET_STEP', payload: 2 });
                 throw err;
             }

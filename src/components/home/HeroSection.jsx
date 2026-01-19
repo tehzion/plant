@@ -11,6 +11,7 @@ const HeroSection = ({
     weatherIcon,
     language
 }) => {
+    const { t } = useLanguage();
 
     const renderWeatherIcon = () => {
         switch (weatherIcon) {
@@ -26,16 +27,16 @@ const HeroSection = ({
     return (
         <div className="dashboard-header">
             <div>
-                <h1 className="greeting">{greeting}, Farmer!</h1>
+                <h1 className="greeting">{greeting}, {t('common.farmer')}!</h1>
                 <p className="date-display">
                     <span
                         style={{ color: 'var(--color-primary)', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         onClick={onLocationClick}
                     >
-                        <MapPin size={16} strokeWidth={1.5} /> {locationName || (isLocating ? 'Locating...' : 'Set Location')} <Clock size={16} strokeWidth={1.5} />
+                        <MapPin size={16} strokeWidth={1.5} /> {locationName ? t(locationName) : (isLocating ? t('common.locating') : t('common.setLocation'))} <Clock size={16} strokeWidth={1.5} />
                     </span>
                     <br />
-                    {new Date().toLocaleDateString(language === 'ms' ? 'ms-MY' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {new Date().toLocaleDateString(t('common.dateLocale') || 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
             </div>
             <div className="weather-widget">

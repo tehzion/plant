@@ -457,18 +457,18 @@ p {
 }
 
 .badge-mild {
-  background: rgba(76, 175, 80, 0.1);
-  color: var(--color-mild);
+  background: #DCFCE7 !important;
+  color: #166534 !important;
 }
 
 .badge-moderate {
-  background: rgba(255, 152, 0, 0.1);
-  color: var(--color-moderate);
+  background: #FFEDD5 !important;
+  color: #9A3412 !important;
 }
 
 .badge-severe {
-  background: rgba(244, 67, 54, 0.1);
-  color: var(--color-severe);
+  background: #FEE2E2 !important;
+  color: #991B1B !important;
 }
 
 /* === Progress Bar === */
@@ -1727,8 +1727,9 @@ p {
 }
 
 .scan-card {
-  min-width: 200px;
-  /* Reduced from 260px for better mobile view */
+  min-width: 150px;
+  width: 40vw;
+  max-width: 220px;
   background: white;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -1760,6 +1761,7 @@ p {
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.3;
@@ -1774,24 +1776,40 @@ p {
   margin-bottom: 8px;
 }
 
-.scan-status-info {
+.scan-status-info,
+.status-badge-mini {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: 4px;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.badge-severity {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .status-healthy {
-  background: var(--color-primary-light);
-  color: var(--color-primary-dark);
+  background: #DCFCE7 !important;
+  color: #166534 !important;
 }
 
-.status-infected {
-  background: #FEF2F2;
-  color: #DC2626;
+.status-infected,
+.status-unhealthy {
+  background: #FEE2E2 !important;
+  color: #991B1B !important;
 }
 
 /* Daily Tips Carousel */
@@ -1886,13 +1904,11 @@ p {
 }
 
 .service-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
 }
 
 .service-card span {
@@ -1901,24 +1917,18 @@ p {
   color: var(--color-text-primary);
 }
 
-.book-icon {
-  background: #3B82F6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.history-icon {
-  background: #8B5CF6;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.shop-icon {
-  background: #EC4899;
-  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
-}
-
+/* Removed extra colors and shadows for a minimalist look */
+.book-icon,
+.history-icon,
+.shop-icon,
 .guide-icon {
-  background: #F59E0B;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.service-card:hover .service-icon {
+  color: var(--color-primary);
+  transform: scale(1.1);
 }
 
 /* Statistics Card */
@@ -1979,6 +1989,214 @@ p {
   margin-bottom: var(--space-lg);
 }
 
-.scan-page {
-  padding-top: var(--space-lg);
+
+
+/* === Loading Card Premium Styles === */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #F3F4F6;
+  /* Light gray background like screenshot */
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loading-card {
+  background: white;
+  width: 100%;
+  max-width: 320px;
+  border-radius: 24px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  /* Soft shadow */
+}
+
+/* Spinner */
+.loading-spinner-circle {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #F3F4F6;
+  border-right-color: #22C55E;
+  /* Green-500 */
+  border-radius: 50%;
+  animation: spinner-rotate 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-title {
+  color: #15803d;
+  /* Green-700 */
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 32px;
+  font-family: var(--font-heading);
+}
+
+/* Quote Box */
+.quote-box {
+  background: #F8FAFC;
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+.quote-icon-left {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  color: #1E293B;
+  /* Dark blue/gray */
+  font-size: 2rem;
+  font-family: serif;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.quote-icon-right {
+  position: absolute;
+  bottom: 0px;
+  right: 16px;
+  color: #1E293B;
+  font-size: 2rem;
+  font-family: serif;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.quote-text {
+  color: #15803d;
+  /* Green-700 matched to title */
+  font-style: italic;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+  font-family: var(--font-family);
+}
+
+/* 3 Dots Indicator */
+.dots-indicator {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  background-color: #E5E7EB;
+  /* Gray-200 default */
+  border-radius: 50%;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dot.active {
+  background-color: #22C55E;
+  /* Green-500 */
+  transform: scale(1.1);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+/* Pulsing effect for the most recent active dot could be nice, but simple fill is requested */
+
+/* Premium Trivia Card */
+.peribahasa-container {
+  background: white;
+  border: 1px solid var(--color-border-light);
+  border-radius: 20px;
+  padding: 24px;
+  margin-top: 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.peribahasa-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: var(--gradient-primary);
+}
+
+.peribahasa-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--color-primary);
+  font-weight: 800;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.peribahasa-text {
+  font-size: 1.15rem;
+  color: var(--color-text-primary);
+  font-style: italic;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* === Leaf Upload Card (Added for Polish) === */
+.leaf-upload-card {
+  margin-top: 24px;
+}
+
+.leaf-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.leaf-icon-circle {
+  width: 48px;
+  height: 48px;
+  background: var(--color-primary-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 177, 79, 0.1);
+}
+
+.leaf-card-text h3 {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0 0 2px 0;
+  color: var(--color-primary-dark);
+}
+
+.leaf-card-text p {
+  font-size: var(--font-size-sm);
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
 }

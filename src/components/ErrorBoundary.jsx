@@ -1,13 +1,7 @@
 import { Component } from 'react';
-import { useLanguage } from '../i18n/i18n.jsx';
+import translations from '../i18n/translations';
 
-// Wrapper component to access hooks
-function ErrorBoundaryWithTranslation(props) {
-    const { t } = useLanguage();
-    return <ErrorBoundaryInner t={t} {...props} />;
-}
-
-class ErrorBoundaryInner extends Component {
+class ErrorBoundary extends Component {
     constructor(props) {
         super(props);
         this.state = { hasError: false, error: null };
@@ -23,10 +17,38 @@ class ErrorBoundaryInner extends Component {
         }
     }
 
-    render() {
-        const { t } = this.props;
+    // Helper to get translation without hooks
+    getSafeT() {
+        try {
+            const lang = localStorage.getItem('appLanguage') || 'ms';
+            const tObj = translations[lang] || translations.ms;
 
+            return (key) => {
+                const keys = key.split('.');
+                let value = tObj;
+                for (const k of keys) {
+                    value = value?.[k];
+                }
+                // Fallback to English if not found
+                if (!value && lang !== 'en') {
+                    let enValue = translations.en;
+                    for (const k of keys) {
+                        enValue = enValue?.[k];
+                    }
+                    return enValue || key;
+                }
+                return value || key;
+            };
+        } catch (e) {
+            // Ultimate fallback
+            return (key) => key;
+        }
+    }
+
+    render() {
         if (this.state.hasError) {
+            const t = this.getSafeT();
+
             return (
                 <div style={{
                     minHeight: '100vh',
@@ -45,10 +67,10 @@ class ErrorBoundaryInner extends Component {
                         textAlign: 'center'
                     }}>
                         <h2 style={{ color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
-                            {t('home.errorBoundaryTitle')}
+                            {t('home.errorBoundaryTitle') || 'Something went wrong'}
                         </h2>
                         <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px' }}>
-                            {t('home.errorBoundaryMessage')}
+                            {t('home.errorBoundaryMessage') || 'Please refresh the page to try again.'}
                         </p>
                         <button
                             onClick={() => window.location.reload()}
@@ -63,7 +85,7 @@ class ErrorBoundaryInner extends Component {
                                 cursor: 'pointer'
                             }}
                         >
-                            {t('home.errorBoundaryButton')}
+                            {t('home.errorBoundaryButton') || 'Refresh Page'}
                         </button>
                     </div>
                 </div>
@@ -74,4 +96,5 @@ class ErrorBoundaryInner extends Component {
     }
 }
 
-export default ErrorBoundaryWithTranslation;
+export default ErrorBoundary;
+

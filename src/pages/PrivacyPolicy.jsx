@@ -6,69 +6,7 @@ const PrivacyPolicy = () => {
     const navigate = useNavigate();
     const { t } = useLanguage();
 
-    const sections = [
-        {
-            id: 'compliance',
-            icon: <Shield size={20} />,
-            title: '1. Compliance with PDPA',
-            content: 'We are committed to protecting your personal data in accordance with the Personal Data Protection Act 2010 (PDPA) of Malaysia. This notice explains how we collect, use, and process your personal information.'
-        },
-        {
-            id: 'information',
-            icon: <Database size={20} />,
-            title: '2. Information We Collect',
-            content: 'We collect information necessary to provide our plant diagnosis service:',
-            list: [
-                {
-                    label: 'Images:',
-                    text: 'Photos you upload for analysis.'
-                },
-                {
-                    label: 'Device Data:',
-                    text: 'Technical information to improve app stability.'
-                },
-                {
-                    label: 'Usage Data:',
-                    text: 'Information about how you interact with our service.'
-                }
-            ]
-        },
-        {
-            id: 'usage',
-            icon: <Bell size={20} />,
-            title: '3. How We Use Information',
-            content: 'We use your data to:',
-            list: [
-                {
-                    text: 'Provide and improve AI disease analysis.'
-                },
-                {
-                    text: 'Personalize your user experience.'
-                },
-                {
-                    text: 'Comply with legal obligations under Malaysian law.'
-                }
-            ]
-        },
-        {
-            id: 'storage',
-            icon: <Lock size={20} />,
-            title: '4. Data Storage & Security',
-            content: 'Your scan history is stored locally on your device using encryption. We implement reasonable security measures to protect your data from unauthorized access, loss, or misuse.'
-        },
-        {
-            id: 'third-party',
-            icon: <Users size={20} />,
-            title: '5. Third-Party Disclosures',
-            content: 'We do not sell your personal data. We may share data with service providers who assist our operations, subject to confidentiality agreements and compliance with PDPA.'
-        },
-        {
-            id: 'contact',
-            icon: <Mail size={20} />,
-            title: '6. Contact Us',
-            content: 'If you have any questions about this Privacy Policy, please contact our support team at support@smartplant.my.'
-        }
-    ];
+
 
     return (
         <div className="page legal-page">

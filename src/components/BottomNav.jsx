@@ -42,7 +42,7 @@ const BottomNav = () => {
                         <Link to="/privacy">{t('nav.privacy')}</Link>
                     </div>
                 )}
-                <p>&copy; {new Date().getFullYear()} Dengan bangganya dibuat di MALAYSIA <span className="my-badge">MY</span></p>
+                <p>&copy; {new Date().getFullYear()} {t('common.madeInMY')} <span className="my-badge">MY</span></p>
             </div>
         </nav>
     );

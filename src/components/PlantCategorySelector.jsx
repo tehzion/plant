@@ -37,12 +37,19 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
         {categories.map((category) => (
           <button
             key={category.id}
-            onClick={() => onSelect(category.nameKey)}
+            onClick={() => !disabled && onSelect(category.nameKey)}
             className={`category-btn ${selected === category.nameKey ? 'active' : ''}`}
             disabled={disabled}
           >
-            <span className="category-icon">{category.icon}</span>
+            <div className="category-icon" style={{ background: selected === category.nameKey ? '#ffffff' : '#F3F4F6' }}>{category.icon}</div>
             <span className="category-name">{t(category.translationKey)}</span>
+            {selected === category.nameKey && (
+              <div className="selected-indicator">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            )}
           </button>
         ))}
       </div>
@@ -69,7 +76,7 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
 
         .category-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
           gap: var(--space-md);
         }
 
@@ -80,84 +87,88 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
         }
 
         .category-btn {
+          position: relative;
           display: flex;
           flex-direction: column;
           align-items: center;
+          justify-content: center;
           gap: var(--space-sm);
-          padding: var(--space-lg);
-          min-height: 100px;
+          padding: var(--space-lg) var(--space-md);
           background: white;
-          border: 2px solid var(--color-border);
+          border: 3px solid var(--color-border);
           border-radius: var(--radius-lg);
           cursor: pointer;
           transition: all var(--transition-base);
           font-family: var(--font-family);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .category-btn::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: var(--gradient-primary);
-          opacity: 0;
-          transition: opacity var(--transition-base);
+          min-height: 140px;
+          height: auto;
+          width: 100%;
         }
 
         .category-btn:hover:not(:disabled) {
-          border-color: var(--color-primary-light);
-          transform: translateY(-4px) scale(1.05);
+          border-color: var(--color-primary);
+          transform: translateY(-4px) scale(1.02);
           box-shadow: var(--shadow-lg);
-        }
-
-        .category-btn:hover:not(:disabled)::before {
-          opacity: 0.05;
         }
 
         .category-btn.active {
-          background: var(--gradient-primary);
-          border-color: var(--color-primary);
-          color: white;
-          box-shadow: var(--shadow-lg);
-          transform: scale(1.05);
-        }
-
-        .category-btn.active::before {
-          opacity: 1;
+          border-color: #22C55E;
+          background: #DCFCE7; /* green-100 equivalent */
+          box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2), 0 2px 4px -1px rgba(34, 197, 94, 0.1);
         }
 
         .category-btn:disabled {
-          opacity: 0.5;
+          opacity: 0.6;
           cursor: not-allowed;
         }
 
         .category-icon {
-          font-size: 1rem;
-          position: relative;
-          z-index: 1;
-          transition: transform var(--transition-base);
-          background: #F9FAFB;
+          width: 50px;
+          height: 50px;
+          background: #F3F4F6;
           border-radius: 50%;
-          width: 56px;
-          height: 56px;
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: transform var(--transition-base);
+          z-index: 1;
         }
 
-        .category-btn:hover .category-icon {
-          transform: scale(1.1);
+        .category-btn:hover:not(:disabled) .category-icon {
+          transform: scale(1.1) rotate(5deg);
         }
 
         .category-name {
-          font-size: var(--font-size-sm);
-          font-weight: 500;
-          position: relative;
+          font-size: var(--font-size-base);
+          font-weight: 600;
+          color: var(--color-text-primary);
+          line-height: 1.2;
+          text-align: center;
           z-index: 1;
+        }
+
+        .selected-indicator {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: 24px;
+          height: 24px;
+          background: #22C55E;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: bold;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          z-index: 2;
+        }
+
+        @keyframes scaleIn {
+          from { transform: scale(0); }
+          to { transform: scale(1); }
         }
 
         @media (max-width: 480px) {
@@ -166,7 +177,8 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
           }
 
           .category-btn {
-            min-height: 90px;
+            min-height: 120px;
+            padding: var(--space-md);
           }
         }
       `}</style>

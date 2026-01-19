@@ -61,11 +61,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
 
         <div className="product-content">
           <div className="product-info-top">
-            <h4 className="product-name" title={product.name}>{product.name}</h4>
+            <h4 className="product-name" title={t(product.name)}>{t(product.name)}</h4>
             <p className="product-count">{product.count}</p>
           </div>
 
-          <p className="product-description">{product.description}</p>
+          <p className="product-description">{t(product.description)}</p>
 
           <div className="product-actions">
             {(product.supplier === 'guanChong' || hasMultipleSuppliers) && product.guanChongUrl && (
@@ -102,9 +102,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.diseaseControlProducts')}</h3>
           </div>
-          <p className="section-subtitle">
-            {t('results.diseaseControlSubtitle')}
-          </p>
 
           <div className="products-grid">
             {products.diseaseControl.map((product, index) => renderProductCard(product, index))}
@@ -124,9 +121,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
               {scaleInfo.icon} {scaleInfo.label}
             </div>
           )}
-          <p className="section-subtitle">
-            {scaleInfo.title}
-          </p>
 
           <div className="products-grid">
             {products.nutrition.map((product, index) => renderProductCard(product, index))}
@@ -139,9 +133,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
         <div className="section-header-centered">
           <h3 className="section-title">{t('results.ourTrustedSuppliers')}</h3>
         </div>
-        <p className="section-subtitle">
-          Professional agro-suppliers with expert support and doorstep delivery
-        </p>
 
         <div className="suppliers-grid">
           {/* Guan Chong Agro */}
@@ -247,7 +238,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
           font-size: 0.95rem;
           font-weight: 600;
           color: var(--color-primary);
-          margin-bottom: 4px;
+          margin-bottom: 20px; /* Increased from 4px for breathing space */
         }
         
         .scale-note {
@@ -416,6 +407,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
             flex: 1; /* Push content apart if needed */
         }
         
+        .supplier-contact {
+            margin-top: 8px;
+            margin-bottom: 20px;
+        }
+
         .supplier-contact p {
             font-size: 0.85rem;
             color: #4B5563;

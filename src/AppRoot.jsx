@@ -7,6 +7,8 @@ import Layout from './components/Layout';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 
+import { ScanProvider } from './context/ScanContext';
+
 const Home = lazy(() => import('./pages/Home'));
 const Results = lazy(() => import('./pages/Results'));
 const History = lazy(() => import('./pages/History'));
@@ -21,22 +23,24 @@ function App() {
         <LanguageProvider>
             <ErrorBoundary>
                 <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                    <Layout>
-                        <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
-                            <Routes>
-                                <Route path="/" element={<Home />} />
-                                <Route path="/results/:id" element={<Results />} />
-                                <Route path="/history" element={<History />} />
-                                <Route path="/encyclopedia" element={<Encyclopedia />} />
-                                <Route path="/profile" element={<Login />} />
-                                <Route path="/onboarding" element={<Onboarding />} />
-                                <Route path="/guide" element={<UserGuide />} />
-                                <Route path="/terms" element={<TermsOfUse />} />
-                                <Route path="/privacy" element={<PrivacyPolicy />} />
-                                <Route path="*" element={<NotFound />} />
-                            </Routes>
-                        </Suspense>
-                    </Layout>
+                    <ScanProvider>
+                        <Layout>
+                            <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
+                                <Routes>
+                                    <Route path="/" element={<Home />} />
+                                    <Route path="/results/:id" element={<Results />} />
+                                    <Route path="/history" element={<History />} />
+                                    <Route path="/encyclopedia" element={<Encyclopedia />} />
+                                    <Route path="/profile" element={<Login />} />
+                                    <Route path="/onboarding" element={<Onboarding />} />
+                                    <Route path="/guide" element={<UserGuide />} />
+                                    <Route path="/terms" element={<TermsOfUse />} />
+                                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                                    <Route path="*" element={<NotFound />} />
+                                </Routes>
+                            </Suspense>
+                        </Layout>
+                    </ScanProvider>
                 </BrowserRouter>
             </ErrorBoundary>
             <style>{`

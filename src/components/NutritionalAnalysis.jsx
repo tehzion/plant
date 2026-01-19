@@ -75,7 +75,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
               </div>
               <div className="nutrients-grid">
                 {nutritionalIssues.deficientNutrients.map((item, index) => {
-                  const nutrientName = typeof item === 'string' ? item : (item?.nutrient || 'Unknown');
+                  const nutrientName = typeof item === 'string' ? item : (item?.nutrient || t('common.unknown'));
                   const severity = typeof item === 'object' && item?.severity ? item.severity : null;
 
                   return (
@@ -114,7 +114,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                         {(() => {
                           const rawName = rec.fertilizerName || rec.product || rec.name || '';
                           const normalizedName = rawName.toLowerCase().trim();
-                          
+
                           // List of generic names to filter out (expanded)
                           const genericNames = [
                             'chemical', 'kimia', 'baja kimia',
@@ -122,17 +122,17 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                             'fertilizer', 'baja',
                             'compound', 'kompaun'
                           ];
-                          
+
                           // Check if the name is too generic
-                          const isGeneric = genericNames.includes(normalizedName) || 
-                                          normalizedName.length < 3 ||
-                                          normalizedName === 'n/a' ||
-                                          normalizedName === '-';
-                          
+                          const isGeneric = genericNames.includes(normalizedName) ||
+                            normalizedName.length < 3 ||
+                            normalizedName === 'n/a' ||
+                            normalizedName === '-';
+
                           if (!isGeneric && rawName) {
                             return toTitleCase(rawName);
                           }
-                          
+
                           // Fallback: use type-based translation with more specific naming
                           const recType = rec.type?.toLowerCase();
                           if (recType === 'organic' || recType === 'organik') {
@@ -140,7 +140,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                           } else if (recType === 'chemical' || recType === 'kimia') {
                             return t('results.chemicalFertilizer');
                           }
-                          
+
                           // Ultimate fallback
                           return t('results.generalFertilizer');
                         })()}

@@ -9,17 +9,17 @@ const DailyTips = () => {
     const touchEnd = useRef(null);
 
     const dailyTips = React.useMemo(() => [
-        { id: 1, titleKey: 'tip1Title', descKey: 'tip1Desc', icon: <Droplets size={36} />, bg: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', color: '#1565C0' },
-        { id: 2, titleKey: 'tip2Title', descKey: 'tip2Desc', icon: <FlaskConical size={36} />, bg: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)', color: '#2E7D32' },
-        { id: 3, titleKey: 'tip3Title', descKey: 'tip3Desc', icon: <Bug size={36} />, bg: 'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)', color: '#EF6C00' },
-        { id: 4, titleKey: 'tip4Title', descKey: 'tip4Desc', icon: <Sprout size={36} />, bg: 'linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%)', color: '#6A1B9A' }
+        { id: 1, categoryKey: 'tip1Cat', titleKey: 'tip1Title', descKey: 'tip1Desc', icon: <Droplets size={36} />, bg: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', color: '#1565C0' },
+        { id: 2, categoryKey: 'tip2Cat', titleKey: 'tip2Title', descKey: 'tip2Desc', icon: <FlaskConical size={36} />, bg: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)', color: '#2E7D32' },
+        { id: 3, categoryKey: 'tip3Cat', titleKey: 'tip3Title', descKey: 'tip3Desc', icon: <Bug size={36} />, bg: 'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)', color: '#EF6C00' },
+        { id: 4, categoryKey: 'tip4Cat', titleKey: 'tip4Title', descKey: 'tip4Desc', icon: <Sprout size={36} />, bg: 'linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%)', color: '#6A1B9A' }
     ], []);
 
     // Carousel Logic
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTipIndex((prev) => (prev + 1) % dailyTips.length);
-        }, 3000);
+        }, 6000);
         return () => clearInterval(interval);
     }, [dailyTips.length]);
 
@@ -67,7 +67,7 @@ const DailyTips = () => {
                             className="tip-badge"
                             style={{ color: dailyTips[currentTipIndex].color }}
                         >
-                            {t('home.tipBadge')}
+                            {t(`home.${dailyTips[currentTipIndex].categoryKey}`) || t('home.tipBadge')}
                         </span>
                         <h4 style={{ color: dailyTips[currentTipIndex].color }}>{t(`home.${dailyTips[currentTipIndex].titleKey}`)}</h4>
                         <p style={{ color: dailyTips[currentTipIndex].color }}>{t(`home.${dailyTips[currentTipIndex].descKey}`)}</p>

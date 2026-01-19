@@ -84,13 +84,9 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
       {/* Disease Information Container */}
       <div className="disease-info-container">
-        {/* Section Header */}
-        <div className="section-header-centered">
-          <h3 className="section-title">{t('results.diseaseInfo')}</h3>
-        </div>
 
         {(() => {
-          // Robust handling for AI ignoring word limits
+          // Robust handling for system ignoring word limits
           let displayTitle = result.disease || t('results.unknownDisease');
           // Don't apply default fallbacks yet - we want to try splitting the title first if no specific notes exist
           let extraDescription = result.additionalNotes || result.analysisSummary || result.analysis_summary || result.description || result.summary || result.justification;
@@ -209,10 +205,17 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
                     {/* Severity display moved here */}
                     {!isHealthy && result.severity && (
-                      <div className="status-severity-container" style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+                      <div className="status-severity-container" style={{
+                        marginTop: '12px',
+                        paddingTop: '12px',
+                        borderTop: '1px solid rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px'
+                      }}>
                         <span className="status-label">{t('results.severity')}</span>
-                        <span className={`status-value severity-text ${getSeverityBadgeClass(result.severity)}`} style={{ fontSize: '1rem', display: 'block' }}>
-                          {t(`results.${(result.severity || 'unknown').toLowerCase()}`)}
+                        <span className="status-value">
+                          {t(`results.${(result.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
                         </span>
                       </div>
                     )}
@@ -237,18 +240,6 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         {/* Details Grid */}
         <div className="details-section">
           <div className="details-grid">
-            {/* Plant Type */}
-            {result.plantType && (
-              <div className="detail-item">
-                <div className="detail-icon plant-icon">
-                  {getPlantIcon(result.plantType)}
-                </div>
-                <div className="detail-text">
-                  <span className="detail-label">{t('results.plantType')}</span>
-                  <span className="detail-value">{result.plantType}</span>
-                </div>
-              </div>
-            )}
 
             {/* Estimated Age (Healthy only) */}
             {isHealthy && result.estimatedAge && (

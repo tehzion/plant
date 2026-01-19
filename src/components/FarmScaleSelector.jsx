@@ -24,7 +24,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
     };
 
     const density = densityMap[category] || 50; // Default estimate
-    if (density === 0) return 'Berbeza mengikut jenis tanaman';
+    if (density === 0) return t('home.variableEstimate');
 
     return Math.round(acres * density).toLocaleString();
   };
@@ -205,15 +205,20 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
         }
 
         .scale-info {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
           text-align: center;
           width: 100%;
+          gap: 4px; /* Explicit gap for '3 lines' feel */
         }
 
         .scale-name {
           font-size: var(--font-size-lg);
           font-weight: 600;
           color: var(--color-text-primary);
-          margin-bottom: var(--space-xs);
+          line-height: 1.2;
+          width: 100%;
         }
 
         .scale-description {
@@ -276,7 +281,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
         }
 
         .quantity-input {
-          width: 100%;
+          width: 120px;
           padding: var(--space-sm);
           border: 1px solid var(--color-border);
           border-radius: var(--radius-sm);

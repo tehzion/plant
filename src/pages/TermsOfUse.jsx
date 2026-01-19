@@ -6,55 +6,7 @@ const TermsOfUse = () => {
     const navigate = useNavigate();
     const { t } = useLanguage();
 
-    const sections = [
-        {
-            id: 'introduction',
-            icon: <FileText size={20} />,
-            title: '1. Introduction',
-            content: 'Welcome to Smart Plant Diseases & Advisor. By accessing or using our application, you agree to be bound by these Terms of Use ("Terms"). These Terms are governed by and construed in accordance with the laws of Malaysia.'
-        },
-        {
-            id: 'eligibility',
-            icon: <Shield size={20} />,
-            title: '2. Eligibility',
-            content: 'This Service is intended for use by individuals located in Malaysia. If you access the Service from outside Malaysia, you do so at your own risk and are responsible for compliance with the laws of your jurisdiction.'
-        },
-        {
-            id: 'use-of-service',
-            icon: <AlertCircle size={20} />,
-            title: '3. Use of Service',
-            content: 'Our service provides AI-based plant disease analysis. While we strive for accuracy, the results are for informational purposes only and should not replace professional agricultural advice from certified agronomists in Malaysia.',
-            list: [
-                'You agree to use the app only for lawful purposes under Malaysian law.',
-                'You will not use the service to diagnose regulated pests or diseases without reporting to the Department of Agriculture Malaysia if required.',
-                'You are responsible for the images you upload and must own the rights to them.'
-            ]
-        },
-        {
-            id: 'intellectual-property',
-            icon: <Scale size={20} />,
-            title: '4. Intellectual Property',
-            content: 'All content, features, and functionality of the App (including but not limited to AI models, design, and software) are the exclusive property of Smart Plant Diseases & Advisor and are protected by Malaysian copyright and intellectual property laws.'
-        },
-        {
-            id: 'limitation',
-            icon: <AlertCircle size={20} />,
-            title: '5. Limitation of Liability',
-            content: 'To the fullest extent permitted by Malaysian law, Smart Plant Diseases & Advisor shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of the Service.'
-        },
-        {
-            id: 'changes',
-            icon: <RefreshCw size={20} />,
-            title: '6. Changes to Terms',
-            content: 'We reserve the right to modify these terms at any time. We will notify users of any significant changes. Continued use of the app constitutes acceptance of new terms.'
-        },
-        {
-            id: 'contact',
-            icon: <Mail size={20} />,
-            title: '7. Contact Us',
-            content: 'For any inquiries regarding these Terms, please contact us at support@smartplant.my.'
-        }
-    ];
+
 
     return (
         <div className="page legal-page">

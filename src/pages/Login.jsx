@@ -10,7 +10,7 @@ const Login = () => {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        alert('Authentication feature coming soon!');
+        alert(t('common.authFeatureComingSoon'));
     };
 
     return (
@@ -79,7 +79,7 @@ const Login = () => {
 
                     <div className="login-footer">
                         <p>
-                            {isLogin ? t('login.noAccount') : 'Already have an account?'}
+                            {isLogin ? t('login.noAccount') : t('common.alreadyHaveAccount')}
                             <button onClick={() => setIsLogin(!isLogin)} className="toggle-btn">
                                 {isLogin ? t('login.register') : t('login.signIn')}
                             </button>

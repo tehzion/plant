@@ -86,13 +86,13 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
+            alert(t('common.errorSelectImage'));
             return;
         }
 
         // Validate file size (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
-            alert('Image size must be less than 10MB');
+            alert(t('common.errorImageSize'));
             return;
         }
 

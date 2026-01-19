@@ -1,16 +1,18 @@
 import { Map, TreeDeciduous, Home, MapPin, DollarSign, FileText, ShoppingCart, Lightbulb, ShoppingBag } from 'lucide-react';
+import { useLanguage } from '../i18n/i18n.jsx';
 
 const SpecificProductRecommendations = ({ products, farmScale }) => {
+  const { t } = useLanguage();
   if (!products || products.length === 0) return null;
 
   const getScaleBadge = () => {
     switch (farmScale) {
       case 'acre':
-        return { icon: <Map size={16} />, text: 'Bulk quantities recommended' };
+        return { icon: <Map size={16} />, text: t('results.bulkRecommended') };
       case 'tree':
-        return { icon: <TreeDeciduous size={16} />, text: 'Per tree application' };
+        return { icon: <TreeDeciduous size={16} />, text: t('results.perTreeApp') };
       case 'personal':
-        return { icon: <Home size={16} />, text: 'Small pack sizes' };
+        return { icon: <Home size={16} />, text: t('results.smallPack') };
       default:
         return null;
     }
@@ -24,7 +26,7 @@ const SpecificProductRecommendations = ({ products, farmScale }) => {
         <div className="title-icon">
           <ShoppingCart size={24} strokeWidth={2.5} />
         </div>
-        <h3 className="products-title">Recommended Products for Your Issue</h3>
+        <h3 className="products-title">{t('results.recommendedTitle')}</h3>
       </div>
       {scaleBadge && (
         <div className="scale-info">
@@ -32,9 +34,6 @@ const SpecificProductRecommendations = ({ products, farmScale }) => {
           <span>{scaleBadge.text}</span>
         </div>
       )}
-      <p className="products-subtitle">
-        Based on the detected issue, here are specific products that can help:
-      </p>
 
       <div className="products-grid">
         {products.map((product, index) => (
@@ -51,20 +50,20 @@ const SpecificProductRecommendations = ({ products, farmScale }) => {
             <div className="product-details">
               <div className="detail-row">
                 <span className="detail-label">
-                  <DollarSign size={16} /> Price:
+                  <DollarSign size={16} /> {t('results.price')}:
                 </span>
                 <span className="detail-value">{product.price}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">
-                  <FileText size={16} /> Usage:
+                  <FileText size={16} /> {t('results.usage')}:
                 </span>
                 <span className="detail-value">{product.usage}</span>
               </div>
             </div>
 
             <div className="why-recommended">
-              <strong>Why this product:</strong> {product.whyRecommended}
+              <strong>{t('results.whyRecommended')}:</strong> {product.whyRecommended}
             </div>
 
             <a
@@ -74,7 +73,7 @@ const SpecificProductRecommendations = ({ products, farmScale }) => {
               className="buy-button"
             >
               <ShoppingBag size={18} />
-              View Product & Buy
+              {t('results.viewProductBuy')}
             </a>
           </div>
         ))}
@@ -83,8 +82,8 @@ const SpecificProductRecommendations = ({ products, farmScale }) => {
       <div className="purchase-note">
         <Lightbulb size={16} />
         <div>
-          <strong>Note:</strong> Click "View Product & Buy" to see full details and purchase options.
-          Contact supplier directly for bulk orders or custom quantities.
+          <strong>{t('common.note')}:</strong> {t('results.noteAction')}
+          {' '}{t('results.contactDirect')}
         </div>
       </div>
 
