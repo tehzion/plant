@@ -13,7 +13,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Load environment variables
+// Load environment variables
 dotenv.config();
+
+// CRITICAL: Validate Configuration
+if (!process.env.OPENAI_API_KEY) {
+    console.error('❌ FATAL: OPENAI_API_KEY is missing. The server will not function correctly.');
+} else {
+    console.log('✅ OPENAI_API_KEY found');
+}
+
+if (!process.env.PLANTNET_API_KEY) {
+    console.warn('⚠️ WARNING: PLANTNET_API_KEY is missing. Species identification feature will be disabled.');
+} else {
+    console.log('✅ PLANTNET_API_KEY found');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +72,11 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         message: 'Plant Analysis API',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        config: {
+            openai: !!process.env.OPENAI_API_KEY,
+            plantnet: !!process.env.PLANTNET_API_KEY
+        }
     });
 });
 
@@ -69,6 +87,10 @@ app.post('/api/ask', async (req, res, next) => {
 
         if (!question) {
             return res.status(400).json({ error: 'Question is required' });
+        }
+
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({ error: 'Service Unavailable', message: 'OpenAI API Key is missing on the server.' });
         }
 
         // 1. Normalize Cache Key
@@ -122,6 +144,15 @@ app.post('/api/feedback', async (req, res, next) => {
 // Main Analysis Endpoint
 app.post('/api/analyze', async (req, res, next) => {
     try {
+        // Validation: Critical Keys
+        if (!process.env.OPENAI_API_KEY) {
+            console.error('❌ Request Failed: OPENAI_API_KEY is missing.');
+            return res.status(503).json({
+                error: 'Configuration Error',
+                message: 'Server is missing API Keys. Please check Render Environment Variables.'
+            });
+        }
+
         // Fix: Extract treeImage/leafImage to match Frontend Payload (src/utils/diseaseDetection.js)
         // Fallback to 'image' for backward compatibility
         const { treeImage, leafImage, image, category, language = 'en', location } = req.body;
