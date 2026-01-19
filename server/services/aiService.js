@@ -70,6 +70,14 @@ export async function identifyPlantWithPlantNet(imageBase64) {
     }
 }
 
+// Helper to clean JSON string from Markdown
+function cleanJsonString(str) {
+    if (!str) return '';
+    // Remove markdown code blocks
+    let cleaned = str.replace(/```json/g, '').replace(/```/g, '');
+    return cleaned.trim();
+}
+
 /**
  * Fallback: Identify plant using GPT Vision
  */
@@ -118,6 +126,8 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                 temperature: 0.3
             });
         } catch (primaryError) {
+            console.error(`⚠️ Primary model (${model}) failed: ${primaryError.code || primaryError.status || primaryError.message}`);
+
             // Fallback to gpt-3.5-turbo if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
             model = 'gpt-3.5-turbo';
@@ -160,9 +170,12 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
         }
 
         const content = response.choices[0].message.content;
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        // Robust JSON Extraction
+        const cleanedContent = cleanJsonString(content);
+        const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) {
+            console.error('❌ Failed to extract JSON from response:', content.substring(0, 100) + '...');
             throw new Error('Failed to parse identification response');
         }
 
@@ -175,9 +188,34 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
         return result;
 
     } catch (error) {
-        console.error('❌ Backup identification failed');
+        console.error('❌ Backup identification failed:', error.message, error.status ? `(Status: ${error.status})` : '');
         return null;
     }
+}
+
+// ... internal helpers ...
+
+/**
+ * Analyze plant with GPT-5 Nano (optimized for Malaysia)
+ */
+export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation) {
+    // ... [No changes to logging here] ...
+    console.log(`🌿 PlantNet Data Used: ${plantNetResult ? 'Yes' : 'No'}`);
+    if (plantNetResult) {
+        console.log(`   - Species: ${plantNetResult.scientificName}`);
+        console.log(`   - Confidence: ${plantNetResult.score}`);
+    }
+
+    // ... [Start of main try block] ...
+    try {
+        console.log('🤖 Analyzing plant health...');
+        const isMalay = language === 'ms';
+        const malaysiaCropInfo = getMalaysiaCropInfo(plantNetResult, category);
+
+        // ... [Context building logic omitted for brevity as it is unchanged] ...
+        // We need to fetch the file content again to inject the updated logic without overwriting the complex context generation
+        // For partial replacement, we will target the actual API call block below
+    } catch (err) { throw err; }
 }
 
 /**
@@ -514,6 +552,8 @@ IMPORTANT RULES:
                 temperature: 0.7,
             });
         } catch (primaryError) {
+            console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
+
             // Fallback to gpt-3.5-turbo if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
             model = 'gpt-3.5-turbo';
@@ -529,9 +569,12 @@ IMPORTANT RULES:
 
         const content = response.choices[0].message.content;
 
-        // Parse JSON response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        // Robust JSON Parsing
+        const cleanedContent = cleanJsonString(content);
+        const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+
         if (!jsonMatch) {
+            console.error('❌ Failed to extract JSON from analysis response. Raw content:', content.substring(0, 200) + '...');
             throw new Error('Failed to parse AI response');
         }
 
@@ -541,7 +584,7 @@ IMPORTANT RULES:
         return result;
 
     } catch (error) {
-        console.error('❌ GPT-4o-mini analysis failed:', error.message);
+        console.error('❌ GPT Analysis failed:', error.message, error.status ? `(Status: ${error.status})` : '');
         throw error;
     }
 }

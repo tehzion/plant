@@ -263,11 +263,31 @@ if (process.env.NODE_ENV === 'production') {
 
 // Only start server if NOT on Vercel (Vercel handles it as a serverless function)
 if (!process.env.VERCEL) {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`✅ Server running on http://localhost:${PORT}`);
         console.log(`🛡️ Security Headers: Enabled`);
         console.log(`🧠 AI Cache: Enabled`);
+        console.log(`🚀 Ready to accept connections`);
+    });
+
+    // Graceful Shutdown
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM signal received: closing HTTP server');
+        server.close(() => {
+            console.log('HTTP server closed');
+        });
     });
 }
+
+// Global Process Error Handlers (Critical for stability)
+process.on('uncaughtException', (error) => {
+    console.error('🔥 CRITICAL: Uncaught Exception:', error);
+    // In production, you might want to exit here, but for now we log it to prevent silent failures
+    // process.exit(1); 
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🔥 CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 export default app;
