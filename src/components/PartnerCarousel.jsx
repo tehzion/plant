@@ -74,15 +74,15 @@ const PartnerCarousel = () => {
         }
 
         .partner-logo-card {
-          width: 180px; /* Wider for better aspect ratio */
-          height: 100px; /* Taller */
+          width: 220px; /* Increased from 180px */
+          height: 130px; /* Increased from 100px */
           background: white;
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 0; 
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Enhanced shadow */
           border: 1px solid #F3F4F6;
           flex-shrink: 0;
           transition: transform 0.2s;
@@ -94,7 +94,7 @@ const PartnerCarousel = () => {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(calc(-180px * 11 - 32px * 11));
+            transform: translateX(calc(-220px * 11 - 32px * 11));
           }
         }
         
@@ -104,7 +104,7 @@ const PartnerCarousel = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 12px; /* Consistent internal padding */
+          padding: 20px; /* Increased padding slightly for balance */
         }
 
         .partner-logo {
@@ -114,21 +114,22 @@ const PartnerCarousel = () => {
           height: auto;
           object-fit: contain;
           transition: transform 0.2s;
+          transform: scale(1.1); /* Slight global boost */
         }
 
         /* Specific Tweak: Major boost for Bayer */
         img[alt="Bayer"] {
-            transform: scale(1.4); 
+            transform: scale(1.5); 
         }
 
         @media (min-width: 768px) {
             .partner-logo-card {
-                width: 240px; /* Significant desktop size increase */
-                height: 140px; 
+                width: 280px; /* Increased from 240px */
+                height: 160px; /* Increased from 140px */
             }
             
             .logo-wrapper {
-                padding: 16px;
+                padding: 24px;
             }
             
             @keyframes scroll {
@@ -136,7 +137,7 @@ const PartnerCarousel = () => {
                 transform: translateX(0);
               }
               100% {
-                transform: translateX(calc(-240px * 11 - 32px * 11));
+                transform: translateX(calc(-280px * 11 - 32px * 11));
               }
             }
         }
