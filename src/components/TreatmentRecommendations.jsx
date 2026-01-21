@@ -146,7 +146,7 @@ const TreatmentRecommendations = ({ result }) => {
         .section-header-centered {
           display: flex;
           align-items: center;
-          justify-content: flex-start; /* Standardize to left */
+          justify-content: flex-start;
           margin-bottom: 16px;
         }
 
@@ -154,7 +154,7 @@ const TreatmentRecommendations = ({ result }) => {
           font-size: 1.25rem;
           color: #1F2937;
           margin: 0;
-          text-align: left; /* Standardize to left */
+          text-align: left;
           font-weight: 700;
         }
 

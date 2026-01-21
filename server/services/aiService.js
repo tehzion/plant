@@ -560,13 +560,31 @@ IMPORTANT RULES:
         const result = JSON.parse(jsonMatch[0]);
 
         console.log('✅ Analysis complete');
-        return result;
+        return ensureCarePlan(result, language);
 
     } catch (error) {
         console.error('❌ GPT Analysis failed:', error.message, error.status ? `(Status: ${error.status})` : '');
         throw error;
     }
 }
+
+/**
+ * Default Care Plans for Fallback (Server-Side)
+ */
+const DEFAULT_CARE_PLANS = {
+    en: {
+        dailyCare: ["Check soil moisture daily", "Ensure adequate sunlight exposure"],
+        weeklyCare: ["Inspect for pests or diseases", "Remove dead or yellowing leaves"],
+        monthlyCare: ["Apply balanced fertilizer", "Check soil drainage"],
+        bestPractices: ["Keep garden clean from weeds", "Rotate crops if possible to prevent soil depletion"]
+    },
+    ms: {
+        dailyCare: ["Periksa kelembapan tanah setiap hari", "Pastikan pendedahan cahaya matahari yang mencukupi"],
+        weeklyCare: ["Periksa tanda-tanda perosak atau penyakit", "Buang daun mati atau kekuningan"],
+        monthlyCare: ["Gunakan baja seimbang", "Periksa saliran tanah"],
+        bestPractices: ["Pastikan kebun bebas daripada rumpai", "Amalkan giliran tanaman jika boleh"]
+    }
+};
 
 /**
  * Ask general agricultural question
@@ -586,4 +604,23 @@ export async function askAI(question, language) {
         temperature: 0.5
     });
     return response.choices[0].message.content;
+}
+
+/**
+ * Helper to ensure healthyCarePlan exists
+ */
+function ensureCarePlan(result, language) {
+    if (!result.healthyCarePlan ||
+        !result.healthyCarePlan.dailyCare ||
+        result.healthyCarePlan.dailyCare.length === 0) {
+
+        console.warn('⚠️ AI omitted healthyCarePlan, injecting server-side fallback.');
+
+        // Select language (default to 'en' if not 'ms')
+        const langCode = language === 'ms' ? 'ms' : 'en';
+
+        // Inject default plan
+        result.healthyCarePlan = DEFAULT_CARE_PLANS[langCode];
+    }
+    return result;
 }

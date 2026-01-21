@@ -146,6 +146,12 @@ export const analyzePlantDisease = async (
       productRecommendations: recommendations,
       description: language === 'ms' ? (randomDisease.causes?.ms || '') : (randomDisease.causes?.en || ''),
       additionalNotes: language === 'ms' ? 'Mod Demo / Data Simulasi' : 'Demo Mode / Simulated Data',
+      healthyCarePlan: {
+        dailyCare: language === 'ms' ? ["Periksa kelembapan tanah", "Hama dan penyakit"] : ["Check soil moisture", "Monitor for pests"],
+        weeklyCare: language === 'ms' ? ["Buang daun mati"] : ["Remove dead leaves"],
+        monthlyCare: language === 'ms' ? ["Baja ringan"] : ["Light fertilizer"],
+        bestPractices: language === 'ms' ? ["Pastikan saliran baik"] : ["Ensure good drainage"]
+      },
       image: treeImageBase64 // Echo back the image
     };
   }

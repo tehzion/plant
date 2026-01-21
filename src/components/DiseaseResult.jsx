@@ -59,8 +59,12 @@ const DiseaseResult = ({ result, image, leafImage }) => {
   };
 
   const isHealthy = result.healthStatus?.toLowerCase() === 'healthy' ||
-    result.disease?.toLowerCase().includes('tiada masalah') ||
     result.disease?.toLowerCase().includes('no issues');
+
+  /* 
+     Details section logic moved inline for robustness 
+     (preventing empty containers)
+  */
 
   return (
     <div className="disease-result">
@@ -257,12 +261,14 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         )}
 
         {/* Details Grid */}
-        <div className="details-section">
-          <div className="details-grid">
+        {/* Details Grid */}
+        {(() => {
+          const detailItems = [];
 
-            {/* Estimated Age (Healthy only) */}
-            {isHealthy && result.estimatedAge && (
-              <div className="detail-item">
+          // Estimated Age (Healthy only)
+          if (isHealthy && result.estimatedAge) {
+            detailItems.push(
+              <div key="age" className="detail-item">
                 <div className="detail-icon age-icon">
                   <Calendar size={20} />
                 </div>
@@ -271,11 +277,13 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                   <span className="detail-value">{result.estimatedAge}</span>
                 </div>
               </div>
-            )}
+            );
+          }
 
-            {/* Pathogen Type OR Primary Cause */}
-            {!isHealthy && (result.pathogenType || result.nutritionalIssues?.hasDeficiency) && result.pathogenType !== 'unknown' && (
-              <div className="detail-item">
+          // Pathogen Type OR Primary Cause
+          if (!isHealthy && (result.pathogenType || result.nutritionalIssues?.hasDeficiency) && result.pathogenType !== 'unknown') {
+            detailItems.push(
+              <div key="pathogen" className="detail-item">
                 <div className="detail-icon pathogen-icon">
                   <Bug size={20} />
                 </div>
@@ -292,11 +300,13 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                   </span>
                 </div>
               </div>
-            )}
+            );
+          }
 
-            {/* Fungus Species (Hide if Nutrient Deficiency) */}
-            {!isHealthy && !result.nutritionalIssues?.hasDeficiency && result.fungusType && (
-              <div className="detail-item">
+          // Fungus Species (Hide if Nutrient Deficiency)
+          if (!isHealthy && !result.nutritionalIssues?.hasDeficiency && result.fungusType) {
+            detailItems.push(
+              <div key="fungus" className="detail-item">
                 <div className="detail-icon fungus-icon">
                   <AlertCircle size={20} />
                 </div>
@@ -305,9 +315,19 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                   <span className="detail-value">{result.fungusType}</span>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+            );
+          }
+
+          if (detailItems.length === 0) return null;
+
+          return (
+            <div className="details-section">
+              <div className="details-grid">
+                {detailItems}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Symptoms Section (Unhealthy only) */}
         {!isHealthy && result.symptoms && result.symptoms.length > 0 && (

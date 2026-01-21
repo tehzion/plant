@@ -3,7 +3,7 @@ import { Calendar, CalendarDays, CalendarRange, Sparkles } from 'lucide-react';
 
 const HealthyCarePlan = ({ carePlan, plantType }) => {
   const { t } = useLanguage();
-  if (!carePlan) return null;
+  // if (!carePlan) return null; // Logic moved to fallback below
 
   const formatCareItem = (text) => {
     if (typeof text !== 'string') return text;
@@ -35,30 +35,40 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
     return text;
   };
 
+  // Default plan if API didn't return one or for legacy scans
+  const defaultPlan = {
+    dailyCare: [t('care.defaultDaily') || "Check soil moisture daily", t('care.defaultSun') || "Ensure adequate sunlight"],
+    weeklyCare: [t('care.defaultWeekly') || "Inspect for pests", t('care.defaultPrunable') || "Remove dead leaves"],
+    monthlyCare: [t('care.defaultMonthly') || "Apply balanced fertilizer", t('care.defaultSoil') || "Check soil drainage"],
+    bestPractices: [t('care.defaultPractice') || "Keep garden clean", t('care.defaultRotate') || "Rotate crops if possible"]
+  };
+
+  const activePlan = carePlan || defaultPlan;
+
   const careSections = [
     {
       key: 'dailyCare',
       title: t('results.dailyCare'),
       icon: <Calendar size={18} />,
-      data: carePlan.dailyCare
+      data: activePlan.dailyCare || defaultPlan.dailyCare
     },
     {
       key: 'weeklyCare',
       title: t('results.weeklyCare'),
       icon: <CalendarDays size={18} />,
-      data: carePlan.weeklyCare
+      data: activePlan.weeklyCare || defaultPlan.weeklyCare
     },
     {
       key: 'monthlyCare',
       title: t('results.monthlyCare'),
       icon: <CalendarRange size={18} />,
-      data: carePlan.monthlyCare
+      data: activePlan.monthlyCare || defaultPlan.monthlyCare
     },
     {
       key: 'bestPractices',
       title: t('results.bestPractices'),
       icon: <Sparkles size={18} />,
-      data: carePlan.bestPractices
+      data: activePlan.bestPractices || defaultPlan.bestPractices
     }
   ];
 
@@ -100,7 +110,7 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
         .section-header-centered {
           display: flex;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
           margin-bottom: 8px;
         }
 
@@ -108,12 +118,12 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
           font-size: 1.25rem;
           color: #1F2937;
           margin: 0;
-          text-align: center;
+          text-align: left;
           font-weight: 700;
         }
 
         .section-subtitle {
-          text-align: center;
+          text-align: left;
           color: #6B7280;
           margin-bottom: 16px;
           font-size: 0.9rem;

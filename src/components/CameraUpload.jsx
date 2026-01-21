@@ -219,9 +219,10 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 100vh; /* Fallback */
+            height: 100dvh;
             background: black;
-            z-index: 1000;
+            z-index: 2000; /* Ensure it's above bottom nav (z-index: 1000) */
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -234,6 +235,7 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
             justify-content: center;
             overflow: hidden;
             position: relative;
+            background: #000;
         }
 
         .live-video {
@@ -244,11 +246,17 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
 
         .camera-controls {
             padding: 30px;
+            padding-bottom: calc(30px + env(safe-area-inset-bottom));
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(10px);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
         }
 
         .btn-circle {

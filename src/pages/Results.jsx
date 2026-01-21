@@ -202,13 +202,8 @@ ${t('pdf.generatedBy')}
         <div>
           {scan.healthStatus?.toLowerCase() !== 'healthy' ? (
             <TreatmentRecommendations result={result} />
-          ) : scan.healthyCarePlan ? (
-            <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
           ) : (
-            <div className="healthy-message">
-              <h3>✅ {t('results.plantIsHealthy')}</h3>
-              <p>{t('results.keepUpGoodWork')}</p>
-            </div>
+            <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
           )}
         </div>
       )
