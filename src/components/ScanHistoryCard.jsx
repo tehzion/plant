@@ -9,10 +9,13 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
   const getSeverityBadgeClass = (severity) => {
     switch (severity?.toLowerCase()) {
       case 'mild':
+      case 'rendah':
         return 'badge-mild';
       case 'moderate':
+      case 'sederhana':
         return 'badge-moderate';
       case 'severe':
+      case 'tinggi':
         return 'badge-severe';
       default:
         return '';
@@ -62,8 +65,8 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
             </p>
 
             <div className="scan-badge-row">
-              <span className={`status-badge-mini ${scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat' ? 'status-healthy' : 'status-unhealthy'}`}>
-                {scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat' ?
+              <span className={`status-badge-mini ${['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ? 'status-healthy' : 'status-unhealthy'}`}>
+                {['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ?
                   <CheckCircle size={10} strokeWidth={3} /> :
                   <AlertTriangle size={10} strokeWidth={3} />
                 }

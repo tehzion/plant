@@ -380,7 +380,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         };
 
         renderProductList(products.diseaseControl, t('results.diseaseControlProducts'));
-        renderProductList(products.nutrition, (!scanData.disease || scanData.disease.toLowerCase().includes('healthy')) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition'));
+        renderProductList(products.nutrition, (!scanData.disease || ['healthy', 'sihat', 'tiada masalah'].some(term => scanData.disease.toLowerCase().includes(term))) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition'));
     }
 
     // === FOOTER/DISCLAIMER ===

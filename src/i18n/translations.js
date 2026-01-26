@@ -379,6 +379,19 @@ export const translations = {
             treatments: 'Treatments',
             prevention: 'Prevention',
             care: 'Care',
+            treatment: 'Treatment',
+            nutrition: 'Nutrition',
+            products: 'Products',
+
+            // Default Care Plan
+            defaultDaily: 'Check soil moisture daily',
+            defaultSun: 'Ensure adequate sunlight',
+            defaultWeekly: 'Inspect for pests',
+            defaultPrunable: 'Remove dead leaves',
+            defaultMonthly: 'Apply balanced fertilizer',
+            defaultSoil: 'Check soil drainage',
+            defaultPractice: 'Keep garden clean',
+            defaultRotate: 'Rotate crops if possible',
 
             // Products
             recommendedProducts: 'Recommended Products for Your Issue',
@@ -989,6 +1002,16 @@ export const translations = {
             product: 'Produk:',
             dosage: 'Dos:',
             howToApply: 'Cara Penggunaan:',
+
+            // Default Care Plan
+            defaultDaily: 'Periksa kelembapan tanah setiap hari',
+            defaultSun: 'Pastikan cahaya matahari mencukupi',
+            defaultWeekly: 'Periksa untuk perosak',
+            defaultPrunable: 'Buang daun mati',
+            defaultMonthly: 'Gunakan baja seimbang',
+            defaultSoil: 'Periksa saliran tanah',
+            defaultPractice: 'Pastikan kebun bersih',
+            defaultRotate: 'Tukar tanaman jika boleh',
 
             // Products Section
             diseaseControlProducts: 'Produk Kawalan Penyakit & Perosak',

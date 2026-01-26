@@ -81,7 +81,7 @@ const Results = () => {
 ${t('pdf.title')}
 ============================================
 
-${t('common.date')}: ${new Date(scan.timestamp).toLocaleString()}
+${t('common.date')}: ${new Date(scan.timestamp).toLocaleString(t('common.dateLocale') || 'en-MY')}
 ${t('results.plantType')}: ${scan.plantType}
 ${t('results.category')}: ${scan.category}
 ${t('results.scale')}: ${scan.farmScale || t('results.notSpecified')}
@@ -97,7 +97,7 @@ ${t('results.severity')}: ${scan.severity}
 ${t('results.symptoms')}:
 ${scan.symptoms}
 
-${scan.healthStatus?.toLowerCase() !== 'healthy' ? `
+${!['healthy', 'sihat', 'tiada masalah'].includes(scan.healthStatus?.toLowerCase()) ? `
 ${t('results.immediateActions')}:
 ${scan.immediateActions?.map((action, i) => `${i + 1}. ${action}`).join('\n')}
 
@@ -197,10 +197,10 @@ ${t('pdf.generatedBy')}
     },
     {
       icon: <Pill size={20} />,
-      title: scan.healthStatus?.toLowerCase() === 'healthy' ? t('results.care') || 'Care' : t('results.treatment'),
+      title: ['healthy', 'sihat', 'tiada masalah'].includes(scan.healthStatus?.toLowerCase()) ? t('results.care') || 'Care' : t('results.treatment'),
       content: (
         <div>
-          {scan.healthStatus?.toLowerCase() !== 'healthy' ? (
+          {!['healthy', 'sihat', 'tiada masalah'].includes(scan.healthStatus?.toLowerCase()) ? (
             <TreatmentRecommendations result={result} />
           ) : (
             <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />

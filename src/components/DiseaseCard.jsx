@@ -357,9 +357,9 @@ const DiseaseCard = ({ disease }) => {
 
         .section-title-wrapper {
           display: flex;
-          align-items: center;
+          align-items: flex-start; /* Align icon to top, not center */
           justify-content: flex-start;
-          gap: 10px;
+          gap: 12px;
           margin-bottom: var(--space-sm);
         }
 
@@ -373,6 +373,7 @@ const DiseaseCard = ({ disease }) => {
           flex-shrink: 0;
           background: var(--color-bg-secondary);
           color: var(--color-primary);
+          margin-top: 2px; /* Visual optical alignment with text cap height */
         }
 
         .section-title {
@@ -380,7 +381,9 @@ const DiseaseCard = ({ disease }) => {
           color: var(--color-primary-dark);
           margin: 0;
           text-align: left;
-          font-weight: 600;
+          font-weight: 700;
+          line-height: 1.3;
+          flex: 1; /* Ensure text takes up available space properly */
         }
 
         .section-text {

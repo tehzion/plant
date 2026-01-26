@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Leaf, Mail, Lock, ArrowRight, X } from 'lucide-react';
 
+import { showToast } from '../utils/toast';
+
 const Login = () => {
     const { t, language } = useLanguage();
     const [isLogin, setIsLogin] = useState(true);
@@ -10,7 +12,7 @@ const Login = () => {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        alert(t('common.authFeatureComingSoon'));
+        showToast(t('common.authFeatureComingSoon'), 'info');
     };
 
     return (

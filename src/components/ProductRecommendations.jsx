@@ -114,7 +114,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
       {products.nutrition && products.nutrition.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
-            <h3 className="section-title">{!disease || disease.toLowerCase().includes('healthy') ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition')}</h3>
+            <h3 className="section-title">{!disease || ['healthy', 'sihat', 'tiada masalah'].some(term => disease.toLowerCase().includes(term)) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition')}</h3>
           </div>
 
           {scaleInfo.label && (

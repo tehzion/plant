@@ -34,9 +34,9 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                     </p>
                                 )}
                                 <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                    <div className={`status-badge-mini ${scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat' ? 'status-healthy' : 'status-unhealthy'}`}>
+                                    <div className={`status-badge-mini ${['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ? 'status-healthy' : 'status-unhealthy'}`}>
                                         <span className="status-icon" style={{ display: 'flex' }}>
-                                            {(scan.healthStatus?.toLowerCase() === 'healthy' || scan.healthStatus === 'Sihat') ?
+                                            {['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ?
                                                 <CheckCircle size={10} strokeWidth={3} /> :
                                                 <AlertTriangle size={10} strokeWidth={3} />
                                             }
@@ -47,9 +47,12 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                     {scan.severity && (
                                         <div className={`badge-severity ${(() => {
                                             switch (scan.severity?.toLowerCase()) {
-                                                case 'mild': return 'badge-mild';
-                                                case 'moderate': return 'badge-moderate';
-                                                case 'severe': return 'badge-severe';
+                                                case 'mild':
+                                                case 'rendah': return 'badge-mild';
+                                                case 'moderate':
+                                                case 'sederhana': return 'badge-moderate';
+                                                case 'severe':
+                                                case 'tinggi': return 'badge-severe';
                                                 default: return '';
                                             }
                                         })()}`}>

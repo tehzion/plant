@@ -47,19 +47,23 @@ const DiseaseResult = ({ result, image, leafImage }) => {
     switch (severity?.toLowerCase()) {
       case 'mild':
       case 'low':
+      case 'rendah':
         return 'badge-mild';
       case 'moderate':
+      case 'sederhana':
         return 'badge-moderate';
       case 'severe':
       case 'high':
+      case 'tinggi':
+      case 'kritikal':
         return 'badge-severe';
       default:
         return 'badge-unknown';
     }
   };
 
-  const isHealthy = result.healthStatus?.toLowerCase() === 'healthy' ||
-    result.disease?.toLowerCase().includes('no issues');
+  const isHealthy = ['healthy', 'sihat'].includes(result.healthStatus?.toLowerCase()) ||
+    ['no issues', 'tiada masalah', 'tiada'].some(term => result.disease?.toLowerCase()?.includes(term));
 
   /* 
      Details section logic moved inline for robustness 
@@ -91,9 +95,16 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         {(() => {
           // Robust handling for system ignoring word limits
+          // Robust handling for system ignoring word limits
           let displayTitle = result.disease || t('results.unknownDisease');
+          // Fix for Malay title in English mode
+          if (displayTitle === 'Tiada Masalah') displayTitle = t('results.noIssues');
+
           // Don't apply default fallbacks yet - we want to try splitting the title first if no specific notes exist
           let extraDescription = result.additionalNotes || result.analysisSummary || result.analysis_summary || result.description || result.summary || result.justification;
+
+          // Fix for Malay demo text in English mode
+          if (extraDescription === 'Mod Demo / Data Simulasi') extraDescription = t('results.demoModeDesc');
 
           // If title is clearly a sentence, split it to extract the core explanation
           // We do this even if additionalNotes exists, merging the extracted explanation into Idea Utama
