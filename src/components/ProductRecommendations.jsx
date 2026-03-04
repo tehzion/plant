@@ -3,6 +3,7 @@ import { getProductRecommendations, suppliers } from '../data/productRecommendat
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
 import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Lightbulb, Building2, Phone, Mail, MessageCircle, ArrowRight } from 'lucide-react';
+import { isHealthy } from '../utils/statusUtils';
 
 const ProductRecommendations = ({ plantType, disease, farmScale }) => {
   const { t } = useLanguage();
@@ -114,7 +115,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale }) => {
       {products.nutrition && products.nutrition.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
-            <h3 className="section-title">{!disease || ['healthy', 'sihat', 'tiada masalah'].some(term => disease.toLowerCase().includes(term)) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition')}</h3>
+            <h3 className="section-title">{(!disease || isHealthy(disease)) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition')}</h3>
           </div>
 
           {scaleInfo.label && (

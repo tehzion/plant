@@ -180,6 +180,93 @@ const UserGuide = () => {
                 'Simpan sejarah imbasan untuk jejak kesihatan tumbuhan',
                 'Bandingkan imbasan untuk lihat sama ada rawatan berkesan'
             ]
+        },
+        zh: {
+            title: '了解您的扫描结果',
+            intro: '本指南可帮助您了解每个指标的含义以及应采取的操作。',
+
+            healthTitle: '植物健康状况',
+            healthSubtitle: '扫描后您会看到什么',
+
+            healthy: {
+                title: '健康',
+                meaning: '您的植物没有疾病或缺陷的迹象',
+                when: '您在以下情况下会看到此信息：',
+                points: [
+                    '未检测到真菌感染',
+                    '无明显可见害虫破坏',
+                    '叶片显示健康的颜色和结构'
+                ],
+                action: '继续日常的护理和监测'
+            },
+
+            unhealthy: {
+                title: '不健康',
+                meaning: '检测到需要注意的问题',
+                when: '您在以下情况下会看到此信息：',
+                points: [
+                    '存在真菌感染',
+                    '检测到害虫破坏',
+                    '可见营养缺乏',
+                    '发现其他疾病症状'
+                ],
+                action: '请按照推荐的治疗计划进行操作'
+            },
+
+            riskTitle: '严重程度',
+            riskSubtitle: '问题有多严重？',
+
+            mild: {
+                title: '轻度',
+                meaning: '早期阶段或次要问题',
+                description: '问题刚刚开始或影响面积很小。早期干预可以防止其蔓延。',
+                example: '叶子上有少量斑点，损伤极小',
+                action: '密切关注并进行预防性治疗'
+            },
+
+            moderate: {
+                title: '中度',
+                meaning: '需要尽快注意',
+                description: '问题已经确立并正在蔓延。需要进行治疗以防止造成严重损害。',
+                example: '多片叶子受影响，症状明显',
+                action: '在1-2天内开始治疗'
+            },
+
+            high: {
+                title: '重度',
+                meaning: '严重 - 立即行动',
+                description: '感染或损害严重。需要立即采取行动拯救植物并防止其传播给其他植物。',
+                example: '广泛受到破坏，迅速恶化',
+                action: '今天就进行治疗，考虑隔离植物'
+            },
+
+            treatmentTitle: '治疗建议',
+            treatmentSubtitle: '下一步该做什么',
+
+            noTreatment: {
+                title: '无需治疗',
+                description: '您的植物很健康！请保持当前的护理常规即可。',
+                tips: '在日常浇水期间继续监测'
+            },
+
+            immediate: {
+                title: '立即行动',
+                description: '需立即采取的关键步骤：',
+                steps: [
+                    '按照显示的具体治疗计划进行操作',
+                    '如果是传染病，隔离植物',
+                    '去除受影响严重的部位',
+                    '使用推荐的产品'
+                ]
+            },
+
+            tipTitle: '专业提示',
+            tips: [
+                '定期扫描以便及早发现问题',
+                '始终检查置信度得分 - 得分越高越可靠',
+                '保存扫描历史记录以长期跟踪植物健康状况',
+                '比较扫描结果以查看治疗是否有效'
+            ]
         }
     };
 
@@ -269,7 +356,7 @@ const UserGuide = () => {
                                     <p className="severity-desc">{lang[level].description}</p>
                                     <div className="example-box">
                                         <Info size={14} />
-                                        <span><strong>{language === 'ms' ? 'Contoh' : 'Example'}:</strong> {lang[level].example}</span>
+                                        <span><strong>{t('common.example')}:</strong> {lang[level].example}</span>
                                     </div>
                                     <div className="action-box">
                                         <AlertTriangle size={14} />
@@ -331,375 +418,6 @@ const UserGuide = () => {
                 </div>
             </div>
 
-            <style>{`
-                .guide-header {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 16px;
-                    margin-bottom: 32px;
-                    padding-top: 24px;
-                }
-                .guide-header h1 {
-                    font-size: 1.75rem;
-                    font-weight: 700;
-                    margin: 0 0 8px 0;
-                    color: #1F2937;
-                    line-height: 1.2;
-                }
-                .guide-intro {
-                    color: #6B7280;
-                    font-size: 0.95rem;
-                    margin: 0;
-                    line-height: 1.5;
-                }
-                .back-btn {
-                    background: white;
-                    border: none;
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 50%;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    color: #374151;
-                    flex-shrink: 0;
-                    transition: all 0.2s;
-                }
-                .back-btn:hover {
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-                    transform: translateY(-1px);
-                }
-                
-                .guide-section {
-                    margin-bottom: 48px;
-                }
-                .section-header {
-                    margin-bottom: 20px;
-                }
-                .section-header h2 {
-                    font-size: 1.25rem;
-                    color: #1F2937;
-                    margin: 0 0 4px 0;
-                    font-weight: 700;
-                }
-                .section-subtitle {
-                    color: #6B7280;
-                    font-size: 0.9rem;
-                    margin: 0;
-                }
-                
-                /* Educational Cards */
-                .educational-card {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 20px;
-                    margin-bottom: 16px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                    border: 2px solid transparent;
-                    transition: all 0.2s;
-                }
-                .educational-card:hover {
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-                    transform: translateY(-2px);
-                }
-                .educational-card.healthy {
-                    border-color: #DEF7EC;
-                    background: linear-gradient(135deg, #F3FAF7 0%, #ffffff 100%);
-                }
-                .educational-card.unhealthy {
-                    border-color: #FDE8E8;
-                    background: linear-gradient(135deg, #FDF2F2 0%, #ffffff 100%);
-                }
-                
-                .card-header {
-                    display: flex;
-                    gap: 16px;
-                    margin-bottom: 16px;
-                }
-                .status-icon {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                }
-                .healthy .status-icon {
-                    background: #DEF7EC;
-                    color: #057A55;
-                }
-                .unhealthy .status-icon {
-                    background: #FDE8E8;
-                    color: #E02424;
-                }
-                .card-header h3 {
-                    margin: 0 0 4px 0;
-                    font-size: 1.1rem;
-                    font-weight: 700;
-                    color: #1F2937;
-                }
-                .card-meaning {
-                    margin: 0;
-                    color: #6B7280;
-                    font-size: 0.9rem;
-                }
-                
-                .card-body {
-                    padding-left: 64px;
-                }
-                .when-label {
-                    font-weight: 600;
-                    color: #4B5563;
-                    margin: 0 0 8px 0;
-                    font-size: 0.85rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                .indicator-list {
-                    list-style: none;
-                    padding: 0;
-                    margin: 0 0 16px 0;
-                }
-                .indicator-list li {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 6px 0;
-                    color: #4B5563;
-                    font-size: 0.9rem;
-                }
-                .indicator-list li svg {
-                    flex-shrink: 0;
-                    opacity: 0.6;
-                }
-                
-                .action-box {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 12px 16px;
-                    border-radius: 12px;
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                }
-                .action-box.success {
-                    background: #DEF7EC;
-                    color: #057A55;
-                }
-                .action-box.warning {
-                    background: #FEF3C7;
-                    color: #92400E;
-                }
-                
-                /* Severity Timeline */
-                .severity-timeline {
-                    display: grid;
-                    gap: 16px;
-                }
-                .severity-card {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 20px;
-                    border-left: 4px solid;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                    transition: all 0.2s;
-                }
-                .severity-card:hover {
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-                    transform: translateX(4px);
-                }
-                .severity-card.mild {
-                    border-color: #3B82F6;
-                }
-                .severity-card.moderate {
-                    border-color: #F59E0B;
-                }
-                .severity-card.high {
-                    border-color: #EF4444;
-                }
-                
-                .severity-badge {
-                    display: inline-block;
-                    padding: 6px 14px;
-                    border-radius: 20px;
-                    font-size: 0.8rem;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    margin-bottom: 12px;
-                }
-                .mild .severity-badge {
-                    background: #DBEAFE;
-                    color: #1E429F;
-                }
-                .moderate .severity-badge {
-                    background: #FEF3C7;
-                    color: #92400E;
-                }
-                .high .severity-badge {
-                    background: #FEE2E2;
-                    color: #991B1B;
-                }
-                
-                .severity-card h4 {
-                    margin: 0 0 8px 0;
-                    font-size: 1rem;
-                    font-weight: 700;
-                    color: #1F2937;
-                }
-                .severity-desc {
-                    color: #6B7280;
-                    font-size: 0.9rem;
-                    line-height: 1.6;
-                    margin: 0 0 12px 0;
-                }
-                .example-box {
-                    display: flex;
-                    gap: 8px;
-                    padding: 10px 12px;
-                    background: #F9FAFB;
-                    border-radius: 8px;
-                    font-size: 0.85rem;
-                    color: #4B5563;
-                    margin-bottom: 12px;
-                    align-items: flex-start;
-                }
-                .example-box svg {
-                    flex-shrink: 0;
-                    margin-top: 2px;
-                    opacity: 0.6;
-                }
-                .severity-card .action-box {
-                    background: #F3F4F6;
-                    color: #1F2937;
-                }
-                
-                /* Treatment Grid */
-                .treatment-grid {
-                    display: grid;
-                    gap: 16px;
-                }
-                .treatment-card {
-                    background: white;
-                    border-radius: 16px;
-                    padding: 20px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                    border: 2px solid;
-                }
-                .treatment-card.success {
-                    border-color: #DEF7EC;
-                }
-                .treatment-card.urgent {
-                    border-color: #FEF3C7;
-                }
-                .treatment-card > svg {
-                    margin-bottom: 12px;
-                }
-                .treatment-card.success > svg {
-                    color: #057A55;
-                }
-                .treatment-card.urgent > svg {
-                    color: #D97706;
-                }
-                .treatment-card h4 {
-                    margin: 0 0 8px 0;
-                    font-size: 1.05rem;
-                    font-weight: 700;
-                    color: #1F2937;
-                }
-                .treatment-card > p {
-                    color: #6B7280;
-                    font-size: 0.9rem;
-                    margin: 0 0 12px 0;
-                    line-height: 1.5;
-                }
-                .steps-list {
-                    margin: 12px 0 0 20px;
-                    padding: 0;
-                    color: #4B5563;
-                    font-size: 0.9rem;
-                }
-                .steps-list li {
-                    margin-bottom: 8px;
-                    line-height: 1.5;
-                }
-                .tip-box {
-                    display: flex;
-                    gap: 8px;
-                    padding: 10px 12px;
-                    background: #F0FDF4;
-                    border-radius: 8px;
-                    font-size: 0.85rem;
-                    color: #166534;
-                    align-items: center;
-                }
-                
-                /* Pro Tips */
-                .tips-section {
-                    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-                    border-radius: 20px;
-                    padding: 24px;
-                }
-                .tips-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 20px;
-                    color: #78350F;
-                }
-                .tips-header svg {
-                    flex-shrink: 0;
-                }
-                .tips-header h3 {
-                    margin: 0;
-                    font-size: 1.15rem;
-                    font-weight: 700;
-                }
-                .tips-grid {
-                    display: grid;
-                    gap: 12px;
-                }
-                .tip-card {
-                    background: white;
-                    border-radius: 12px;
-                    padding: 16px;
-                    display: flex;
-                    gap: 12px;
-                    align-items: flex-start;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                }
-                .tip-number {
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 50%;
-                    background: #FBBF24;
-                    color: #78350F;
-                    font-weight: 700;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 0.9rem;
-                    flex-shrink: 0;
-                }
-                .tip-card p {
-                    margin: 0;
-                    color: #4B5563;
-                    font-size: 0.9rem;
-                    line-height: 1.5;
-                }
-                
-                @media (max-width: 768px) {
-                    .guide-header h1 {
-                        font-size: 1.4rem;
-                    }
-                    .card-body {
-                        padding-left: 0;
-                    }
-                }
-            `}</style>
         </div>
     );
 };

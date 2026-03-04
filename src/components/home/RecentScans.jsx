@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
+import { isHealthy } from '../../utils/statusUtils';
 
 const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
     const { t } = useLanguage();
@@ -34,9 +35,9 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                     </p>
                                 )}
                                 <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                    <div className={`status-badge-mini ${['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ? 'status-healthy' : 'status-unhealthy'}`}>
+                                    <div className={`status-badge-mini ${isHealthy(scan) ? 'status-healthy' : 'status-unhealthy'}`}>
                                         <span className="status-icon" style={{ display: 'flex' }}>
-                                            {['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ?
+                                            {isHealthy(scan) ?
                                                 <CheckCircle size={10} strokeWidth={3} /> :
                                                 <AlertTriangle size={10} strokeWidth={3} />
                                             }

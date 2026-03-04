@@ -1,46 +1,17 @@
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Calendar, CalendarDays, CalendarRange, Sparkles } from 'lucide-react';
+import { formatItemWithTitle } from '../utils/textUtils';
 
 const HealthyCarePlan = ({ carePlan, plantType }) => {
   const { t } = useLanguage();
   // if (!carePlan) return null; // Logic moved to fallback below
 
-  const formatCareItem = (text) => {
-    if (typeof text !== 'string') return text;
-    const colonIndex = text.indexOf(':');
-    if (colonIndex > 0 && colonIndex < 50) {
-      const title = text.substring(0, colonIndex);
-      const content = text.substring(colonIndex + 1);
-
-      if (title === title.toUpperCase() && title !== title.toLowerCase()) {
-        const titleCase = title
-          .toLowerCase()
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-
-        return (
-          <>
-            <strong>{titleCase}:</strong>{content}
-          </>
-        );
-      }
-
-      return (
-        <>
-          <strong>{title}:</strong>{content}
-        </>
-      );
-    }
-    return text;
-  };
-
   // Default plan if API didn't return one or for legacy scans
   const defaultPlan = {
-    dailyCare: [t('care.defaultDaily') || "Check soil moisture daily", t('care.defaultSun') || "Ensure adequate sunlight"],
-    weeklyCare: [t('care.defaultWeekly') || "Inspect for pests", t('care.defaultPrunable') || "Remove dead leaves"],
-    monthlyCare: [t('care.defaultMonthly') || "Apply balanced fertilizer", t('care.defaultSoil') || "Check soil drainage"],
-    bestPractices: [t('care.defaultPractice') || "Keep garden clean", t('care.defaultRotate') || "Rotate crops if possible"]
+    dailyCare: [t('results.defaultDaily') || "Check soil moisture daily", t('results.defaultSun') || "Ensure adequate sunlight"],
+    weeklyCare: [t('results.defaultWeekly') || "Inspect for pests", t('results.defaultPrunable') || "Remove dead leaves"],
+    monthlyCare: [t('results.defaultMonthly') || "Apply balanced fertilizer", t('results.defaultSoil') || "Check soil drainage"],
+    bestPractices: [t('results.defaultPractice') || "Keep garden clean", t('results.defaultRotate') || "Rotate crops if possible"]
   };
 
   const activePlan = carePlan || defaultPlan;
@@ -92,7 +63,7 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
             </div>
             <ul className="care-list">
               {section.data.map((item, index) => (
-                <li key={index} className="care-item">{formatCareItem(item)}</li>
+                <li key={index} className="care-item">{formatItemWithTitle(item)}</li>
               ))}
             </ul>
           </div>

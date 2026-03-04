@@ -62,8 +62,8 @@ const DiseaseResult = ({ result, image, leafImage }) => {
     }
   };
 
-  const isHealthy = ['healthy', 'sihat'].includes(result.healthStatus?.toLowerCase()) ||
-    ['no issues', 'tiada masalah', 'tiada'].some(term => result.disease?.toLowerCase()?.includes(term));
+  const isHealthy = ['healthy', 'sihat', '健康'].includes(result.healthStatus?.toLowerCase()) ||
+    ['no issues', 'tiada masalah', 'tiada', '未检测到问题', '无问题'].some(term => result.disease?.toLowerCase()?.includes(term));
 
   /* 
      Details section logic moved inline for robustness 

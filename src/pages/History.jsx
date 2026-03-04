@@ -62,10 +62,10 @@ const History = () => {
                 ) : (
                     <div className="history-content">
                         {/* Today */}
-                        {groupedScans.Today.length > 0 && (
+                        {groupedScans.today && groupedScans.today.length > 0 && (
                             <div className="history-group">
                                 <h3 className="group-title">{t('history.today')}</h3>
-                                {groupedScans.Today.map(scan => (
+                                {groupedScans.today.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -76,10 +76,10 @@ const History = () => {
                         )}
 
                         {/* Yesterday */}
-                        {groupedScans.Yesterday.length > 0 && (
+                        {groupedScans.yesterday && groupedScans.yesterday.length > 0 && (
                             <div className="history-group">
                                 <h3 className="group-title">{t('history.yesterday')}</h3>
-                                {groupedScans.Yesterday.map(scan => (
+                                {groupedScans.yesterday.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -90,10 +90,24 @@ const History = () => {
                         )}
 
                         {/* This Week */}
-                        {groupedScans['This Week'].length > 0 && (
+                        {groupedScans.thisWeek && groupedScans.thisWeek.length > 0 && (
                             <div className="history-group">
                                 <h3 className="group-title">{t('history.thisWeek')}</h3>
-                                {groupedScans['This Week'].map(scan => (
+                                {groupedScans.thisWeek.map(scan => (
+                                    <ScanHistoryCard
+                                        key={scan.id}
+                                        scan={scan}
+                                        onDelete={handleDelete}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Last Week */}
+                        {groupedScans.lastWeek && groupedScans.lastWeek.length > 0 && (
+                            <div className="history-group">
+                                <h3 className="group-title">{t('history.lastWeek')}</h3>
+                                {groupedScans.lastWeek.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -104,10 +118,10 @@ const History = () => {
                         )}
 
                         {/* Older */}
-                        {groupedScans.Older.length > 0 && (
+                        {groupedScans.older && groupedScans.older.length > 0 && (
                             <div className="history-group">
                                 <h3 className="group-title">{t('history.older')}</h3>
-                                {groupedScans.Older.map(scan => (
+                                {groupedScans.older.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}

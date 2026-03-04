@@ -61,12 +61,11 @@ export const imageToBase64 = (file, maxWidth = 1024) => {
  * @param {string} treeImageBase64 - Base64 encoded tree image
  * @param {string} category - Plant category
  * @param {string} leafImageBase64 - Optional base64 encoded leaf close-up
- * @param {string} language - Language code ('en' or 'ms')
+ * @param {string} language - Language code ('en', 'ms', or 'zh')
  * @returns {Promise<Object>} Analysis result
  */
 // Import disease database for fallback/mock data
-import { diseaseDatabase } from '../data/diseaseDatabase';
-import { getProductRecommendations } from '../data/productRecommendations';
+import { getMockAnalysisResult } from './mockData';
 
 export const analyzePlantDisease = async (
   treeImageBase64,
@@ -98,7 +97,6 @@ export const analyzePlantDisease = async (
       }
 
       if (response.status === 500) {
-        // Use backend message if available (for debugging), otherwise generic
         throw new Error(errorData.message || errorData.error || 'Server error. Please try again.');
       }
 
@@ -109,51 +107,16 @@ export const analyzePlantDisease = async (
     return result;
 
   } catch (error) {
-    console.warn('Disease detection API failed, using local fallback:', error);
+    console.warn('Disease detection API failed:', error);
 
-    // MOCK FALLBACK FOR DEVELOPMENT/DEMO
-    // Simulate a short delay for realism
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Safety: Only fallback to mock data in development or if the API URL is local
+    const isLocal = API_URL.includes('localhost') || API_URL === '';
+    if (import.meta.env.DEV || isLocal) {
+      console.log('Using local fallback (Development/Local mode only)');
+      return await getMockAnalysisResult(treeImageBase64, category, language);
+    }
 
-    // Get random disease from database, prioritizing the selected category if possible
-    // Note: Database categories are 'Fungicides', 'Insecticides' etc, not plant types. 
-    // We'll just pick a random one for the demo.
-    const randomDisease = diseaseDatabase[Math.floor(Math.random() * diseaseDatabase.length)];
-
-    // Get product recommendations
-    const recommendations = getProductRecommendations(category || 'General', randomDisease.id);
-
-    // Deterministic Confidence Score (Simulation)
-    // Generates a stable score based on the image content (base64 length + first 100 chars)
-    // This ensures the same image always gets the same score (simulating real system consistency)
-    const imageHash = (treeImageBase64?.length || 0) + (treeImageBase64?.substring(0, 100)?.split('').reduce((a, b) => a + b.charCodeAt(0), 0) || 0);
-    const outputScore = 0.85 + ((imageHash % 140) / 1000); // Maps to 0.85 - 0.99 range
-
-    // Construct a realistic response object matching the API format
-    return {
-      id: Date.now().toString(),
-      disease: language === 'ms' ? (randomDisease.name?.ms || randomDisease.name?.en || 'Unknown Disease') : (randomDisease.name?.en || 'Unknown Disease'),
-      fungusType: language === 'ms' ? (randomDisease.pathogen?.ms || randomDisease.pathogen?.en || 'Unknown Pathogen') : (randomDisease.pathogen?.en || 'Unknown Pathogen'),
-      pathogenType: "Fungal/Insect", // Generic fallback
-      confidence: outputScore.toFixed(2), // Real-feeling deterministic score
-      severity: "Moderate",
-      symptoms: language === 'ms' ? (randomDisease.symptoms?.ms ? [randomDisease.symptoms.ms] : []) : (randomDisease.symptoms?.en ? [randomDisease.symptoms.en] : []),
-      causes: language === 'ms' ? (randomDisease.causes?.ms ? [randomDisease.causes.ms] : []) : (randomDisease.causes?.en ? [randomDisease.causes.en] : []),
-      treatments: language === 'ms' ? (randomDisease.treatment?.ms || []) : (randomDisease.treatment?.en || []),
-      prevention: language === 'ms' ? (randomDisease.prevention?.ms || []) : (randomDisease.prevention?.en || []),
-      plantType: category || 'General',
-      healthStatus: language === 'ms' ? 'Tidak Sihat' : 'Unhealthy', // Local DB only has diseases
-      productRecommendations: recommendations,
-      description: language === 'ms' ? (randomDisease.causes?.ms || '') : (randomDisease.causes?.en || ''),
-      additionalNotes: language === 'ms' ? 'Mod Demo / Data Simulasi' : 'Demo Mode / Simulated Data',
-      healthyCarePlan: {
-        dailyCare: language === 'ms' ? ["Periksa kelembapan tanah", "Hama dan penyakit"] : ["Check soil moisture", "Monitor for pests"],
-        weeklyCare: language === 'ms' ? ["Buang daun mati"] : ["Remove dead leaves"],
-        monthlyCare: language === 'ms' ? ["Baja ringan"] : ["Light fertilizer"],
-        bestPractices: language === 'ms' ? ["Pastikan saliran baik"] : ["Ensure good drainage"]
-      },
-      image: treeImageBase64 // Echo back the image
-    };
+    throw error;
   }
 };
 

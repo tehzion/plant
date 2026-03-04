@@ -16,6 +16,8 @@ import FeedbackWidget from '../components/FeedbackWidget';
 import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
+import { isHealthy } from '../utils/statusUtils';
+
 const Results = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -58,6 +60,8 @@ const Results = () => {
     identificationSource: scan.identificationSource
   };
 
+  const healthy = isHealthy(scan);
+
   const handleScanAgain = () => {
     navigate('/?scan=true');
   };
@@ -77,27 +81,30 @@ const Results = () => {
 
   const handleDownloadText = () => {
     // Fallback: Create a simple text report
+    const localeString = t('common.dateLocale') || 'en-MY';
+    const reportDate = new Date(scan.timestamp).toLocaleString(localeString);
+
     const report = `
 ${t('pdf.title')}
 ============================================
 
-${t('common.date')}: ${new Date(scan.timestamp).toLocaleString(t('common.dateLocale') || 'en-MY')}
+${t('common.date')}: ${reportDate}
 ${t('results.plantType')}: ${scan.plantType}
 ${t('results.category')}: ${scan.category}
 ${t('results.scale')}: ${scan.farmScale || t('results.notSpecified')}
 ${scan.estimatedAge ? `${t('results.estimatedAge')}: ${scan.estimatedAge}` : ''}
 
-${t('results.status')}: ${scan.healthStatus}
+${t('results.status')}: ${t(`results.${scan.healthStatus?.toLowerCase()}`) || scan.healthStatus}
 ${t('results.disease')}: ${scan.disease}
 ${scan.fungusType ? `${t('results.fungusSpecies')}: ${scan.fungusType}` : ''}
 ${scan.pathogenType ? `${t('results.pathogenType')}: ${scan.pathogenType}` : ''}
 ${t('results.confidence')}: ${scan.confidence}%
-${t('results.severity')}: ${scan.severity}
+${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}
 
 ${t('results.symptoms')}:
 ${scan.symptoms}
 
-${!['healthy', 'sihat', 'tiada masalah'].includes(scan.healthStatus?.toLowerCase()) ? `
+${!healthy ? `
 ${t('results.immediateActions')}:
 ${scan.immediateActions?.map((action, i) => `${i + 1}. ${action}`).join('\n')}
 
@@ -197,10 +204,10 @@ ${t('pdf.generatedBy')}
     },
     {
       icon: <Pill size={20} />,
-      title: ['healthy', 'sihat', 'tiada masalah'].includes(scan.healthStatus?.toLowerCase()) ? t('results.care') || 'Care' : t('results.treatment'),
+      title: healthy ? t('results.care') || 'Care' : t('results.treatment'),
       content: (
         <div>
-          {!['healthy', 'sihat', 'tiada masalah'].includes(scan.healthStatus?.toLowerCase()) ? (
+          {!healthy ? (
             <TreatmentRecommendations result={result} />
           ) : (
             <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
@@ -305,7 +312,7 @@ ${t('pdf.generatedBy')}
             </div>
 
             {/* Location */}
-            {scan.locationName && scan.locationName !== 'N/A' && (
+            {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== t('common.locationNA') && (
               <div className="metadata-item">
                 <div className="metadata-icon location-icon">
                   <MapPin size={20} />

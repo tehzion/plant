@@ -1,11 +1,12 @@
-import { useLanguage } from '../i18n/i18n.jsx';
+﻿import { useLanguage } from '../i18n/i18n.jsx';
 
 const LanguageSelector = () => {
   const { language, setLanguage } = useLanguage();
 
   const languages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'ms', name: 'Bahasa Malaysia', flag: '🇲🇾' },
+    { code: 'en', name: 'English', flag: 'ðŸ‡¬ðŸ‡§' },
+    { code: 'ms', name: 'Bahasa Malaysia', flag: 'ðŸ‡²ðŸ‡¾' },
+    { code: 'zh', name: 'ä¸­æ–‡', flag: 'ðŸ‡¨ðŸ‡³' },
   ];
 
   return (

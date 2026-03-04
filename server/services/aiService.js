@@ -239,6 +239,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         console.log('🤖 Analyzing plant health...');
 
         const isMalay = language === 'ms';
+        const isChinese = language === 'zh';
 
         // Get Malaysia-specific crop information
         const malaysiaCropInfo = getMalaysiaCropInfo(plantNetResult, category);
@@ -361,7 +362,9 @@ Government Agencies: ${MALAYSIA_SUPPLIERS.govtAgencies.slice(0, 3).join(', ')}`;
 
         const languageInstruction = isMalay
             ? 'PENTING: Berikan SEMUA respons dalam Bahasa Malaysia. Gunakan istilah pertanian Malaysia yang betul.'
-            : 'Provide responses in English using Malaysian agricultural terminology where appropriate.';
+            : isChinese
+                ? 'CRITICAL: Provide ALL responses in Simplified Chinese (简体中文). Use appropriate Chinese agricultural terminology. Every text field in the JSON must be in Chinese.'
+                : 'Provide responses in English using Malaysian agricultural terminology where appropriate.';
 
 
         const exampleSymptom = isMalay ? 'Tompok hitam pada daun' : 'Black spots on leaves';
@@ -392,13 +395,13 @@ You provide practical, actionable advice tailored to Malaysian farmers, consider
                     {
                         type: 'text',
                         text: `${enhancedContext}
-📍 ${isMalay ? 'LOKASI' : 'LOCATION'}: ${userLocation || 'Malaysia'}
+📍 ${isMalay ? 'LOKASI' : isChinese ? '位置' : 'LOCATION'}: ${userLocation || 'Malaysia'}
 
-CRITICAL: You must provide the response STRICTLY in ${isMalay ? 'BAHASA MELAYU' : 'ENGLISH'}. Do not mix languages.
+CRITICAL: You must provide the response STRICTLY in ${isMalay ? 'BAHASA MELAYU' : isChinese ? 'SIMPLIFIED CHINESE (简体中文)' : 'ENGLISH'}. Do not mix languages. Every single text field must be in this language.
 
 ${identificationInstruction}
 
-${isMalay ? 'Analisis tumbuhan ini untuk penyakit, perosak, dan isu pemakanan dengan fokus kepada konteks lokasi tersebut di Malaysia.' : 'Analyze this plant for diseases, pests, and nutritional issues with focus on that specific Malaysian location context.'}
+${isMalay ? 'Analisis tumbuhan ini untuk penyakit, perosak, dan isu pemakanan dengan fokus kepada konteks lokasi tersebut di Malaysia.' : isChinese ? '请分析该植物的病害、害虫和营养问题，重点关注马来西亚该具体地点的背景。所有文本字段必须使用简体中文。' : 'Analyze this plant for diseases, pests, and nutritional issues with focus on that specific Malaysian location context.'}
 
 ${leafImage ? (isMalay ? `PENTING: Dua gambar telah diberikan:
 1. Gambar penuh tumbuhan (konteks keseluruhan)
@@ -430,55 +433,55 @@ CRITICAL ANALYSIS REQUIREMENTS:
 
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
-  "disease": "${isMalay ? 'IDENTIFIER RINGKAS (MAX 3 PATAH PERKATAAN). Cth: "Kulat Daun", "Reput Buah", "Tiada Masalah". DILARANG tulis ayat panjang di sini.' : 'SHORT IDENTIFIER (MAX 3 WORDS). e.g. "Leaf Rust", "Fruit Rot", "No Issues". DO NOT write long sentences here.'}",
-  "additionalNotes": "${isMalay ? 'IDEA UTAMA (WAJIB): Berikan huraian mesra pengguna tentang bagaimana anggaran dibuat (Cth: "Kami perhatikan daun anda hijau dan tiada tanda serangga, kami anggarkan ia sihat 90%"). Beri galakan. (MAX 2-3 ayat).' : 'KEY IDEA (MANDATORY): Provide a user-friendly explanation of how the estimate was made (e.g. "We noticed your leaves are green and pest-free, so we estimate it is 90% healthy"). Keep it friendly and encouraging. (MAX 2-3 sentences).'}",
-  "healthStatus": "${isMalay ? 'Sihat/Tidak Sihat (WAJIB selari dengan severity)' : 'Healthy/Unhealthy (MUST align with severity)'}",
-  "severity": "${isMalay ? 'mild (untuk Sihat) / moderate / severe (untuk Tidak Sihat)' : 'mild (for Healthy) / moderate / severe (for Unhealthy)'}",
+  "disease": "${isMalay ? 'IDENTIFIER RINGKAS (MAX 3 PATAH PERKATAAN). Cth: "Kulat Daun", "Reput Buah", "Tiada Masalah". DILARANG tulis ayat panjang di sini.' : isChinese ? '简短标识符（最多3个词）。例如：“叶锈病”、“果实腐烂”、“无问题”。此处请勿写长句子。' : 'SHORT IDENTIFIER (MAX 3 WORDS). e.g. "Leaf Rust", "Fruit Rot", "No Issues". DO NOT write long sentences here.'}",
+  "additionalNotes": "${isMalay ? 'IDEA UTAMA (WAJIB): Berikan huraian mesra pengguna tentang bagaimana anggaran dibuat (Cth: "Kami perhatikan daun anda hijau dan tiada tanda serangga, kami anggarkan ia sihat 90%"). Beri galakan. (MAX 2-3 ayat).' : isChinese ? '核心建议（必填）：以友好的方式说明诊断依据（例如：“我们注意到您的叶片呈鲜绿色且无虫害迹象，因此我们估计植物 90% 健康”）。请保持语气友好且带有鼓励性（最多2-3句话）。' : 'KEY IDEA (MANDATORY): Provide a user-friendly explanation of how the estimate was made (e.g. "We noticed your leaves are green and pest-free, so we estimate it is 90% healthy"). Keep it friendly and encouraging. (MAX 2-3 sentences).'} ",
+  "healthStatus": "Healthy / Unhealthy",
+  "severity": "mild / moderate / severe",
   "confidence": 85,
-  "plantType": "${isMalay ? 'Nama Biasa Malaysia (Nama Saintifik) - Cth: Cili (Capsicum annuum). WAJIB berikan nama biasa.' : 'Malaysian Common Name (Scientific Name) - e.g. Chili (Capsicum annuum). MUST provide common name.'}",
+  "plantType": "${isMalay ? 'Nama Biasa Malaysia (Nama Saintifik) - Cth: Cili (Capsicum annuum). WAJIB berikan nama biasa.' : isChinese ? '马来西亚常用名称（学名） - 例如：辣椒 (Capsicum annuum)。必须提供常用名称。' : 'Malaysian Common Name (Scientific Name) - e.g. Chili (Capsicum annuum). MUST provide common name.'}",
   "malaysianContext": {
-    "variety": "${isMalay ? 'Varieti tempatan (Hanya jika yakin, jangan teka)' : 'Local variety (Only if confident, do not guess)'}",
-    "region": "${isMalay ? 'Kawasan penanaman utama' : 'Main growing regions'}",
-    "seasonalConsideration": "${isMalay ? 'Pertimbangan musim semasa' : 'Current seasonal considerations'}"
+    "variety": "${isMalay ? 'Varieti tempatan (Hanya jika yakin, jangan teka)' : isChinese ? '本地品种（仅在确定时提供，请勿猜测）' : 'Local variety (Only if confident, do not guess)'}",
+    "region": "${isMalay ? 'Kawasan penanaman utama' : isChinese ? '主要种植区域' : 'Main growing regions'}",
+    "seasonalConsideration": "${isMalay ? 'Pertimbangan musim semasa' : isChinese ? '当前季节注意事项' : 'Current seasonal considerations'}"
   },
   "pathogenType": "Fungal/Bacterial/Viral/Pest/Environmental/Multiple/None",
-  "symptoms": ["${exampleSymptom}"],
-  "immediateActions": ["${isMalay ? 'Tindakan segera 1' : 'Immediate action 1'}"],
-  "treatments": ["${isMalay ? 'Rawatan (Fokus bahan aktif sahaja, JANGAN sebut kedai/pembekal)' : 'Treatment (Focus on active ingredients only, DO NOT mention shops/suppliers)'}"],
-  "prevention": ["${isMalay ? 'Pencegahan untuk iklim Malaysia' : 'Prevention for Malaysian climate'}"],
+  "symptoms": ["${isMalay ? 'Tompok hitam' : isChinese ? '叶片黑点' : 'Black spots'}"],
+  "immediateActions": ["${isMalay ? 'Tindakan segera 1' : isChinese ? '紧急措施 1' : 'Immediate action 1'}"],
+  "treatments": ["${isMalay ? 'Rawatan' : isChinese ? '治疗方案' : 'Treatment'}"],
+  "prevention": ["${isMalay ? 'Pencegahan' : isChinese ? '预防措施' : 'Prevention'}"],
   "healthyCarePlan": {
-    "dailyCare": ["${isMalay ? 'Siram awal pagi' : 'Water early morning'}"],
-    "weeklyCare": ["${isMalay ? 'Periksa perosak' : 'Check for pests'}"],
-    "monthlyCare": ["${isMalay ? 'Baja ringan' : 'Light fertilizer'}"],
-    "bestPractices": ["${isMalay ? 'Pastikan saliran baik' : 'Ensure good drainage'}"]
+    "dailyCare": ["${isMalay ? 'Siram awal pagi' : isChinese ? '清晨浇水' : 'Water early morning'}"],
+    "weeklyCare": ["${isMalay ? 'Periksa perosak' : isChinese ? '检查害虫' : 'Check for pests'}"],
+    "monthlyCare": ["${isMalay ? 'Baja ringan' : isChinese ? '施轻量肥' : 'Light fertilizer'}"],
+    "bestPractices": ["${isMalay ? 'Pastikan saliran baik' : isChinese ? '确保排水良好' : 'Ensure good drainage'}"]
   },
   "nutritionalIssues": {
     "hasDeficiency": true/false,
     "severity": "Mild/Moderate/Severe",
-    "symptoms": ["${isMalay ? 'Kekuningan pada daun' : 'Yellowing of leaves'}"],
+    "symptoms": ["${isMalay ? 'Kekuningan' : isChinese ? '叶片发黄' : 'Yellowing'}"],
     "deficientNutrients": [{
       "nutrient": "Nitrogen/Phosphorus/Potassium/Micronutrients",
       "severity": "Mild/Moderate/Severe",
-      "symptoms": ["Specific symptom"],
-      "recommendations": ["Recommendation"]
+      "symptoms": ["${isMalay ? 'Gejala khusus' : isChinese ? '具体症状' : 'Specific symptom'}"],
+      "recommendations": ["${isMalay ? 'Cadangan' : isChinese ? '建议' : 'Recommendation'}"]
     }]
   },
   "fertilizerRecommendations": [{
-    "fertilizerName": "${isMalay ? 'Nama Baja Spesifik (WAJIB: Cth: NPK 15-15-15, Urea, Baja Organik Ayam, MOP). JANGAN sesekali guna perkataan "Kimia" atau "Organik" sahaja.' : 'Specific Fertilizer Name (REQUIRED: e.g. NPK 15-15-15, Urea, Chicken Manure, MOP). NEVER use generic "Chemical" or "Organic" as the name.'}",
+    "fertilizerName": "NPK 15-15-15",
     "type": "Organic/Chemical",
-    "applicationMethod": "${isMalay ? 'Cara aplikasi' : 'Application method'}",
-    "frequency": "${isMalay ? 'Kekerapan' : 'Frequency'}",
-    "amount": "${isMalay ? 'Dos' : 'Dosage'}"
+    "applicationMethod": "${isMalay ? 'Cara aplikasi' : isChinese ? '施肥方法' : 'Application method'}",
+    "frequency": "${isMalay ? 'Kekerapan' : isChinese ? '频率' : 'Frequency'}",
+    "amount": "${isMalay ? 'Dos' : isChinese ? '剂量' : 'Dosage'}"
   }],
   "malaysianGovernmentSupport": {
-    "recommendedAgency": "${isMalay ? 'DOA/MARDI/MPOB/LGM' : 'DOA/MARDI/MPOB/LGM'}",
-    "services": ["${isMalay ? 'Perkhidmatan tersedia' : 'Available services'}"],
-    "contactInfo": "${isMalay ? 'Cara mendapatkan bantuan' : 'How to get assistance'}"
+    "recommendedAgency": "DOA/MARDI/MPOB/LGM",
+    "services": ["${isMalay ? 'Perkhidmatan' : isChinese ? '相关服务' : 'Available services'}"],
+    "contactInfo": "${isMalay ? 'Cara hubung' : isChinese ? '联系方式' : 'How to get assistance'}"
   },
   "economicImpact": {
-    "estimatedYieldLoss": "${isMalay ? 'Anggaran kehilangan hasil jika tidak dirawat' : 'Estimated yield loss if untreated'}",
-    "treatmentCost": "${isMalay ? 'Anggaran kos rawatan (RM)' : 'Estimated treatment cost (RM)'}",
-    "roi": "${isMalay ? 'Pulangan pelaburan dijangka' : 'Expected return on investment'}"
+    "estimatedYieldLoss": "${isMalay ? 'Anggaran kehilangan hasil' : isChinese ? '预计减产情况' : 'Estimated yield loss'}",
+    "treatmentCost": "RM 50 - 100",
+    "roi": "High"
   }
 }
 
@@ -528,7 +531,7 @@ IMPORTANT RULES:
                 response_format: { type: "json_object" },
                 messages: messages,
                 max_tokens: 4000,
-                temperature: 0.7,
+                temperature: 0.3,
             });
         } catch (primaryError) {
             console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
@@ -542,7 +545,7 @@ IMPORTANT RULES:
                 response_format: { type: "json_object" },
                 messages: messages,
                 max_tokens: 4000,
-                temperature: 0.7,
+                temperature: 0.3,
             });
         }
 
@@ -583,6 +586,12 @@ const DEFAULT_CARE_PLANS = {
         weeklyCare: ["Periksa tanda-tanda perosak atau penyakit", "Buang daun mati atau kekuningan"],
         monthlyCare: ["Gunakan baja seimbang", "Periksa saliran tanah"],
         bestPractices: ["Pastikan kebun bebas daripada rumpai", "Amalkan giliran tanaman jika boleh"]
+    },
+    zh: {
+        dailyCare: ["\u6bcf\u65e5\u68c0\u67e5\u571f\u58e4\u6e7f\u5ea6", "\u786e\u4fdd\u5145\u8db3\u7684\u65e5\u7167"],
+        weeklyCare: ["\u68c0\u67e5\u75c5\u866b\u5bb3\u8feb\u8c61", "\u6e05\u9664\u67af\u53f6\u6216\u9ec4\u53f6"],
+        monthlyCare: ["\u65bd\u7528\u5747\u8861\u80a5\u6599", "\u68c0\u67e5\u571f\u58e4\u6392\u6c34"],
+        bestPractices: ["\u4fdd\u6301\u82b1\u56ed\u65e0\u6742\u8349", "\u5c3d\u53ef\u80fd\u8f6e\u4f5c\u4ee5\u9632\u6b62\u571f\u58e4\u8017\u7aed"]
     }
 };
 
@@ -596,7 +605,7 @@ export async function askAI(question, language) {
             {
                 role: 'system',
                 content: `You are a helpful agricultural expert. Answer the user's question concisely (max 3-4 sentences). 
-                ${language === 'ms' ? 'Provide answer in Bahasa Malaysia.' : 'Provide answer in English.'}`
+                ${language === 'ms' ? 'Provide answer in Bahasa Malaysia.' : language === 'zh' ? 'Provide answer in Simplified Chinese (简体中文).' : 'Provide answer in English.'}`
             },
             { role: 'user', content: question }
         ],
@@ -607,17 +616,28 @@ export async function askAI(question, language) {
 }
 
 /**
- * Helper to ensure healthyCarePlan exists
+ * Helper to ensure healthyCarePlan exists and healthStatus is standardized
  */
 function ensureCarePlan(result, language) {
+    // 1. Standardize healthStatus to be machine-readable (lowercase 'healthy' or 'unhealthy')
+    const rawStatus = (result.healthStatus || '').toLowerCase();
+    const healthyKeywords = ['healthy', 'sihat', 'tiada masalah', '健康', '无问题', '未检测到问题', 'normal', 'tiada penyakit', 'pokok elok'];
+
+    // Explicitly map status for consistency
+    const isActuallyHealthy = healthyKeywords.some(keyword => rawStatus.includes(keyword)) ||
+        (result.disease && healthyKeywords.some(keyword => result.disease.toLowerCase().includes(keyword)));
+
+    result.healthStatus = isActuallyHealthy ? 'healthy' : 'unhealthy';
+
+    // 2. Ensure care plan exists for healthy plants or as general fallback
     if (!result.healthyCarePlan ||
         !result.healthyCarePlan.dailyCare ||
         result.healthyCarePlan.dailyCare.length === 0) {
 
         console.warn('⚠️ AI omitted healthyCarePlan, injecting server-side fallback.');
 
-        // Select language (default to 'en' if not 'ms')
-        const langCode = language === 'ms' ? 'ms' : 'en';
+        // Select language (default to 'en' if not 'ms' or 'zh')
+        const langCode = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
 
         // Inject default plan
         result.healthyCarePlan = DEFAULT_CARE_PLANS[langCode];

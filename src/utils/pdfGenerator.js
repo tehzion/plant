@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { getProductRecommendations, suppliers } from '../data/productRecommendations.js';
+import { isHealthy } from './statusUtils';
 
 /**
  * Generate a comprehensive PDF report for plant disease analysis
@@ -68,7 +69,8 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
     doc.setFont('helvetica', 'normal');
     // Ensure "Dijana oleh..." is used if explicitly translated, otherwise fallback
     doc.text(t('pdf.generatedBy'), pageWidth / 2, 36, { align: 'center' });
-    doc.text(`${t('pdf.reportDate')}: ${new Date().toLocaleDateString(language === 'ms' ? 'ms-MY' : 'en-MY')}`, pageWidth / 2, 41, { align: 'center' });
+    const localeString = t('common.dateLocale') || 'en-MY';
+    doc.text(`${t('pdf.reportDate')}: ${new Date().toLocaleDateString(localeString)}`, pageWidth / 2, 41, { align: 'center' });
 
     yPos = 55;
 
@@ -102,11 +104,8 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
     }
 
     // === HEALTH STATUS BANNER ===
-    const isHealthy = scanData.healthStatus?.toLowerCase() === 'healthy' ||
-        scanData.healthStatus === 'Sihat' ||
-        scanData.disease?.toLowerCase().includes('tiada masalah') ||
-        scanData.disease?.toLowerCase().includes('no issues');
-    const statusColor = isHealthy ? healthyColor : unhealthyColor;
+    const healthy = isHealthy(scanData);
+    const statusColor = healthy ? healthyColor : unhealthyColor;
 
     doc.setFillColor(...statusColor);
     doc.roundedRect(15, yPos, pageWidth - 30, 24, 4, 4, 'F');
@@ -114,7 +113,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    const statusText = isHealthy ? t('results.healthy').toUpperCase() : t('results.unhealthy').toUpperCase();
+    const statusText = healthy ? t('results.healthy').toUpperCase() : t('results.unhealthy').toUpperCase();
     doc.text(statusText, pageWidth / 2, yPos + 16, { align: 'center' });
 
     yPos += 35;
@@ -146,13 +145,13 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         metadataRows.push([t('common.location'), scanData.locationName || scanData.location || t('common.locationNA')]);
     }
 
-    if (!isHealthy && scanData.disease) {
-        metadataRows.push([t('results.disease'), scanData.disease]);
+    if (!healthy && scanData.disease) {
+        metadataRows.push([t('results.diagnosis') || t('results.disease'), scanData.disease]);
     }
 
     if (scanData.fungusType) {
         metadataRows.push([t('results.fungusSpecies'), scanData.fungusType]);
-        metadataRows.push([t('results.pathogen'), scanData.pathogenType || 'Fungi']);
+        metadataRows.push([t('results.pathogen'), scanData.pathogenType || t('results.fungi')]);
     }
 
     doc.autoTable({
@@ -162,6 +161,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         styles: {
             fontSize: 10,
             cellPadding: 3,
+            font: language === 'zh' ? 'helvetica' : 'helvetica', // Placeholder for font logic
         },
         columnStyles: {
             0: { fontStyle: 'bold', textColor: grayText, width: 60 },
@@ -215,7 +215,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         yPos += 8;
     }
 
-    // === CAUSES (New) ===
+    // === CAUSES ===
     if (scanData.causes && scanData.causes.length > 0) {
         checkPageBreak(30);
         doc.setFontSize(14);
@@ -238,7 +238,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
     }
 
     // === TREATMENT PLAN ===
-    if (!isHealthy) {
+    if (!healthy) {
         checkPageBreak(40);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
@@ -289,12 +289,12 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         }
     }
 
-    // === PREVENTION (New) ===
+    // === PREVENTION ===
     if (scanData.prevention && scanData.prevention.length > 0) {
         checkPageBreak(30);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...healthyColor); // Use green for prevention
+        doc.setTextColor(...healthyColor);
         doc.text(t('results.prevention') || 'Prevention & Best Practices', 15, yPos);
         yPos += 8;
 
@@ -312,7 +312,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         yPos += 10;
     }
 
-    // === NUTRITIONAL ANALYSIS (Enhanced) ===
+    // === NUTRITIONAL ANALYSIS ===
     if (scanData.nutritionalIssues?.hasDeficiency) {
         checkPageBreak(40);
         doc.setFontSize(16);
@@ -325,7 +325,8 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         if (deficientNutrients && deficientNutrients.length > 0) {
             deficientNutrients.forEach((issue) => {
                 const issueText = typeof issue === 'string' ? issue : `${issue.nutrient}: ${issue.symptoms?.[0] || ''}`;
-                const cleanText = issueText.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}]/gu, '');
+                // Safer emoji stripping for CJK support
+                const cleanText = issueText.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '');
                 const lines = doc.splitTextToSize(`! ${cleanText}`, pageWidth - 30);
                 lines.forEach(line => {
                     checkPageBreak(6);
@@ -337,7 +338,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         }
     }
 
-    // === PRODUCT RECOMMENDATIONS (With Suppliers) ===
+    // === PRODUCT RECOMMENDATIONS ===
     const products = getProductRecommendations(scanData.plantType, scanData.disease);
     if (products && (products.diseaseControl?.length > 0 || products.nutrition?.length > 0)) {
         checkPageBreak(50);
@@ -361,8 +362,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
             doc.setFont('helvetica', 'normal');
 
             productList.forEach((prod) => {
-                checkPageBreak(25); // Products need more space
-                // Product Name & Desc
+                checkPageBreak(25);
                 const nameLink = `${t(prod.name)} (${prod.count || 'N/A'})`;
                 doc.setFont('helvetica', 'bold');
                 doc.text(`• ${nameLink}`, 20, yPos);
@@ -380,7 +380,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         };
 
         renderProductList(products.diseaseControl, t('results.diseaseControlProducts'));
-        renderProductList(products.nutrition, (!scanData.disease || ['healthy', 'sihat', 'tiada masalah'].some(term => scanData.disease.toLowerCase().includes(term))) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition'));
+        renderProductList(products.nutrition, (!scanData.disease || isHealthy(scanData)) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition'));
     }
 
     // === FOOTER/DISCLAIMER ===
@@ -390,7 +390,7 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
-    doc.setTextColor(156, 163, 175); // #9CA3AF
+    doc.setTextColor(156, 163, 175);
     const disclaimerLines = doc.splitTextToSize(t('pdf.disclaimer'), pageWidth - 30);
     disclaimerLines.forEach((line, index) => {
         doc.text(line, pageWidth / 2, disclaimerY + (index * 4), { align: 'center' });
@@ -401,6 +401,8 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         if (yPos + requiredSpace > pageHeight - 30) {
             doc.addPage();
             yPos = 25;
+            // When a new page starts, we should technically reset the font if it was custom
+            doc.setFont('helvetica', 'normal');
         }
     }
 

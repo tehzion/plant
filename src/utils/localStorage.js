@@ -56,13 +56,28 @@ export const saveScan = (scanData) => {
     } catch (error) {
         console.error('Error saving scan:', error);
         // Handle quota exceeded error
-        if (error.name === 'QuotaExceededError') {
-            // Clear old scans and try again
-            const history = getScanHistory().slice(0, 20);
-            // Re-encrypt reduced history
-            const encryptedData = encryptData(JSON.stringify(history));
-            localStorage.setItem(STORAGE_KEY, encryptedData);
-            return saveScan(scanData);
+        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+            try {
+                // More aggressive cleanup: Keep only 15 most recent
+                console.warn('Local storage quota exceeded, clearing old history...');
+                const history = getScanHistory();
+                if (history.length > 15) {
+                    const reducedHistory = history.slice(0, 15);
+                    const encryptedData = encryptData(JSON.stringify(reducedHistory));
+                    localStorage.setItem(STORAGE_KEY, encryptedData);
+
+                    // Try one last time with the current scan
+                    // We don't recurse indefinitely, we just try once more after cleanup
+                    const finalHistory = [
+                        { id: Date.now().toString(36), timestamp: new Date().toISOString(), ...scanData },
+                        ...reducedHistory
+                    ].slice(0, 15);
+                    localStorage.setItem(STORAGE_KEY, encryptData(JSON.stringify(finalHistory)));
+                    return finalHistory[0];
+                }
+            } catch (e) {
+                console.error('Failed to recover from quota error:', e);
+            }
         }
         throw error;
     }
@@ -143,22 +158,28 @@ export const clearAllScans = () => {
 
 /**
  * Get scans grouped by date
- * @returns {Object} Scans grouped by date labels (Today, Yesterday, etc.)
+ * @returns {Object} Scans grouped by date labels (today, yesterday, etc.)
  */
 export const getGroupedScans = () => {
     const history = getScanHistory();
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
+    const fortnightAgo = new Date(today);
+    fortnightAgo.setDate(fortnightAgo.getDate() - 14);
+
     const grouped = {
-        Today: [],
-        Yesterday: [],
-        'This Week': [],
-        Older: []
+        today: [],
+        yesterday: [],
+        thisWeek: [],
+        lastWeek: [],
+        older: []
     };
 
     history.forEach(scan => {
@@ -166,13 +187,15 @@ export const getGroupedScans = () => {
         const scanDay = new Date(scanDate.getFullYear(), scanDate.getMonth(), scanDate.getDate());
 
         if (scanDay.getTime() === today.getTime()) {
-            grouped.Today.push(scan);
+            grouped.today.push(scan);
         } else if (scanDay.getTime() === yesterday.getTime()) {
-            grouped.Yesterday.push(scan);
+            grouped.yesterday.push(scan);
         } else if (scanDate >= weekAgo) {
-            grouped['This Week'].push(scan);
+            grouped.thisWeek.push(scan);
+        } else if (scanDate >= fortnightAgo) {
+            grouped.lastWeek.push(scan);
         } else {
-            grouped.Older.push(scan);
+            grouped.older.push(scan);
         }
     });
 

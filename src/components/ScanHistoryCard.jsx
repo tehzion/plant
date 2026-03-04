@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { MapPin, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { isHealthy } from '../utils/statusUtils';
 
 const ScanHistoryCard = ({ scan, onDelete }) => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+
+  const healthy = isHealthy(scan);
 
   const getSeverityBadgeClass = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -65,8 +68,8 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
             </p>
 
             <div className="scan-badge-row">
-              <span className={`status-badge-mini ${['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ? 'status-healthy' : 'status-unhealthy'}`}>
-                {['healthy', 'sihat', 'tiada masalah'].some(s => scan.healthStatus?.toLowerCase().includes(s)) ?
+              <span className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
+                {healthy ?
                   <CheckCircle size={10} strokeWidth={3} /> :
                   <AlertTriangle size={10} strokeWidth={3} />
                 }

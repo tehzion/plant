@@ -13,21 +13,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Load environment variables
-// Load environment variables
 dotenv.config();
-
-// CRITICAL: Validate Configuration
-if (!process.env.OPENAI_API_KEY) {
-    console.error('❌ FATAL: OPENAI_API_KEY is missing. The server will not function correctly.');
-} else {
-    console.log('✅ OPENAI_API_KEY found');
-}
-
-if (!process.env.PLANTNET_API_KEY) {
-    console.warn('⚠️ WARNING: PLANTNET_API_KEY is missing. Species identification feature will be disabled.');
-} else {
-    console.log('✅ PLANTNET_API_KEY found');
-}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,9 +24,9 @@ const PORT = process.env.PORT || 3002;
 // Initialize Cache (Default TTL: 7 days for Questions, 24h for images)
 const aiCache = new NodeCache({ stdTTL: 86400 });
 
-// Security & Config
-app.use(helmet()); // Add security headers
-app.use(compression()); // Compress all responses
+// Security Headers & Middlewares
+app.use(helmet());
+app.use(compression());
 app.use(cors({
     origin: '*',
     credentials: true,
@@ -65,7 +51,6 @@ const limiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
-app.use('/api/', limiter);
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -80,19 +65,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// TEMPORARY DEBUG: Check Environment Variables Safely
-app.get('/api/test-env', (req, res) => {
-    res.json({
-        message: 'Environment Check',
-        timestamp: new Date().toISOString(),
-        env_vars: {
-            // Check if keys are present (DO NOT RETURN VALUES)
-            OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'Present (Length: ' + process.env.OPENAI_API_KEY.length + ')' : 'MISSING',
-            PLANTNET_API_KEY: process.env.PLANTNET_API_KEY ? 'Present (Length: ' + process.env.PLANTNET_API_KEY.length + ')' : 'MISSING',
-            NODE_ENV: process.env.NODE_ENV
-        }
-    });
-});
+app.use('/api/', limiter);
 
 // General AI Question Endpoint (Cached)
 app.post('/api/ask', async (req, res, next) => {
@@ -257,11 +230,13 @@ app.post('/api/analyze', async (req, res, next) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error('🔥 Global Error:', err.stack);
-    res.status(500).json({
-        error: 'Internal Server Error',
-        message: err.message, // TEMPORARY DEBUG: Expose real error
-        stack: err.stack // TEMPORARY DEBUG: Expose stack
+    const isProduction = process.env.NODE_ENV === 'production';
+    console.error(`🔥 [${req.method} ${req.url}] Error:`, isProduction ? err.message : err.stack);
+
+    res.status(err.status || 500).json({
+        error: isProduction ? 'Internal Server Error' : (err.name || 'Internal Server Error'),
+        message: isProduction ? 'An unexpected error occurred. Please try again later.' : err.message,
+        ...(isProduction ? {} : { stack: err.stack })
     });
 });
 
