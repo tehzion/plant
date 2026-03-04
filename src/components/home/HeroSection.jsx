@@ -42,6 +42,7 @@ const HeroSection = ({
                     </p>
                 </div>
                 <div className="header-controls">
+                    <LanguageSelector />
                     <div className="weather-widget">
                         <span className="weather-icon">{renderWeatherIcon()}</span>
                         <span className="weather-temp">{weatherTemp ? `${weatherTemp}°C` : '--°C'}</span>
