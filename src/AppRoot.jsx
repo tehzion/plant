@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import { Analytics } from '@vercel/analytics/react';
 
 import { ScanProvider } from './context/ScanContext';
 
@@ -43,6 +44,7 @@ function App() {
                     </ScanProvider>
                 </BrowserRouter>
             </ErrorBoundary>
+            <Analytics />
             <style>{`
                 .page-loading {
                     display: flex;
