@@ -1,3 +1,5 @@
+import { getMockAnalysisResult } from './mockData';
+
 // Plant Disease Detection - Backend API Integration
 
 // In production (Render/Vercel), we want relative paths (e.g. /api/analyze) 
@@ -64,9 +66,6 @@ export const imageToBase64 = (file, maxWidth = 1024) => {
  * @param {string} language - Language code ('en', 'ms', or 'zh')
  * @returns {Promise<Object>} Analysis result
  */
-// Import disease database for fallback/mock data
-import { getMockAnalysisResult } from './mockData';
-
 export const analyzePlantDisease = async (
   treeImageBase64,
   category,
