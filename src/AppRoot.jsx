@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { LanguageProvider } from './i18n/i18n.jsx';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -43,6 +44,7 @@ function App() {
                     </ScanProvider>
                 </BrowserRouter>
             </ErrorBoundary>
+            <Analytics />
             <style>{`
                 .page-loading {
                     display: flex;
