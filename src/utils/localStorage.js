@@ -1,6 +1,8 @@
 import CryptoJS from 'crypto-js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
+const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
+const CHECKLIST_KEY = 'sea_plant_mygap_checklist';
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'sea-plant-default-secret-key-2025';
 
 /**
@@ -200,4 +202,59 @@ export const getGroupedScans = () => {
     });
 
     return grouped;
+};
+
+/**
+ * myGAP Digital Logbook Functions
+ */
+export const saveLogEntry = (logEntry) => {
+    try {
+        const logs = getLogbook();
+        const newLog = {
+            id: Date.now().toString(36),
+            timestamp: new Date().toISOString(),
+            ...logEntry
+        };
+        logs.unshift(newLog);
+        localStorage.setItem(LOGBOOK_KEY, encryptData(JSON.stringify(logs.slice(0, 100))));
+        return newLog;
+    } catch (error) {
+        console.error('Error saving log entry:', error);
+        return null;
+    }
+};
+
+export const getLogbook = () => {
+    try {
+        const data = localStorage.getItem(LOGBOOK_KEY);
+        if (!data) return [];
+        return JSON.parse(decryptData(data));
+    } catch (error) {
+        console.error('Error reading logbook:', error);
+        return [];
+    }
+};
+
+/**
+ * myGAP Compliance Checklist Functions
+ */
+export const saveChecklistState = (checklistState) => {
+    try {
+        localStorage.setItem(CHECKLIST_KEY, encryptData(JSON.stringify(checklistState)));
+        return true;
+    } catch (error) {
+        console.error('Error saving checklist state:', error);
+        return false;
+    }
+};
+
+export const getChecklistState = () => {
+    try {
+        const data = localStorage.getItem(CHECKLIST_KEY);
+        if (!data) return {};
+        return JSON.parse(decryptData(data));
+    } catch (error) {
+        console.error('Error reading checklist state:', error);
+        return {};
+    }
 };
