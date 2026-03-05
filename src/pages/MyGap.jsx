@@ -129,18 +129,20 @@ const MyGapPage = () => {
                     line-height: 1.5;
                 }
                 .official-link-button {
-                    display: inline-flex;
+                    display: flex;
                     align-items: center;
                     justify-content: center;
                     gap: var(--space-sm);
-                    width: 100%;
-                    padding: var(--space-md) var(--space-lg);
+                    width: fit-content;
+                    margin: 0 auto;
+                    padding: var(--space-sm) var(--space-xl);
                     background-color: var(--color-primary);
                     color: white;
                     font-weight: 600;
-                    border-radius: var(--radius-md);
+                    font-size: var(--font-size-sm);
+                    border-radius: var(--radius-full);
                     text-decoration: none;
-                    transition: background-color 0.2s;
+                    transition: all 0.2s;
                 }
                 .official-link-button:hover {
                     background-color: var(--color-primary-dark);
