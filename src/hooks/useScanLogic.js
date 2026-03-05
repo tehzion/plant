@@ -146,7 +146,7 @@ export const useScanLogic = () => {
             setError,
             performAnalyze
         };
-    }, [language, t]);
+    }, [language, t, stateRef]);
 
     return {
         state,
