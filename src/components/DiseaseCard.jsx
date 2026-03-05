@@ -357,21 +357,22 @@ const DiseaseCard = ({ disease }) => {
 
         .section-title-wrapper {
           display: flex;
-          align-items: center; /* Changed from flex-start to center for better visual alignment */
+          align-items: center; 
           justify-content: flex-start;
           gap: 12px;
-          margin-bottom: var(--space-md); /* Increased margin */
+          margin-bottom: var(--space-md);
+          text-align: left; /* Explicitly set left alignment */
         }
 
         .section-icon {
-          width: 28px; /* Slightly smaller for better balance */
+          width: 28px;
           height: 28px;
           border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          background: rgba(74, 124, 44, 0.08); /* Lighter primary tint */
+          background: rgba(74, 124, 44, 0.08);
           color: var(--color-primary);
         }
 
@@ -379,28 +380,28 @@ const DiseaseCard = ({ disease }) => {
           font-size: var(--font-size-base);
           color: var(--color-primary-dark);
           margin: 0;
-          text-align: left;
+          text-align: left !important; /* Force left alignment */
           font-weight: 600;
-          line-height: 1.2; /* Slightly increased for multi-line support */
+          line-height: 1.2;
           flex: 1;
         }
 
         .section-text {
           color: var(--color-text-secondary);
           line-height: 1.6;
-          text-align: left;
+          text-align: left !important; /* Force left alignment */
           margin: 0;
           padding-left: 40px;
-          word-break: break-word; /* Ensure long words don't overflow */
+          word-break: break-word;
         }
 
         .info-list {
           margin: 0;
-          padding-left: 40px; /* Aligns with text above, after icon+gap */
+          padding-left: 40px;
           color: var(--color-text-secondary);
           line-height: 1.8;
-          text-align: left;
-          list-style-type: disc; /* Ensure clear bullet points */
+          text-align: left !important; /* Force left alignment */
+          list-style-type: disc;
         }
 
         .info-list li {
