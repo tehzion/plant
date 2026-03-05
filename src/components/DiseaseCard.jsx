@@ -357,33 +357,32 @@ const DiseaseCard = ({ disease }) => {
 
         .section-title-wrapper {
           display: flex;
-          align-items: flex-start; /* Align icon to top, not center */
+          align-items: center; /* Changed from flex-start to center for better visual alignment */
           justify-content: flex-start;
           gap: 12px;
-          margin-bottom: var(--space-sm);
+          margin-bottom: var(--space-md); /* Increased margin */
         }
 
         .section-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
+          width: 28px; /* Slightly smaller for better balance */
+          height: 28px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          background: var(--color-bg-secondary);
+          background: rgba(74, 124, 44, 0.08); /* Lighter primary tint */
           color: var(--color-primary);
-          margin-top: 2px; /* Visual optical alignment with text cap height */
         }
 
         .section-title {
-          font-size: var(--font-size-lg);
+          font-size: var(--font-size-base);
           color: var(--color-primary-dark);
           margin: 0;
           text-align: left;
-          font-weight: 700;
-          line-height: 1.3;
-          flex: 1; /* Ensure text takes up available space properly */
+          font-weight: 600;
+          line-height: 1.2; /* Slightly increased for multi-line support */
+          flex: 1;
         }
 
         .section-text {
@@ -391,14 +390,17 @@ const DiseaseCard = ({ disease }) => {
           line-height: 1.6;
           text-align: left;
           margin: 0;
+          padding-left: 40px;
+          word-break: break-word; /* Ensure long words don't overflow */
         }
 
         .info-list {
           margin: 0;
-          padding-left: var(--space-lg);
+          padding-left: 40px; /* Aligns with text above, after icon+gap */
           color: var(--color-text-secondary);
           line-height: 1.8;
           text-align: left;
+          list-style-type: disc; /* Ensure clear bullet points */
         }
 
         .info-list li {
@@ -433,11 +435,11 @@ const DiseaseCard = ({ disease }) => {
           }
 
           .section-title {
-            font-size: var(--font-size-xl);
+            font-size: var(--font-size-lg);
           }
 
-          .info-list {
-            padding-left: var(--space-xl);
+          .section-text, .info-list {
+            padding-left: 48px;
           }
 
           /* Force hide mobile modal on desktop even if rendered */
