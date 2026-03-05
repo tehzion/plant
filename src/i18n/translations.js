@@ -472,6 +472,11 @@ export const translations = {
             pillar4: 'Worker Welfare',
             pillar4Desc: 'Ensuring the safety, health, and welfare of farm workers.',
             officialLink: 'Visit Official DOA Portal',
+            generateReport: 'Download Compliance Report',
+            reportTitle: 'myGAP Compliance Report',
+            reportGenerated: 'Generated on',
+            logbookSummary: 'Logbook Summary',
+            noLogs: 'No activity logs recorded yet.',
         },
 
         encyclopedia: {
@@ -1708,6 +1713,13 @@ export const translations = {
             pathogen: '病原体',
             filterHint: '请尝试调整您的搜索或筛选条件',
             close: '关闭',
+            notSafeToHarvest: '尚未达到安全采收期。',
+            officialLink: '访问 DOA 官方门户网站',
+            generateReport: '下载合规报告',
+            reportTitle: 'myGAP 合规报告',
+            reportGenerated: '生成于',
+            logbookSummary: '日志摘要',
+            noLogs: '暂无活动记录。',
 
             // 类别
             fungicides: '真菌病害',
