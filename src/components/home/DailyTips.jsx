@@ -60,17 +60,32 @@ const DailyTips = () => {
                 <div
                     key={currentTipIndex}
                     className="tips-card fade-in-fast"
-                    style={{ background: dailyTips[currentTipIndex].bg, position: 'relative' }}
+                    style={{ 
+                        background: dailyTips[currentTipIndex].bg, 
+                        position: 'relative',
+                        borderRadius: 'var(--radius-xl)',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        border: '1px solid rgba(255,255,255,0.3)'
+                    }}
                 >
                     <div className="tip-content">
                         <span
                             className="tip-badge"
-                            style={{ color: dailyTips[currentTipIndex].color }}
+                            style={{ 
+                                background: 'rgba(255,255,255,0.8)',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                marginBottom: '8px',
+                                display: 'inline-block',
+                                color: dailyTips[currentTipIndex].color 
+                            }}
                         >
                             {t(`home.${dailyTips[currentTipIndex].categoryKey}`) || t('home.tipBadge')}
                         </span>
-                        <h4 style={{ color: dailyTips[currentTipIndex].color }}>{t(`home.${dailyTips[currentTipIndex].titleKey}`)}</h4>
-                        <p style={{ color: dailyTips[currentTipIndex].color }}>{t(`home.${dailyTips[currentTipIndex].descKey}`)}</p>
+                        <h4 style={{ color: dailyTips[currentTipIndex].color, fontSize: '1.25rem', marginBottom: '8px' }}>{t(`home.${dailyTips[currentTipIndex].titleKey}`)}</h4>
+                        <p style={{ color: dailyTips[currentTipIndex].color, fontSize: '0.95rem', lineHeight: '1.5', opacity: 0.9 }}>{t(`home.${dailyTips[currentTipIndex].descKey}`)}</p>
                     </div>
                     <div className="tip-image">{dailyTips[currentTipIndex].icon}</div>
 

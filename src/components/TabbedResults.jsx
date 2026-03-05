@@ -202,9 +202,8 @@ const TabbedResults = ({ tabs }) => {
         }
 
         .tab-header.active {
-          color: #fff;
+          color: var(--color-primary);
           font-weight: 600;
-          background-color: var(--color-primary);
         }
 
         .active-indicator {

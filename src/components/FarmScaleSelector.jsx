@@ -153,37 +153,31 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
         }
 
         .scale-button {
-          position: relative;
+          width: 100%;
           display: flex;
-          flex-direction: column;
           align-items: center;
-          gap: var(--space-sm);
+          gap: var(--space-md);
           padding: var(--space-lg);
           background: white;
-          border: 3px solid var(--color-border);
-          border-radius: var(--radius-lg);
+          border: 2px solid var(--color-border-light);
+          border-radius: var(--radius-xl);
           cursor: pointer;
-          transition: all var(--transition-base);
-          font-family: var(--font-family);
-          min-height: 180px;
-          height: auto;
-          width: 100%;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          text-align: left;
+          position: relative;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
         .scale-button:hover:not(:disabled) {
           border-color: var(--color-primary);
-          transform: translateY(-4px) scale(1.02);
-          box-shadow: var(--shadow-lg);
-        }
-
-        .scale-button:hover:not(:disabled) .scale-icon {
-          transform: scale(1.1) rotate(5deg);
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(74, 124, 44, 0.1);
         }
 
         .scale-button.selected {
           border-color: var(--color-primary);
-          background: linear-gradient(135deg, rgba(95, 168, 62, 0.1) 0%, rgba(61, 124, 31, 0.05) 100%);
-          box-shadow: var(--shadow-md);
+          background: var(--color-bg-primary);
+          box-shadow: 0 4px 12px rgba(74, 124, 44, 0.15);
         }
 
         .scale-button:disabled {

@@ -154,8 +154,7 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // 1. Generate Image Hash for Caching
         const imageHash = crypto.createHash('md5').update(mainImage).digest('hex');
-        const leafHash = leafImage ? crypto.createHash('md5').update(leafImage).digest('hex') : 'none';
-        const cacheKey = `analyze_${imageHash}_${leafHash}_${category}_${language}`;
+        const cacheKey = `analyze_${imageHash}_${language}`;
 
         // 2. Check Cache
         const cachedResult = aiCache.get(cacheKey);

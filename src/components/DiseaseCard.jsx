@@ -190,20 +190,11 @@ const DiseaseCard = ({ disease }) => {
 
       <style>{`
         .disease-card {
-          background: #fff;
-          border: 1px solid var(--color-border-light, #e2e8f0);
-          border-radius: var(--radius-lg, 12px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
           margin-bottom: var(--space-md);
-          transition: all 0.2s ease-out;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           height: fit-content;
           display: flex;
           flex-direction: column;
-        }
-
-        .disease-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 10px 15px -3px rgba(74, 124, 44, 0.1), 0 4px 6px -2px rgba(74, 124, 44, 0.05);
         }
 
         .desktop-accordion-content {
@@ -366,51 +357,48 @@ const DiseaseCard = ({ disease }) => {
 
         .section-title-wrapper {
           display: flex;
-          align-items: center; 
+          align-items: flex-start; /* Align icon to top, not center */
           justify-content: flex-start;
           gap: 12px;
-          margin-bottom: var(--space-md);
-          text-align: left; /* Explicitly set left alignment */
+          margin-bottom: var(--space-sm);
         }
 
         .section-icon {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          background: rgba(74, 124, 44, 0.08);
+          background: var(--color-bg-secondary);
           color: var(--color-primary);
+          margin-top: 2px; /* Visual optical alignment with text cap height */
         }
 
         .section-title {
-          font-size: var(--font-size-base);
+          font-size: var(--font-size-lg);
           color: var(--color-primary-dark);
           margin: 0;
-          text-align: left !important; /* Force left alignment */
-          font-weight: 600;
-          line-height: 1.2;
-          flex: 1;
+          text-align: left;
+          font-weight: 700;
+          line-height: 1.3;
+          flex: 1; /* Ensure text takes up available space properly */
         }
 
         .section-text {
           color: var(--color-text-secondary);
           line-height: 1.6;
-          text-align: left !important; /* Force left alignment */
+          text-align: left;
           margin: 0;
-          padding-left: 40px;
-          word-break: break-word;
         }
 
         .info-list {
           margin: 0;
-          padding-left: 40px;
+          padding-left: var(--space-lg);
           color: var(--color-text-secondary);
           line-height: 1.8;
-          text-align: left !important; /* Force left alignment */
-          list-style-type: disc;
+          text-align: left;
         }
 
         .info-list li {
@@ -445,11 +433,11 @@ const DiseaseCard = ({ disease }) => {
           }
 
           .section-title {
-            font-size: var(--font-size-lg);
+            font-size: var(--font-size-xl);
           }
 
-          .section-text, .info-list {
-            padding-left: 48px;
+          .info-list {
+            padding-left: var(--space-xl);
           }
 
           /* Force hide mobile modal on desktop even if rendered */

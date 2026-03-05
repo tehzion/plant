@@ -95,10 +95,11 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
           gap: var(--space-sm);
           padding: var(--space-lg) var(--space-md);
           background: white;
-          border: 3px solid var(--color-border);
-          border-radius: var(--radius-lg);
+          border: 2px solid var(--color-border-light);
+          border-radius: var(--radius-xl);
           cursor: pointer;
-          transition: all var(--transition-base);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
           font-family: var(--font-family);
           min-height: 140px;
           height: auto;
@@ -107,14 +108,14 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
 
         .category-btn:hover:not(:disabled) {
           border-color: var(--color-primary);
-          transform: translateY(-4px) scale(1.02);
-          box-shadow: var(--shadow-lg);
+          transform: translateY(-4px);
+          box-shadow: 0 10px 15px -3px rgba(74, 124, 44, 0.1);
         }
 
         .category-btn.active {
-          border-color: #22C55E;
-          background: #DCFCE7; /* green-100 equivalent */
-          box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2), 0 2px 4px -1px rgba(34, 197, 94, 0.1);
+          border-color: var(--color-primary);
+          background: var(--color-bg-primary);
+          box-shadow: 0 4px 12px rgba(74, 124, 44, 0.15);
         }
 
         .category-btn:disabled {

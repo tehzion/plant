@@ -16,22 +16,22 @@ const BottomNav = () => {
 
     return (
         <nav className="bottom-nav">
-            <div className="bottom-nav-content">
+            <div className="bottom-nav-content" style={{ padding: '4px 0' }}>
                 <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`}>
-                    <span className="nav-item-icon"><HomeIcon size={24} strokeWidth={1.5} /></span>
-                    <span>{t('nav.home')}</span>
+                    <span className="nav-item-icon"><HomeIcon size={20} strokeWidth={1.5} /></span>
+                    <span style={{ fontSize: '0.75rem' }}>{t('nav.home')}</span>
                 </Link>
                 <Link to="/history" className={`nav-item ${isActive('/history') ? 'active' : ''}`}>
-                    <span className="nav-item-icon"><ClipboardList size={24} strokeWidth={1.5} /></span>
-                    <span>{t('nav.history')}</span>
+                    <span className="nav-item-icon"><ClipboardList size={20} strokeWidth={1.5} /></span>
+                    <span style={{ fontSize: '0.75rem' }}>{t('nav.history')}</span>
                 </Link>
                 <Link to="/encyclopedia" className={`nav-item ${isActive('/encyclopedia') ? 'active' : ''}`}>
-                    <span className="nav-item-icon"><BookOpen size={24} strokeWidth={1.5} /></span>
-                    <span>{t('nav.encyclopedia')}</span>
+                    <span className="nav-item-icon"><BookOpen size={20} strokeWidth={1.5} /></span>
+                    <span style={{ fontSize: '0.75rem' }}>{t('nav.encyclopedia')}</span>
                 </Link>
                 <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`}>
-                    <span className="nav-item-icon"><User size={24} strokeWidth={1.5} /></span>
-                    <span>{t('nav.profile')}</span>
+                    <span className="nav-item-icon"><User size={20} strokeWidth={1.5} /></span>
+                    <span style={{ fontSize: '0.75rem' }}>{t('nav.profile')}</span>
                 </Link>
             </div>
             <div className="persistent-footer">
