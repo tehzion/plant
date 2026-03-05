@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Zap, Pill, Shield } from 'lucide-react';
-import { formatItemWithTitle } from '../utils/textUtils';
 
 const TreatmentRecommendations = ({ result }) => {
   const { t } = useLanguage();
@@ -80,7 +79,7 @@ const TreatmentRecommendations = ({ result }) => {
                 {section.listType === 'ol' ? (
                   <ol className="action-list">
                     {section.data.map((item, index) => (
-                      <li key={index} className="list-item">{formatItemWithTitle(item)}</li>
+                      <li key={index} className="list-item">{item}</li>
                     ))}
                   </ol>
                 ) : (
