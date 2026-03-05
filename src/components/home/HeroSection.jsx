@@ -1,7 +1,6 @@
 import React from 'react';
 import { MapPin, Clock, Sun, CloudSun, CloudRain, Snowflake, CloudLightning } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
-import LanguageSelector from '../LanguageSelector';
 
 const HeroSection = ({
     greeting,
@@ -42,7 +41,6 @@ const HeroSection = ({
                     </p>
                 </div>
                 <div className="header-controls">
-                    <LanguageSelector />
                     <div className="weather-widget">
                         <span className="weather-icon">{renderWeatherIcon()}</span>
                         <span className="weather-temp">{weatherTemp ? `${weatherTemp}°C` : '--°C'}</span>
