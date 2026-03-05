@@ -1,6 +1,6 @@
 # SEA Plant Disease Detector 🌿
 
-AI-powered plant disease detection for Southeast Asian crops including rice, vegetables, fruits, palm, rubber, and durian.
+AI-powered plant disease detection for Southeast Asian crops including rice, vegetables, fruits, palm, rubber, and durian. Now with comprehensive **myGAP certification support**.
 
 ## Features
 
@@ -10,7 +10,9 @@ AI-powered plant disease detection for Southeast Asian crops including rice, veg
 - 💊 **Treatment Recommendations**: Immediate actions and prevention tips
 - 📋 **Scan History**: Local storage of past scans
 - 📚 **Disease Encyclopedia**: Comprehensive database of SEA plant diseases
-- 📱 **PWA Ready**: Install on mobile devices for easy access
+- 📱 **PWA Ready**: Install on mobile devices for easy access with auto-updates
+- ✅ **myGAP Support**: Digital checklist, logbook, and PHI calculator
+- 📄 **Professional Reports**: Generate PDF reports for disease analysis and compliance
 
 ## Setup Instructions
 
@@ -52,6 +54,7 @@ npm run build
 4. **View Results**: See disease identification, severity, and treatment recommendations
 5. **Access History**: View past scans in the History tab
 6. **Browse Encyclopedia**: Learn about common SEA plant diseases
+7. **Manage Compliance**: Use the myGAP tools to track farm activities and generate compliance reports
 
 ## Technology Stack
 
@@ -60,7 +63,8 @@ npm run build
 - **AI**: OpenAI Vision API (GPT-4 Vision)
 - **Styling**: Vanilla CSS with custom design system
 - **Storage**: Browser LocalStorage
-- **PWA**: Service Worker for offline support
+- **PWA**: Service Worker for offline support with auto-update
+- **Reporting**: jsPDF for professional report generation
 
 ## Project Structure
 
@@ -81,12 +85,16 @@ Plant/
 │   │   ├── Home.jsx
 │   │   ├── Results.jsx
 │   │   ├── History.jsx
-│   │   └── Encyclopedia.jsx
+│   │   ├── Encyclopedia.jsx
+│   │   └── MyGap.jsx
 │   ├── utils/
 │   │   ├── diseaseDetection.js
+│   │   ├── pdfGenerator.js
 │   │   └── localStorage.js
 │   ├── data/
 │   │   └── diseaseDatabase.js
+│   ├── i18n/
+│   │   └── translations.js
 │   ├── App.jsx
 │   ├── main.jsx
 │   └── index.css
@@ -122,10 +130,8 @@ The app includes information on common SEA plant diseases:
 ## Future Enhancements
 
 - Offline AI model for areas with limited internet
-- Multi-language support (Thai, Vietnamese, Indonesian, etc.)
 - Weather integration for disease risk prediction
 - Community features for sharing treatments
-- Export scan reports as PDF
 
 ## License
 
