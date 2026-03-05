@@ -130,6 +130,8 @@ export const translations = {
             keyInfo: 'Crop Advisor',
             scanPlant: 'Scan Plant',
             scanDesc: 'Detect diseases instantly',
+            mygapTitle: 'myGAP Guide',
+            mygapDesc: 'Good Agricultural Practices',
             confirmExit: 'Cancel current scan?',
             confirmExitMessage: 'You will lose your current scan progress.',
             connecting: 'Connecting...',
@@ -451,6 +453,25 @@ export const translations = {
             followInstructions: 'Follow package instructions',
             defaultHealthyReasoning: 'Our analysis shows that your plant appears vibrant and free from visible pathogens or stress markers. Continue your current care routine to maintain this health.',
             defaultUnhealthyReasoning: 'Based on the visual symptoms like discoloration or lesions, our system has identified potential stressors. We recommend following the treatment steps below to restore your plant\'s health.',
+        },
+
+        // MYGAP Page
+        mygap: {
+            title: 'myGAP Guide',
+            subtitle: 'An Introduction to Malaysian Good Agricultural Practices',
+            disclaimer: 'This is a simplified guide for educational purposes and is not an official document. For certification, always refer to the official Department of Agriculture (DOA) Malaysia website.',
+            whatIsMyGap: 'What is myGAP?',
+            whatIsMyGapContent: 'myGAP is a certification scheme from the Department of Agriculture Malaysia to recognize farms that adopt good agricultural practices. It focuses on producing safe, quality food while protecting the environment and ensuring worker safety.',
+            keyPillars: 'Key Pillars of myGAP',
+            pillar1: 'Food Safety',
+            pillar1Desc: 'Ensuring produce is safe from chemical and biological hazards.',
+            pillar2: 'Product Quality',
+            pillar2Desc: 'Producing high-quality crops that meet market standards.',
+            pillar3: 'Environmental Care',
+            pillar3Desc: 'Using sustainable practices that protect the environment.',
+            pillar4: 'Worker Welfare',
+            pillar4Desc: 'Ensuring the safety, health, and welfare of farm workers.',
+            officialLink: 'Visit Official DOA Portal',
         },
 
         encyclopedia: {

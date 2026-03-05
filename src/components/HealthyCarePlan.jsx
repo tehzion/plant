@@ -1,6 +1,5 @@
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Calendar, CalendarDays, CalendarRange, Sparkles } from 'lucide-react';
-import { formatItemWithTitle } from '../utils/textUtils';
 
 const HealthyCarePlan = ({ carePlan, plantType }) => {
   const { t } = useLanguage();
@@ -63,7 +62,7 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
             </div>
             <ul className="care-list">
               {section.data.map((item, index) => (
-                <li key={index} className="care-item">{formatItemWithTitle(item)}</li>
+                <li key={index} className="care-item">{item}</li>
               ))}
             </ul>
           </div>
