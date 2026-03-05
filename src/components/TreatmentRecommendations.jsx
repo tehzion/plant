@@ -85,7 +85,7 @@ const TreatmentRecommendations = ({ result }) => {
                 ) : (
                   <ul className="action-list">
                     {section.data.map((item, index) => (
-                      <li key={index} className="list-item">{formatItemWithTitle(item)}</li>
+                      <li key={index} className="list-item">{item}</li>
                     ))}
                   </ul>
                 )}

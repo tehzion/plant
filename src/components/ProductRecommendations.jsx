@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getProductRecommendations, suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
-import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Lightbulb, Building2, Phone, Mail, MessageCircle, ArrowRight } from 'lucide-react';
+import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone } from 'lucide-react';
 import { isHealthy } from '../utils/statusUtils';
 
 const ProductRecommendations = ({ plantType, disease, farmScale }) => {

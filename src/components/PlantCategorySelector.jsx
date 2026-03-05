@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { Wheat, Carrot, Apple, TreePalm, TreeDeciduous, Bean, Flame, Sprout, Nut, Ban, Flower2, Leaf, CircleDot } from 'lucide-react';
+import { Wheat, Carrot, Apple, TreePalm, TreeDeciduous, Bean, Flame, Sprout, Flower2, Leaf, CircleDot } from 'lucide-react';
 
 const categories = [
   { id: 'rice', nameKey: 'Rice', translationKey: 'home.categoryRice', icon: <Wheat size={32} color="#EAB308" /> },

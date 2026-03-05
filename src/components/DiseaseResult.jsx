@@ -5,7 +5,6 @@ import {
   Sprout,
   Calendar,
   Bug,
-  AlertCircle,
   Wheat,
   Carrot,
   Apple,
