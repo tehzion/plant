@@ -38,8 +38,8 @@ const ServicesGrid = ({ onNavigate }) => {
             </div>
             <style>{`
                 .service-icon.mygap-icon {
-                    background: #E8F5E9; /* Soft Green */
-                    color: #2E7D32;
+                    background: #F3F4F6;
+                    color: #1F2937;
                 }
             `}</style>
         </div>
