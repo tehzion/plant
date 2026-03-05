@@ -48,35 +48,48 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         return value;
     };
 
-    // Colors - App Green (Brand Specific)
-    const primaryColor = [0, 177, 79]; // #00B14F
-    const healthyColor = [0, 177, 79]; // #00B14F - Consistent with primary
-    const unhealthyColor = [239, 68, 68]; // #EF4444
-    const grayText = [107, 114, 128]; // #6B7280
+    // Brand Colors - Standardized
+    const primaryColor = [0, 177, 79]; // #00B14F (Grab-like green)
+    const secondaryColor = [232, 245, 233]; // #E8F5E9 (Light green)
+    const darkColor = [28, 36, 52]; // #1C2434 (Dark text)
+    const lightText = [100, 116, 139]; // #64748B (Secondary text)
+    const unhealthyColor = [239, 68, 68]; // #EF4444 (Red)
 
-    // === HEADER ===
+    // === HEADER SECTION ===
+    // Green header background
     doc.setFillColor(...primaryColor);
     doc.rect(0, 0, pageWidth, 45, 'F');
 
+    // Logo Placeholder (White Circle)
+    doc.setFillColor(255, 255, 255);
+    doc.circle(25, 22, 12, 'F');
+    // Leaf Icon (Simplified drawing)
+    doc.setFillColor(...primaryColor);
+    doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
+    doc.fill();
+
+    // App Name
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(t('common.appTitle') || 'Agropreneur', pageWidth / 2, 20, { align: 'center' });
-    doc.setFontSize(14);
-    doc.text(t('common.appSlogan') || 'Cultivating Smarter Futures', pageWidth / 2, 28, { align: 'center' });
+    doc.text('Smart Plant Advisor', 42, 20);
 
-    doc.setFontSize(10);
+    // Report Title
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    // Ensure "Dijana oleh..." is used if explicitly translated, otherwise fallback
-    doc.text(t('pdf.generatedBy'), pageWidth / 2, 36, { align: 'center' });
+    doc.text(t('pdf.title').toUpperCase(), 42, 28);
+
+    // Date Badge
     const localeString = t('common.dateLocale') || 'en-MY';
-    doc.text(`${t('pdf.reportDate')}: ${new Date().toLocaleDateString(localeString)}`, pageWidth / 2, 41, { align: 'center' });
+    const dateStr = new Date().toLocaleDateString(localeString);
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${t('pdf.reportDate')}: ${dateStr}`, pageWidth - 20, 25, { align: 'right' });
 
-    yPos = 55;
+    yPos = 60;
 
-    // === IMAGES ===
+    // === IMAGES SECTION ===
     const hasTreeImage = scanData.image && scanData.image.startsWith('data:image');
-    // Check leafImage - sometimes it's "null" string or actual null
     const hasLeafImage = scanData.leafImage && scanData.leafImage.startsWith('data:image');
 
     try {
@@ -105,25 +118,25 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
 
     // === HEALTH STATUS BANNER ===
     const healthy = isHealthy(scanData);
-    const statusColor = healthy ? healthyColor : unhealthyColor;
+    const statusColor = healthy ? primaryColor : unhealthyColor;
 
     doc.setFillColor(...statusColor);
-    doc.roundedRect(15, yPos, pageWidth - 30, 24, 4, 4, 'F');
+    doc.roundedRect(14, yPos, pageWidth - 28, 28, 3, 3, 'F');
 
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     const statusText = healthy ? t('results.healthy').toUpperCase() : t('results.unhealthy').toUpperCase();
-    doc.text(statusText, pageWidth / 2, yPos + 16, { align: 'center' });
+    doc.text(statusText, pageWidth / 2, yPos + 18, { align: 'center' });
 
-    yPos += 35;
+    yPos += 40;
 
     // === ANALYSIS DETAILS (Using AutoTable) ===
-    doc.setTextColor(31, 41, 55); // #1F2937
+    doc.setTextColor(...darkColor);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(t('pdf.analysisDetails'), 15, yPos);
-    yPos += 5;
+    doc.text(t('pdf.analysisDetails'), 14, yPos);
+    yPos += 8;
 
     const metadataRows = [
         [t('results.plantType'), scanData.plantType],
@@ -156,41 +169,53 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
 
     doc.autoTable({
         startY: yPos,
-        theme: 'plain',
         body: metadataRows,
+        theme: 'grid',
         styles: {
             fontSize: 10,
-            cellPadding: 3,
-            font: language === 'zh' ? 'helvetica' : 'helvetica', // Placeholder for font logic
+            cellPadding: 5,
+            lineColor: [226, 232, 240],
+            textColor: darkColor
         },
         columnStyles: {
-            0: { fontStyle: 'bold', textColor: grayText, width: 60 },
+            0: { fontStyle: 'bold', textColor: lightText, width: 60, fillColor: secondaryColor },
             1: { cellWidth: 'auto' }
         },
-        margin: { left: 15, right: 15 },
+        margin: { left: 14, right: 14 },
         didDrawPage: (data) => {
-            yPos = data.cursor.y + 10;
+            // Don't update yPos inside here as it might be called multiple times
         }
     });
+    
+    yPos = doc.lastAutoTable.finalY + 15;
+
+    // Helper function to check if we need a new page
+    function checkPageBreak(requiredSpace = 20) {
+        if (yPos + requiredSpace > pageHeight - 30) {
+            doc.addPage();
+            yPos = 30; // Reset Y position with some top margin
+            doc.setFont('helvetica', 'normal');
+        }
+    }
 
     // === DESCRIPTION (If available) ===
     if (scanData.description) {
         checkPageBreak(30);
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(31, 41, 55);
-        doc.text(t('results.aboutDisease') || 'About This Condition', 15, yPos);
-        yPos += 7;
+        doc.setTextColor(...darkColor);
+        doc.text(t('results.aboutDisease') || 'About This Condition', 14, yPos);
+        yPos += 8;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        const descLines = doc.splitTextToSize(scanData.description, pageWidth - 30);
+        const descLines = doc.splitTextToSize(scanData.description, pageWidth - 28);
         descLines.forEach(line => {
             checkPageBreak(5);
-            doc.text(line, 15, yPos);
+            doc.text(line, 14, yPos);
             yPos += 5;
         });
-        yPos += 5;
+        yPos += 10;
     }
 
     // === SYMPTOMS ===
@@ -198,21 +223,21 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         checkPageBreak(30);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(31, 41, 55);
-        doc.text(t('results.symptoms'), 15, yPos);
+        doc.setTextColor(...darkColor);
+        doc.text(t('results.symptoms'), 14, yPos);
         yPos += 8;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         scanData.symptoms.forEach((symptom, index) => {
-            const lines = doc.splitTextToSize(`${index + 1}. ${symptom}`, pageWidth - 30);
+            const lines = doc.splitTextToSize(`${index + 1}. ${symptom}`, pageWidth - 28);
             lines.forEach(line => {
                 checkPageBreak(6);
-                doc.text(line, 15, yPos);
+                doc.text(line, 14, yPos);
                 yPos += 6;
             });
         });
-        yPos += 8;
+        yPos += 10;
     }
 
     // === CAUSES ===
@@ -220,47 +245,52 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         checkPageBreak(30);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(31, 41, 55);
-        doc.text(t('results.causes') || 'Causes & Conditions', 15, yPos);
+        doc.setTextColor(...darkColor);
+        doc.text(t('results.causes') || 'Causes & Conditions', 14, yPos);
         yPos += 8;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         scanData.causes.forEach((cause, index) => {
-            const lines = doc.splitTextToSize(`• ${cause}`, pageWidth - 30);
+            const lines = doc.splitTextToSize(`• ${cause}`, pageWidth - 28);
             lines.forEach(line => {
                 checkPageBreak(6);
-                doc.text(line, 20, yPos);
+                doc.text(line, 18, yPos);
                 yPos += 6;
             });
         });
-        yPos += 8;
+        yPos += 10;
     }
 
     // === TREATMENT PLAN ===
     if (!healthy) {
         checkPageBreak(40);
-        doc.setFontSize(16);
+        
+        // Section Header with Background
+        doc.setFillColor(254, 242, 242); // Light red bg
+        doc.roundedRect(14, yPos, pageWidth - 28, 10, 2, 2, 'F');
+        
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...unhealthyColor);
-        doc.text(t('pdf.treatmentPlan'), 15, yPos);
-        yPos += 10;
+        doc.text(t('pdf.treatmentPlan').toUpperCase(), 18, yPos + 7);
+        yPos += 18;
 
         // Immediate Actions
         if (scanData.immediateActions && scanData.immediateActions.length > 0) {
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(31, 41, 55);
-            doc.text(t('results.immediateActions'), 15, yPos);
+            doc.setTextColor(...darkColor);
+            doc.text(t('results.immediateActions'), 14, yPos);
             yPos += 8;
 
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
             scanData.immediateActions.forEach((action) => {
-                const lines = doc.splitTextToSize(`- ${action}`, pageWidth - 30);
+                const lines = doc.splitTextToSize(`- ${action}`, pageWidth - 28);
                 lines.forEach(line => {
                     checkPageBreak(6);
-                    doc.text(line, 20, yPos);
+                    doc.text(line, 18, yPos);
                     yPos += 6;
                 });
             });
@@ -269,56 +299,61 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
 
         // Treatments
         if (scanData.treatments && scanData.treatments.length > 0) {
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(31, 41, 55);
-            doc.text(t('results.treatments') || 'Treatment Options', 15, yPos);
+            doc.setTextColor(...darkColor);
+            doc.text(t('results.treatments') || 'Treatment Options', 14, yPos);
             yPos += 8;
 
             doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
             scanData.treatments.forEach((treatment) => {
-                const lines = doc.splitTextToSize(`- ${treatment}`, pageWidth - 30);
+                const lines = doc.splitTextToSize(`- ${treatment}`, pageWidth - 28);
                 lines.forEach(line => {
                     checkPageBreak(6);
-                    doc.text(line, 20, yPos);
+                    doc.text(line, 18, yPos);
                     yPos += 6;
                 });
             });
-            yPos += 10;
+            yPos += 12;
         }
     }
 
     // === PREVENTION ===
     if (scanData.prevention && scanData.prevention.length > 0) {
         checkPageBreak(30);
-        doc.setFontSize(14);
+        
+        // Section Header with Background
+        doc.setFillColor(...secondaryColor); // Light green bg
+        doc.roundedRect(14, yPos, pageWidth - 28, 10, 2, 2, 'F');
+        
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...healthyColor);
-        doc.text(t('results.prevention') || 'Prevention & Best Practices', 15, yPos);
-        yPos += 8;
+        doc.setTextColor(...primaryColor);
+        doc.text((t('results.prevention') || 'Prevention').toUpperCase(), 18, yPos + 7);
+        yPos += 18;
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(31, 41, 55);
+        doc.setTextColor(...darkColor);
         scanData.prevention.forEach((item) => {
-            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 30);
+            const lines = doc.splitTextToSize(`• ${item}`, pageWidth - 28);
             lines.forEach(line => {
                 checkPageBreak(6);
-                doc.text(line, 20, yPos);
+                doc.text(line, 18, yPos);
                 yPos += 6;
             });
         });
-        yPos += 10;
+        yPos += 12;
     }
 
     // === NUTRITIONAL ANALYSIS ===
     if (scanData.nutritionalIssues?.hasDeficiency) {
         checkPageBreak(40);
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(217, 119, 6); // Amber
-        doc.text(t('results.nutritionalIssues'), 15, yPos);
+        doc.text(t('results.nutritionalIssues'), 14, yPos);
         yPos += 10;
 
         const { deficientNutrients } = scanData.nutritionalIssues;
@@ -327,14 +362,14 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
                 const issueText = typeof issue === 'string' ? issue : `${issue.nutrient}: ${issue.symptoms?.[0] || ''}`;
                 // Safer emoji stripping for CJK support
                 const cleanText = issueText.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}]/gu, '');
-                const lines = doc.splitTextToSize(`! ${cleanText}`, pageWidth - 30);
+                const lines = doc.splitTextToSize(`! ${cleanText}`, pageWidth - 28);
                 lines.forEach(line => {
                     checkPageBreak(6);
-                    doc.text(line, 15, yPos);
+                    doc.text(line, 14, yPos);
                     yPos += 6;
                 });
             });
-            yPos += 10;
+            yPos += 12;
         }
     }
 
@@ -342,20 +377,23 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
     const products = getProductRecommendations(scanData.plantType, scanData.disease);
     if (products && (products.diseaseControl?.length > 0 || products.nutrition?.length > 0)) {
         checkPageBreak(50);
-        doc.setFontSize(16);
+        
+        // Header
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
-        doc.text(t('pdf.productRecommendations'), 15, yPos);
-        yPos += 10;
+        doc.text(t('pdf.productRecommendations'), 14, yPos);
+        doc.line(14, yPos + 2, pageWidth - 14, yPos + 2); // Underline
+        yPos += 12;
 
         const renderProductList = (productList, categoryTitle) => {
             if (!productList || productList.length === 0) return;
 
             checkPageBreak(30);
-            doc.setFontSize(12);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(31, 41, 55);
-            doc.text(categoryTitle, 15, yPos);
+            doc.setTextColor(...darkColor);
+            doc.text(categoryTitle, 14, yPos);
             yPos += 8;
 
             doc.setFontSize(10);
@@ -364,18 +402,27 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
             productList.forEach((prod) => {
                 checkPageBreak(25);
                 const nameLink = `${t(prod.name)} (${prod.count || 'N/A'})`;
+                
+                // Bullet point
+                doc.setTextColor(...primaryColor);
+                doc.text('•', 16, yPos);
+                
+                // Product Name
+                doc.setTextColor(...darkColor);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`• ${nameLink}`, 20, yPos);
+                doc.text(nameLink, 20, yPos);
                 yPos += 5;
 
+                // Description
                 doc.setFont('helvetica', 'normal');
-                const descLines = doc.splitTextToSize(`${t(prod.description)}`, pageWidth - 40);
+                doc.setTextColor(...lightText);
+                const descLines = doc.splitTextToSize(`${t(prod.description)}`, pageWidth - 35);
                 descLines.forEach(line => {
-                    doc.text(line, 25, yPos);
+                    doc.text(line, 20, yPos);
                     yPos += 5;
                 });
 
-                yPos += 5;
+                yPos += 4;
             });
         };
 
@@ -383,27 +430,33 @@ export const generatePDFReport = async (scanData, language = 'en', translations)
         renderProductList(products.nutrition, (!scanData.disease || isHealthy(scanData)) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition'));
     }
 
-    // === FOOTER/DISCLAIMER ===
-    const disclaimerY = pageHeight - 25;
-    doc.setDrawColor(230, 230, 230);
-    doc.line(15, disclaimerY - 5, pageWidth - 15, disclaimerY - 5);
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(156, 163, 175);
-    const disclaimerLines = doc.splitTextToSize(t('pdf.disclaimer'), pageWidth - 30);
-    disclaimerLines.forEach((line, index) => {
-        doc.text(line, pageWidth / 2, disclaimerY + (index * 4), { align: 'center' });
-    });
-
-    // Helper function to check if we need a new page
-    function checkPageBreak(requiredSpace = 20) {
-        if (yPos + requiredSpace > pageHeight - 30) {
-            doc.addPage();
-            yPos = 25;
-            // When a new page starts, we should technically reset the font if it was custom
-            doc.setFont('helvetica', 'normal');
-        }
+    // === FOOTER (All Pages) ===
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        
+        // Footer Line
+        doc.setDrawColor(226, 232, 240);
+        doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(...lightText);
+        doc.setFont('helvetica', 'normal');
+        
+        // Disclaimer (Left)
+        doc.text(
+            `Smart Plant Advisor - ${t('pdf.generatedBy')}`,
+            14,
+            pageHeight - 10
+        );
+        
+        // Page Number (Right)
+        doc.text(
+            `Page ${i} of ${pageCount}`,
+            pageWidth - 14,
+            pageHeight - 10,
+            { align: 'right' }
+        );
     }
 
     // Save the PDF
