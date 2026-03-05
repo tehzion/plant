@@ -15,6 +15,7 @@ const History = lazy(() => import('./pages/History'));
 const Encyclopedia = lazy(() => import('./pages/Encyclopedia'));
 const Login = lazy(() => import('./pages/Login'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const MyGap = lazy(() => import('./pages/MyGap'));
 const UserGuide = lazy(() => import('./pages/UserGuide'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -32,6 +33,7 @@ function App() {
                                     <Route path="/history" element={<History />} />
                                     <Route path="/encyclopedia" element={<Encyclopedia />} />
                                     <Route path="/profile" element={<Login />} />
+                                    <Route path="/mygap" element={<MyGap />} />
                                     <Route path="/onboarding" element={<Onboarding />} />
                                     <Route path="/guide" element={<UserGuide />} />
                                     <Route path="/terms" element={<TermsOfUse />} />
