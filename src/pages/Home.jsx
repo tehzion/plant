@@ -272,12 +272,12 @@ const Home = () => {
 
           <DailyTips />
 
-          <ServicesGrid onNavigate={(path) => {
-            if (path === '/shop') handleFeatureStub(t('home.shop'));
-            else if (path === '/statistics') handleFeatureStub(t('home.statistics'));
-            else if (path === '/key-info') navigate('/guide');
-            else if (path === '/user-guide') navigate('/onboarding');
-            else navigate(path);
+          <ServicesGrid onNavigate={(path, isStub) => {
+            if (isStub) {
+              handleFeatureStub();
+            } else {
+              navigate(path);
+            }
           }} />
         </div>
       </div>
@@ -327,31 +327,7 @@ const Home = () => {
 
               <button
                 onClick={handleResetAndClose}
-                style={{
-                  marginTop: '24px',
-                  background: 'none',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '9999px',
-                  padding: '8px 24px',
-                  color: '#6B7280',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = '#9CA3AF';
-                  e.currentTarget.style.color = '#374151';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                  e.currentTarget.style.color = '#6B7280';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
+                className="cancel-analysis-button"
               >
                 <span style={{ fontSize: '1.2em', lineHeight: '1' }}>×</span> {t('common.cancel')}
               </button>
@@ -359,6 +335,28 @@ const Home = () => {
           </div>
         ) : (
           <>
+            <style>{`
+              .cancel-analysis-button {
+                margin-top: 24px;
+                background: none;
+                border: 1px solid #D1D5DB;
+                border-radius: 9999px;
+                padding: 8px 24px;
+                color: #6B7280;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              }
+              .cancel-analysis-button:hover {
+                border-color: #9CA3AF;
+                color: #374151;
+                transform: translateY(-1px);
+              }
+            `}</style>
             <div style={{ marginTop: '24px' }}>
               <ProgressStepper currentStep={currentStep} steps={steps} onStepClick={(step) => {
                 if (step < currentStep) scanActions.setStep(step);

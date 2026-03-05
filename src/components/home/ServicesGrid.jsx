@@ -5,36 +5,53 @@ import { useLanguage } from '../../i18n/i18n.jsx';
 const ServicesGrid = ({ onNavigate }) => {
     const { t } = useLanguage();
 
+    const services = [
+        {
+            path: '/shop',
+            icon: <ShoppingBag size={24} strokeWidth={1.5} />,
+            label: t('nav.shop'),
+            iconClass: 'shop-icon',
+            isStub: true // Mark this as a stub feature
+        },
+        {
+            path: '/mygap',
+            icon: <CheckSquare size={24} strokeWidth={1.5} />,
+            label: t('home.mygapTitle'),
+            iconClass: 'mygap-icon'
+        },
+        {
+            path: '/key-info',
+            icon: <Info size={24} strokeWidth={1.5} />,
+            label: t('home.keyInfo'),
+            iconClass: 'guide-icon',
+            isStub: true // Mark this as a stub feature
+        },
+        {
+            path: '/guide',
+            icon: <BookOpen size={24} strokeWidth={1.5} />,
+            label: t('settings.guide'),
+            iconClass: 'book-icon'
+        }
+    ];
+
     return (
         <div className="section mt-md slide-up delay-300">
             <div className="section-header">
                 <h3 className="section-title">{t('home.services')}</h3>
             </div>
             <div className="services-grid">
-                <div className="service-card" onClick={() => onNavigate('/shop')}>
-                    <div className="service-icon shop-icon">
-                        <ShoppingBag size={24} strokeWidth={1.5} />
+                {services.map((service) => (
+                    <div
+                        key={service.path}
+                        className="service-card"
+                        onClick={() => onNavigate(service.path, service.isStub)}
+                    >
+                        <div className={`service-icon ${service.iconClass}`}>
+                            {service.icon}
+                        </div>
+                        <span>{service.label}</span>
                     </div>
-                    <span>{t('nav.shop')}</span>
-                </div>
-                <div className="service-card" onClick={() => onNavigate('/mygap')}>
-                    <div className="service-icon mygap-icon">
-                        <CheckSquare size={24} strokeWidth={1.5} />
-                    </div>
-                    <span>{t('home.mygapTitle')}</span>
-                </div>
-                <div className="service-card" onClick={() => onNavigate('/key-info')}>
-                    <div className="service-icon guide-icon">
-                        <Info size={24} strokeWidth={1.5} />
-                    </div>
-                    <span>{t('home.keyInfo')}</span>
-                </div>
-                <div className="service-card" onClick={() => onNavigate('/user-guide')}>
-                    <div className="service-icon book-icon">
-                        <BookOpen size={24} strokeWidth={1.5} />
-                    </div>
-                    <span>{t('settings.guide')}</span>
-                </div>
+                ))}
             </div>
             <style>{`
                 .service-icon.mygap-icon {
