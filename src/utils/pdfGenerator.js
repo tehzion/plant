@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { getProductRecommendations, suppliers } from '../data/productRecommendations.js';
+import { getProductRecommendations } from '../data/productRecommendations.js';
 import { isHealthy } from './statusUtils';
 
 /**
@@ -10,7 +10,10 @@ import { isHealthy } from './statusUtils';
  * @param {Object} translations - Translation object
  * @returns {Promise<void>}
  */
-export const generatePDFReport = async (scanData, language = 'en', translations) => {
+export const generatePDFReport = async (scanData, inputLanguage = 'en', translations) => {
+    // Force English if Chinese is selected, as jsPDF standard fonts don't support CJK
+    const language = inputLanguage === 'zh' ? 'en' : inputLanguage;
+    
     const doc = new jsPDF();
     const t = (key) => {
         const keys = key.split('.');
