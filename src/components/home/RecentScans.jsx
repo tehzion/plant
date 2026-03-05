@@ -15,7 +15,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
             <div className="recent-scans-list">
                 {scans.length > 0 ? (
                     scans.map((scan) => (
-                        <div key={scan.id} className="scan-card" onClick={() => onScanClick(scan.id)}>
+                        <div key={scan.id} className="scan-card" onClick={() => onScanClick(scan.id)} style={{ background: '#fff', border: '1px solid var(--color-border-light, #e2e8f0)', borderRadius: 'var(--radius-lg, 12px)', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', transition: 'all 0.2s ease-out' }}>
                             <div className="scan-thumbnail">
                                 <img src={scan.image} alt={scan.disease} />
                             </div>

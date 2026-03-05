@@ -190,11 +190,20 @@ const DiseaseCard = ({ disease }) => {
 
       <style>{`
         .disease-card {
+          background: #fff;
+          border: 1px solid var(--color-border-light, #e2e8f0);
+          border-radius: var(--radius-lg, 12px);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
           margin-bottom: var(--space-md);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s ease-out;
           height: fit-content;
           display: flex;
           flex-direction: column;
+        }
+
+        .disease-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 10px 15px -3px rgba(74, 124, 44, 0.1), 0 4px 6px -2px rgba(74, 124, 44, 0.05);
         }
 
         .desktop-accordion-content {
