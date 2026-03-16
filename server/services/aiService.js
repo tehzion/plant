@@ -700,9 +700,10 @@ You MUST split your recommendations into TWO groups:
 2. **Nutrition**: Products for general plant health, growth, and maintenance (fertilizers, nutrients, growth boosters, soil conditioners)
 
 Rules:
-- Select 3-5 tag IDs AND 1-3 category IDs for EACH group (treatment and nutrition)
-- For healthy plants: treatment group can be empty, focus on nutrition
-- For unhealthy plants: treatment group should address the specific disease
+- Select 1-5 tag IDs AND 1-3 category IDs for EACH group (treatment and nutrition)
+- CRITICAL: Even if the plant is healthy or no specific treatment exists, you MUST ALWAYS return at least 1-2 tag/category IDs for 'nutrition' (e.g. general fertilizer, soil enhancer) so the user always gets an enhancement recommendation. Never return completely empty arrays for BOTH groups.
+- For healthy plants: treatment group can be empty, but focus heavily on nutrition.
+- For unhealthy plants: treatment group should address the specific disease.
 - Return ONLY IDs that exist in the provided catalogs
 - Output valid JSON only`
                 },

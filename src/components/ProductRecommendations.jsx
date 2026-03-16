@@ -106,7 +106,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
     );
   }
 
-  if (!products || (!products.diseaseControl?.length && !products.nutrition?.length)) return null;
+  if (!products) return null;
+
+  const hasNoProducts = !products.diseaseControl?.length && !products.nutrition?.length;
 
   // Get scale-specific recommendations
   const getScaleRecommendation = () => {
@@ -192,10 +194,27 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
   return (
     <div className="product-recommendations-container">
       {/* AI Reasoning Explainer */}
-      {reasoning && (
+      {reasoning && !hasNoProducts && (
         <div className="ai-reasoning-banner">
           <Info size={16} />
           <span>{t('results.whyTheseProducts') || 'Why these products?'} {reasoning}</span>
+        </div>
+      )}
+
+      {/* Empty State when AI finds no matching products */}
+      {hasNoProducts && (
+        <div className="product-section" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ background: '#F3F4F6', padding: '16px', borderRadius: '50%' }}>
+              <PackageX size={32} color="#9CA3AF" />
+            </div>
+          </div>
+          <h3 style={{ color: '#374151', fontSize: '1.1rem', marginBottom: '8px' }}>
+            {t('results.noProductsFound') || 'No specific products found'}
+          </h3>
+          <p style={{ color: '#6B7280', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto' }}>
+            {t('results.noProductsDesc') || 'We couldn\'t find specific products in our store matching this condition right now. You can still contact our suppliers directly.'}
+          </p>
         </div>
       )}
 

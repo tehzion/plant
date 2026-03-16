@@ -375,6 +375,21 @@ const MyGapPage = () => {
                         <h2 className="section-title">{t('mygap.checklistTitle')}</h2>
                         <p className="section-subtitle mb-lg">{t('mygap.checklistSubtitle')}</p>
 
+                        <div className="compliance-progress-container">
+                            <div className="progress-header">
+                                <span className="progress-label">{t('mygap.complianceProgress') || 'Compliance Progress'}</span>
+                                <span className="progress-stats">
+                                    {Object.values(checklist).filter(Boolean).length}/{checklistItems.length} {t('mygap.completed') || 'Completed'} - {Math.round((Object.values(checklist).filter(Boolean).length / checklistItems.length) * 100)}%
+                                </span>
+                            </div>
+                            <div className="progress-track">
+                                <div 
+                                    className="progress-fill" 
+                                    style={{ width: `${Math.round((Object.values(checklist).filter(Boolean).length / checklistItems.length) * 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+
                         <div className="checklist-items">
                             {checklistItems.map((item) => (
                                 <div
@@ -643,6 +658,43 @@ const MyGapPage = () => {
                 }
                 .completed .check-icon {
                     color: var(--color-primary);
+                }
+
+                .compliance-progress-container {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: var(--radius-lg);
+                    padding: var(--space-md) var(--space-lg);
+                    margin-bottom: var(--space-xl);
+                }
+                .progress-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: var(--space-sm);
+                }
+                .progress-label {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: var(--color-text-primary);
+                }
+                .progress-stats {
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                    color: var(--color-primary);
+                }
+                .progress-track {
+                    width: 100%;
+                    height: 8px;
+                    background-color: #e2e8f0;
+                    border-radius: var(--radius-full);
+                    overflow: hidden;
+                }
+                .progress-fill {
+                    height: 100%;
+                    background-color: var(--color-primary);
+                    border-radius: var(--radius-full);
+                    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
                 }
 
                 /* Logbook Styles */

@@ -461,6 +461,8 @@ export const translations = {
             productsError: 'Could not load products. Please try again later.',
             whyTheseProducts: 'Why these products?',
             addToCart: 'Add to Cart',
+            noProductsFound: 'No specific products found',
+            noProductsDesc: 'We couldn\'t find specific products in our store matching this condition right now. You can still contact our suppliers directly.',
         },
 
         // MYGAP Page
@@ -473,8 +475,10 @@ export const translations = {
             tabPhi: 'PHI',
             disclaimer: 'This is a simplified guide for educational purposes and is not an official document. For certification, always refer to the official Department of Agriculture (DOA) Malaysia website.',
             whatIsMyGap: 'What is myGAP?',
-            whatIsMyGapContent: 'myGAP is a certification scheme from the Department of Agriculture Malaysia to recognize farms that adopt good agricultural practices. It focuses on producing safe, quality food while protecting the environment and ensuring worker safety.',
-            keyPillars: 'Key Pillars of myGAP',
+            whatIsMyGapContent: 'myGAP is a certification scheme by the Department of Agriculture Malaysia that recognizes farms adopting Good Agricultural Practices. It focuses on farm productivity while ensuring food safety, environmental protection, and worker welfare.',
+            keyPillars: 'myGAP Key Pillars',
+            complianceProgress: 'Compliance Progress',
+            completed: 'Completed',
             pillar1: 'Food Safety',
             pillar1Desc: 'Ensuring produce is safe from chemical and biological hazards.',
             pillar2: 'Product Quality',
@@ -1140,6 +1144,8 @@ export const translations = {
             productsError: 'Tidak dapat memuatkan produk. Sila cuba sebentar lagi.',
             whyTheseProducts: 'Mengapa produk ini?',
             addToCart: 'Tambah ke Troli',
+            noProductsFound: 'Tiada produk khusus dijumpai',
+            noProductsDesc: 'Kami tidak menemui produk khusus dalam kedai kami yang sepadan dengan keadaan ini sekarang. Anda masih boleh menghubungi pembekal kami secara terus.',
         },
 
         mygap: {
@@ -1150,9 +1156,11 @@ export const translations = {
             tabLogbook: 'Log Aktiviti',
             tabPhi: 'PHI',
             disclaimer: 'Ini ialah panduan ringkas untuk tujuan pendidikan dan bukan dokumen rasmi. Untuk pensijilan, sentiasa rujuk portal rasmi Jabatan Pertanian (DOA) Malaysia.',
-            whatIsMyGap: 'Apakah myGAP?',
-            whatIsMyGapContent: 'myGAP ialah skim pensijilan daripada Jabatan Pertanian Malaysia untuk mengiktiraf ladang yang mengamalkan amalan pertanian baik. Ia menekankan penghasilan makanan yang selamat dan berkualiti, perlindungan alam sekitar, serta keselamatan pekerja.',
+            whatIsMyGap: 'Apakah itu myGAP?',
+            whatIsMyGapContent: 'myGAP ialah skim pensijilan oleh Jabatan Pertanian Malaysia yang mengiktiraf ladang yang mengamalkan Amalan Pertanian Baik. Ia memfokuskan pada pengeluaran makanan yang selamat, serta menjaga alam sekitar dan keselamatan pekerja.',
             keyPillars: 'Teras Utama myGAP',
+            complianceProgress: 'Kemajuan Pematuhan',
+            completed: 'Selesai',
             pillar1: 'Keselamatan Makanan',
             pillar1Desc: 'Memastikan hasil selamat daripada bahaya kimia dan biologi.',
             pillar2: 'Kualiti Produk',
@@ -1616,6 +1624,8 @@ export const translations = {
             whatIsMyGap: '什么是 myGAP？',
             whatIsMyGapContent: 'myGAP 是马来西亚农业部推出的认证计划，用于认可采用良好农业规范的农场。其重点是生产安全、优质的农产品，同时保护环境并保障工人安全。',
             keyPillars: 'myGAP 关键支柱',
+            complianceProgress: '合规进度',
+            completed: '已完成',
             pillar1: '食品安全',
             pillar1Desc: '确保农产品避免化学与生物危害，安全可食。',
             pillar2: '产品质量',
@@ -1866,6 +1876,8 @@ export const translations = {
             productsError: '无法加载产品。请稍后再试。',
             whyTheseProducts: '为何推荐这些产品？',
             addToCart: '加入购物车',
+            noProductsFound: '未找到特定产品',
+            noProductsDesc: '目前我们在商店中未能找到符合此情况的特定产品。您仍可以直接联系我们的供应商了解更多。',
         },
 
         encyclopedia: {
