@@ -48,6 +48,10 @@ const Results = () => {
       ? translatedCategory
       : (categoryRaw || t('common.unknown'));
 
+  const scanDate = scan?.timestamp ? new Date(scan.timestamp) : null;
+  const hasValidTimestamp = !!scanDate && !Number.isNaN(scanDate.getTime());
+  const dateLocale = t('common.dateLocale') || 'en-US';
+
   const result = {
     healthStatus: getStandardizedStatus(scan),
     plantType: scan.plantType,
@@ -90,8 +94,9 @@ const Results = () => {
 
   const handleDownloadText = () => {
     // Fallback: Create a simple text report
-    const localeString = t('common.dateLocale') || 'en-MY';
-    const reportDate = new Date(scan.timestamp).toLocaleString(localeString);
+    const reportDate = hasValidTimestamp
+      ? scanDate.toLocaleString(dateLocale)
+      : t('results.notRecorded');
 
     const report = `
 ${t('pdf.title')}
@@ -362,10 +367,12 @@ ${t('pdf.generatedBy')}
               <div className="metadata-content">
                 <span className="metadata-label">{t('common.date')}</span>
                 <span className="metadata-value">
-                  {new Date(scan.timestamp).toLocaleDateString(t('common.dateLocale') || 'en-US')}
-                  <span className="metadata-time">
-                    {new Date(scan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  {hasValidTimestamp ? scanDate.toLocaleDateString(dateLocale) : t('results.notRecorded')}
+                  {hasValidTimestamp && (
+                    <span className="metadata-time">
+                      {scanDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
