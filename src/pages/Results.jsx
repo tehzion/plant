@@ -72,7 +72,8 @@ const Results = () => {
     healthyCarePlan: scan.healthyCarePlan,
     additionalNotes: scan.additionalNotes,
     identification: scan.identification,
-    identificationSource: scan.identificationSource
+    identificationSource: scan.identificationSource,
+    productSearchTags: scan.productSearchTags || []
   };
 
   const standardizedStatus = result.healthStatus;
@@ -263,6 +264,7 @@ ${t('pdf.generatedBy')}
             plantType={scan.plantType}
             disease={scan.disease}
             farmScale={scan.farmScale}
+            scanResult={result}
           />
         </div>
       )

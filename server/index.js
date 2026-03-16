@@ -7,7 +7,8 @@ import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI } from './services/aiService.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags } from './services/aiService.js';
+import { getAllTags, getAllCategories, getProductsByTagIds } from './services/wooCommerceService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -234,6 +235,51 @@ app.post('/api/analyze', async (req, res, next) => {
 });
 
 
+
+// WooCommerce Products Search Endpoint (GPT-5-mini Powered)
+app.post('/api/products/search', async (req, res, next) => {
+    try {
+        const { diagnosis } = req.body;
+        
+        if (!diagnosis) {
+            return res.status(400).json({ error: 'Diagnosis object is required' });
+        }
+        
+        // 1. Fetch all available WooCommerce tags AND categories in parallel
+        const [availableTags, availableCategories] = await Promise.all([
+            getAllTags(),
+            getAllCategories()
+        ]);
+        
+        if (availableTags.length === 0 && availableCategories.length === 0) {
+            return res.json({ diseaseControl: [], nutrition: [] });
+        }
+        
+        // 2. Ask GPT-5-mini to pick the best tags & categories, split into treatment vs nutrition
+        console.log(`🛒 GPT-5-mini: Analyzing diagnosis for "${diagnosis.disease}" with ${availableTags.length} tags + ${availableCategories.length} categories...`);
+        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories);
+        
+        // 3. Fetch products for each category in parallel
+        const [treatmentProducts, nutritionProducts] = await Promise.all([
+            getProductsByTagIds(recommendation.treatmentTagIds, recommendation.treatmentCategoryIds),
+            getProductsByTagIds(recommendation.nutritionTagIds, recommendation.nutritionCategoryIds)
+        ]);
+        
+        // Deduplicate (a product might appear in both lists)
+        const treatmentIds = new Set(treatmentProducts.map(p => p.id));
+        const dedupedNutrition = nutritionProducts.filter(p => !treatmentIds.has(p.id));
+        
+        console.log(`✅ Returning ${treatmentProducts.length} treatment + ${dedupedNutrition.length} nutrition products`);
+        res.json({
+            diseaseControl: treatmentProducts,
+            nutrition: dedupedNutrition,
+            reasoning: recommendation.reasoning
+        });
+    } catch (error) {
+        console.error('❌ Product search failed:', error);
+        res.status(500).json({ error: 'Failed to search products' });
+    }
+});
 
 // Global Error Handler
 app.use((err, req, res, next) => {

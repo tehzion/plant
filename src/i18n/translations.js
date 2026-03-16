@@ -456,6 +456,11 @@ export const translations = {
             followInstructions: 'Follow package instructions',
             defaultHealthyReasoning: 'Our analysis shows that your plant appears vibrant and free from visible pathogens or stress markers. Continue your current care routine to maintain this health.',
             defaultUnhealthyReasoning: 'Based on the visual symptoms like discoloration or lesions, our system has identified potential stressors. We recommend following the treatment steps below to restore your plant\'s health.',
+
+            loadingProducts: 'Loading products...',
+            productsError: 'Could not load products. Please try again later.',
+            whyTheseProducts: 'Why these products?',
+            addToCart: 'Add to Cart',
         },
 
         // MYGAP Page
@@ -1130,6 +1135,11 @@ export const translations = {
             chemicalFertilizer: 'Baja Kimia',
             organicFertilizer: 'Baja Organik',
             generalFertilizer: 'Baja',
+
+            loadingProducts: 'Memuatkan produk...',
+            productsError: 'Tidak dapat memuatkan produk. Sila cuba sebentar lagi.',
+            whyTheseProducts: 'Mengapa produk ini?',
+            addToCart: 'Tambah ke Troli',
         },
 
         mygap: {
@@ -1851,6 +1861,11 @@ export const translations = {
             followInstructions: '按包装说明操作',
             defaultHealthyReasoning: '我们的分析显示您的植物看起来充满活力，没有可见的病原体或胁迫标志。请继续当前的护理作息以保持这种健康状态。',
             defaultUnhealthyReasoning: '根据变色或病变等视觉症状，我们的系统发现了潜在的胁迫因素。建议您按照以下治疗步骤恢复植物健康。',
+            
+            loadingProducts: '加载产品中...',
+            productsError: '无法加载产品。请稍后再试。',
+            whyTheseProducts: '为何推荐这些产品？',
+            addToCart: '加入购物车',
         },
 
         encyclopedia: {

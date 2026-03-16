@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import NodeCache from 'node-cache';
 import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
 
 dotenv.config();
@@ -9,6 +10,9 @@ dotenv.config();
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
+
+// Cache GPT-5-mini product recommendations for 1 hour
+const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
 /**
  * Helper function to call PlantNet API
@@ -129,9 +133,9 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
         } catch (primaryError) {
             console.error(`⚠️ Primary model (${model}) failed: ${primaryError.code || primaryError.status || primaryError.message}`);
 
-            // Fallback to gpt-3.5-turbo if 4o-mini fails
+            // Fallback to GPT-5 mini if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'gpt-3.5-turbo';
+            model = 'GPT-5 mini';
 
             response = await openai.chat.completions.create({
                 model: model,
@@ -484,7 +488,8 @@ ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
     "estimatedYieldLoss": "${isMalay ? 'Anggaran kehilangan hasil' : isChinese ? '预计减产情况' : 'Estimated yield loss'}",
     "treatmentCost": "RM 50 - 100",
     "roi": "High"
-  }
+  },
+  "productSearchTags": ["${isMalay ? 'baja' : isChinese ? '肥料' : 'fertilizer'}", "${isMalay ? 'racun kulat' : isChinese ? '杀菌剂' : 'fungicide'}"]
 }
 
 IMPORTANT RULES:
@@ -499,8 +504,8 @@ IMPORTANT RULES:
 - CRITICAL: For nutrient deficiencies, set 'pathogenType' to "Environmental" or "Nutritional" and DO NOT identify a fungus type unless a secondary infection is clearly visible.
 - CRITICAL: ALWAYS populate arrays with MULTIPLE items (2-4 minimum). Single-item arrays or empty arrays are NOT acceptable.
 - CRITICAL: For healthy plants, ALWAYS provide healthyCarePlan with complete dailyCare, weeklyCare, monthlyCare, and bestPractices (3+ items each).
-- CRITICAL: additionalNotes is MANDATORY - never leave it empty. Provide a friendly 2-3 sentence justification.
-- CRITICAL: fertilizerRecommendations must use SPECIFIC product names, never generic words like "Chemical" or "Organic".`
+- CRITICAL: fertilizerRecommendations must use SPECIFIC product names, never generic words like "Chemical" or "Organic".
+- CRITICAL: "productSearchTags" MUST be an array of 2-5 distinct, single-word or hyphenated-word product search tags (e.g. ["fungicide", "neem-oil", "fertilizer"]) based on the diagnosed issue. These MUST be primarily in English for the WooCommerce search engine regardless of the user language.`
                     },
                     {
                         type: 'image_url',
@@ -645,4 +650,125 @@ function ensureCarePlan(result, language) {
         result.healthyCarePlan = DEFAULT_CARE_PLANS[langCode];
     }
     return result;
+}
+
+/**
+ * GPT-5-mini Product Recommendation Engine
+ * Takes disease diagnosis info + available WooCommerce tags & categories
+ * Returns two separate lists: treatment tag/category IDs and nutrition tag/category IDs
+ * @param {Object} diagnosisInfo - { disease, healthStatus, pathogenType, plantType, symptoms, treatments }
+ * @param {Array} availableTags - Array of { id, name } from WooCommerce
+ * @param {Array} availableCategories - Array of { id, name } from WooCommerce
+ * @returns {Promise<Object>} { treatmentTagIds, treatmentCategoryIds, nutritionTagIds, nutritionCategoryIds, reasoning }
+ */
+export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = []) {
+    if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
+        console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');
+        return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
+    }
+
+    // Cache key based on diagnosis signature
+    const cacheKey = `rec_${(diagnosisInfo.disease || 'none').toLowerCase().replace(/\s+/g, '-')}_${(diagnosisInfo.healthStatus || 'unknown')}_${(diagnosisInfo.pathogenType || 'none').toLowerCase().replace(/\s+/g, '-')}`;
+    const cached = recommendationCache.get(cacheKey);
+    if (cached) {
+        console.log(`🧠 GPT-5-mini recommendation cache HIT for: ${cacheKey}`);
+        return cached;
+    }
+
+    try {
+        console.log('🛒 GPT-5-mini: Recommending products based on diagnosis...');
+
+        // Build compact catalogs for the prompt
+        const tagCatalog = (availableTags || [])
+            .map(t => `[TAG:${t.id}] ${t.name}`)
+            .join('\n');
+
+        const categoryCatalog = (availableCategories || [])
+            .map(c => `[CAT:${c.id}] ${c.name}`)
+            .join('\n');
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            response_format: { type: "json_object" },
+            messages: [
+                {
+                    role: 'system',
+                    content: `You are an agricultural product recommendation expert for a Malaysian e-commerce store. Given a plant disease diagnosis, you must select the most relevant product tags AND categories from the store's catalog.
+
+You MUST split your recommendations into TWO groups:
+1. **Treatment**: Products to treat the diagnosed disease/issue (fungicides, disease control, pest control, soil treatment, recovery products)
+2. **Nutrition**: Products for general plant health, growth, and maintenance (fertilizers, nutrients, growth boosters, soil conditioners)
+
+Rules:
+- Select 3-5 tag IDs AND 1-3 category IDs for EACH group (treatment and nutrition)
+- For healthy plants: treatment group can be empty, focus on nutrition
+- For unhealthy plants: treatment group should address the specific disease
+- Return ONLY IDs that exist in the provided catalogs
+- Output valid JSON only`
+                },
+                {
+                    role: 'user',
+                    content: `PLANT DIAGNOSIS:
+- Plant Type: ${diagnosisInfo.plantType || 'Unknown'}
+- Disease: ${diagnosisInfo.disease || 'None'}
+- Health Status: ${diagnosisInfo.healthStatus || 'unknown'}
+- Pathogen Type: ${diagnosisInfo.pathogenType || 'None'}
+- Symptoms: ${Array.isArray(diagnosisInfo.symptoms) ? diagnosisInfo.symptoms.join(', ') : (diagnosisInfo.symptoms || 'None')}
+- Treatments Suggested: ${Array.isArray(diagnosisInfo.treatments) ? diagnosisInfo.treatments.join(', ') : (diagnosisInfo.treatments || 'None')}
+
+AVAILABLE PRODUCT TAGS:
+${tagCatalog}
+
+AVAILABLE PRODUCT CATEGORIES:
+${categoryCatalog}
+
+Return JSON with two separate recommendation groups:
+{
+  "treatment": {
+    "tagIds": [123, 456],
+    "categoryIds": [10, 20]
+  },
+  "nutrition": {
+    "tagIds": [789, 101],
+    "categoryIds": [30]
+  },
+  "reasoning": "Brief explanation"
+}`
+                }
+            ],
+            max_tokens: 600,
+            temperature: 0.3,
+        });
+
+        const content = response.choices[0].message.content;
+        const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+            console.error('❌ GPT-5-mini product recommendation: Failed to parse response');
+            return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
+        }
+
+        const result = JSON.parse(jsonMatch[0]);
+
+        const output = {
+            treatmentTagIds: result.treatment?.tagIds || [],
+            treatmentCategoryIds: result.treatment?.categoryIds || [],
+            nutritionTagIds: result.nutrition?.tagIds || [],
+            nutritionCategoryIds: result.nutrition?.categoryIds || [],
+            reasoning: result.reasoning || ''
+        };
+
+        console.log(`✅ GPT-5-mini recommended Treatment: ${output.treatmentTagIds.length} tags + ${output.treatmentCategoryIds.length} cats | Nutrition: ${output.nutritionTagIds.length} tags + ${output.nutritionCategoryIds.length} cats`);
+        console.log(`   Reason: ${output.reasoning}`);
+        
+        // Cache this recommendation
+        recommendationCache.set(cacheKey, output);
+        
+        return output;
+
+    } catch (error) {
+        console.error('❌ GPT-5-mini product recommendation failed:', error.message);
+        return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
+    }
 }

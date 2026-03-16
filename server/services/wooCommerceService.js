@@ -5,8 +5,10 @@
 
 import NodeCache from 'node-cache';
 
-// Cache products for 1 hour to reduce API calls
+// Cache products for 1 hour, tags & categories for 6 hours
 const productCache = new NodeCache({ stdTTL: 3600 });
+const tagCache = new NodeCache({ stdTTL: 21600 });
+const categoryCache = new NodeCache({ stdTTL: 21600 });
 
 /**
  * Get WooCommerce API credentials from environment
@@ -35,12 +37,117 @@ const buildApiUrl = (endpoint, params = {}) => {
     url.searchParams.append('consumer_key', config.consumerKey);
     url.searchParams.append('consumer_secret', config.consumerSecret);
 
-    // Add additional params
     Object.entries(params).forEach(([key, value]) => {
         url.searchParams.append(key, value);
     });
 
     return url.toString();
+};
+
+/**
+ * Fetch all WooCommerce product tags (cached, paginated)
+ * @returns {Promise<Array>} Array of { id, name, count }
+ */
+export const getAllTags = async () => {
+    const cacheKey = 'woo_all_tags';
+    const cached = tagCache.get(cacheKey);
+    if (cached) {
+        console.log('🧠 WooCommerce tags cache HIT');
+        return cached;
+    }
+
+    const config = getWooConfig();
+    if (!config) return [];
+
+    try {
+        console.log('🏷️ Fetching all product tags from WooCommerce...');
+        let allTags = [];
+        let page = 1;
+
+        while (true) {
+            const apiUrl = buildApiUrl('products/tags', { per_page: 100, page });
+            if (!apiUrl) break;
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`WooCommerce Tags API error: ${response.status}`);
+            }
+
+            const tags = await response.json();
+            if (!tags || tags.length === 0) break;
+
+            allTags.push(...tags.map(t => ({
+                id: t.id,
+                name: t.name,
+                count: t.count
+            })));
+
+            page++;
+        }
+
+        // Filter out empty tags (count = 0)
+        const usefulTags = allTags.filter(t => t.count > 0);
+
+        tagCache.set(cacheKey, usefulTags);
+        console.log(`✅ Cached ${usefulTags.length} product tags from WooCommerce`);
+        return usefulTags;
+    } catch (error) {
+        console.error('❌ WooCommerce tag fetch failed:', error.message);
+        return [];
+    }
+};
+
+/**
+ * Fetch all WooCommerce product categories (cached, paginated)
+ * @returns {Promise<Array>} Array of { id, name, count, parent }
+ */
+export const getAllCategories = async () => {
+    const cacheKey = 'woo_all_categories';
+    const cached = categoryCache.get(cacheKey);
+    if (cached) {
+        console.log('🧠 WooCommerce categories cache HIT');
+        return cached;
+    }
+
+    const config = getWooConfig();
+    if (!config) return [];
+
+    try {
+        console.log('📂 Fetching all product categories from WooCommerce...');
+        let allCategories = [];
+        let page = 1;
+
+        while (true) {
+            const apiUrl = buildApiUrl('products/categories', { per_page: 100, page });
+            if (!apiUrl) break;
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`WooCommerce Categories API error: ${response.status}`);
+            }
+
+            const categories = await response.json();
+            if (!categories || categories.length === 0) break;
+
+            allCategories.push(...categories.map(c => ({
+                id: c.id,
+                name: c.name,
+                count: c.count,
+                parent: c.parent
+            })));
+
+            page++;
+        }
+
+        const usefulCategories = allCategories.filter(c => c.count > 0);
+
+        categoryCache.set(cacheKey, usefulCategories);
+        console.log(`✅ Cached ${usefulCategories.length} product categories from WooCommerce`);
+        return usefulCategories;
+    } catch (error) {
+        console.error('❌ WooCommerce category fetch failed:', error.message);
+        return [];
+    }
 };
 
 /**
@@ -68,7 +175,6 @@ export const getAllProducts = async () => {
 
         const products = await response.json();
 
-        // Transform to simpler format
         const transformedProducts = products.map(p => ({
             id: p.id,
             name: p.name,
@@ -80,7 +186,9 @@ export const getAllProducts = async () => {
             permalink: p.permalink,
             cartUrl: `${process.env.WOOCOMMERCE_URL}/cart/?add-to-cart=${p.id}`,
             categories: p.categories?.map(c => c.name) || [],
-            tags: p.tags?.map(t => t.name) || []
+            categoryIds: p.categories?.map(c => c.id) || [],
+            tags: p.tags?.map(t => t.name) || [],
+            tagIds: p.tags?.map(t => t.id) || []
         }));
 
         productCache.set(cacheKey, transformedProducts);
@@ -94,84 +202,36 @@ export const getAllProducts = async () => {
 };
 
 /**
- * Search products by keyword
- * @param {string} keyword - Search term
- * @returns {Promise<Array>} Matching products
+ * Get products matching specific WooCommerce tag IDs and/or category IDs
+ * @param {Array<number>} tagIds - Array of WooCommerce tag IDs
+ * @param {Array<number>} categoryIds - Optional array of WooCommerce category IDs
+ * @returns {Promise<Array>} Matching products sorted by relevance
  */
-export const searchProducts = async (keyword) => {
+export const getProductsByTagIds = async (tagIds, categoryIds = []) => {
+    const hasTagIds = tagIds && Array.isArray(tagIds) && tagIds.length > 0;
+    const hasCatIds = categoryIds && Array.isArray(categoryIds) && categoryIds.length > 0;
+    if (!hasTagIds && !hasCatIds) return [];
+
     const allProducts = await getAllProducts();
-    const searchTerm = keyword.toLowerCase();
+    const tagIdSet = new Set(tagIds || []);
+    const catIdSet = new Set(categoryIds || []);
 
-    return allProducts.filter(p =>
-        p.name.toLowerCase().includes(searchTerm) ||
-        p.tags.some(tag => tag.toLowerCase().includes(searchTerm)) ||
-        p.categories.some(cat => cat.toLowerCase().includes(searchTerm))
-    );
-};
+    const scoredProducts = allProducts.map(product => {
+        let score = 0;
+        product.tagIds.forEach(tid => {
+            if (tagIdSet.has(tid)) score += 2; // Tag match weighted higher
+        });
+        product.categoryIds.forEach(cid => {
+            if (catIdSet.has(cid)) score += 1; // Category match
+        });
+        return { product, score };
+    });
 
-/**
- * Get products matching disease-related keywords
- * @param {string} disease - Disease name
- * @param {string} healthStatus - 'healthy' or 'unhealthy'
- * @returns {Promise<Object>} { diseaseControl: [], nutrition: [] }
- */
-export const getProductsForDisease = async (disease, healthStatus) => {
-    const allProducts = await getAllProducts();
-    const diseaseLower = (disease || '').toLowerCase();
-    const isHealthy = healthStatus?.toLowerCase() === 'healthy';
-
-    const result = {
-        diseaseControl: [],
-        nutrition: []
-    };
-
-    // Define keyword mappings
-    const diseaseKeywords = {
-        fungal: ['fungicide', 'copper', 'mancozeb', 'azoxystrobin'],
-        bacterial: ['copper', 'bactericide', 'streptomycin'],
-        pest: ['insecticide', 'pesticide', 'abamectin', 'cypermethrin'],
-        virus: ['imidacloprid', 'insecticide'], // Control vectors
-        rust: ['fungicide', 'mancozeb', 'rust'],
-        mildew: ['fungicide', 'sulfur', 'mildew'],
-        blast: ['fungicide', 'tricyclazole', 'blast'],
-        rot: ['fungicide', 'copper', 'rot'],
-        wilt: ['fungicide', 'copper', 'wilt']
-    };
-
-    const nutritionKeywords = ['fertilizer', 'npk', 'organic', 'humic', 'nutrient', 'growth'];
-
-    // Find disease control products
-    if (!isHealthy) {
-        for (const [condition, keywords] of Object.entries(diseaseKeywords)) {
-            if (diseaseLower.includes(condition)) {
-                const matches = allProducts.filter(p =>
-                    keywords.some(kw =>
-                        p.name.toLowerCase().includes(kw) ||
-                        p.tags.some(t => t.toLowerCase().includes(kw))
-                    )
-                );
-                result.diseaseControl.push(...matches);
-            }
-        }
-
-        // Remove duplicates
-        result.diseaseControl = [...new Map(result.diseaseControl.map(p => [p.id, p])).values()];
-    }
-
-    // Find nutrition products (always include)
-    result.nutrition = allProducts.filter(p =>
-        nutritionKeywords.some(kw =>
-            p.name.toLowerCase().includes(kw) ||
-            p.tags.some(t => t.toLowerCase().includes(kw)) ||
-            p.categories.some(c => c.toLowerCase().includes(kw))
-        )
-    );
-
-    // Limit results
-    result.diseaseControl = result.diseaseControl.slice(0, 4);
-    result.nutrition = result.nutrition.slice(0, 4);
-
-    return result;
+    return scoredProducts
+        .filter(p => p.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(p => p.product)
+        .slice(0, 10);
 };
 
 /**

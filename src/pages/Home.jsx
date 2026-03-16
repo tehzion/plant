@@ -221,7 +221,17 @@ const Home = () => {
           navigate(`/results/${scanId}`);
         }
       } catch (e) {
-        // Error handled in hook
+        // Error handled in hook, but we intercept it here to show as a modal if it's the non-plant error
+        if (e.message === 'NOT_A_PLANT' || scanActions.error === t('home.errorNotPlant')) {
+          setModalConfig({
+            isOpen: true,
+            title: t('common.error') || 'Error',
+            message: t('home.errorNotPlant'),
+            type: 'alert'
+          });
+          // Clear the inline error so it doesn't show at the bottom too
+          scanActions.setError('');
+        }
       }
     }
   };
