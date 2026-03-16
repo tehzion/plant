@@ -3,12 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { getGroupedScans, deleteScan, clearAllScans, getScanHistory } from '../utils/localStorage';
 import ScanHistoryCard from '../components/ScanHistoryCard';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { ClipboardList, ScanLine, Trash2, History as HistoryIcon } from 'lucide-react';
+import { useScanContext } from '../context/ScanContext';
+import { ClipboardList, ScanLine, Trash2, History as HistoryIcon, ShieldCheck } from 'lucide-react';
+import { useEffect } from 'react';
 
 const History = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
+    const { state: scanState } = useScanContext();
     const [groupedScans, setGroupedScans] = useState(getGroupedScans());
+
+    // Auto-refresh when background scan completes
+    useEffect(() => {
+        if (!scanState.loading) {
+            setGroupedScans(getGroupedScans());
+        }
+    }, [scanState.loading]);
 
     const handleDelete = (id) => {
         if (window.confirm(t('history.confirmDeleteSingle') || 'Delete this scan?')) {

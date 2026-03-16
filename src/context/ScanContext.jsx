@@ -31,12 +31,12 @@ export const ScanProvider = ({ children }) => {
         }
     }, [location.pathname, state.loading, t]);
 
-    // Clear notification when arriving at results
+    // Clear background scan notification when arriving at results
     useEffect(() => {
-        if (location.pathname.startsWith('/results')) {
+        if (location.pathname.startsWith('/results') && notification?.type === 'info') {
             setNotification(null);
         }
-    }, [location.pathname]);
+    }, [location.pathname, notification]);
 
     // Enhanced Actions wrapper
     const wrappedActions = useMemo(() => ({

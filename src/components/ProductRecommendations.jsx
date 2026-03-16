@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
-import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info } from 'lucide-react';
+import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX } from 'lucide-react';
 import { isHealthy } from '../utils/statusUtils';
 
 const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) => {
@@ -34,7 +34,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
               healthStatus: scanResult?.healthStatus || 'unknown',
               pathogenType: scanResult?.pathogenType || 'None',
               symptoms: scanResult?.symptoms || [],
-              treatments: scanResult?.treatments || []
+              treatments: scanResult?.treatments || [],
+              productSearchTags: scanResult?.productSearchTags || []
             }
           })
         });

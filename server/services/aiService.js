@@ -11,7 +11,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-// Cache GPT-5-mini product recommendations for 1 hour
+// Cache GPT-5 mini product recommendations for 1 hour
 const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
 /**
@@ -135,7 +135,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
 
             // Fallback to GPT-5 mini if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'GPT-5 mini';
+            model = 'gpt-5-mini';
 
             response = await openai.chat.completions.create({
                 model: model,
@@ -543,7 +543,7 @@ IMPORTANT RULES:
             });
         }
 
-        // Call GPT with model fallback (gpt-4o-mini primary, gpt-3.5-turbo backup)
+        // Call GPT with model fallback (gpt-4o-mini primary, GPT-5 mini backup)
         let model = 'gpt-4o-mini';
         let response;
 
@@ -558,9 +558,9 @@ IMPORTANT RULES:
         } catch (primaryError) {
             console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
 
-            // Fallback to gpt-3.5-turbo if 4o-mini fails
+            // Fallback to GPT-5 mini if 4o-mini fails
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'gpt-3.5-turbo';
+            model = 'gpt-5-mini';
 
             response = await openai.chat.completions.create({
                 model: model,
@@ -668,7 +668,7 @@ function ensureCarePlan(result, language) {
 }
 
 /**
- * GPT-5-mini Product Recommendation Engine
+ * GPT-5 mini Product Recommendation Engine
  * Takes disease diagnosis info + available WooCommerce tags & categories
  * Returns two separate lists: treatment tag/category IDs and nutrition tag/category IDs
  * @param {Object} diagnosisInfo - { disease, healthStatus, pathogenType, plantType, symptoms, treatments }
@@ -682,16 +682,24 @@ export async function recommendProductTags(diagnosisInfo, availableTags, availab
         return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
     }
 
-    // Cache key based on diagnosis signature
-    const cacheKey = `rec_${(diagnosisInfo.disease || 'none').toLowerCase().replace(/\s+/g, '-')}_${(diagnosisInfo.healthStatus || 'unknown')}_${(diagnosisInfo.pathogenType || 'none').toLowerCase().replace(/\s+/g, '-')}`;
+    // Cache key based on comprehensive diagnosis signature to prevent cross-crop collisions
+    const safePlantType = (diagnosisInfo.plantType || 'unknown').toLowerCase().replace(/\s+/g, '-');
+    const safeDisease = (diagnosisInfo.disease || 'none').toLowerCase().replace(/\s+/g, '-');
+    const safeStatus = (diagnosisInfo.healthStatus || 'unknown').toLowerCase();
+    const safePathogen = (diagnosisInfo.pathogenType || 'none').toLowerCase().replace(/\s+/g, '-');
+    const safeSearchTags = Array.isArray(diagnosisInfo.productSearchTags)
+        ? diagnosisInfo.productSearchTags.join('-').toLowerCase()
+        : 'no-tags';
+
+    const cacheKey = `rec_${safePlantType}_${safeDisease}_${safeStatus}_${safePathogen}_${safeSearchTags}`;
     const cached = recommendationCache.get(cacheKey);
     if (cached) {
-        console.log(`🧠 GPT-5-mini recommendation cache HIT for: ${cacheKey}`);
+        console.log(`🧠 GPT-5 mini recommendation cache HIT for: ${cacheKey}`);
         return cached;
     }
 
     try {
-        console.log('🛒 GPT-5-mini: Recommending products based on diagnosis...');
+        console.log('🛒 GPT-5 mini: Recommending products based on diagnosis...');
 
         // Build compact catalogs for the prompt
         const tagCatalog = (availableTags || [])
@@ -717,6 +725,7 @@ You MUST split your recommendations into TWO groups:
 Rules:
 - Select 1-5 tag IDs AND 1-3 category IDs for EACH group (treatment and nutrition)
 - CRITICAL: Even if the plant is healthy or no specific treatment exists, you MUST ALWAYS return at least 1-2 tag/category IDs for 'nutrition' (e.g. general fertilizer, soil enhancer) so the user always gets an enhancement recommendation. Never return completely empty arrays for BOTH groups.
+- IMPORTANT: You MUST heavily prioritize selecting WooCommerce Tags/Categories that contain or exactly match the "EXPLICIT PRODUCT SEARCH HINTS" provided below.
 - For healthy plants: treatment group can be empty, but focus heavily on nutrition.
 - For unhealthy plants: treatment group should address the specific disease.
 - Return ONLY IDs that exist in the provided catalogs
@@ -731,6 +740,9 @@ Rules:
 - Pathogen Type: ${diagnosisInfo.pathogenType || 'None'}
 - Symptoms: ${Array.isArray(diagnosisInfo.symptoms) ? diagnosisInfo.symptoms.join(', ') : (diagnosisInfo.symptoms || 'None')}
 - Treatments Suggested: ${Array.isArray(diagnosisInfo.treatments) ? diagnosisInfo.treatments.join(', ') : (diagnosisInfo.treatments || 'None')}
+
+🎯 EXPLICIT PRODUCT SEARCH HINTS (Use these strict keywords to immediately find matching tags below):
+${Array.isArray(diagnosisInfo.productSearchTags) ? diagnosisInfo.productSearchTags.join(', ') : (diagnosisInfo.productSearchTags || 'None')}
 
 AVAILABLE PRODUCT TAGS:
 ${tagCatalog}
@@ -761,7 +773,7 @@ Return JSON with two separate recommendation groups:
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) {
-            console.error('❌ GPT-5-mini product recommendation: Failed to parse response');
+            console.error('❌ GPT-5 mini product recommendation: Failed to parse response');
             return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
         }
 
@@ -775,16 +787,16 @@ Return JSON with two separate recommendation groups:
             reasoning: result.reasoning || ''
         };
 
-        console.log(`✅ GPT-5-mini recommended Treatment: ${output.treatmentTagIds.length} tags + ${output.treatmentCategoryIds.length} cats | Nutrition: ${output.nutritionTagIds.length} tags + ${output.nutritionCategoryIds.length} cats`);
+        console.log(`✅ GPT-5 mini recommended Treatment: ${output.treatmentTagIds.length} tags + ${output.treatmentCategoryIds.length} cats | Nutrition: ${output.nutritionTagIds.length} tags + ${output.nutritionCategoryIds.length} cats`);
         console.log(`   Reason: ${output.reasoning}`);
-        
+
         // Cache this recommendation
         recommendationCache.set(cacheKey, output);
-        
+
         return output;
 
     } catch (error) {
-        console.error('❌ GPT-5-mini product recommendation failed:', error.message);
+        console.error('❌ GPT-5 mini product recommendation failed:', error.message);
         return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
     }
 }
