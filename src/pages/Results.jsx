@@ -40,6 +40,14 @@ const Results = () => {
     );
   }
 
+  const categoryRaw = (scan.category ?? scan.plantType ?? '').toString();
+  const categoryKey = categoryRaw.replace(/[^a-zA-Z0-9]/g, '');
+  const translatedCategory = categoryKey ? t(`home.category${categoryKey}`) : '';
+  const categoryLabel =
+    translatedCategory && translatedCategory !== `home.category${categoryKey}`
+      ? translatedCategory
+      : (categoryRaw || t('common.unknown'));
+
   const result = {
     healthStatus: getStandardizedStatus(scan),
     plantType: scan.plantType,
@@ -91,7 +99,7 @@ ${t('pdf.title')}
 
 ${t('common.date')}: ${reportDate}
 ${t('results.plantType')}: ${scan.plantType}
-${t('results.category')}: ${scan.category}
+${t('results.category')}: ${categoryLabel}
 ${t('results.scale')}: ${scan.farmScale || t('results.notSpecified')}
 ${scan.estimatedAge ? `${t('results.estimatedAge')}: ${scan.estimatedAge}` : ''}
 
@@ -263,7 +271,7 @@ ${t('pdf.generatedBy')}
               </div>
               <div className="metadata-content">
                 <span className="metadata-label">{t('results.category')}</span>
-                <span className="metadata-value">{t(`home.category${scan.category.replace(/[^a-zA-Z0-9]/g, '')}`) || scan.category}</span>
+                <span className="metadata-value">{categoryLabel}</span>
               </div>
             </div>
 
@@ -300,7 +308,7 @@ ${t('pdf.generatedBy')}
                               'Palm/Rubber': 130, 'Palm Oil': 55, 'Vegetables': 0, 'Fruits': 0,
                               'Rice': 0, 'Weed Control': 0
                             };
-                            const density = densityMap[scan.category] || 50;
+                            const density = densityMap[categoryRaw] || 50;
                             if (density === 0) return '';
                             return `${Math.round(scan.scaleQuantity * density).toLocaleString()} ${t('home.trees')}`;
                           })()}
