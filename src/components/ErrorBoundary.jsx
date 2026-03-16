@@ -12,9 +12,7 @@ class ErrorBoundary extends Component {
     }
 
     componentDidCatch(error, errorInfo) {
-        if (import.meta.env.DEV) {
-            console.error('Error caught by boundary:', error, errorInfo);
-        }
+        console.error('Error caught by boundary:', error, errorInfo);
     }
 
     // Helper to get translation without hooks
@@ -48,6 +46,12 @@ class ErrorBoundary extends Component {
     render() {
         if (this.state.hasError) {
             const t = this.getSafeT();
+            let showDetails = false;
+            try {
+                showDetails = import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug');
+            } catch (e) {
+                showDetails = import.meta.env.DEV;
+            }
 
             return (
                 <div style={{
@@ -72,6 +76,25 @@ class ErrorBoundary extends Component {
                         <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px' }}>
                             {t('home.errorBoundaryMessage') || 'Please refresh the page to try again.'}
                         </p>
+                        {showDetails && (
+                            <div style={{
+                                textAlign: 'left',
+                                background: '#F9FAFB',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '12px',
+                                padding: '12px',
+                                marginBottom: '16px',
+                                fontSize: '12px',
+                                color: '#374151',
+                                overflow: 'auto',
+                                maxHeight: '200px'
+                            }}>
+                                <div style={{ fontWeight: 700, marginBottom: '8px' }}>Error Details</div>
+                                <div style={{ whiteSpace: 'pre-wrap' }}>
+                                    {this.state.error?.message || String(this.state.error)}
+                                </div>
+                            </div>
+                        )}
                         <button
                             onClick={() => window.location.reload()}
                             style={{

@@ -1,5 +1,6 @@
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
+  AlertCircle,
   AlertTriangle,
   CheckCircle,
   Sprout,
