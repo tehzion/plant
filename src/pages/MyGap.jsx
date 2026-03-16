@@ -313,21 +313,21 @@ const MyGapPage = () => {
                     onClick={() => setActiveTab('checklist')}
                 >
                     <ClipboardCheck size={18} />
-                    <span>Checklist</span>
+                    <span>{t('mygap.tabChecklist')}</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'logbook' ? 'active' : ''}`}
                     onClick={() => setActiveTab('logbook')}
                 >
                     <FileText size={18} />
-                    <span>Logbook</span>
+                    <span>{t('mygap.tabLogbook')}</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'phi' ? 'active' : ''}`}
                     onClick={() => setActiveTab('phi')}
                 >
                     <Calculator size={18} />
-                    <span>PHI</span>
+                    <span>{t('mygap.tabPhi')}</span>
                 </button>
             </div>
 
@@ -427,7 +427,7 @@ const MyGapPage = () => {
                                         required
                                         value={newLog.notes}
                                         onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
-                                        placeholder="Enter details..."
+                                        placeholder={t('mygap.logNotesPlaceholder')}
                                     />
                                 </div>
                                 <div className="form-actions">
@@ -445,7 +445,7 @@ const MyGapPage = () => {
                             {logs.length === 0 ? (
                                 <div className="empty-logs">
                                     <Calendar size={48} />
-                                    <p>No records found. Start your first log!</p>
+                                    <p>{t('mygap.emptyLogs')}</p>
                                 </div>
                             ) : (
                                 logs.map((log) => (
@@ -480,7 +480,7 @@ const MyGapPage = () => {
                                     type="text"
                                     value={pesticideName}
                                     onChange={(e) => setPesticideName(e.target.value)}
-                                    placeholder="e.g. Abamectin"
+                                    placeholder={t('mygap.pesticideNamePlaceholder')}
                                 />
                             </div>
                             <div className="form-group">
@@ -490,7 +490,7 @@ const MyGapPage = () => {
                                     required
                                     value={phiDays}
                                     onChange={(e) => setPhiDays(e.target.value)}
-                                    placeholder="e.g. 14"
+                                    placeholder={t('mygap.phiDaysPlaceholder')}
                                 />
                             </div>
                             <button type="submit" className="btn btn-primary w-full">
