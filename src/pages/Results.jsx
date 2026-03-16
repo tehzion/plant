@@ -98,6 +98,17 @@ const Results = () => {
       ? scanDate.toLocaleString(dateLocale)
       : t('results.notRecorded');
 
+    const normalizeList = (value) => {
+      if (Array.isArray(value)) return value.filter(Boolean);
+      if (typeof value === 'string') {
+        return value
+          .split(/\r?\n|•/g)
+          .map(v => v.trim())
+          .filter(Boolean);
+      }
+      return [];
+    };
+
     const report = `
 ${t('pdf.title')}
 ============================================
@@ -120,28 +131,28 @@ ${scan.symptoms}
 
 ${!healthy ? `
 ${t('results.immediateActions')}:
-${scan.immediateActions?.map((action, i) => `${i + 1}. ${action}`).join('\n')}
+${normalizeList(scan.immediateActions).map((action, i) => `${i + 1}. ${action}`).join('\n')}
 
 ${t('results.treatments')}:
-${scan.treatments?.map((treatment, i) => `${i + 1}. ${treatment}`).join('\n')}
+${normalizeList(scan.treatments).map((treatment, i) => `${i + 1}. ${treatment}`).join('\n')}
 ` : ''}
 
 ${scan.healthyCarePlan ? `
 ${t('results.dailyCare')}:
-${scan.healthyCarePlan.dailyCare?.map((care, i) => `${i + 1}. ${care}`).join('\n')}
+${normalizeList(scan.healthyCarePlan.dailyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
 
 ${t('results.weeklyCare')}:
-${scan.healthyCarePlan.weeklyCare?.map((care, i) => `${i + 1}. ${care}`).join('\n')}
+${normalizeList(scan.healthyCarePlan.weeklyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
 
 ${t('results.monthlyCare')}:
-${scan.healthyCarePlan.monthlyCare?.map((care, i) => `${i + 1}. ${care}`).join('\n')}
+${normalizeList(scan.healthyCarePlan.monthlyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
 
 ${t('results.bestPractices')}:
-${scan.healthyCarePlan.bestPractices?.map((practice, i) => `${i + 1}. ${practice}`).join('\n')}
+${normalizeList(scan.healthyCarePlan.bestPractices).map((practice, i) => `${i + 1}. ${practice}`).join('\n')}
 ` : ''}
 
 ${t('results.prevention')}:
-${scan.prevention?.map((prev, i) => `${i + 1}. ${prev}`).join('\n')}
+${normalizeList(scan.prevention).map((prev, i) => `${i + 1}. ${prev}`).join('\n')}
 
 ${scan.nutritionalIssues?.hasDeficiency ? `
 ${t('results.nutritionalIssues')}:

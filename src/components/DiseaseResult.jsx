@@ -63,6 +63,11 @@ const DiseaseResult = ({ result, image, leafImage }) => {
   };
 
   const healthy = isHealthy(result);
+  const symptomsList = Array.isArray(result.symptoms)
+    ? result.symptoms.filter(Boolean)
+    : (typeof result.symptoms === 'string'
+      ? result.symptoms.split(/\r?\n|•/g).map(v => v.trim()).filter(Boolean)
+      : []);
 
   /* 
      Details section logic moved inline for robustness 
@@ -340,14 +345,14 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         })()}
 
         {/* Symptoms Section (Unhealthy only) */}
-        {!healthy && result.symptoms && result.symptoms.length > 0 && (
+        {!healthy && symptomsList.length > 0 && (
           <div className="symptoms-section">
             <h4 className="subsection-title">
               <AlertCircle size={18} className="subsection-icon" />
               {t('results.symptoms')}
             </h4>
             <ul className="symptoms-list">
-              {result.symptoms.map((symptom, idx) => (
+              {symptomsList.map((symptom, idx) => (
                 <li key={idx} className="symptom-item">{symptom}</li>
               ))}
             </ul>

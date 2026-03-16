@@ -12,6 +12,17 @@ const TreatmentRecommendations = ({ result }) => {
 
   if (!result) return null;
 
+  const normalizeList = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string') {
+      return value
+        .split(/\r?\n|•/g)
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+    return [];
+  };
+
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -24,21 +35,21 @@ const TreatmentRecommendations = ({ result }) => {
       key: 'immediate',
       title: t('results.immediateActions'),
       icon: <Zap size={20} />,
-      data: result.immediateActions,
+      data: normalizeList(result.immediateActions),
       listType: 'ol'
     },
     {
       key: 'treatments',
       title: t('results.treatments'),
       icon: <Pill size={20} />,
-      data: result.treatments,
+      data: normalizeList(result.treatments),
       listType: 'ul'
     },
     {
       key: 'prevention',
       title: t('results.prevention'),
       icon: <Shield size={20} />,
-      data: result.prevention,
+      data: normalizeList(result.prevention),
       listType: 'ul'
     }
   ];

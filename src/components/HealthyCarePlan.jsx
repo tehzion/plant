@@ -5,6 +5,17 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
   const { t } = useLanguage();
   // if (!carePlan) return null; // Logic moved to fallback below
 
+  const normalizeList = (value, fallback) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string') {
+      return value
+        .split(/\r?\n|•/g)
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+    return fallback;
+  };
+
   // Default plan if API didn't return one or for legacy scans
   const defaultPlan = {
     dailyCare: [t('results.defaultDaily') || "Check soil moisture daily", t('results.defaultSun') || "Ensure adequate sunlight"],
@@ -20,27 +31,32 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
       key: 'dailyCare',
       title: t('results.dailyCare'),
       icon: <Calendar size={18} />,
-      data: activePlan.dailyCare || defaultPlan.dailyCare
+      data: normalizeList(activePlan.dailyCare, defaultPlan.dailyCare)
     },
     {
       key: 'weeklyCare',
       title: t('results.weeklyCare'),
       icon: <CalendarDays size={18} />,
-      data: activePlan.weeklyCare || defaultPlan.weeklyCare
+      data: normalizeList(activePlan.weeklyCare, defaultPlan.weeklyCare)
     },
     {
       key: 'monthlyCare',
       title: t('results.monthlyCare'),
       icon: <CalendarRange size={18} />,
-      data: activePlan.monthlyCare || defaultPlan.monthlyCare
+      data: normalizeList(activePlan.monthlyCare, defaultPlan.monthlyCare)
     },
     {
       key: 'bestPractices',
       title: t('results.bestPractices'),
       icon: <Sparkles size={18} />,
-      data: activePlan.bestPractices || defaultPlan.bestPractices
+      data: normalizeList(activePlan.bestPractices, defaultPlan.bestPractices)
     }
   ];
+
+  const subtitleTemplate = t('results.healthyPlantSubtitle');
+  const subtitleText = typeof subtitleTemplate === 'string'
+    ? subtitleTemplate.replace('{plantType}', plantType || t('common.unknown'))
+    : '';
 
   return (
     <div className="healthy-care-plan">
@@ -49,7 +65,7 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
         <h3 className="section-title">{t('results.healthyPlantTitle')}</h3>
       </div>
       <p className="section-subtitle">
-        {t('results.healthyPlantSubtitle').replace('{plantType}', plantType)}
+        {subtitleText}
       </p>
 
       {/* Care Sections */}
