@@ -172,6 +172,13 @@ app.post('/api/analyze', async (req, res, next) => {
         if (!plantNetResult) {
             const gptVisionResult = await identifyPlantWithGPTVision(mainImage, category);
             if (gptVisionResult) {
+                if (gptVisionResult.isPlant === false) {
+                    console.warn('⚠️ Image identified as NOT a plant.');
+                    return res.status(400).json({
+                        error: 'NOT_A_PLANT',
+                        message: 'NOT_A_PLANT'
+                    });
+                }
                 plantNetResult = gptVisionResult;
                 identificationSource = 'GPT-Vision';
             }

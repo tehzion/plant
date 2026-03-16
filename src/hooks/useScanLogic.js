@@ -130,7 +130,8 @@ export const useScanLogic = () => {
                 return await Promise.race([analysisTask(), timeoutPromise]);
             } catch (err) {
                 console.error('Analysis error:', err);
-                dispatch({ type: 'SET_ERROR', payload: err.message || t('home.errorAnalysis') });
+                const errorMessage = err.message === 'NOT_A_PLANT' ? t('home.errorNotPlant') : (err.message || t('home.errorAnalysis'));
+                dispatch({ type: 'SET_ERROR', payload: errorMessage });
                 dispatch({ type: 'SET_STEP', payload: 2 });
                 throw err;
             }

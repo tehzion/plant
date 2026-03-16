@@ -96,7 +96,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a botanical expert specializing in plant identification. Identify the plant species from the image and provide scientific name, common names, family, and genus. Be accurate and only identify if you are confident.'
+                        content: 'You are a botanical expert specializing in plant identification. First, check if the image contains a plant. If it does NOT contain a plant, set "isPlant": false and leave other fields empty. If it is a plant, set "isPlant": true, and provide scientific name, common names, family, and genus. Be accurate and only identify if you are confident.'
                     },
                     {
                         role: 'user',
@@ -105,6 +105,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                                 type: 'text',
                                 text: `Identify this plant. Category hint: ${category}. Provide response in JSON format:
 {
+  "isPlant": true,
   "scientificName": "Scientific name",
   "commonNames": ["Common name 1", "Common name 2"],
   "family": "Family name",
@@ -138,7 +139,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a botanical expert specializing in plant identification. Identify the plant species from the image and provide scientific name, common names, family, and genus. Be accurate and only identify if you are confident.'
+                        content: 'You are a botanical expert specializing in plant identification. First, check if the image contains a plant. If it does NOT contain a plant, set "isPlant": false and leave other fields empty. If it is a plant, set "isPlant": true, and provide scientific name, common names, family, and genus. Be accurate and only identify if you are confident.'
                     },
                     {
                         role: 'user',
@@ -147,6 +148,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                                 type: 'text',
                                 text: `Identify this plant. Category hint: ${category}. Provide response in JSON format:
 {
+  "isPlant": true,
   "scientificName": "Scientific name",
   "commonNames": ["Common name 1", "Common name 2"],
   "family": "Family name",

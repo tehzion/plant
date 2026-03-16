@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-  ScanLine, AlertCircle, Leaf
+  ScanLine, AlertCircle, Leaf, ChevronDown
 } from 'lucide-react';
 import { checkServerHealth } from '../utils/diseaseDetection';
 import { getScanHistory } from '../utils/localStorage';
@@ -171,6 +171,11 @@ const Home = () => {
     setSearchParams({ scan: 'true' });
   };
 
+  const handleMinimize = () => {
+    setSearchParams({}); // Exits scan viewMode -> triggers 'dashboard' mode
+    scanActions.showBackgroundNotification(); // Force the background notification since we manually minimized
+  };
+
   const handleResetAndClose = () => {
     const exit = () => {
       scanActions.resetScan();
@@ -210,7 +215,11 @@ const Home = () => {
       // Start Analysis
       try {
         const scanId = await scanActions.performAnalyze(location, locationName);
-        if (isMounted.current && scanId) navigate(`/results/${scanId}`);
+        // Only auto-navigate if the user is still actively looking at the scan overlay
+        const currentSearch = new URLSearchParams(window.location.search);
+        if (isMounted.current && scanId && currentSearch.get('scan') === 'true') {
+          navigate(`/results/${scanId}`);
+        }
       } catch (e) {
         // Error handled in hook
       }
@@ -301,6 +310,53 @@ const Home = () => {
         cancelText={modalConfig.cancelText}
       />
 
+      <style>{`
+        .overlay-actions {
+          margin-top: 24px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+        }
+        .minimize-analysis-button {
+          background: white;
+          border: 1px solid #22C55E;
+          color: #16A34A;
+          border-radius: 9999px;
+          padding: 10px 24px;
+          font-size: 0.95rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2);
+        }
+        .minimize-analysis-button:hover {
+          background: #F0FDF4;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px -2px rgba(34, 197, 94, 0.3);
+        }
+        .cancel-analysis-button {
+          background: none;
+          border: none;
+          padding: 8px 24px;
+          color: #EF4444;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-radius: 9999px;
+        }
+        .cancel-analysis-button:hover {
+          color: #B91C1C;
+          background: #FEF2F2;
+          transform: translateY(-1px);
+        }
+      `}</style>
+
       <div className="container">
         {(loading || currentStep === 3) ? (
           <div className="loading-overlay">
@@ -325,38 +381,18 @@ const Home = () => {
                 <div className={`dot ${analyzingStep >= 2 ? 'active' : ''}`}></div>
               </div>
 
-              <button
-                onClick={handleResetAndClose}
-                className="cancel-analysis-button"
-              >
-                <span style={{ fontSize: '1.2em', lineHeight: '1' }}>×</span> {t('common.cancel')}
-              </button>
+              <div className="overlay-actions">
+                <button onClick={handleMinimize} className="minimize-analysis-button">
+                  <ChevronDown size={18} /> {t('home.minimizeScan') || 'Continue Browsing'}
+                </button>
+                <button onClick={handleResetAndClose} className="cancel-analysis-button">
+                  {t('home.cancelScan') || 'Cancel Scan'}
+                </button>
+              </div>
             </div>
           </div>
         ) : (
           <>
-            <style>{`
-              .cancel-analysis-button {
-                margin-top: 24px;
-                background: none;
-                border: 1px solid #D1D5DB;
-                border-radius: 9999px;
-                padding: 8px 24px;
-                color: #6B7280;
-                font-size: 0.85rem;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-              }
-              .cancel-analysis-button:hover {
-                border-color: #9CA3AF;
-                color: #374151;
-                transform: translateY(-1px);
-              }
-            `}</style>
             <div style={{ marginTop: '24px' }}>
               <ProgressStepper currentStep={currentStep} steps={steps} onStepClick={(step) => {
                 if (step < currentStep) scanActions.setStep(step);

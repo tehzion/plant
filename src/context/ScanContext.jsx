@@ -45,10 +45,12 @@ export const ScanProvider = ({ children }) => {
             try {
                 const id = await logicActions.performAnalyze(loc, locName);
 
-                // Check if we are in background (not on Home)
+                // Check if we are in background (not actively on the scan loading screen)
                 const currentPath = locationRef.current.pathname;
+                const currentSearch = locationRef.current.search;
+                const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
 
-                if (currentPath !== '/') {
+                if (!isActivelyScanning) {
                     setNotification({
                         type: 'success',
                         message: t('home.analysisComplete') || 'Analysis Complete!',
@@ -64,7 +66,10 @@ export const ScanProvider = ({ children }) => {
             } catch (e) {
                 // Error handling is done in logicActions, but we can show toast if in background
                 const currentPath = locationRef.current.pathname;
-                if (currentPath !== '/') {
+                const currentSearch = locationRef.current.search;
+                const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
+
+                if (!isActivelyScanning) {
                     setNotification({
                         type: 'error',
                         message: e.message || 'Analysis Failed',
@@ -73,6 +78,13 @@ export const ScanProvider = ({ children }) => {
                 }
                 throw e;
             }
+        },
+        showBackgroundNotification: () => {
+            setNotification({
+                type: 'info',
+                message: t('home.analyzingInBackground') || 'Analysis running in background...',
+                duration: 5000
+            });
         },
         dismissNotification: () => setNotification(null)
     }), [logicActions, navigate, t]);
