@@ -2,6 +2,7 @@ import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease } from '../utils/diseaseDetection';
 import { saveScan } from '../utils/localStorage';
+import { getStandardizedStatus } from '../utils/statusUtils';
 
 // Scan state reducer
 const scanReducer = (state, action) => {
@@ -105,12 +106,14 @@ export const useScanLogic = () => {
 
                 const treeImageThumbnail = await imageToBase64(currentState.selectedImage, 400);
                 const leafImageThumbnail = currentState.selectedLeafImage ? await imageToBase64(currentState.selectedLeafImage, 400) : null;
+                const standardizedHealthStatus = getStandardizedStatus(result);
 
                 const savedScan = saveScan({
                     image: treeImageThumbnail,
                     leafImage: leafImageThumbnail,
-                    disease: result.disease,
                     ...result,
+                    healthStatus: standardizedHealthStatus,
+                    disease: result.disease,
                     plantType: result.plantType || currentState.selectedCategory,
                     category: currentState.selectedCategory || 'Vegetables',
                     farmScale: currentState.selectedScale,

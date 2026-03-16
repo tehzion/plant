@@ -16,7 +16,7 @@ import FeedbackWidget from '../components/FeedbackWidget';
 import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
-import { isHealthy } from '../utils/statusUtils';
+import { isHealthy, getStandardizedStatus } from '../utils/statusUtils';
 
 const Results = () => {
   const { id } = useParams();
@@ -41,7 +41,7 @@ const Results = () => {
   }
 
   const result = {
-    healthStatus: scan.healthStatus,
+    healthStatus: getStandardizedStatus(scan),
     plantType: scan.plantType,
     disease: scan.disease,
     fungusType: scan.fungusType,
@@ -60,7 +60,8 @@ const Results = () => {
     identificationSource: scan.identificationSource
   };
 
-  const healthy = isHealthy(scan);
+  const standardizedStatus = result.healthStatus;
+  const healthy = standardizedStatus === 'healthy';
 
   const handleScanAgain = () => {
     navigate('/?scan=true');
@@ -94,7 +95,7 @@ ${t('results.category')}: ${scan.category}
 ${t('results.scale')}: ${scan.farmScale || t('results.notSpecified')}
 ${scan.estimatedAge ? `${t('results.estimatedAge')}: ${scan.estimatedAge}` : ''}
 
-${t('results.status')}: ${t(`results.${scan.healthStatus?.toLowerCase()}`) || scan.healthStatus}
+${t('results.status')}: ${t(`results.${standardizedStatus}`)}
 ${t('results.disease')}: ${scan.disease}
 ${scan.fungusType ? `${t('results.fungusSpecies')}: ${scan.fungusType}` : ''}
 ${scan.pathogenType ? `${t('results.pathogenType')}: ${scan.pathogenType}` : ''}
@@ -160,7 +161,7 @@ ${t('pdf.generatedBy')}
       try {
         await navigator.share({
           title: t('pdf.title') || 'Plant Analysis Report',
-          text: `${t('results.disease')}: ${scan.disease} (${scan.healthStatus})`,
+          text: `${t('results.disease')}: ${scan.disease} (${t(`results.${standardizedStatus}`)})`,
           url: window.location.href,
         });
         return;

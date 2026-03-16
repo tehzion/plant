@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
-import { isHealthy } from '../../utils/statusUtils';
+import { getStandardizedStatus } from '../../utils/statusUtils';
 
 const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
     const { t } = useLanguage();
@@ -14,8 +14,12 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
             </div>
             <div className="recent-scans-list">
                 {scans.length > 0 ? (
-                    scans.map((scan) => (
-                        <div key={scan.id} className="scan-card" onClick={() => onScanClick(scan.id)}>
+                    scans.map((scan) => {
+                        const standardizedStatus = getStandardizedStatus(scan);
+                        const healthy = standardizedStatus === 'healthy';
+
+                        return (
+                            <div key={scan.id} className="scan-card" onClick={() => onScanClick(scan.id)}>
                             <div className="scan-thumbnail">
                                 <img src={scan.image} alt={scan.disease} />
                             </div>
@@ -35,14 +39,14 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                     </p>
                                 )}
                                 <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                    <div className={`status-badge-mini ${isHealthy(scan) ? 'status-healthy' : 'status-unhealthy'}`}>
+                                    <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
                                         <span className="status-icon" style={{ display: 'flex' }}>
-                                            {isHealthy(scan) ?
+                                            {healthy ?
                                                 <CheckCircle size={10} strokeWidth={3} /> :
                                                 <AlertTriangle size={10} strokeWidth={3} />
                                             }
                                         </span>
-                                        <span className="status-text">{t(`results.${(scan.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.healthStatus}</span>
+                                        <span className="status-text">{t(`results.${standardizedStatus}`)}</span>
                                     </div>
 
                                     {scan.severity && (
@@ -62,8 +66,9 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                     )}
                                 </div>
                             </div>
-                        </div>
-                    ))
+                            </div>
+                        );
+                    })
                 ) : (
                     <div className="empty-state-card">
                         <span>{t('home.noRecentScans')}</span>

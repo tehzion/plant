@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { MapPin, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
-import { isHealthy } from '../utils/statusUtils';
+import { getStandardizedStatus } from '../utils/statusUtils';
 
 const ScanHistoryCard = ({ scan, onDelete }) => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();
 
-  const healthy = isHealthy(scan);
+  const standardizedStatus = getStandardizedStatus(scan);
+  const healthy = standardizedStatus === 'healthy';
 
   const getSeverityBadgeClass = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -73,7 +74,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
                   <CheckCircle size={10} strokeWidth={3} /> :
                   <AlertTriangle size={10} strokeWidth={3} />
                 }
-                {t(`results.${(scan.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)}
+                {t(`results.${standardizedStatus}`)}
               </span>
 
               {scan.severity && (

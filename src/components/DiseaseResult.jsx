@@ -16,6 +16,7 @@ import {
   Flower2,
   Info
 } from 'lucide-react';
+import { isHealthy } from '../utils/statusUtils';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
   const { t } = useLanguage();
@@ -61,8 +62,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
     }
   };
 
-  const isHealthy = ['healthy', 'sihat', '健康'].includes(result.healthStatus?.toLowerCase()) ||
-    ['no issues', 'tiada masalah', 'tiada', '未检测到问题', '无问题'].some(term => result.disease?.toLowerCase()?.includes(term));
+  const healthy = isHealthy(result);
 
   /* 
      Details section logic moved inline for robustness 
@@ -219,16 +219,16 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                 </div>
                 <div className="idea-content-wrapper">
                   <p className="idea-content">
-                    {extraDescription || result.additionalNotes || (isHealthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning'))}
+                    {extraDescription || result.additionalNotes || (healthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning'))}
                   </p>
                 </div>
               </div>
 
               {/* Status Card - Prominent */}
               {result.healthStatus && (
-                <div className={`status-banner ${isHealthy ? 'status-healthy' : 'status-unhealthy'}`}>
+                <div className={`status-banner ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
                   <div className="status-icon-wrapper">
-                    {isHealthy ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
+                    {healthy ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
                   </div>
                   <div className="status-content">
                     <span className="status-label">{t('results.status')}</span>
@@ -237,7 +237,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                     </span>
 
                     {/* Severity display moved here */}
-                    {!isHealthy && result.severity && (
+                    {!healthy && result.severity && (
                       <div className="status-severity-container" style={{
                         marginTop: '12px',
                         paddingTop: '12px',
@@ -276,7 +276,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           const detailItems = [];
 
           // Estimated Age (Healthy only)
-          if (isHealthy && result.estimatedAge) {
+          if (healthy && result.estimatedAge) {
             detailItems.push(
               <div key="age" className="detail-item">
                 <div className="detail-icon age-icon">
@@ -291,7 +291,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           }
 
           // Pathogen Type OR Primary Cause
-          if (!isHealthy && (result.pathogenType || result.nutritionalIssues?.hasDeficiency) && result.pathogenType !== 'unknown') {
+          if (!healthy && (result.pathogenType || result.nutritionalIssues?.hasDeficiency) && result.pathogenType !== 'unknown') {
             detailItems.push(
               <div key="pathogen" className="detail-item">
                 <div className="detail-icon pathogen-icon">
@@ -314,7 +314,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           }
 
           // Fungus Species (Hide if Nutrient Deficiency)
-          if (!isHealthy && !result.nutritionalIssues?.hasDeficiency && result.fungusType) {
+          if (!healthy && !result.nutritionalIssues?.hasDeficiency && result.fungusType) {
             detailItems.push(
               <div key="fungus" className="detail-item">
                 <div className="detail-icon fungus-icon">
@@ -340,7 +340,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         })()}
 
         {/* Symptoms Section (Unhealthy only) */}
-        {!isHealthy && result.symptoms && result.symptoms.length > 0 && (
+        {!healthy && result.symptoms && result.symptoms.length > 0 && (
           <div className="symptoms-section">
             <h4 className="subsection-title">
               <AlertCircle size={18} className="subsection-icon" />
@@ -805,4 +805,3 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 };
 
 export default DiseaseResult;
-
