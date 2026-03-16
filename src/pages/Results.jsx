@@ -51,6 +51,9 @@ const Results = () => {
   const scanDate = scan?.timestamp ? new Date(scan.timestamp) : null;
   const hasValidTimestamp = !!scanDate && !Number.isNaN(scanDate.getTime());
   const dateLocale = t('common.dateLocale') || 'en-US';
+  const lat = Number(scan?.location?.lat);
+  const lng = Number(scan?.location?.lng);
+  const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
 
   const result = {
     healthStatus: getStandardizedStatus(scan),
@@ -345,15 +348,15 @@ ${t('pdf.generatedBy')}
                 <div className="metadata-content">
                   <span className="metadata-label">{t('common.location')}</span>
                   <span className="metadata-value">{scan.locationName}</span>
-                  {scan.location && (
+                  {hasValidCoords && (
                     <span className="metadata-coords">
-                      {scan.location.lat?.toFixed(4)}, {scan.location.lng?.toFixed(4)}
+                      {lat.toFixed(4)}, {lng.toFixed(4)}
                     </span>
                   )}
                 </div>
-                {scan.location && (
+                {hasValidCoords && (
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${scan.location.lat},${scan.location.lng}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="map-link-small"
