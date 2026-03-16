@@ -426,19 +426,34 @@ CRITICAL ANALYSIS REQUIREMENTS:
 7. Avoid generic advice; be specific to the identified plant species.
 8. DO NOT use emojis in any text fields. Use plain text only.
 9. DO NOT mention specific stores, suppliers, or companies in the text. Only mention the product name or active ingredient.
-10. CONSISTENCY RULE: If "healthStatus" is "Healthy"/"Sihat", then "severity" MUST be "mild" and "disease" MUST be "No Issues" or "Tiada Masalah". NEVER combine "Healthy" with "Severe" or "Unhealthy".
-11. MANDATORY JUSTIFICATION: In "additionalNotes", provide a short, friendly justification (e.g., "We estimate your plant is healthy because the leaves show vibrant green growth without signs of pests"). DO NOT be overly technical; keep it simple and encouraging (MAX 2-3 sentences). This is displayed as "Idea Utama" to the user.
-12. CRITICAL - FERTILIZER NAMES: In "fertilizerRecommendations", ALWAYS provide SPECIFIC product names (e.g., "NPK 15-15-15", "Urea 46%", "Baja Organik Ayam", "MOP (Muriate of Potash)"). NEVER use generic words like "Chemical", "Organic", "Kimia", "Organik", "Fertilizer", or "Baja" as the fertilizerName. If you don't know a specific product, use descriptive names like "NPK Compound 12-12-17" or "Poultry Manure Organic".
-13. CRITICAL - ARRAY POPULATION: ALL array fields (symptoms, immediateActions, treatments, prevention, dailyCare, weeklyCare, monthlyCare, bestPractices) MUST contain at least 2-4 items. DO NOT leave arrays empty or with single items.
-14. CRITICAL - NUTRIENT DEFICIENCY: If you identify ANY nutrient deficiency (yellowing, stunted growth, leaf discoloration), you MUST:
+10. STRICT DIAGNOSTIC MATRIX - You MUST apply these visual rules to differentiate similar conditions:
+    - Nitrogen (N) Deficiency: Uniform yellowing starting on older/lower leaves.
+    - Potassium (K) Deficiency: Yellowing or burning (necrosis) at leaf edges/margins of older leaves.
+    - Magnesium (Mg) Deficiency: Interveinal chlorosis (yellowing between green veins) on older leaves.
+    - Iron (Fe)/Calcium (Ca) Deficiency: Symptoms appear on NEW/upper leaves (Fe: interveinal chlorosis, Ca: curling/necrotic tips).
+    - Fungal Disease: Circular/irregular necrotic spots, often with characteristic colored margins (halos) or visible spores.
+    - Bacterial Disease: Water-soaked lesions, angular spots strictly constrained by leaf veins.
+    - Viral Disease: Mosaic patterns (mottling), leaf distortion/curling. Very rarely has distinct necrotic spots or halos.
+11. CHAIN OF THOUGHT: You MUST systematically analyze the visual evidence by filling out the "diagnosticReasoning" object BEFORE making a final diagnosis in the "disease" field.
+12. CONSISTENCY RULE: If "healthStatus" is "Healthy"/"Sihat", then "severity" MUST be "mild" and "disease" MUST be "No Issues" or "Tiada Masalah". NEVER combine "Healthy" with "Severe" or "Unhealthy".
+13. MANDATORY JUSTIFICATION: In "additionalNotes", provide a short, friendly justification (e.g., "We estimate your plant is healthy because the leaves show vibrant green growth without signs of pests"). DO NOT be overly technical; keep it simple and encouraging (MAX 2-3 sentences). This is displayed as "Idea Utama" to the user.
+14. CRITICAL - FERTILIZER NAMES: In "fertilizerRecommendations", ALWAYS provide SPECIFIC product names (e.g., "NPK 15-15-15", "Urea 46%", "Baja Organik Ayam", "MOP (Muriate of Potash)"). NEVER use generic words like "Chemical", "Organic", "Kimia", "Organik", "Fertilizer", or "Baja" as the fertilizerName. If you don't know a specific product, use descriptive names like "NPK Compound 12-12-17" or "Poultry Manure Organic".
+15. CRITICAL - ARRAY POPULATION: ALL array fields (symptoms, immediateActions, treatments, prevention, dailyCare, weeklyCare, monthlyCare, bestPractices) MUST contain at least 2-4 items. DO NOT leave arrays empty or with single items.
+16. CRITICAL - NUTRIENT DEFICIENCY: If you identify ANY nutrient deficiency (yellowing, stunted growth, leaf discoloration), you MUST:
     - Set "nutritionalIssues.hasDeficiency": true
     - Fill "nutritionalIssues.deficientNutrients" array with detailed objects
     - Set "pathogenType" to "Environmental" or "Nutritional"
     - Provide "fertilizerRecommendations" array with 2-3 specific fertilizers
-15. HEALTHY PLANTS CARE: If plant is healthy, you MUST still provide "healthyCarePlan" with complete dailyCare, weeklyCare, monthlyCare, and bestPractices arrays (minimum 3 items each).
+17. HEALTHY PLANTS CARE: If plant is healthy, you MUST still provide "healthyCarePlan" with complete dailyCare, weeklyCare, monthlyCare, and bestPractices arrays (minimum 3 items each).
 
 ${isMalay ? 'Format respons dalam JSON:' : 'Format response as JSON:'}
 {
+  "diagnosticReasoning": {
+    "leafLocationAnalysis": "${isMalay ? 'adakah simptom pada daun lama atau baru?' : isChinese ? '症状出现在老叶还是新叶上？' : 'are symptoms on older or newer leaves?'}",
+    "symptomPatternAnalysis": "${isMalay ? 'adakah kekuningan seragam, celah urat, atau tompokan?' : isChinese ? '发黄是均匀的、脉间的还是斑点状的？' : 'is yellowing uniform, interveinal, or spotted?'}",
+    "lesionAnalysis": "${isMalay ? 'bentuk tompok, ada halo atau spora? (jika ada)' : isChinese ? '斑点形状，是否有晕圈或孢子？（如果有）' : 'shape of lesions, halos, or spores? (if any)'}",
+    "conclusion": "${isMalay ? 'kesimpulan berdasarkan matriks' : isChinese ? '基于矩阵的结论' : 'conclusion based on the diagnostic matrix'}"
+  },
   "disease": "${isMalay ? 'IDENTIFIER RINGKAS (MAX 3 PATAH PERKATAAN). Cth: "Kulat Daun", "Reput Buah", "Tiada Masalah". DILARANG tulis ayat panjang di sini.' : isChinese ? '简短标识符（最多3个词）。例如：“叶锈病”、“果实腐烂”、“无问题”。此处请勿写长句子。' : 'SHORT IDENTIFIER (MAX 3 WORDS). e.g. "Leaf Rust", "Fruit Rot", "No Issues". DO NOT write long sentences here.'}",
   "additionalNotes": "${isMalay ? 'IDEA UTAMA (WAJIB): Berikan huraian mesra pengguna tentang bagaimana anggaran dibuat (Cth: "Kami perhatikan daun anda hijau dan tiada tanda serangga, kami anggarkan ia sihat 90%"). Beri galakan. (MAX 2-3 ayat).' : isChinese ? '核心建议（必填）：以友好的方式说明诊断依据（例如：“我们注意到您的叶片呈鲜绿色且无虫害迹象，因此我们估计植物 90% 健康”）。请保持语气友好且带有鼓励性（最多2-3句话）。' : 'KEY IDEA (MANDATORY): Provide a user-friendly explanation of how the estimate was made (e.g. "We noticed your leaves are green and pest-free, so we estimate it is 90% healthy"). Keep it friendly and encouraging. (MAX 2-3 sentences).'} ",
   "healthStatus": "Healthy / Unhealthy",
