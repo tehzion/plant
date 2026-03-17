@@ -28,8 +28,23 @@ const aiCache = new NodeCache({ stdTTL: 86400 });
 // Security Headers & Middlewares
 app.use(helmet());
 app.use(compression());
+
+// Restricted CORS
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-    origin: '*',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl) or allowed origins
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -55,14 +70,17 @@ const limiter = rateLimit({
 
 // Health Check
 app.get('/api/health', (req, res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
     res.json({
         status: 'ok',
         message: 'Plant Analysis API',
         timestamp: new Date().toISOString(),
-        config: {
-            openai: !!process.env.OPENAI_API_KEY,
-            plantnet: !!process.env.PLANTNET_API_KEY
-        }
+        ...(!isProduction && {
+            config: {
+                openai: !!process.env.OPENAI_API_KEY,
+                plantnet: !!process.env.PLANTNET_API_KEY
+            }
+        })
     });
 });
 

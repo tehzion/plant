@@ -18,6 +18,9 @@ const Footer = () => {
                 )}
                 <p>
                     &copy; {new Date().getFullYear()} {t('common.madeInMY')} <span className="my-badge">MY</span>
+                    {typeof __APP_VERSION__ !== 'undefined' && (
+                        <span className="version-tag"> | {__APP_VERSION__}</span>
+                    )}
                 </p>
             </div>
 
@@ -59,6 +62,12 @@ const Footer = () => {
                 .app-footer p {
                     margin: 0;
                     opacity: 0.8;
+                }
+
+                .version-tag {
+                    font-size: 0.75rem;
+                    opacity: 0.6;
+                    margin-left: 4px;
                 }
 
                 .my-badge {

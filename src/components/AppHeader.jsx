@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import LanguageSelector from './LanguageSelector';
+import { RefreshCw } from 'lucide-react';
 
 const AppHeader = ({ isHome }) => {
     const { t } = useLanguage();
@@ -44,6 +45,14 @@ const AppHeader = ({ isHome }) => {
                 </div>
 
                 <div className="header-right">
+                    <button 
+                        onClick={() => window.location.reload()} 
+                        className="refresh-btn"
+                        title="Refresh App"
+                        aria-label="Refresh App"
+                    >
+                        <RefreshCw size={20} />
+                    </button>
                     <LanguageSelector />
                 </div>
             </div>
@@ -81,6 +90,33 @@ const AppHeader = ({ isHome }) => {
                     width: auto;
                     object-fit: contain;
                     mix-blend-mode: multiply; /* Hides white background */
+                }
+
+                .header-right {
+                    display: flex;
+                    align-items: center;
+                    gap: var(--space-md);
+                }
+
+                .refresh-btn {
+                    background: none;
+                    border: none;
+                    color: var(--color-text-secondary);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: var(--space-xs);
+                    border-radius: 50%;
+                    transition: all 0.2s;
+                    opacity: 0.7;
+                }
+
+                .refresh-btn:hover {
+                    background: rgba(0, 177, 79, 0.1);
+                    color: var(--color-primary);
+                    opacity: 1;
+                    transform: rotate(30deg);
                 }
 
                 @media (max-width: 768px) {

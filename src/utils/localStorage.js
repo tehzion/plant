@@ -3,7 +3,11 @@ import CryptoJS from 'crypto-js';
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
 const CHECKLIST_KEY = 'sea_plant_mygap_checklist';
-const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'sea-plant-default-secret-key-2025';
+const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
+
+if (!SECRET_KEY && import.meta.env.DEV) {
+    console.warn('⚠️ VITE_ENCRYPTION_KEY is missing. Local storage will be unencrypted in development.');
+}
 
 /**
  * Encrypt data string
@@ -11,6 +15,7 @@ const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'sea-plant-default-sec
  * @returns {string} Encrypted text
  */
 const encryptData = (text) => {
+    if (!SECRET_KEY) return text; // No key = store as plain text
     return CryptoJS.AES.encrypt(text, SECRET_KEY).toString();
 };
 
@@ -20,8 +25,14 @@ const encryptData = (text) => {
  * @returns {string} Decrypted text
  */
 const decryptData = (ciphertext) => {
-    const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    if (!SECRET_KEY) return ciphertext; // No key = assume plain text
+    try {
+        const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        return decrypted || ciphertext; // If decryption returns empty, data was likely plain text
+    } catch (e) {
+        return ciphertext; // Fallback: return as-is if decryption fails
+    }
 };
 
 /**
