@@ -688,6 +688,9 @@ export const translations = {
             or: 'OR',
             continueGoogle: 'Continue with Google',
             continueFacebook: 'Continue with Facebook',
+            errorInvalidCredentials: 'Wrong email or password.',
+            errorEmailExists: 'That email is already registered. Try signing in instead.',
+            errorEmailNotConfirmed: 'Please confirm your email first, then sign in.',
         },
         // Onboarding
         onboarding: {
@@ -1448,6 +1451,9 @@ export const translations = {
             or: 'ATAU',
             continueGoogle: 'Teruskan dengan Google',
             continueFacebook: 'Teruskan dengan Facebook',
+            errorInvalidCredentials: 'Nama pengguna atau kata laluan salah.',
+            errorEmailExists: 'E-mel tersebut telah didaftarkan. Sila log masuk.',
+            errorEmailNotConfirmed: 'Sila sahkan e-mel anda dahulu, kemudian log masuk.',
         },
         // Onboarding
         onboarding: {
@@ -2111,7 +2117,7 @@ export const translations = {
             followInstructions: '按包装说明操作',
             defaultHealthyReasoning: '我们的分析显示您的植物看起来充满活力，没有可见的病原体或胁迫标志。请继续当前的护理作息以保持这种健康状态。',
             defaultUnhealthyReasoning: '根据变色或病变等视觉症状，我们的系统发现了潜在的胁迫因素。建议您按照以下治疗步骤恢复植物健康。',
-            
+
             loadingProducts: '加载产品中...',
             productsError: '无法加载产品。请稍后再试。',
             whyTheseProducts: '为何推荐这些产品？',
@@ -2201,6 +2207,9 @@ export const translations = {
             or: '或者',
             continueGoogle: '使用Google继续',
             continueFacebook: '使用Facebook继续',
+            errorInvalidCredentials: '邮箱或密码错误。',
+            errorEmailExists: '该邮箱已注册，请直接登录。',
+            errorEmailNotConfirmed: '请先验证您的邮箱，然后再登录。',
         },
 
         // 引导页
