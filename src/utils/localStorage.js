@@ -18,9 +18,13 @@ const encryptData = (text) => {
 };
 
 const decryptData = (ciphertext) => {
-    if (!SECRET_KEY) return ciphertext;
+    if (!SECRET_KEY || !ciphertext) return ciphertext;
+    
+    // If it looks like raw JSON array/object, don't decrypt it
+    if (ciphertext.startsWith('[') || ciphertext.startsWith('{')) return ciphertext;
+
     try {
-        const bytes     = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+        const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
         const decrypted = bytes.toString(CryptoJS.enc.Utf8);
         return decrypted || ciphertext;
     } catch {
@@ -175,7 +179,12 @@ export const getScanHistory = (userId = null) => {
             const decrypted = decryptData(data);
             return JSON.parse(decrypted);
         } catch {
-            try { return JSON.parse(data); } catch { return []; }
+            try { 
+                return JSON.parse(data); 
+            } catch { 
+                localStorage.removeItem(STORAGE_KEY);
+                return []; 
+            }
         }
     } catch {
         return [];
@@ -351,7 +360,12 @@ export const getLogbook = (userId = null) => {
     try {
         const data = localStorage.getItem(LOGBOOK_KEY);
         if (!data) return [];
-        return JSON.parse(decryptData(data));
+        try {
+            return JSON.parse(decryptData(data));
+        } catch {
+            localStorage.removeItem(LOGBOOK_KEY);
+            return [];
+        }
     } catch {
         return [];
     }
@@ -403,7 +417,12 @@ export const getChecklistState = (userId = null) => {
     try {
         const data = localStorage.getItem(CHECKLIST_KEY);
         if (!data) return {};
-        return JSON.parse(decryptData(data));
+        try {
+            return JSON.parse(decryptData(data));
+        } catch {
+            localStorage.removeItem(CHECKLIST_KEY);
+            return {};
+        }
     } catch {
         return {};
     }
@@ -491,7 +510,12 @@ export const getDailyNotes = (userId = null) => {
         const NOTES_KEY = 'sea_plant_daily_notes';
         const data = localStorage.getItem(NOTES_KEY);
         if (!data) return [];
-        return JSON.parse(decryptData(data));
+        try {
+            return JSON.parse(decryptData(data));
+        } catch {
+            localStorage.removeItem(NOTES_KEY);
+            return [];
+        }
     } catch {
         return [];
     }
@@ -559,7 +583,12 @@ export const getPlots = (userId = null) => {
         const PLOTS_KEY = 'sea_plant_plots';
         const data = localStorage.getItem(PLOTS_KEY);
         if (!data) return [];
-        return JSON.parse(decryptData(data));
+        try {
+            return JSON.parse(decryptData(data));
+        } catch {
+            localStorage.removeItem(PLOTS_KEY);
+            return [];
+        }
     } catch {
         return [];
     }
