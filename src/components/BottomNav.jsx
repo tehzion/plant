@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Home as HomeIcon, ClipboardList, BookOpen, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const BottomNav = () => {
     const location = useLocation();
     const { t } = useLanguage();
+    const { user } = useAuth();
     const [showLegal, setShowLegal] = useState(false);
+
+    // Initials for avatar
+    const initials = user?.email
+        ? user.email.split('@')[0].slice(0, 2).toUpperCase()
+        : null;
 
     useEffect(() => {
         const handleScroll = () => {
@@ -52,7 +59,14 @@ const BottomNav = () => {
                     <span className="nav-item-label">{t('nav.encyclopedia')}</span>
                 </Link>
                 <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`}>
-                    <span className="nav-item-icon"><User size={20} strokeWidth={1.5} /></span>
+                    <span className="nav-item-icon" style={{ position: 'relative' }}>
+                        {initials ? (
+                            <span className="bottom-nav-avatar">{initials}</span>
+                        ) : (
+                            <User size={20} strokeWidth={1.5} />
+                        )}
+                        {initials && <span className="bottom-nav-auth-dot" />}
+                    </span>
                     <span className="nav-item-label">{t('nav.profile')}</span>
                 </Link>
             </div>
@@ -91,6 +105,31 @@ const BottomNav = () => {
                     opacity: 1;
                     height: auto;
                     margin-bottom: 4px;
+                }
+
+                .bottom-nav-avatar {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    background: var(--color-primary);
+                    color: white;
+                    font-size: 0.6rem;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                }
+
+                .bottom-nav-auth-dot {
+                    position: absolute;
+                    top: -2px;
+                    right: -2px;
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    border: 1.5px solid white;
                 }
             `}</style>
         </nav>

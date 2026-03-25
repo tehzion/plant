@@ -8,6 +8,7 @@ import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 
 import { ScanProvider } from './context/ScanContext';
+import { AuthProvider } from './context/AuthContext';
 
 const Home = lazy(() => import('./pages/Home'));
 const Results = lazy(() => import('./pages/Results'));
@@ -20,31 +21,34 @@ const UserGuide = lazy(() => import('./pages/UserGuide'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function App() {
+    console.log('⚛️ App: Rendering full tree...');
     return (
-        <LanguageProvider>
-            <ErrorBoundary>
-                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                    <ScanProvider>
-                        <Layout>
-                            <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
-                                <Routes>
-                                    <Route path="/" element={<Home />} />
-                                    <Route path="/results/:id" element={<Results />} />
-                                    <Route path="/history" element={<History />} />
-                                    <Route path="/encyclopedia" element={<Encyclopedia />} />
-                                    <Route path="/profile" element={<Login />} />
-                                    <Route path="/mygap" element={<MyGap />} />
-                                    <Route path="/onboarding" element={<Onboarding />} />
-                                    <Route path="/guide" element={<UserGuide />} />
-                                    <Route path="/terms" element={<TermsOfUse />} />
-                                    <Route path="/privacy" element={<PrivacyPolicy />} />
-                                    <Route path="*" element={<NotFound />} />
-                                </Routes>
-                            </Suspense>
-                        </Layout>
-                    </ScanProvider>
-                </BrowserRouter>
-            </ErrorBoundary>
+        <ErrorBoundary>
+            <AuthProvider>
+                <LanguageProvider>
+                    <BrowserRouter>
+                        <ScanProvider>
+                            <Layout>
+                                <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
+                                    <Routes>
+                                        <Route path="/" element={<Home />} />
+                                        <Route path="/results/:id" element={<Results />} />
+                                        <Route path="/history" element={<History />} />
+                                        <Route path="/encyclopedia" element={<Encyclopedia />} />
+                                        <Route path="/profile" element={<Login />} />
+                                        <Route path="/mygap" element={<MyGap />} />
+                                        <Route path="/onboarding" element={<Onboarding />} />
+                                        <Route path="/guide" element={<UserGuide />} />
+                                        <Route path="/terms" element={<TermsOfUse />} />
+                                        <Route path="/privacy" element={<PrivacyPolicy />} />
+                                        <Route path="*" element={<NotFound />} />
+                                    </Routes>
+                                </Suspense>
+                            </Layout>
+                        </ScanProvider>
+                    </BrowserRouter>
+                </LanguageProvider>
+            </AuthProvider>
             <style>{`
                 .page-loading {
                     display: flex;
@@ -53,7 +57,7 @@ function App() {
                     min-height: 50vh;
                 }
             `}</style>
-        </LanguageProvider>
+        </ErrorBoundary>
     );
 }
 

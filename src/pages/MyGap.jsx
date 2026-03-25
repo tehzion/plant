@@ -6,11 +6,13 @@ import {
     ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download
 } from 'lucide-react';
 import { getLogbook, saveLogEntry, getChecklistState, saveChecklistState } from '../utils/localStorage';
+import { useAuth } from '../context/AuthContext';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
     const [logs, setLogs] = useState([]);
     const [checklist, setChecklist] = useState({});
@@ -23,19 +25,26 @@ const MyGapPage = () => {
     const [phiResult, setPhiResult] = useState(null);
 
     useEffect(() => {
-        setLogs(getLogbook());
-        setChecklist(getChecklistState());
-    }, []);
+        const loadData = async () => {
+            const [logs, checklist] = await Promise.all([
+                Promise.resolve(getLogbook(user?.id ?? null)),
+                Promise.resolve(getChecklistState(user?.id ?? null))
+            ]);
+            setLogs(logs);
+            setChecklist(checklist);
+        };
+        loadData();
+    }, [user?.id]);
 
-    const handleCheckToggle = (id) => {
+    const handleCheckToggle = async (id) => {
         const newState = { ...checklist, [id]: !checklist[id] };
         setChecklist(newState);
-        saveChecklistState(newState);
+        await saveChecklistState(newState, user?.id ?? null);
     };
 
-    const handleAddLog = (e) => {
+    const handleAddLog = async (e) => {
         e.preventDefault();
-        const entry = saveLogEntry(newLog);
+        const entry = await saveLogEntry(newLog, user?.id ?? null);
         if (entry) {
             setLogs([entry, ...logs]);
             setIsAddingLog(false);

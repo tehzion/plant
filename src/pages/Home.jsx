@@ -18,6 +18,7 @@ import { useGreeting } from '../hooks/useGreeting';
 import { useLocation } from '../hooks/useLocation';
 import { useWeather } from '../hooks/useWeather';
 import { useScanContext } from '../context/ScanContext';
+import { useAuth } from '../context/AuthContext';
 
 // UI Components
 import HeroSection from '../components/home/HeroSection';
@@ -26,6 +27,7 @@ import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
 import DailyTips from '../components/home/DailyTips';
 import ServicesGrid from '../components/home/ServicesGrid';
+import FarmingNotices from '../components/home/FarmingNotices';
 
 const Home = () => {
   const { t, language } = useLanguage();
@@ -36,8 +38,9 @@ const Home = () => {
   // Custom Hooks
   const { getGreeting } = useGreeting();
   const { location, locationName, isLocating, getLocation, setLocationName } = useLocation();
-  const { weatherTemp, weatherIcon, fetchWeather } = useWeather();
+  const { weatherTemp, weatherIcon, forecast, fetchWeather } = useWeather();
   const { state: scanState, actions: scanActions } = useScanContext();
+  const { user } = useAuth();
   const isMounted = useRef(true);
 
   // Track mounted state
@@ -102,10 +105,13 @@ const Home = () => {
   useEffect(() => {
     if (viewMode === 'dashboard') {
       // Refresh scan history whenever dashboard is active or scan completes
-      const history = getScanHistory();
-      setRecentScans(history.slice(0, 4));
+      const fetchHistory = async () => {
+        const history = await Promise.resolve(getScanHistory(user?.id ?? null));
+        setRecentScans(history.slice(0, 4));
+      };
+      fetchHistory();
     }
-  }, [viewMode, loading]); // Added loading to auto-refresh history after background scan
+  }, [viewMode, loading, user?.id]); // Added loading to auto-refresh history after background scan
 
   // Initial Location & Weather
   useEffect(() => {
@@ -288,6 +294,11 @@ const Home = () => {
             onSeeAll={() => navigate('/history')}
             onScanClick={(id) => navigate(`/results/${id}`)}
           />
+
+          {/* Farming Notices — logged-in users only */}
+          {user && forecast.length > 0 && (
+            <FarmingNotices forecast={forecast} />
+          )}
 
           <DailyTips />
 

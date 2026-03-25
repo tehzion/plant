@@ -3,6 +3,7 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease } from '../utils/diseaseDetection';
 import { saveScan } from '../utils/localStorage';
 import { getStandardizedStatus } from '../utils/statusUtils';
+import { useAuth } from '../context/AuthContext';
 
 // Scan state reducer
 const scanReducer = (state, action) => {
@@ -53,6 +54,7 @@ const initialScanState = {
 
 export const useScanLogic = () => {
     const { language, t } = useLanguage();
+    const { user } = useAuth();
     const [state, dispatch] = useReducer(scanReducer, initialScanState);
     const stateRef = useRef(state);
     useEffect(() => {
@@ -108,7 +110,7 @@ export const useScanLogic = () => {
                 const leafImageThumbnail = currentState.selectedLeafImage ? await imageToBase64(currentState.selectedLeafImage, 400) : null;
                 const standardizedHealthStatus = getStandardizedStatus(result);
 
-                const savedScan = saveScan({
+                const savedScan = await saveScan({
                     image: treeImageThumbnail,
                     leafImage: leafImageThumbnail,
                     ...result,
@@ -120,7 +122,7 @@ export const useScanLogic = () => {
                     scaleQuantity: currentState.scaleQuantity,
                     location: location,
                     locationName: locationName || result.locationName
-                });
+                }, user?.id ?? null);
 
                 dispatch({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;
@@ -150,7 +152,7 @@ export const useScanLogic = () => {
             setError,
             performAnalyze
         };
-    }, [language, t, stateRef]);
+    }, [language, t, stateRef, user]);
 
     return {
         state,

@@ -87,7 +87,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
           {scan.locationName && (
             <p className="scan-location">
               <MapPin size={14} className="location-icon" />
-              {t(scan.locationName)}
+              {t(`common.${scan.locationName}`, scan.locationName)}
             </p>
           )}
         </div>

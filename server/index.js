@@ -7,7 +7,7 @@ import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags } from './services/aiService.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk } from './services/aiService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds } from './services/wooCommerceService.js';
 
 import path from 'path';
@@ -296,6 +296,63 @@ app.post('/api/products/search', async (req, res, next) => {
     } catch (error) {
         console.error('❌ Product search failed:', error);
         res.status(500).json({ error: 'Failed to search products' });
+    }
+});
+
+// ----------------------------------------------------------------------------------
+// PHASE 3: FARM INTELLIGENCE ENDPOINTS
+// ----------------------------------------------------------------------------------
+
+// 1. AI Agronomist Insights
+app.post('/api/farm/insights', async (req, res, next) => {
+    try {
+        const { logs, alerts, harvestData, plots, checklistPct, language = 'en' } = req.body;
+        if (!logs || !Array.isArray(logs)) {
+            return res.status(400).json({ error: 'logs array is required' });
+        }
+        const insights = await generateAgronomistInsights(logs, alerts, harvestData, plots, checklistPct, language);
+        res.json(insights);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// 2. Smart Treatment SOP Generator
+app.post('/api/farm/sop', async (req, res, next) => {
+    try {
+        const { crop, disease, severity, language = 'en' } = req.body;
+        if (!crop || !disease) {
+            return res.status(400).json({ error: 'crop and disease are required' });
+        }
+        const sop = await generateTreatmentSOP(crop, disease, severity, language);
+        res.json(sop);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// 3. Natural Language Activity Logging
+app.post('/api/farm/parse-log', async (req, res, next) => {
+    try {
+        const { text, language = 'en' } = req.body;
+        if (!text) {
+            return res.status(400).json({ error: 'text is required' });
+        }
+        const parsedData = await parseNaturalLanguageLog(text, language);
+        res.json(parsedData);
+    } catch (error) {
+        next(error);
+    }
+});
+
+// 4. Predictive Farm Risk Assessor
+app.post('/api/farm/predict', async (req, res, next) => {
+    try {
+        const { plots, logs, alerts, location, language = 'en' } = req.body;
+        const risk = await generatePredictiveRisk(plots, logs, alerts, location, language);
+        res.json(risk);
+    } catch (error) {
+        next(error);
     }
 });
 

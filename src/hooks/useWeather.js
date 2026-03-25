@@ -1,33 +1,111 @@
 import { useState, useCallback } from 'react';
 
+// WMO weather code → icon name
+const wmoIcon = (code) => {
+    if (code === 0)       return 'sun';
+    if (code <= 3)        return 'cloud-sun';
+    if (code <= 49)       return 'cloud';
+    if (code <= 69)       return 'cloud-rain';
+    if (code <= 79)       return 'snowflake';
+    if (code <= 99)       return 'cloud-lightning';
+    return 'cloud-sun';
+};
+
+/**
+ * Maps a WMO code to a short description string.
+ */
+const wmoDesc = (code) => {
+    if (code === 0)            return 'Clear sky';
+    if (code <= 3)             return 'Partly cloudy';
+    if (code <= 49)            return 'Fog / haze';
+    if (code <= 55)            return 'Drizzle';
+    if (code <= 65)            return 'Rain';
+    if (code <= 69)            return 'Freezing rain';
+    if (code <= 79)            return 'Snow';
+    if (code <= 82)            return 'Rain showers';
+    if (code <= 86)            return 'Snow showers';
+    if (code <= 99)            return 'Thunderstorm';
+    return 'Unknown';
+};
+
+/**
+ * Derives farming notice from daily forecast values.
+ * @param {{ precip: number, humidity: number, uvIndex: number, tempMax: number }} day
+ * @returns {{ status: 'good'|'caution'|'warning', message: string }}
+ */
+export const deriveFarmingNotice = ({ precip = 0, humidity = 70, uvIndex = 5, tempMax = 30 }) => {
+    if (precip > 25) {
+        return { status: 'warning', message: 'Heavy rain expected — avoid spraying, check drainage' };
+    }
+    if (precip > 8) {
+        return { status: 'caution', message: 'Moderate rain — delay foliar applications' };
+    }
+    if (uvIndex > 9) {
+        return { status: 'caution', message: 'High UV — spray before 9am or after 5pm' };
+    }
+    if (tempMax > 36) {
+        return { status: 'caution', message: 'Heat stress risk — irrigate and monitor soil moisture' };
+    }
+    if (humidity < 50) {
+        return { status: 'caution', message: 'Low humidity — watch for spider mite activity' };
+    }
+    return { status: 'good', message: 'Good spray window — dry, calm conditions' };
+};
+
 export const useWeather = () => {
-    const [weatherTemp, setWeatherTemp] = useState(null);
-    const [weatherIcon, setWeatherIcon] = useState('cloud-sun');
-    const [loading, setLoading] = useState(false);
+    const [weatherTemp, setWeatherTemp]   = useState(null);
+    const [weatherIcon, setWeatherIcon]   = useState('cloud-sun');
+    const [forecast, setForecast]         = useState([]);   // array of daily forecast objects
+    const [loading, setLoading]           = useState(false);
 
     const fetchWeather = useCallback(async (lat, lng) => {
         if (!lat || !lng) return;
-
         setLoading(true);
         try {
-            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
-            const weatherData = await weatherRes.json();
-            const current = weatherData.current_weather;
+            const url = [
+                `https://api.open-meteo.com/v1/forecast`,
+                `?latitude=${lat}&longitude=${lng}`,
+                `&current_weather=true`,
+                // 5-day daily fields for farming notices
+                `&daily=precipitation_sum,relative_humidity_2m_max,uv_index_max,temperature_2m_max,weathercode`,
+                `&timezone=auto`,
+                `&forecast_days=5`,
+            ].join('');
 
+            const res  = await fetch(url);
+            const data = await res.json();
+
+            // ── Current conditions ───────────────────────────────────
+            const current = data.current_weather;
             if (current) {
                 setWeatherTemp(Math.round(current.temperature));
-                const code = current.weathercode;
+                setWeatherIcon(wmoIcon(current.weathercode));
+            }
 
-                // Map WMO codes to icon names
-                if (code === 0) setWeatherIcon('sun');
-                else if (code <= 3) setWeatherIcon('cloud-sun');
-                else if (code <= 69) setWeatherIcon('cloud-rain');
-                else if (code <= 79) setWeatherIcon('snowflake');
-                else if (code <= 99) setWeatherIcon('cloud-lightning');
+            // ── Daily forecast ───────────────────────────────────────
+            if (data.daily && data.daily.time) {
+                const days = data.daily.time.map((date, i) => {
+                    const precip   = data.daily.precipitation_sum?.[i]        ?? 0;
+                    const humidity = data.daily.relative_humidity_2m_max?.[i] ?? 70;
+                    const uvIndex  = data.daily.uv_index_max?.[i]             ?? 5;
+                    const tempMax  = data.daily.temperature_2m_max?.[i]       ?? 30;
+                    const code     = data.daily.weathercode?.[i]              ?? 0;
+
+                    return {
+                        date,
+                        precip,
+                        humidity,
+                        uvIndex,
+                        tempMax,
+                        icon:   wmoIcon(code),
+                        desc:   wmoDesc(code),
+                        notice: deriveFarmingNotice({ precip, humidity, uvIndex, tempMax }),
+                    };
+                });
+                setForecast(days);
             }
         } catch (e) {
-            console.error("Weather fetch failed", e);
-            // Fallback
+            console.error('Weather fetch failed', e);
             setWeatherTemp(30);
             setWeatherIcon('sun');
         } finally {
@@ -35,5 +113,5 @@ export const useWeather = () => {
         }
     }, []);
 
-    return { weatherTemp, weatherIcon, loading, fetchWeather };
+    return { weatherTemp, weatherIcon, forecast, loading, fetchWeather };
 };

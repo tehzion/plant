@@ -1,93 +1,134 @@
 import CryptoJS from 'crypto-js';
+import { supabase } from '../lib/supabase';
 
-const STORAGE_KEY = 'sea_plant_scan_history';
-const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
+// ─── localStorage keys (guest mode) ──────────────────────────────────────────
+const STORAGE_KEY   = 'sea_plant_scan_history';
+const LOGBOOK_KEY   = 'sea_plant_mygap_logbook';
 const CHECKLIST_KEY = 'sea_plant_mygap_checklist';
-const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
+const SECRET_KEY    = import.meta.env.VITE_ENCRYPTION_KEY;
 
 if (!SECRET_KEY && import.meta.env.DEV) {
-    console.warn('⚠️ VITE_ENCRYPTION_KEY is missing. Local storage will be unencrypted in development.');
+    console.warn('⚠️ VITE_ENCRYPTION_KEY is missing. localStorage will be unencrypted in guest mode.');
 }
 
-/**
- * Encrypt data string
- * @param {string} text - Text to encrypt
- * @returns {string} Encrypted text
- */
+// ─── Encryption helpers (guest localStorage paths only) ──────────────────────
 const encryptData = (text) => {
-    if (!SECRET_KEY) return text; // No key = store as plain text
+    if (!SECRET_KEY) return text;
     return CryptoJS.AES.encrypt(text, SECRET_KEY).toString();
 };
 
-/**
- * Decrypt data string
- * @param {string} ciphertext - Encrypted text
- * @returns {string} Decrypted text
- */
 const decryptData = (ciphertext) => {
-    if (!SECRET_KEY) return ciphertext; // No key = assume plain text
+    if (!SECRET_KEY) return ciphertext;
     try {
-        const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+        const bytes     = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
         const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-        return decrypted || ciphertext; // If decryption returns empty, data was likely plain text
-    } catch (e) {
-        return ciphertext; // Fallback: return as-is if decryption fails
+        return decrypted || ciphertext;
+    } catch {
+        return ciphertext;
     }
 };
 
+// ─── Image helpers ────────────────────────────────────────────────────────────
 /**
- * Save a scan result to local storage (Encrypted)
- * @param {Object} scanData - The scan data to save
- * @param {string} scanData.image - Base64 image data
- * @param {string} scanData.disease - Disease name
- * @param {number} scanData.confidence - Confidence percentage
- * @param {string} scanData.severity - Severity level (mild/moderate/severe)
- * @param {string} scanData.plantPart - Affected plant part
- * @param {Array} scanData.treatments - Treatment recommendations
- * @param {string} scanData.category - Plant category
+ * Upload a base64 image to Supabase Storage.
+ * Returns the public URL, or null on failure.
  */
-export const saveScan = (scanData) => {
+const uploadImageToStorage = async (base64, userId, scanId, suffix = 'main') => {
+    if (!supabase || !base64 || !userId) return null;
     try {
-        const history = getScanHistory();
+        // Convert data URL or plain base64 → Blob
+        const base64Data = base64.startsWith('data:')
+            ? base64.split(',')[1]
+            : base64;
+        const byteChars  = atob(base64Data);
+        const byteNums   = new Array(byteChars.length).fill(0).map((_, i) => byteChars.charCodeAt(i));
+        const blob        = new Blob([new Uint8Array(byteNums)], { type: 'image/jpeg' });
+
+        const path = `${userId}/${scanId}_${suffix}.jpg`;
+        const { error } = await supabase.storage
+            .from('scan-images')
+            .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+
+        if (error) { console.warn('Image upload failed:', error.message); return null; }
+
+        const { data } = supabase.storage.from('scan-images').getPublicUrl(path);
+        return data.publicUrl;
+    } catch (e) {
+        console.warn('Image upload exception:', e);
+        return null;
+    }
+};
+
+// ─── SCAN HISTORY ─────────────────────────────────────────────────────────────
+
+/**
+ * Save a scan result.
+ * @param {Object} scanData
+ * @param {string|null} userId  — pass user?.id; null → guest localStorage
+ */
+export const saveScan = async (scanData, userId = null) => {
+    // ── Supabase path ──
+    if (userId && supabase) {
+        try {
+            const id = Date.now().toString(36);
+
+            // Upload images in parallel, fall back gracefully if Storage is not ready
+            const [imageUrl, leafImageUrl] = await Promise.all([
+                uploadImageToStorage(scanData.image, userId, id, 'main'),
+                scanData.leafImage
+                    ? uploadImageToStorage(scanData.leafImage, userId, id, 'leaf')
+                    : Promise.resolve(null)
+            ]);
+
+            // Build the row — store full result as result_json, key fields as columns for queries
+            const row = {
+                id,
+                user_id:       userId,
+                disease:       scanData.disease       || null,
+                confidence:    scanData.confidence    ?? null,
+                severity:      scanData.severity      || null,
+                category:      scanData.category      || null,
+                scale:         scanData.farmScale     || scanData.scale || null,
+                location_name: scanData.locationName  || null,
+                result_json:   { ...scanData, image: null, leafImage: null }, // strip blobs
+                image_url:     imageUrl,
+                leaf_image_url: leafImageUrl,
+                created_at:    new Date().toISOString(),
+            };
+
+            const { error } = await supabase.from('scan_history').insert(row);
+            if (error) throw error;
+
+            // Return a shape identical to the localStorage version so callers don't break
+            return { ...scanData, id, timestamp: row.created_at, image_url: imageUrl };
+        } catch (err) {
+            console.error('Supabase saveScan error:', err);
+            throw err;
+        }
+    }
+
+    // ── Guest localStorage path (original logic, unchanged) ──
+    try {
+        const history = getScanHistory(); // synchronous guest version
         const newScan = {
-            id: Date.now().toString(36), // Shortened ID (Base36)
+            id: Date.now().toString(36),
             timestamp: new Date().toISOString(),
             ...scanData
         };
-
-        history.unshift(newScan); // Add to beginning
-
-        // Limit to 50 most recent scans
+        history.unshift(newScan);
         const limitedHistory = history.slice(0, 50);
-
-        // ENCRYPT DATA BEFORE SAVING
-        const jsonString = JSON.stringify(limitedHistory);
-        const encryptedData = encryptData(jsonString);
-
-        localStorage.setItem(STORAGE_KEY, encryptedData);
+        localStorage.setItem(STORAGE_KEY, encryptData(JSON.stringify(limitedHistory)));
         return newScan;
     } catch (error) {
-        console.error('Error saving scan:', error);
-        // Handle quota exceeded error
+        console.error('Error saving scan (localStorage):', error);
         if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
             try {
-                // More aggressive cleanup: Keep only 15 most recent
-                console.warn('Local storage quota exceeded, clearing old history...');
-                const history = getScanHistory();
-                if (history.length > 15) {
-                    const reducedHistory = history.slice(0, 15);
-                    const encryptedData = encryptData(JSON.stringify(reducedHistory));
-                    localStorage.setItem(STORAGE_KEY, encryptedData);
-
-                    // Try one last time with the current scan
-                    // We don't recurse indefinitely, we just try once more after cleanup
-                    const finalHistory = [
-                        { id: Date.now().toString(36), timestamp: new Date().toISOString(), ...scanData },
-                        ...reducedHistory
-                    ].slice(0, 15);
-                    localStorage.setItem(STORAGE_KEY, encryptData(JSON.stringify(finalHistory)));
-                    return finalHistory[0];
-                }
+                const history  = getScanHistory();
+                const reduced  = history.slice(0, 15);
+                const newScan  = { id: Date.now().toString(36), timestamp: new Date().toISOString(), ...scanData };
+                const final    = [newScan, ...reduced].slice(0, 15);
+                localStorage.setItem(STORAGE_KEY, encryptData(JSON.stringify(final)));
+                return final[0];
             } catch (e) {
                 console.error('Failed to recover from quota error:', e);
             }
@@ -97,175 +138,455 @@ export const saveScan = (scanData) => {
 };
 
 /**
- * Get all scan history (Auto-Decrypt)
- * @returns {Array} Array of scan objects
+ * Get full scan history.
+ * @param {string|null} userId  — pass user?.id; null → guest localStorage
+ * @returns {Array}
  */
-export const getScanHistory = () => {
+export const getScanHistory = (userId = null) => {
+    // ── Supabase path returns a Promise; callers must await when logged in ──
+    if (userId && supabase) {
+        return supabase
+            .from('scan_history')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .then(({ data, error }) => {
+                if (error) { console.error('getScanHistory error:', error); return []; }
+                // Normalise shape to match localStorage scans
+                return (data || []).map(row => ({
+                    ...row.result_json,
+                    id:          row.id,
+                    timestamp:   row.created_at,
+                    disease:     row.disease,
+                    confidence:  row.confidence,
+                    severity:    row.severity,
+                    category:    row.category,
+                    image_url:   row.image_url,
+                    locationName: row.location_name,
+                }));
+            });
+    }
+
+    // ── Synchronous localStorage path ──
     try {
         const data = localStorage.getItem(STORAGE_KEY);
         if (!data) return [];
-
-        // Try to decrypt first
         try {
-            const decryptedString = decryptData(data);
-            if (decryptedString) {
-                return JSON.parse(decryptedString);
-            }
-            throw new Error('Empty decryption result');
-        } catch (e) {
-            // FALLBACK: If decryption fails, it might be old legacy plain JSON data
-            // Attempt to parse directly
-            try {
-                return JSON.parse(data);
-            } catch (jsonError) {
-                console.error('Data corruption:', jsonError);
-                return [];
-            }
+            const decrypted = decryptData(data);
+            return JSON.parse(decrypted);
+        } catch {
+            try { return JSON.parse(data); } catch { return []; }
         }
-    } catch (error) {
-        console.error('Error reading scan history:', error);
+    } catch {
         return [];
     }
 };
 
 /**
- * Get a single scan by ID
- * @param {string} id - Scan ID
- * @returns {Object|null} Scan object or null if not found
+ * Get a single scan by ID.
+ * @param {string} id
+ * @param {string|null} userId
  */
-export const getScanById = (id) => {
+export const getScanById = (id, userId = null) => {
+    if (userId && supabase) {
+        return supabase
+            .from('scan_history')
+            .select('*')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .single()
+            .then(({ data, error }) => {
+                if (error || !data) return null;
+                return {
+                    ...data.result_json,
+                    id:          data.id,
+                    timestamp:   data.created_at,
+                    disease:     data.disease,
+                    confidence:  data.confidence,
+                    severity:    data.severity,
+                    category:    data.category,
+                    image_url:   data.image_url,
+                    locationName: data.location_name,
+                };
+            });
+    }
+
     const history = getScanHistory();
-    return history.find(scan => scan.id === id) || null;
+    return history.find(s => s.id === id) || null;
 };
 
 /**
- * Delete a scan by ID
- * @param {string} id - Scan ID to delete
+ * Delete a scan by ID.
+ * @param {string} id
+ * @param {string|null} userId
  */
-export const deleteScan = (id) => {
-    try {
-        const history = getScanHistory();
-        const filtered = history.filter(scan => scan.id !== id);
-        const encryptedData = encryptData(JSON.stringify(filtered));
-        localStorage.setItem(STORAGE_KEY, encryptedData);
+export const deleteScan = async (id, userId = null) => {
+    if (userId && supabase) {
+        const { error } = await supabase
+            .from('scan_history')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+        if (error) { console.error('deleteScan error:', error); return false; }
         return true;
-    } catch (error) {
-        console.error('Error deleting scan:', error);
+    }
+
+    try {
+        const history  = getScanHistory();
+        const filtered = history.filter(s => s.id !== id);
+        localStorage.setItem(STORAGE_KEY, encryptData(JSON.stringify(filtered)));
+        return true;
+    } catch {
         return false;
     }
 };
 
 /**
- * Clear all scan history
+ * Clear all scans.
+ * @param {string|null} userId
  */
-export const clearAllScans = () => {
+export const clearAllScans = async (userId = null) => {
+    if (userId && supabase) {
+        const { error } = await supabase
+            .from('scan_history')
+            .delete()
+            .eq('user_id', userId);
+        if (error) { console.error('clearAllScans error:', error); return false; }
+        return true;
+    }
+
     try {
         localStorage.removeItem(STORAGE_KEY);
         return true;
-    } catch (error) {
-        console.error('Error clearing scan history:', error);
+    } catch {
         return false;
     }
 };
 
-
 /**
- * Get scans grouped by date
- * @returns {Object} Scans grouped by date labels (today, yesterday, etc.)
+ * Get scans grouped by date (today / yesterday / thisWeek / lastWeek / older).
+ * Pure JS grouping — same logic regardless of source.
+ * @param {string|null} userId  — if provided, getScanHistory returns a Promise
  */
-export const getGroupedScans = () => {
-    const history = getScanHistory();
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+export const getGroupedScans = async (userId = null) => {
+    const history = await Promise.resolve(getScanHistory(userId));
 
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const now       = new Date();
+    const today     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const weekAgo   = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
+    const fortAgo   = new Date(today); fortAgo.setDate(fortAgo.getDate() - 14);
 
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    const fortnightAgo = new Date(today);
-    fortnightAgo.setDate(fortnightAgo.getDate() - 14);
-
-    const grouped = {
-        today: [],
-        yesterday: [],
-        thisWeek: [],
-        lastWeek: [],
-        older: []
-    };
+    const grouped = { today: [], yesterday: [], thisWeek: [], lastWeek: [], older: [] };
 
     history.forEach(scan => {
-        const scanDate = new Date(scan.timestamp);
-        const scanDay = new Date(scanDate.getFullYear(), scanDate.getMonth(), scanDate.getDate());
-
-        if (scanDay.getTime() === today.getTime()) {
-            grouped.today.push(scan);
-        } else if (scanDay.getTime() === yesterday.getTime()) {
-            grouped.yesterday.push(scan);
-        } else if (scanDate >= weekAgo) {
-            grouped.thisWeek.push(scan);
-        } else if (scanDate >= fortnightAgo) {
-            grouped.lastWeek.push(scan);
-        } else {
-            grouped.older.push(scan);
-        }
+        const d   = new Date(scan.timestamp ?? scan.created_at);
+        const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        if (day.getTime() === today.getTime())          grouped.today.push(scan);
+        else if (day.getTime() === yesterday.getTime()) grouped.yesterday.push(scan);
+        else if (d >= weekAgo)                          grouped.thisWeek.push(scan);
+        else if (d >= fortAgo)                          grouped.lastWeek.push(scan);
+        else                                            grouped.older.push(scan);
     });
 
     return grouped;
 };
 
+
+// ─── MYGAP LOGBOOK ────────────────────────────────────────────────────────────
+
 /**
- * myGAP Digital Logbook Functions
+ * Save a logbook entry.
+ * @param {Object} logEntry
+ * @param {string|null} userId
  */
-export const saveLogEntry = (logEntry) => {
-    try {
-        const logs = getLogbook();
+export const saveLogEntry = async (logEntry, userId = null) => {
+    if (userId && supabase) {
         const newLog = {
-            id: Date.now().toString(36),
-            timestamp: new Date().toISOString(),
-            ...logEntry
+            id:         Date.now().toString(36),
+            user_id:    userId,
+            type:       logEntry.type,
+            notes:      logEntry.notes,
+            created_at: new Date().toISOString(),
         };
+        const { error } = await supabase.from('mygap_logs').insert(newLog);
+        if (error) { console.error('saveLogEntry error:', error); return null; }
+        return { ...newLog, timestamp: newLog.created_at };
+    }
+
+    try {
+        const logs   = getLogbook();
+        const newLog = { id: Date.now().toString(36), timestamp: new Date().toISOString(), ...logEntry };
         logs.unshift(newLog);
         localStorage.setItem(LOGBOOK_KEY, encryptData(JSON.stringify(logs.slice(0, 100))));
         return newLog;
     } catch (error) {
-        console.error('Error saving log entry:', error);
+        console.error('saveLogEntry (localStorage) error:', error);
         return null;
     }
 };
 
-export const getLogbook = () => {
+/**
+ * Get all logbook entries.
+ * @param {string|null} userId
+ */
+export const getLogbook = (userId = null) => {
+    if (userId && supabase) {
+        return supabase
+            .from('mygap_logs')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .then(({ data, error }) => {
+                if (error) { console.error('getLogbook error:', error); return []; }
+                return (data || []).map(row => ({
+                    id:        row.id,
+                    timestamp: row.created_at,
+                    type:      row.type,
+                    notes:     row.notes,
+                }));
+            });
+    }
+
     try {
         const data = localStorage.getItem(LOGBOOK_KEY);
         if (!data) return [];
         return JSON.parse(decryptData(data));
-    } catch (error) {
-        console.error('Error reading logbook:', error);
+    } catch {
+        return [];
+    }
+};
+
+
+// ─── MYGAP CHECKLIST ──────────────────────────────────────────────────────────
+
+/**
+ * Save checklist state.
+ * @param {Object} state  — e.g. { check1: true, check2: false, … }
+ * @param {string|null} userId
+ */
+export const saveChecklistState = async (state, userId = null) => {
+    if (userId && supabase) {
+        const { error } = await supabase
+            .from('mygap_checklist')
+            .upsert({ user_id: userId, state, updated_at: new Date().toISOString() });
+        if (error) { console.error('saveChecklistState error:', error); return false; }
+        return true;
+    }
+
+    try {
+        localStorage.setItem(CHECKLIST_KEY, encryptData(JSON.stringify(state)));
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * Get checklist state.
+ * @param {string|null} userId
+ * @returns {Object|Promise<Object>}
+ */
+export const getChecklistState = (userId = null) => {
+    if (userId && supabase) {
+        return supabase
+            .from('mygap_checklist')
+            .select('state')
+            .eq('user_id', userId)
+            .maybeSingle()
+            .then(({ data, error }) => {
+                if (error) { console.error('getChecklistState error:', error); return {}; }
+                return data?.state ?? {};
+            });
+    }
+
+    try {
+        const data = localStorage.getItem(CHECKLIST_KEY);
+        if (!data) return {};
+        return JSON.parse(decryptData(data));
+    } catch {
+        return {};
+    }
+};
+
+
+// ─── DAILY NOTES ─────────────────────────────────────────────────────────────
+
+/**
+ * Save a daily note/report entry (structured).
+ * @param {{ note?: string, activity_type?: string, plot_id?: string,
+ *           chemical_name?: string, chemical_qty?: string, application_timing?: string,
+ *           temperature_am?: number, humidity?: number,
+ *           growth_stage?: string, pest_notes?: string, disease_incidence?: number,
+ *           disease_name_observed?: string, scout_severity?: string,
+ *           kg_harvested?: number, quality_grade?: string,
+ *           price_per_kg?: number, buyer_name?: string,
+ *           expense_amount?: number }} entry
+ * @param {string|null} userId
+ */
+export const saveDailyNote = async (entry, userId = null) => {
+    const newNote = {
+        id:                  Date.now().toString(36),
+        note:                entry.note                || '',
+        activity_type:       entry.activity_type       || 'note',
+        plot_id:             entry.plot_id             || null,
+        chemical_name:       entry.chemical_name       || null,
+        chemical_qty:        entry.chemical_qty        || null,
+        application_timing:  entry.application_timing  || null,
+        temperature_am:      entry.temperature_am != null ? Number(entry.temperature_am) : null,
+        humidity:            entry.humidity        != null ? Number(entry.humidity)       : null,
+        growth_stage:        entry.growth_stage        || null,
+        pest_notes:          entry.pest_notes          || null,
+        disease_incidence:   entry.disease_incidence != null ? Number(entry.disease_incidence) : null,
+        disease_name_observed: entry.disease_name_observed || null,
+        scout_severity:      entry.scout_severity      || null,
+        kg_harvested:        entry.kg_harvested != null ? Number(entry.kg_harvested) : null,
+        quality_grade:       entry.quality_grade       || null,
+        price_per_kg:        entry.price_per_kg != null ? Number(entry.price_per_kg) : null,
+        buyer_name:          entry.buyer_name          || null,
+        expense_amount:      entry.expense_amount != null ? Number(entry.expense_amount) : null,
+        expense_category:    entry.expense_category    || null,
+        photo_url:           entry.photo_url           || null,
+        created_at:          new Date().toISOString(),
+    };
+
+    if (userId && supabase) {
+        const { error } = await supabase
+            .from('daily_notes')
+            .insert({ ...newNote, user_id: userId });
+        if (error) { console.error('saveDailyNote error:', error); return null; }
+        return newNote;
+    }
+
+    try {
+        const NOTES_KEY = 'sea_plant_daily_notes';
+        const existing  = JSON.parse(decryptData(localStorage.getItem(NOTES_KEY) || encryptData('[]')));
+        existing.unshift(newNote);
+        localStorage.setItem(NOTES_KEY, encryptData(JSON.stringify(existing.slice(0, 50))));
+        return newNote;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * Get all daily notes.
+ * @param {string|null} userId
+ */
+export const getDailyNotes = (userId = null) => {
+    if (userId && supabase) {
+        return supabase
+            .from('daily_notes')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(20)
+            .then(({ data, error }) => {
+                if (error) { console.error('getDailyNotes error:', error); return []; }
+                return data || [];
+            });
+    }
+
+    try {
+        const NOTES_KEY = 'sea_plant_daily_notes';
+        const data = localStorage.getItem(NOTES_KEY);
+        if (!data) return [];
+        return JSON.parse(decryptData(data));
+    } catch {
+        return [];
+    }
+};
+
+
+// ─── FARM PLOTS ──────────────────────────────────────────────────────────────
+
+/**
+ * Save a new farm/plot entry.
+ * @param {{ name: string, cropType: string, area: number, unit: string }} plot
+ * @param {string|null} userId
+ */
+export const savePlot = async (plot, userId = null) => {
+    const newPlot = {
+        id:         Date.now().toString(36),
+        name:       plot.name || '',
+        crop_type:  plot.cropType || '',
+        area:       plot.area || 0,
+        unit:       plot.unit || 'acres',
+        soil_ph:    plot.soil_ph != null ? Number(plot.soil_ph) : null,
+        npk_n:      plot.npk_n  != null ? Number(plot.npk_n)  : null,
+        npk_p:      plot.npk_p  != null ? Number(plot.npk_p)  : null,
+        npk_k:      plot.npk_k  != null ? Number(plot.npk_k)  : null,
+        created_at: new Date().toISOString(),
+    };
+
+    if (userId && supabase) {
+        const { error } = await supabase
+            .from('plots')
+            .insert({ ...newPlot, user_id: userId });
+        if (error) { console.error('savePlot error:', error); return null; }
+        return newPlot;
+    }
+
+    try {
+        const PLOTS_KEY = 'sea_plant_plots';
+        const existing  = JSON.parse(decryptData(localStorage.getItem(PLOTS_KEY) || encryptData('[]')));
+        existing.unshift(newPlot);
+        localStorage.setItem(PLOTS_KEY, encryptData(JSON.stringify(existing)));
+        return newPlot;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * Get all farm plots.
+ * @param {string|null} userId
+ */
+export const getPlots = (userId = null) => {
+    if (userId && supabase) {
+        return supabase
+            .from('plots')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .then(({ data, error }) => {
+                if (error) { console.error('getPlots error:', error); return []; }
+                return data || [];
+            });
+    }
+
+    try {
+        const PLOTS_KEY = 'sea_plant_plots';
+        const data = localStorage.getItem(PLOTS_KEY);
+        if (!data) return [];
+        return JSON.parse(decryptData(data));
+    } catch {
         return [];
     }
 };
 
 /**
- * myGAP Compliance Checklist Functions
+ * Delete a plot by ID.
+ * @param {string} id
+ * @param {string|null} userId
  */
-export const saveChecklistState = (checklistState) => {
-    try {
-        localStorage.setItem(CHECKLIST_KEY, encryptData(JSON.stringify(checklistState)));
+export const deletePlot = async (id, userId = null) => {
+    if (userId && supabase) {
+        const { error } = await supabase
+            .from('plots')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+        if (error) { console.error('deletePlot error:', error); return false; }
         return true;
-    } catch (error) {
-        console.error('Error saving checklist state:', error);
-        return false;
     }
-};
 
-export const getChecklistState = () => {
     try {
-        const data = localStorage.getItem(CHECKLIST_KEY);
-        if (!data) return {};
-        return JSON.parse(decryptData(data));
-    } catch (error) {
-        console.error('Error reading checklist state:', error);
-        return {};
+        const PLOTS_KEY = 'sea_plant_plots';
+        const existing  = JSON.parse(decryptData(localStorage.getItem(PLOTS_KEY) || encryptData('[]')));
+        localStorage.setItem(PLOTS_KEY, encryptData(JSON.stringify(existing.filter(p => p.id !== id))));
+        return true;
+    } catch {
+        return false;
     }
 };

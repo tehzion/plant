@@ -1,36 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getGroupedScans, deleteScan, clearAllScans, getScanHistory } from '../utils/localStorage';
+import { getGroupedScans, deleteScan, clearAllScans } from '../utils/localStorage';
 import ScanHistoryCard from '../components/ScanHistoryCard';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useScanContext } from '../context/ScanContext';
-import { ClipboardList, ScanLine, Trash2, History as HistoryIcon, ShieldCheck } from 'lucide-react';
-import { useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { ClipboardList, ScanLine, Trash2, History as HistoryIcon } from 'lucide-react';
 
 const History = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
     const { state: scanState } = useScanContext();
-    const [groupedScans, setGroupedScans] = useState(getGroupedScans());
+    const { user } = useAuth();
+    const [groupedScans, setGroupedScans] = useState({ today: [], yesterday: [], thisWeek: [], lastWeek: [], older: [] });
+
+    const refreshHistory = async () => {
+        const grouped = await getGroupedScans(user?.id ?? null);
+        setGroupedScans(grouped);
+    };
+    // Initial load + refresh when user or scan state changes
+    useEffect(() => {
+        refreshHistory();
+    }, [user?.id]);
 
     // Auto-refresh when background scan completes
     useEffect(() => {
         if (!scanState.loading) {
-            setGroupedScans(getGroupedScans());
+            refreshHistory();
         }
     }, [scanState.loading]);
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm(t('history.confirmDeleteSingle') || 'Delete this scan?')) {
-            deleteScan(id);
-            setGroupedScans(getGroupedScans());
+            await deleteScan(id, user?.id ?? null);
+            refreshHistory();
         }
     };
 
-    const handleClearAll = () => {
+    const handleClearAll = async () => {
         if (window.confirm(t('history.clearConfirm'))) {
-            clearAllScans();
-            setGroupedScans(getGroupedScans());
+            await clearAllScans(user?.id ?? null);
+            refreshHistory();
         }
     };
 

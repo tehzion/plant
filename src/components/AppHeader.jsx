@@ -3,10 +3,17 @@ import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import LanguageSelector from './LanguageSelector';
 import { RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const AppHeader = ({ isHome }) => {
     const { t } = useLanguage();
+    const { user } = useAuth();
     const location = useLocation();
+
+    // Derive initials from email for avatar
+    const initials = user?.email
+        ? user.email.split('@')[0].slice(0, 2).toUpperCase()
+        : null;
 
     const isActive = (path) => {
         if (path === '/') return location.pathname === '/';
@@ -40,7 +47,11 @@ const AppHeader = ({ isHome }) => {
                         {t('nav.encyclopedia')}
                     </Link>
                     <Link to="/profile" className={`nav-link ${isActive('/profile') ? 'active' : ''}`}>
-                        {t('nav.profile')}
+                        {initials ? (
+                            <span className="header-avatar-badge">{initials}</span>
+                        ) : (
+                            t('nav.profile')
+                        )}
                     </Link>
                 </div>
 
@@ -158,6 +169,22 @@ const AppHeader = ({ isHome }) => {
                     height: 2px;
                     background: var(--color-primary);
                     border-radius: 2px;
+                }
+
+                .header-avatar-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    background: var(--color-primary);
+                    color: white;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                    vertical-align: middle;
+                    box-shadow: 0 2px 6px rgba(0,177,79,0.35);
                 }
 
                 @media (max-width: 768px) {

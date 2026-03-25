@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { imageToBase64 } from '../utils/diseaseDetection';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -12,6 +13,7 @@ import NutritionalAnalysis from '../components/NutritionalAnalysis';
 import ProductRecommendations from '../components/ProductRecommendations';
 import HealthyCarePlan from '../components/HealthyCarePlan';
 import FeedbackWidget from '../components/FeedbackWidget';
+import { useAuth } from '../context/AuthContext';
 
 import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
 import { showToast } from '../utils/toast';
@@ -22,7 +24,27 @@ const Results = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
-  const scan = getScanById(id);
+  const { user } = useAuth();
+  const [scan, setScan] = useState(null);
+  const [scanLoading, setScanLoading] = useState(true);
+
+  useEffect(() => {
+    setScanLoading(true);
+    Promise.resolve(getScanById(id, user?.id ?? null)).then(result => {
+      setScan(result);
+      setScanLoading(false);
+    });
+  }, [id, user?.id]);
+
+  if (scanLoading) {
+    return (
+      <div className="results">
+        <div className="container" style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <div className="loading-spinner-circle" />
+        </div>
+      </div>
+    );
+  }
 
   if (!scan) {
     return (
