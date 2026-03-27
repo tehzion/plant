@@ -34,7 +34,7 @@ const HeroSection = ({
                             style={{ color: 'var(--color-primary)', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             onClick={onLocationClick}
                         >
-                            <MapPin size={16} strokeWidth={1.5} /> {locationName ? t(`common.${locationName}`, locationName) : (isLocating ? t('common.locating') : t('common.setLocation'))} <Clock size={16} strokeWidth={1.5} />
+                            <MapPin size={16} strokeWidth={1.5} /> {locationName ? (locationName.startsWith('common.') ? t(locationName) : t(`common.${locationName}`, locationName)) : (isLocating ? t('common.locating') : t('common.setLocation'))} <Clock size={16} strokeWidth={1.5} />
                         </span>
                         <br />
                         {new Date().toLocaleDateString(t('common.dateLocale') || 'en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
