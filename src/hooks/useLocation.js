@@ -54,7 +54,7 @@ export const useLocation = () => {
                     setIsLocating(false);
                     resolve(null);
                 },
-                { timeout: 30000, maximumAge: 300000, enableHighAccuracy: false }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
             );
         });
     }, []);

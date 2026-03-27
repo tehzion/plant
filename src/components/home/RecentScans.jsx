@@ -35,7 +35,9 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                 </p>
                                 {scan.locationName && scan.locationName !== 'N/A' && !scan.locationName.includes('N/A') && (
                                     <p className="scan-location">
-                                        <MapPin size={12} strokeWidth={1.5} /> {t(`common.${scan.locationName}`, scan.locationName)}
+                                        <MapPin size={12} strokeWidth={1.5} /> {scan.locationName.startsWith('common.') 
+                                            ? t(scan.locationName) 
+                                            : t(`common.${scan.locationName}`, scan.locationName)}
                                     </p>
                                 )}
                                 <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

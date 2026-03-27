@@ -158,7 +158,9 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
 
     // LOCATIONS
     if (scanData.location || scanData.locationName) {
-        metadataRows.push([t('common.location'), scanData.locationName || scanData.location || t('common.locationNA')]);
+        const locName = scanData.locationName || scanData.location || 'common.locationNA';
+        const displayLoc = locName.startsWith('common.') ? t(locName) : locName;
+        metadataRows.push([t('common.location'), displayLoc]);
     }
 
     if (!healthy && scanData.disease) {

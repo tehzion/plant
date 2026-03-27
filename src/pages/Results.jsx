@@ -371,7 +371,11 @@ ${t('pdf.generatedBy')}
                 </div>
                 <div className="metadata-content">
                   <span className="metadata-label">{t('common.location')}</span>
-                  <span className="metadata-value">{scan.locationName}</span>
+                  <span className="metadata-value">
+                    {scan.locationName.startsWith('common.') 
+                      ? t(scan.locationName) 
+                      : scan.locationName}
+                  </span>
                   {hasValidCoords && (
                     <span className="metadata-coords">
                       {lat.toFixed(4)}, {lng.toFixed(4)}
