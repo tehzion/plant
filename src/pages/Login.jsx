@@ -128,7 +128,7 @@ const Login = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                     disabled={loading}
-                                    minLength={6}
+                                    minLength={4}
                                 />
                             </div>
                         </div>

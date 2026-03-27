@@ -51,15 +51,20 @@ export const AuthProvider = ({ children }) => {
     // ── Auth actions ──────────────────────────────────────────────────────────
 
     const signIn = async (email, password) => {
+        const cleanEmail = email?.trim();
+        const cleanPassword = password?.trim();
+
         // Demo bypass — works even when Supabase is disabled
-        if (email === 'test@test.com' && password === 'Test321@') {
-            const demoUser = { id: 'demo-user-123', email: 'test@test.com' };
-            localStorage.setItem('plant_demo_session', 'true');
-            setUser(demoUser);
-            return { user: demoUser };
-        }
-        if (email === 'test@test.com') {
-            throw new Error('Invalid login credentials');
+        if (cleanEmail === 'test@test.com') {
+            const isCorrectPassword = cleanPassword === 'Test321@' || cleanPassword === 'test';
+            if (isCorrectPassword) {
+                const demoUser = { id: 'demo-user-123', email: 'test@test.com' };
+                localStorage.setItem('plant_demo_session', 'true');
+                setUser(demoUser);
+                return { user: demoUser };
+            } else {
+                throw new Error('Invalid password for demo account. Please use Test321@ or test');
+            }
         }
 
         if (!supabase) {

@@ -80,7 +80,7 @@ export const translations = {
         },
 
         profile: {
-            totalScans: 'Total Scans', diseasesFound: 'Diseases', gapCompliance: 'GAP Compliance',
+            totalScans: 'Total Scans', diseasesFound: 'Diseases', healthy: 'Healthy', gapCompliance: 'GAP Compliance',
             plots: 'Plots', lastScan: 'Last scan', resolved: 'Resolved',
             recentActivity: 'Recent Scans', activityLog: 'Activity Log',
             quickActions: 'Quick Actions', healthRate: 'Plant Health Rate',
@@ -177,6 +177,7 @@ export const translations = {
 
         // Home Page
         home: {
+            farmingNotices: 'Farming Notices',
             title: 'Smart Plant Diseases & Advisor',
             subtitle: 'Smart plant health analysis for Malaysian agriculture',
             uploadPhoto: 'Upload Plant Photo',
@@ -852,7 +853,7 @@ export const translations = {
         },
 
         profile: {
-            totalScans: 'Jumlah Imbasan', diseasesFound: 'Penyakit', gapCompliance: 'Kepatuhan GAP',
+            totalScans: 'Jumlah Imbasan', diseasesFound: 'Penyakit', healthy: 'Sihat', gapCompliance: 'Kepatuhan GAP',
             plots: 'Petak', lastScan: 'Imbasan terakhir', resolved: 'Selesai',
             recentActivity: 'Imbasan Terkini', activityLog: 'Log Aktiviti',
             quickActions: 'Tindakan Pantas', healthRate: 'Kadar Kesihatan Tumbuhan',
@@ -949,6 +950,7 @@ export const translations = {
 
         // Home Page
         home: {
+            farmingNotices: 'Pemberitahuan Pertanian',
             title: 'Smart Plant Diseases & Advisor',
             subtitle: 'Analisis kesihatan tumbuhan pintar untuk pertanian Malaysia',
             uploadPhoto: 'Muat Naik Foto Tumbuhan',
@@ -1626,7 +1628,7 @@ export const translations = {
         },
 
         profile: {
-            totalScans: '总扫描数', diseasesFound: '疾病', gapCompliance: 'GAP 合规',
+            totalScans: '总扫描数', diseasesFound: '疾病', healthy: '健康', gapCompliance: 'GAP 合规',
             plots: '地块', lastScan: '最后扫描', resolved: '已解决',
             recentActivity: '近期扫描', activityLog: '活动日志',
             quickActions: '快速操作', healthRate: '植物健康率',
@@ -1720,6 +1722,7 @@ export const translations = {
 
         // 主页
         home: {
+            farmingNotices: '农业公告',
             title: '智能植物病害顾问',
             subtitle: '马来西亚农业智能植物健康分析',
             uploadPhoto: '上传植物照片',

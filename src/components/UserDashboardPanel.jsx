@@ -23,9 +23,9 @@ import { supabase } from '../lib/supabase';
 const relDate = (ts, t) => {
     if (!ts) return '';
     const diff = Math.floor((Date.now() - new Date(ts)) / 86400000);
-    if (diff === 0) return t('profile.relToday') || 'Today';
-    if (diff === 1) return t('profile.relYesterday') || 'Yesterday';
-    return `${diff}${t('profile.relDaysAgo') || 'd ago'}`;
+    if (diff === 0) return t?.('profile.relToday') || 'Today';
+    if (diff === 1) return t?.('profile.relYesterday') || 'Yesterday';
+    return `${diff}${t?.('profile.relDaysAgo') || 'd ago'}`;
 };
 
 const ACTIVITY_TYPES_CFG = [
@@ -430,7 +430,7 @@ const UserDashboardPanel = () => {
             const scanDelta    = thisT - lastT;
 
             return { diseaseDelta, scanDelta, thisD, lastD, thisT, lastT };
-        }, []);
+        }, [scanHistory]);
 
         const renderTrend = (delta, invert = false) => {
             if (delta === 0) return <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>→ {t('profile.trendSame') || 'Same'}</span>;
@@ -464,7 +464,7 @@ const UserDashboardPanel = () => {
                 }
             });
             return days;
-        }, [alerts]);
+        }, [alerts, t]);
 
         return (
             <>
@@ -553,8 +553,8 @@ const UserDashboardPanel = () => {
 
                 <div className="udp-section" style={{ padding: '16px 16px 0', borderBottom: 'none' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', margin: '0 0 16px 4px' }}>{t('profile.scanTrendTitle') || 'Scan Activity Trend (Last 7 Days)'}</div>
-                    <div style={{ width: '100%', height: 160 }}>
-                        <ResponsiveContainer>
+                    <div style={{ width: '100%', height: 160, minHeight: 160 }}>
+                        <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={trendData} margin={{ top: 5, right: 0, left: -25, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
@@ -880,8 +880,8 @@ const UserDashboardPanel = () => {
                     <SectionHeader icon={<BarChart2 size={15} />} title={t('profile.healthBreakdown') || 'Health Breakdown'} />
                     <div style={{ padding: '0 16px 16px' }}>
                         {healthData.length > 0 ? (
-                            <div style={{ width: '100%', height: 180 }}>
-                                <ResponsiveContainer>
+                            <div style={{ width: '100%', height: 180, minHeight: 180 }}>
+                                <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie data={healthData} innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
                                             {healthData.map((entry, index) => (
@@ -957,8 +957,8 @@ const UserDashboardPanel = () => {
                                         <div style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#6b7280' }}>{t('profile.basedOnHarvestTrends') || 'Based on harvest trends'}</div>
                                     </div>
                                 )}
-                                <div style={{ width: '100%', height: 180 }}>
-                                    <ResponsiveContainer>
+                                <div style={{ width: '100%', height: 180, minHeight: 180 }}>
+                                    <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={yieldChartData.data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                             <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
@@ -975,8 +975,8 @@ const UserDashboardPanel = () => {
                         {expenseData.length > 0 && (
                             <div style={{ marginBottom: '16px' }}>
                                 <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{t('profile.expenseBreakdown') || 'Expense Breakdown'}</div>
-                                <div style={{ width: '100%', height: 160 }}>
-                                    <ResponsiveContainer>
+                                <div style={{ width: '100%', height: 160, minHeight: 160 }}>
+                                    <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie data={expenseData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
                                                 {expenseData.map((entry, index) => (
@@ -998,8 +998,8 @@ const UserDashboardPanel = () => {
                         {harvestLogs.length > 0 && qualityData.length > 0 && (
                             <div>
                                 <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{t('profile.qualityBreakdown') || 'Quality Breakdown'}</div>
-                                <div style={{ width: '100%', height: 160 }}>
-                                    <ResponsiveContainer>
+                                <div style={{ width: '100%', height: 160, minHeight: 160 }}>
+                                    <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={qualityData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                                             <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                             <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />

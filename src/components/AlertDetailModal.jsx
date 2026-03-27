@@ -119,7 +119,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                         <Clock size={13} />
                         <span>{t('profile.detected') || 'Detected'}: {new Date(scan.timestamp ?? scan.created_at).toLocaleDateString()}</span>
                         {scan.confidence && (
-                            <><ShieldCheck size={13} /><span>{Math.round(scan.confidence * 100)}{t('profile.aiConfidence') || '% confidence'}</span></>
+                            <><ShieldCheck size={13} /><span>{Math.round(scan.confidence * 100)}{t('profile.aiConfidence') || '%'}</span></>
                         )}
                     </div>
 
