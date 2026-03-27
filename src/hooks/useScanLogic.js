@@ -1,7 +1,7 @@
 import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease } from '../utils/diseaseDetection';
-import { saveScan } from '../utils/localStorage';
+import { saveScan, saveDailyNote, saveLogEntry } from '../utils/localStorage';
 import { getStandardizedStatus } from '../utils/statusUtils';
 import { useAuth } from '../context/AuthContext';
 
@@ -123,6 +123,24 @@ export const useScanLogic = () => {
                     location: location,
                     locationName: locationName || result.locationName
                 }, user?.id ?? null);
+
+                // ── Sync: Auto-log a "Scouting" activity for the dashboard ──────
+                if (savedScan) {
+                    await saveDailyNote({
+                        activity_type: 'scout',
+                        note: `${t('profile.scoutFromScan') || 'Autonomous scouting via AI Scan'}: ${result.disease || 'Healthy'} (${standardizedHealthStatus})`,
+                        disease_incidence: standardizedHealthStatus === 'healthy' ? 0 : 5, // Representative value
+                        scout_severity: result.severity || (standardizedHealthStatus === 'healthy' ? 'Low' : 'Moderate'),
+                        disease_name_observed: result.disease || null,
+                        plant_part: result.plantPart || null,
+                        created_at: new Date().toISOString()
+                    }, user?.id ?? null).catch(e => console.error('Auto-log failed:', e));
+
+                    await saveLogEntry({
+                        type: t('profile.actScout') || 'Scout',
+                        notes: `${t('profile.scoutFromScan') || 'Autonomous scouting via AI Scan'}: ${result.disease || 'Healthy'} (${standardizedHealthStatus})`,
+                    }, user?.id ?? null).catch(e => console.error('Logbook sync failed:', e));
+                }
 
                 dispatch({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;

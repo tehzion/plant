@@ -619,3 +619,50 @@ export const deletePlot = async (id, userId = null) => {
         return false;
     }
 };
+/**
+ * Seed demo data for the demo user if localStorage is empty.
+ * @param {string} userId 
+ * @param {Object} data - { scans, notes, plots }
+ */
+export const seedDemoData = (userId, data) => {
+    if (userId !== 'demo-user-123') return;
+
+    const { scans, notes, plots, logbook } = data;
+
+    // 1. Seed Scans
+    const PLOTS_KEY = 'sea_plant_plots';
+    const NOTES_KEY = 'sea_plant_daily_notes';
+    const SCANS_KEY = 'sea_plant_scan_history';
+    const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
+
+    if (scans && scans.length > 0) {
+        const existingScans = JSON.parse(decryptData(localStorage.getItem(SCANS_KEY) || encryptData('[]')));
+        if (existingScans.length === 0) {
+            localStorage.setItem(SCANS_KEY, encryptData(JSON.stringify(scans)));
+        }
+    }
+
+    // 2. Seed Notes
+    if (notes && notes.length > 0) {
+        const existingNotes = JSON.parse(decryptData(localStorage.getItem(NOTES_KEY) || encryptData('[]')));
+        if (existingNotes.length === 0) {
+            localStorage.setItem(NOTES_KEY, encryptData(JSON.stringify(notes)));
+        }
+    }
+
+    // 3. Seed Plots
+    if (plots && plots.length > 0) {
+        const existingPlots = JSON.parse(decryptData(localStorage.getItem(PLOTS_KEY) || encryptData('[]')));
+        if (existingPlots.length === 0) {
+            localStorage.setItem(PLOTS_KEY, encryptData(JSON.stringify(plots)));
+        }
+    }
+
+    // 4. Seed Logbook
+    if (logbook && logbook.length > 0) {
+        const existingLogs = JSON.parse(decryptData(localStorage.getItem(LOGBOOK_KEY) || encryptData('[]')));
+        if (existingLogs.length === 0) {
+            localStorage.setItem(LOGBOOK_KEY, encryptData(JSON.stringify(logbook)));
+        }
+    }
+};

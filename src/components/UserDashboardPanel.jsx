@@ -5,8 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation } from '../hooks/useLocation';
 import {
     getScanHistory, getChecklistState, getLogbook,
-    getDailyNotes, saveDailyNote, getPlots, savePlot, deletePlot
+    getDailyNotes, saveDailyNote, getPlots, savePlot, deletePlot,
+    seedDemoData
 } from '../utils/localStorage';
+import { DEMO_SCANS, DEMO_NOTES, DEMO_PLOTS, DEMO_LOGBOOK } from '../utils/demoData';
 import {
     ScanLine, ClipboardList, BookOpen, LogOut,
     ShieldCheck, ChevronRight, Calendar, TrendingUp,
@@ -121,6 +123,15 @@ const UserDashboardPanel = () => {
     // ── Load all data ──────────────────────────────────────────────────────────
     useEffect(() => {
         const load = async () => {
+            if (user?.id === 'demo-user-123') {
+                seedDemoData(user.id, { 
+                    scans: DEMO_SCANS, 
+                    notes: DEMO_NOTES, 
+                    plots: DEMO_PLOTS, 
+                    logbook: DEMO_LOGBOOK 
+                });
+            }
+
             const [history, checklist, logbook, dailyNotes, farmPlots] = await Promise.all([
                 Promise.resolve(getScanHistory(user?.id ?? null)),
                 Promise.resolve(getChecklistState(user?.id ?? null)),
