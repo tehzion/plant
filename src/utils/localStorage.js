@@ -72,9 +72,9 @@ const uploadImageToStorage = async (base64, userId, scanId, suffix = 'main') => 
  */
 export const saveScan = async (scanData, userId = null) => {
     // ── Supabase path ──
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         try {
-            const id = Date.now().toString(36);
+            const id = crypto.randomUUID();
 
             // Upload images in parallel, fall back gracefully if Storage is not ready
             const [imageUrl, leafImageUrl] = await Promise.all([
@@ -115,7 +115,7 @@ export const saveScan = async (scanData, userId = null) => {
     try {
         const history = getScanHistory(); // synchronous guest version
         const newScan = {
-            id: Date.now().toString(36),
+            id: crypto.randomUUID(),
             timestamp: new Date().toISOString(),
             ...scanData
         };
@@ -129,7 +129,7 @@ export const saveScan = async (scanData, userId = null) => {
             try {
                 const history  = getScanHistory();
                 const reduced  = history.slice(0, 15);
-                const newScan  = { id: Date.now().toString(36), timestamp: new Date().toISOString(), ...scanData };
+                const newScan  = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...scanData };
                 const final    = [newScan, ...reduced].slice(0, 15);
                 localStorage.setItem(STORAGE_KEY, encryptData(JSON.stringify(final)));
                 return final[0];
@@ -148,7 +148,7 @@ export const saveScan = async (scanData, userId = null) => {
  */
 export const getScanHistory = (userId = null) => {
     // ── Supabase path returns a Promise; callers must await when logged in ──
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('scan_history')
             .select('*')
@@ -197,7 +197,7 @@ export const getScanHistory = (userId = null) => {
  * @param {string|null} userId
  */
 export const getScanById = (id, userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('scan_history')
             .select('*')
@@ -230,7 +230,7 @@ export const getScanById = (id, userId = null) => {
  * @param {string|null} userId
  */
 export const deleteScan = async (id, userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const { error } = await supabase
             .from('scan_history')
             .delete()
@@ -255,7 +255,7 @@ export const deleteScan = async (id, userId = null) => {
  * @param {string|null} userId
  */
 export const clearAllScans = async (userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const { error } = await supabase
             .from('scan_history')
             .delete()
@@ -310,9 +310,9 @@ export const getGroupedScans = async (userId = null) => {
  * @param {string|null} userId
  */
 export const saveLogEntry = async (logEntry, userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const newLog = {
-            id:         Date.now().toString(36),
+            id:         crypto.randomUUID(),
             user_id:    userId,
             type:       logEntry.type,
             notes:      logEntry.notes,
@@ -325,7 +325,7 @@ export const saveLogEntry = async (logEntry, userId = null) => {
 
     try {
         const logs   = getLogbook();
-        const newLog = { id: Date.now().toString(36), timestamp: new Date().toISOString(), ...logEntry };
+        const newLog = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...logEntry };
         logs.unshift(newLog);
         localStorage.setItem(LOGBOOK_KEY, encryptData(JSON.stringify(logs.slice(0, 100))));
         return newLog;
@@ -340,7 +340,7 @@ export const saveLogEntry = async (logEntry, userId = null) => {
  * @param {string|null} userId
  */
 export const getLogbook = (userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('mygap_logs')
             .select('*')
@@ -380,7 +380,7 @@ export const getLogbook = (userId = null) => {
  * @param {string|null} userId
  */
 export const saveChecklistState = async (state, userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const { error } = await supabase
             .from('mygap_checklist')
             .upsert({ user_id: userId, state, updated_at: new Date().toISOString() });
@@ -402,7 +402,7 @@ export const saveChecklistState = async (state, userId = null) => {
  * @returns {Object|Promise<Object>}
  */
 export const getChecklistState = (userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('mygap_checklist')
             .select('state')
@@ -445,7 +445,7 @@ export const getChecklistState = (userId = null) => {
  */
 export const saveDailyNote = async (entry, userId = null) => {
     const newNote = {
-        id:                  Date.now().toString(36),
+        id:                  crypto.randomUUID(),
         note:                entry.note                || '',
         activity_type:       entry.activity_type       || 'note',
         plot_id:             entry.plot_id             || null,
@@ -469,7 +469,7 @@ export const saveDailyNote = async (entry, userId = null) => {
         created_at:          new Date().toISOString(),
     };
 
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const { error } = await supabase
             .from('daily_notes')
             .insert({ ...newNote, user_id: userId });
@@ -493,7 +493,7 @@ export const saveDailyNote = async (entry, userId = null) => {
  * @param {string|null} userId
  */
 export const getDailyNotes = (userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('daily_notes')
             .select('*')
@@ -531,7 +531,7 @@ export const getDailyNotes = (userId = null) => {
  */
 export const savePlot = async (plot, userId = null) => {
     const newPlot = {
-        id:         Date.now().toString(36),
+        id:         crypto.randomUUID(),
         name:       plot.name || '',
         crop_type:  plot.cropType || '',
         area:       plot.area || 0,
@@ -543,7 +543,7 @@ export const savePlot = async (plot, userId = null) => {
         created_at: new Date().toISOString(),
     };
 
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const { error } = await supabase
             .from('plots')
             .insert({ ...newPlot, user_id: userId });
@@ -567,7 +567,7 @@ export const savePlot = async (plot, userId = null) => {
  * @param {string|null} userId
  */
 export const getPlots = (userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('plots')
             .select('*')
@@ -600,7 +600,7 @@ export const getPlots = (userId = null) => {
  * @param {string|null} userId
  */
 export const deletePlot = async (id, userId = null) => {
-    if (userId && supabase) {
+    if (userId && userId !== 'demo-user-123' && supabase) {
         const { error } = await supabase
             .from('plots')
             .delete()

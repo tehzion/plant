@@ -826,7 +826,7 @@ Context rules:
 - Farm Plots Context: ${JSON.stringify(plots)}. If applicable, use the farm size to estimate pesticide/fertilizer spray volume requirements.
 - GAP Compliance Score: ${checklistPct}%. If below 80%, recommend farm hygiene, field training, or record-keeping improvements before advanced solutions.
 - Formatting: Always use authentic Malaysian agricultural terminology (e.g., 'Baja Kopi', 'Racun Serangga', 'Musang King', 'SOP GAP').
-Output MUST be a JSON object with: 
+Output MUST be in the specified language (${language}) and follow this JSON structure: 
 - "summary" (A 2-3 sentence overview of farm health)
 - "recommendations" (Array of 2-3 specific action items based on the data)
 - "yieldAnalysis" (A 1 sentence evaluation of recent harvests, if provided)`
@@ -904,7 +904,7 @@ Return JSON.`
  */
 export async function parseNaturalLanguageLog(text, language = 'en') {
     try {
-        console.log(`🤖 Parsing Natural Language Log: "${text}"...`);
+        console.log(`🤖 Auto-Enhance Request: "${text.substring(0, 50)}..."`);
         const response = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             response_format: { type: "json_object" },
@@ -912,6 +912,7 @@ export async function parseNaturalLanguageLog(text, language = 'en') {
                 {
                     role: 'system',
                     content: `You process unstructured dictate/notes from farmers into a highly structured JSON form schema.
+Language of input: ${language}.
 STRICT RULES:
 1. "type" MUST exactly match one of ["note", "spray", "fertilize", "prune", "inspect", "scout", "harvest"]. Infer the best fit.
 2. If the user mentions a local Malaysian term (e.g., "baja" -> fertilize, "racun" -> spray, "tuai" -> harvest), map it to the correct English type value.
@@ -921,8 +922,16 @@ Extract these exact fields (Return JSON):
 - "plotId": String (e.g. "Plot A", "Farm 1", "Durian Block")
 - "chemicalName": String (e.g. "Mancozeb", "Neem Oil", "NPK 15-15")
 - "quantity": String (e.g. "20L", "5kg")
-- "kg_harvested": Number (only if type is Harvest)
-- "notes": String (Any leftover observations)`
+- "kg_harvested": Number (only if type is harvest)
+- "price_per_kg": Number (only if type is harvest)
+- "buyer_name": String (only if type is harvest)
+- "temperature": Number (e.g. 28)
+- "humidity": Number (e.g. 75)
+- "disease_name": String (e.g. "Aphids", "Powdery Mildew")
+- "severity": "Low" | "Moderate" | "High"
+- "expense_amount": Number
+- "expense_category": "Fertilizer" | "Pesticide" | "Labor" | "Equipment" | "Other"
+- "notes": String (A cleaned up, professional version of the input, e.g. "Sprayed 20L Mancozeb on Plot A" instead of "sprayed 20l mancozeb plot a")`
                 },
                 {
                     role: 'user',
@@ -934,7 +943,9 @@ Extract these exact fields (Return JSON):
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
-        return JSON.parse(content);
+        const parsed = JSON.parse(content);
+        console.log('✅ AI Parsed Result:', JSON.stringify(parsed, null, 2));
+        return parsed;
     } catch (error) {
         console.error('❌ NLP Parsing failed:', error.message);
         throw error;

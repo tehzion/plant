@@ -1,33 +1,46 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { migrateLocalStorageToSupabase } from '../utils/migrations';
+
+// NOTE: migrateLocalStorageToSupabase is intentionally NOT imported while
+// Supabase is disabled — importing it would trigger Supabase calls at module
+// load time, which would throw errors when supabase === null.
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(undefined); // undefined = still loading, null = guest
+    const [user, setUser] = useState(undefined); // undefined = loading, null = guest
 
     useEffect(() => {
+        // ── Demo / test account bypass ────────────────────────────────────────
+        if (localStorage.getItem('plant_demo_session') === 'true') {
+            setUser({ id: 'demo-user-123', email: 'test@test.com' });
+            return;
+        }
+
+        // ── Supabase disabled → run entirely in guest/localStorage mode ───────
         if (!supabase) {
-            // No Supabase config — permanently in guest mode
             setUser(null);
             return;
         }
 
-        // Initialize from existing session
+        // ── Supabase enabled path (currently unreachable) ─────────────────────
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
         });
 
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
                 const currentUser = session?.user ?? null;
                 setUser(currentUser);
 
-                // Run one-time migration on first login
+                // One-time migration when a real user logs in
                 if (currentUser) {
-                    await migrateLocalStorageToSupabase(currentUser.id);
+                    try {
+                        const { migrateLocalStorageToSupabase } = await import('../utils/migrations');
+                        await migrateLocalStorageToSupabase(currentUser.id);
+                    } catch (e) {
+                        console.warn('Migration skipped:', e.message);
+                    }
                 }
             }
         );
@@ -35,29 +48,64 @@ export const AuthProvider = ({ children }) => {
         return () => subscription.unsubscribe();
     }, []);
 
+    // ── Auth actions ──────────────────────────────────────────────────────────
+
     const signIn = async (email, password) => {
+        // Demo bypass — works even when Supabase is disabled
+        if (email === 'test@test.com' && password === 'Test321@') {
+            const demoUser = { id: 'demo-user-123', email: 'test@test.com' };
+            localStorage.setItem('plant_demo_session', 'true');
+            setUser(demoUser);
+            return { user: demoUser };
+        }
+        if (email === 'test@test.com') {
+            throw new Error('Invalid login credentials');
+        }
+
+        if (!supabase) {
+            throw new Error('Cloud login is currently disabled. Use the demo account (test@test.com / Test321@) or enable Supabase in src/lib/supabase.js.');
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         return data;
     };
 
     const signUp = async (email, password) => {
+        if (!supabase) {
+            throw new Error('Cloud sign-up is currently disabled. Enable Supabase in src/lib/supabase.js to use this feature.');
+        }
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         return data;
     };
 
     const signOut = async () => {
+        // Clear demo session
+        if (localStorage.getItem('plant_demo_session')) {
+            localStorage.removeItem('plant_demo_session');
+            setUser(null);
+            return;
+        }
+
+        // Guard against null supabase before calling .auth
+        if (!supabase) {
+            setUser(null);
+            return;
+        }
+
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
+        setUser(null);
     };
 
     const signInWithGoogle = async () => {
+        if (!supabase) {
+            throw new Error('Google sign-in is currently disabled. Enable Supabase in src/lib/supabase.js to use this feature.');
+        }
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: {
-                redirectTo: window.location.origin
-            }
+            options: { redirectTo: window.location.origin },
         });
         if (error) throw error;
         return data;
