@@ -827,9 +827,9 @@ Context rules:
 - GAP Compliance Score: ${checklistPct}%. If below 80%, recommend farm hygiene, field training, or record-keeping improvements before advanced solutions.
 - Formatting: Always use authentic Malaysian agricultural terminology (e.g., 'Baja Kopi', 'Racun Serangga', 'Musang King', 'SOP GAP').
 Output MUST be in the specified language (${language}) and follow this JSON structure: 
-- "summary" (A 2-3 sentence overview of farm health)
-- "recommendations" (Array of 2-3 specific action items based on the data)
-- "yieldAnalysis" (A 1 sentence evaluation of recent harvests, if provided)`
+- "summary" (A 2-3 sentence overview of farm health and activity summary)
+- "recommendations" (Array of 2-3 specific action items based on the data, e.g., "Pruning quality seems low on Plot A, consider structural pruning training")
+- "yieldAnalysis" (A 1-2 sentence evaluation of recent harvests and quality grades, e.g., "Musang King yield is up 15% with 80% Grade A quality")`
                 },
                 {
                     role: 'user',
@@ -924,7 +924,12 @@ Extract these exact fields (Return JSON):
 - "quantity": String (e.g. "20L", "5kg")
 - "kg_harvested": Number (only if type is harvest)
 - "price_per_kg": Number (only if type is harvest)
+- "quality_grade": "A" | "B" | "C" | "Good" | "Average" | "Poor" (only if type is harvest)
 - "buyer_name": String (only if type is harvest)
+- "pruned_count": Number (only if type is prune)
+- "pruning_type": "Thinning" | "Formative" | "Sanitary" | "Maintenance" (only if type is prune)
+- "inspection_type": "Pest/Disease" | "Nutrient" | "Irrigation" | "General" (only if type is inspect)
+- "inspection_status": "Good" | "Warning" | "Critical" (only if type is inspect)
 - "temperature": Number (e.g. 28)
 - "humidity": Number (e.g. 75)
 - "disease_name": String (e.g. "Aphids", "Powdery Mildew")
@@ -996,7 +1001,7 @@ Output MUST be a JSON object:
   "hasRisk": boolean,
   "riskLevel": "high" | "moderate" | "none",
   "warningMessage": "Short 1-2 sentence alert stating the specific risk (e.g., Heavy rain over next 3 days will rapidly spread active fungal alert)",
-  "suggestedAction": "Immediate action required",
+  "suggestedAction": "Immediate action required (e.g., 'Apply preventive fungicide before rain', 'Urgent inspection of irrigation system')",
   "recommendedTreatment": {
     "activity": "spray | fertilize | prune | inspect",
     "chemical": "Name of specific chemical/treatment to apply, or null"

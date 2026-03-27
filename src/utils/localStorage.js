@@ -465,6 +465,10 @@ export const saveDailyNote = async (entry, userId = null) => {
         buyer_name:          entry.buyer_name          || null,
         expense_amount:      entry.expense_amount != null ? Number(entry.expense_amount) : null,
         expense_category:    entry.expense_category    || null,
+        pruned_count:        entry.pruned_count != null ? Number(entry.pruned_count) : null,
+        pruning_type:       entry.pruning_type        || null,
+        inspection_type:     entry.inspection_type     || null,
+        inspection_status:   entry.inspection_status   || null,
         photo_url:           entry.photo_url           || null,
         created_at:          new Date().toISOString(),
     };

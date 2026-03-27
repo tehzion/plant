@@ -14,7 +14,7 @@ import {
     ShieldCheck, ChevronRight, Calendar, TrendingUp,
     AlertTriangle, BarChart2, MapPin, FileText, Plus, Search, Wand2,
     Trash2, X, CheckCircle2, Leaf, BrainCircuit, Sparkles, Send, CheckSquare,
-    ShoppingBag, Info
+    ShoppingBag, Info, Database, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import AlertDetailModal from './AlertDetailModal';
@@ -48,6 +48,7 @@ const ACTIVITY_BADGE_COLOR = {
     fertilize: { bg: '#d1fae5', color: '#065f46' },
     prune:     { bg: '#ede9fe', color: '#6d28d9' },
     inspect:   { bg: '#dbeafe', color: '#1d4ed8' },
+    harvest:   { bg: '#f0fdf4', color: '#166534' },
     other:     { bg: '#f3f4f6', color: '#6b7280' },
 };
 
@@ -57,7 +58,10 @@ const EMPTY_FORM = {
     temperature_am: '', humidity: '',
     growth_stage: 'Vegetative', pest_notes: '', disease_incidence: '',
     disease_name_observed: '', scout_severity: 'Low',
-    expense_amount: '', expense_category: 'Fertilizer',
+    kg_harvested: '', quality_grade: 'Good', price_per_kg: '', buyer_name: '',
+    pruned_count: '', pruning_type: 'Thinning',
+    inspection_type: 'Pest/Disease', inspection_status: 'Good',
+    expense_amount: '', expense_category: 'Other',
     photo_base64: '',
 };
 
@@ -299,7 +303,12 @@ const UserDashboardPanel = () => {
                 chemical_qty: parsed.quantity || f.chemical_qty,
                 kg_harvested: parsed.kg_harvested || f.kg_harvested,
                 price_per_kg: parsed.price_per_kg || f.price_per_kg,
+                quality_grade: parsed.quality_grade || f.quality_grade,
                 buyer_name: parsed.buyer_name || f.buyer_name,
+                pruned_count: parsed.pruned_count || f.pruned_count,
+                pruning_type: parsed.pruning_type || f.pruning_type,
+                inspection_type: parsed.inspection_type || f.inspection_type,
+                inspection_status: parsed.inspection_status || f.inspection_status,
                 temperature_am: parsed.temperature || f.temperature_am,
                 humidity: parsed.humidity || f.humidity,
                 disease_name_observed: parsed.disease_name || f.disease_name_observed,
@@ -365,6 +374,17 @@ const UserDashboardPanel = () => {
             scout_severity: noteForm.scout_severity || null,
             expense_amount: noteForm.expense_amount !== '' ? Number(noteForm.expense_amount) : null,
             expense_category: noteForm.expense_category || null,
+            // Harvest
+            kg_harvested:   noteForm.kg_harvested !== ''  ? Number(noteForm.kg_harvested) : null,
+            price_per_kg:   noteForm.price_per_kg !== ''  ? Number(noteForm.price_per_kg) : null,
+            quality_grade:  noteForm.quality_grade || null,
+            buyer_name:     noteForm.buyer_name    || null,
+            // Prune
+            pruned_count:   noteForm.pruned_count !== ''  ? Number(noteForm.pruned_count)  : null,
+            pruning_type:   noteForm.pruning_type  || null,
+            // Inspect
+            inspection_type:   noteForm.inspection_type   || null,
+            inspection_status: noteForm.inspection_status || null,
             photo_url: photoUrl,
         }, user?.id ?? null);
         if (saved) {
@@ -477,8 +497,24 @@ const UserDashboardPanel = () => {
             return days;
         }, [alerts, t]);
 
+        const daysSinceScan = stats.lastScan
+            ? Math.floor((Date.now() - new Date(stats.lastScan)) / 86400000)
+            : Infinity;
+
         return (
             <>
+                {/* T0: Weekly Scan Due Banner */}
+                {daysSinceScan > 7 && (
+                    <div className="udp-task-banner" onClick={() => navigate('/?scan=true')}>
+                        <div className="udp-task-icon">📅</div>
+                        <div className="udp-task-content">
+                            <div className="udp-task-title">{t('profile.weeklyScanDue') || 'Weekly Scan Due'}</div>
+                            <div className="udp-task-desc">{t('profile.scanReminderDesc') || 'Keep your farm intelligence accurate with a fresh scan.'}</div>
+                        </div>
+                        <ChevronRight size={16} />
+                    </div>
+                )}
+
                 {/* AI Predictive Risk Banner */}
                 {(assessingRisk || predictiveRisk?.hasRisk) && (
                     <div className="udp-section" style={{ background: assessingRisk ? '#fefce8' : '#fef2f2', borderColor: assessingRisk ? '#fef08a' : '#fecaca', padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -721,59 +757,26 @@ const UserDashboardPanel = () => {
                     </div>
                 )}
 
-                {/* T3: Smart Quick Actions */}
+                {/* T3: Explore Navigation Section */}
                 <div className="udp-section">
-                    <SectionHeader title={t('profile.quickActions') || 'Quick Actions'} />
-                    <div className="udp-actions-grid">
-                        {(() => {
-                            const daysSinceScan = stats.lastScan
-                                ? Math.floor((Date.now() - new Date(stats.lastScan)) / 86400000)
-                                : Infinity;
-                            const hasUnackedAlerts = activeAlerts.length > 0;
-                            let primaryAction;
-                            if (hasUnackedAlerts) {
-                                primaryAction = {
-                                    icon: <AlertTriangle size={22} />,
-                                    label: t('profile.logTreatment') || 'Log Treatment',
-                                    color: 'scan-icon',
-                                    style: { background: 'rgba(220, 38, 38, 0.1)', border: '1.5px solid #fca5a5' },
-                                    iconStyle: { background: '#fee2e2', color: '#dc2626' },
-                                    to: null,
-                                    action: () => { setTab('log'); setAddingNote(true); }
-                                };
-                            } else if (daysSinceScan > 7) {
-                                primaryAction = {
-                                    icon: <ScanLine size={22} />,
-                                    label: `📅 ${t('profile.weeklyScanDue') || 'Weekly Scan Due'}`,
-                                    color: 'scan-icon',
-                                    style: { background: 'rgba(245, 158, 11, 0.1)', border: '1.5px solid #fcd34d' },
-                                    iconStyle: { background: '#fef3c7', color: '#d97706' },
-                                    to: '/?scan=true',
-                                    action: null
-                                };
-                            } else {
-                                primaryAction = { icon: <ScanLine size={22} />, label: t('home.newScan') || 'New Scan', color: 'scan-icon', style: {}, iconStyle: {}, to: '/?scan=true', action: null };
-                            }
-
-                            const standardActions = [
-                                { icon: <ShoppingBag size={22} />, label: t('nav.shop') || 'Shop', color: 'shop-icon', to: '/shop', action: null },
-                                { icon: <CheckSquare size={22} />, label: t('home.mygapTitle') || 'myGAP Guide', color: 'mygap-icon', to: '/mygap', action: null },
-                                { icon: <Info size={22} />, label: t('home.keyInfo') || 'Crop Advisor', color: 'guide-icon', to: '/key-info', action: null },
-                                { icon: <BookOpen size={22} />, label: t('settings.guide') || 'User Guide', color: 'book-icon', to: '/guide', action: null },
-                            ];
-
-                            return [primaryAction, ...standardActions].map((a, i) => (
-                                <button
-                                    key={i}
-                                    className="udp-action-btn"
-                                    style={a.style}
-                                    onClick={() => a.action ? a.action() : navigate(a.to)}
-                                >
-                                    <div className={`udp-action-icon ${a.color}`} style={a.iconStyle}>{a.icon}</div>
-                                    <span>{a.label}</span>
-                                </button>
-                            ));
-                        })()}
+                    <SectionHeader title={t('profile.explore') || 'Explore'} />
+                    <div className="udp-explore-grid">
+                        <button className="udp-explore-card" onClick={() => navigate('/shop')}>
+                            <div className="udp-explore-icon"><ShoppingBag size={24} /></div>
+                            <span className="udp-explore-label">{t('nav.shop') || 'Shop'}</span>
+                        </button>
+                        <button className="udp-explore-card" onClick={() => navigate('/mygap')}>
+                            <div className="udp-explore-icon"><CheckSquare size={24} /></div>
+                            <span className="udp-explore-label">{t('home.mygapTitle') || 'myGAP Guide'}</span>
+                        </button>
+                        <button className="udp-explore-card" onClick={() => navigate('/key-info')}>
+                            <div className="udp-explore-icon"><Info size={24} /></div>
+                            <span className="udp-explore-label">{t('home.keyInfo') || 'Crop Advisor'}</span>
+                        </button>
+                        <button className="udp-explore-card" onClick={() => navigate('/guide')}>
+                            <div className="udp-explore-icon"><BookOpen size={24} /></div>
+                            <span className="udp-explore-label">{t('settings.guide') || 'User Guide'}</span>
+                        </button>
                     </div>
                 </div>
             </>
@@ -1301,7 +1304,18 @@ const UserDashboardPanel = () => {
                                     key={a.value}
                                     type="button"
                                     className={`udp-activity-chip ${noteForm.activity_type === a.value ? 'active' : ''}`}
-                                    onClick={() => setNoteForm(f => ({ ...f, activity_type: a.value }))}
+                                    onClick={() => {
+                                        let defaultCat = 'Other';
+                                        if (a.value === 'fertilize') defaultCat = 'Fertilizer';
+                                        else if (a.value === 'spray') defaultCat = 'Pesticide';
+                                        else if (['prune', 'inspect', 'scout'].includes(a.value)) defaultCat = 'Labor';
+                                        
+                                        setNoteForm(f => ({ 
+                                            ...f, 
+                                            activity_type: a.value,
+                                            expense_category: defaultCat
+                                        }));
+                                    }}
                                 >
                                     {a.label}
                                 </button>
@@ -1402,6 +1416,48 @@ const UserDashboardPanel = () => {
                         </>
                     )}
 
+                    {/* Prune fields — only shown for Prune */}
+                    {noteForm.activity_type === 'prune' && (
+                        <div className="udp-form-row">
+                            <div style={{ flex: 1 }}>
+                                <label className="udp-form-label">{t('profile.prunedCount') || 'Trees / Items Pruned'}</label>
+                                <input className="udp-input" type="number" min="0" placeholder="e.g. 10" value={noteForm.pruned_count} onChange={e => setNoteForm(f => ({ ...f, pruned_count: e.target.value }))} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="udp-form-label">{t('profile.pruningType') || 'Pruning Type'}</label>
+                                <select className="udp-input" value={noteForm.pruning_type} onChange={e => setNoteForm(f => ({ ...f, pruning_type: e.target.value }))}>
+                                    <option value="Thinning">{t('profile.pruneThinning') || 'Thinning'}</option>
+                                    <option value="Structural">{t('profile.pruneStructural') || 'Structural'}</option>
+                                    <option value="Deadwood">{t('profile.pruneDeadwood') || 'Deadwood'}</option>
+                                    <option value="Others">{t('profile.catOther') || 'Others'}</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Inspect fields — only shown for Inspect */}
+                    {noteForm.activity_type === 'inspect' && (
+                        <div className="udp-form-row">
+                            <div style={{ flex: 1 }}>
+                                <label className="udp-form-label">{t('profile.inspectionType') || 'Inspection Type'}</label>
+                                <select className="udp-input" value={noteForm.inspection_type} onChange={e => setNoteForm(f => ({ ...f, inspection_type: e.target.value }))}>
+                                    <option value="Pest/Disease">Pest/Disease</option>
+                                    <option value="Soil/Nutrient">Soil/Nutrient</option>
+                                    <option value="Irrigation">Irrigation</option>
+                                    <option value="Infrastructure">Infrastructure</option>
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="udp-form-label">{t('profile.inspectionStatus') || 'Status'}</label>
+                                <select className="udp-input" value={noteForm.inspection_status} onChange={e => setNoteForm(f => ({ ...f, inspection_status: e.target.value }))}>
+                                    <option value="Good">Good / Pass</option>
+                                    <option value="Action Required">Action Required</option>
+                                    <option value="Urgent">Urgent Warning</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Harvest fields — only shown for Harvest */}
                     {noteForm.activity_type === 'harvest' && (
                         <>
@@ -1430,6 +1486,12 @@ const UserDashboardPanel = () => {
                                     <input className="udp-input" placeholder={t('form.buyerPlaceholder') || 'e.g. Ah Chong'} value={noteForm.buyer_name} onChange={e => setNoteForm(f => ({ ...f, buyer_name: e.target.value }))} />
                                 </div>
                             </div>
+                            {(noteForm.kg_harvested && noteForm.price_per_kg) && (
+                                <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '10px', border: '1px solid #dcfce7', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>{t('profile.estRevenue') || 'Estimated Revenue'}</span>
+                                    <span style={{ fontSize: '1rem', color: '#15803d', fontWeight: 800 }}>RM {(Number(noteForm.kg_harvested) * Number(noteForm.price_per_kg)).toFixed(2)}</span>
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -1495,33 +1557,35 @@ const UserDashboardPanel = () => {
                         />
                     </div>
 
-                    {/* Expenses Section */}
-                    <div className="udp-form-grid">
-                        <div>
-                            <label className="udp-form-label">{t('profile.expenseCategory') || 'Expense Category'}</label>
-                            <select
-                                className="udp-input"
-                                value={noteForm.expense_category}
-                                onChange={e => setNoteForm(f => ({ ...f, expense_category: e.target.value }))}
-                            >
-                                <option value="Fertilizer">{t('profile.catFertilizer') || 'Fertilizer'}</option>
-                                <option value="Pesticide">{t('profile.catPesticide') || 'Pesticide'}</option>
-                                <option value="Labor">{t('profile.catLabor') || 'Labor'}</option>
-                                <option value="Equipment">{t('profile.catEquipment') || 'Equipment'}</option>
-                                <option value="Other">{t('profile.catOther') || 'Other'}</option>
-                            </select>
+                    {/* Expenses Section — NOT shown for Harvest */}
+                    {noteForm.activity_type !== 'harvest' && (
+                        <div className="udp-form-grid">
+                            <div>
+                                <label className="udp-form-label">{t('profile.expenseCategory') || 'Expense Category'}</label>
+                                <select
+                                    className="udp-input"
+                                    value={noteForm.expense_category}
+                                    onChange={e => setNoteForm(f => ({ ...f, expense_category: e.target.value }))}
+                                >
+                                    <option value="Fertilizer">{t('profile.catFertilizer') || 'Fertilizer'}</option>
+                                    <option value="Pesticide">{t('profile.catPesticide') || 'Pesticide'}</option>
+                                    <option value="Labor">{t('profile.catLabor') || 'Labor'}</option>
+                                    <option value="Equipment">{t('profile.catEquipment') || 'Equipment'}</option>
+                                    <option value="Other">{t('profile.catOther') || 'Other'}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="udp-form-label">{t('profile.expense') || 'Cost (RM)'}</label>
+                                <input
+                                    className="udp-input"
+                                    type="number" min="0" step="0.01"
+                                    placeholder={t('form.expensePlaceholder') || "e.g. 50"}
+                                    value={noteForm.expense_amount}
+                                    onChange={e => setNoteForm(f => ({ ...f, expense_amount: e.target.value }))}
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className="udp-form-label">{t('profile.expense') || 'Cost (RM)'}</label>
-                            <input
-                                className="udp-input"
-                                type="number" min="0" step="0.01"
-                                placeholder={t('form.expensePlaceholder') || "e.g. 50"}
-                                value={noteForm.expense_amount}
-                                onChange={e => setNoteForm(f => ({ ...f, expense_amount: e.target.value }))}
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     {/* Photo Attachment */}
                     <div>
@@ -2124,24 +2188,44 @@ const UserDashboardPanel = () => {
                 .udp-log-row:last-child { border-bottom: none; }
                 .udp-log-icon { color: var(--color-primary); flex-shrink: 0; margin-top: 2px; }
 
-                /* Quick actions */
-                .udp-actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-                .udp-action-btn {
-                    display: flex; flex-direction: column; align-items: center; gap: 7px;
-                    padding: var(--radius-lg) 6px; background: none; border: none; cursor: pointer;
-                    transition: background 0.15s; font-size: 0.68rem; font-weight: 700; color: var(--color-text-primary);
+                /* Explore Grid (2x2 Card Style) */
+                .udp-explore-grid { 
+                    display: grid; 
+                    grid-template-columns: repeat(2, 1fr); 
+                    gap: 12px; 
+                    padding: 0 16px 16px;
                 }
-                .udp-action-btn:hover { background: var(--color-bg-secondary); }
-                .udp-action-icon {
-                    width: 42px; height: 42px; border-radius: 13px;
-                    display: flex; align-items: center; justify-content: center; color: white;
+                .udp-explore-card {
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: center; 
+                    justify-content: center;
+                    gap: 12px;
+                    padding: 24px 12px; 
+                    background: white; 
+                    border: 1px solid var(--color-border); 
+                    border-radius: var(--radius-lg); 
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
                 }
-                .udp-action-icon.scan-icon    { background: linear-gradient(135deg,#22c55e,#16a34a); }
-                .udp-action-icon.logs-icon    { background: linear-gradient(135deg,#60a5fa,#3b82f6); }
-                .udp-action-icon.mygap-icon   { background: linear-gradient(135deg,#a78bfa,#7c3aed); }
-                .udp-action-icon.shop-icon    { background: linear-gradient(135deg,#fb7185,#e11d48); }
-                .udp-action-icon.guide-icon   { background: linear-gradient(135deg,#fbbf24,#d97706); }
-                .udp-action-icon.book-icon    { background: linear-gradient(135deg,#38bdf8,#0284c7); }
+                .udp-explore-card:hover { 
+                    border-color: var(--color-primary);
+                    background: #f8fafc;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                    transform: translateY(-2px);
+                }
+                .udp-explore-icon {
+                    color: #475569; /* Slate 600 - minimal clean look */
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .udp-explore-label {
+                    font-size: 0.82rem; 
+                    font-weight: 700; 
+                    color: var(--color-text-primary);
+                }
 
                 /* Reports */
                 .udp-reports { display: flex; flex-direction: column; gap: var(--radius-lg); }
@@ -2162,7 +2246,19 @@ const UserDashboardPanel = () => {
                 .udp-bar-amber  { background: #f59e0b; }
                 .udp-bar-pct    { font-size: 0.78rem; font-weight: 700; color: var(--color-text-primary); width: 24px; text-align: right; }
 
-                /* Forms */
+                /* Task Banners */
+                .udp-task-banner {
+                    display: flex; align-items: center; gap: 14px;
+                    margin-bottom: 16px; padding: 16px;
+                    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+                    border: 1px solid #fcd34d; border-radius: var(--radius-lg);
+                    cursor: pointer; transition: transform 0.2s;
+                }
+                .udp-task-banner:hover { transform: translateY(-2px); }
+                .udp-task-icon { font-size: 1.5rem; }
+                .udp-task-content { flex: 1; }
+                .udp-task-title { font-size: 0.9rem; font-weight: 800; color: #92400e; margin-bottom: 2px; }
+                .udp-task-desc  { font-size: 0.78rem; color: #b45309; }
                 .udp-tab-actions { display: flex; justify-content: flex-end; }
                 .udp-add-btn {
                     display: flex; align-items: center; gap: 6px;
