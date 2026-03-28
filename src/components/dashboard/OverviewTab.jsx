@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import {
     AlertTriangle,
     BarChart2,
     BrainCircuit,
+    BookOpen,
     Calendar,
     CheckCircle2,
     CheckSquare,
     ChevronRight,
     Cloud,
+    Database,
     Info,
     ShieldCheck,
     Sparkles,
@@ -53,6 +55,10 @@ const OverviewTab = ({
         [notes],
     );
     const recentHistory = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
+    const label = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
 
     const aiCardData = (aiInsights?.scopeKey === 'overview' ? aiInsights : null) || (
         predictiveRisk
@@ -94,7 +100,7 @@ const OverviewTab = ({
                             <div className="udp-alert-dot" />
                             <div className="udp-scan-info">
                                 <span className="udp-scan-name">{scan.name || scan.disease}</span>
-                                <span className="udp-scan-cat">{scan.category} · {relDate(scan.timestamp ?? scan.created_at, t)}</span>
+                                <span className="udp-scan-cat">{scan.category} / {relDate(scan.timestamp ?? scan.created_at, t)}</span>
                             </div>
                             <span className="udp-alert-hint">{t('profile.actionRequired') || 'Action Needed'} <ChevronRight size={14} /></span>
                         </button>
@@ -112,7 +118,7 @@ const OverviewTab = ({
 
             {!hasLoggedToday && (
                 <div className="udp-task-banner" onClick={() => { setTab('notes'); setAddingNote(true); }}>
-                    <div className="udp-task-icon">✍️</div>
+                    <div className="udp-task-icon udp-standard-icon"><Calendar size={24} /></div>
                     <div className="udp-task-content">
                         <div className="udp-task-title">{t('profile.logDailyTask') || 'Log a Daily Farm Task'}</div>
                         <div className="udp-task-desc">{t('profile.logDailyHint') || 'Record spray, scouting, harvest, or note to strengthen traceability.'}</div>
@@ -162,8 +168,8 @@ const OverviewTab = ({
                                 <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#b91c1c', lineHeight: 1.4 }}>
                                     {predictiveRisk.warningMessage}
                                 </p>
-                                <div style={{ background: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '0.75rem', color: '#991b1b', fontWeight: 700, display: 'inline-block' }}>
-                                    💡 {predictiveRisk.suggestedAction}
+                                <div style={{ background: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '0.75rem', color: '#991b1b', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                    <Sparkles size={13} /> {predictiveRisk.suggestedAction}
                                 </div>
                                 {predictiveRisk.recommendedTreatment?.prefillAllowed !== false && predictiveRisk.recommendedTreatment && (
                                     <button
@@ -230,38 +236,44 @@ const OverviewTab = ({
             </div>
 
             <div className="udp-section">
-                <SectionHeader icon={<TrendingUp size={15} />} title={t('profile.forecast') || 'Weather & Planning'} />
-                <div style={{ padding: '0 16px 12px' }}>
-                    <div style={{ display: 'flex', overflowX: 'auto', gap: 12, paddingBottom: 8, scrollbarWidth: 'none' }}>
+                <SectionHeader icon={<TrendingUp size={15} />} title={label('profile.weatherForecast', 'Weather Forecast')} />
+                <div className="udp-forecast-panel">
+                    {(forecast || []).length === 0 ? (
+                        <div className="udp-empty-forecast">
+                            {label('profile.weatherForecastUnavailable', 'Forecast will appear here after weather data is loaded.')}
+                        </div>
+                    ) : (
+                        <div className="udp-forecast-strip">
                         {(forecast || []).slice(0, 4).map((day, index) => {
                             const noticeData = deriveFarmingNotice(day);
                             const notice = {
-                                label: t(noticeData.key) || 'Good',
+                                label: label(noticeData.key, 'Good'),
                                 color: noticeData.status === 'warning' ? '#ef4444' : noticeData.status === 'caution' ? '#f59e0b' : '#16a34a',
                                 bg: noticeData.status === 'warning' ? '#fef2f2' : noticeData.status === 'caution' ? '#fffbeb' : '#f0fdf4',
                                 border: noticeData.status === 'warning' ? '#fecaca' : noticeData.status === 'caution' ? '#fef3c7' : '#dcfce7',
                                 icon: noticeData.status === 'warning' ? <AlertTriangle size={16} /> : noticeData.status === 'caution' ? <Cloud size={16} /> : <Sun size={16} />,
                             };
                             return (
-                                <div key={day.date || index} style={{ flexShrink: 0, width: 85, background: notice.bg, padding: '10px 8px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, border: `1px solid ${notice.border}` }}>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                                <div key={day.date || index} className="udp-forecast-card" style={{ background: notice.bg, borderColor: notice.border }}>
+                                    <span className="udp-forecast-day">
                                         {index === 0
                                             ? (t('common.today') || t('profile.today') || 'Today')
                                             : new Date(day.date).toLocaleDateString(t('common.dateLocale') || undefined, { weekday: 'short' })}
                                     </span>
-                                    <div style={{ color: notice.color }}>{notice.icon}</div>
-                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{Math.round(day.tempMax)}°C</span>
-                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: notice.color, textAlign: 'center', lineHeight: 1.1 }}>{notice.label}</span>
+                                    <div className="udp-forecast-icon" style={{ color: notice.color }}>{notice.icon}</div>
+                                    <span className="udp-forecast-temp">{Math.round(day.tempMax)}&deg;C</span>
+                                    <span className="udp-forecast-note" style={{ color: notice.color }}>{notice.label}</span>
                                 </div>
                             );
                         })}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
             <div className="udp-explore-grid">
                 <div className="udp-explore-card" style={{ background: 'linear-gradient(135deg, #fff, #f0fdf4)' }} onClick={() => navigate('/mygap')}>
-                    <div className="udp-explore-icon" style={{ color: '#16a34a' }}><ShieldCheck size={24} /></div>
+                    <div className="udp-explore-icon udp-standard-icon"><ShieldCheck size={24} /></div>
                     <span className="udp-explore-label">{t('home.mygapTitle') || 'myGAP Guide'}</span>
                     <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${checklistPct}%`, height: '100%', background: '#22c55e' }} />
@@ -269,22 +281,26 @@ const OverviewTab = ({
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#15803d' }}>{checklistPct}% {t('common.ready') || 'Ready'}</span>
                 </div>
                 <div className="udp-explore-card" style={{ background: 'linear-gradient(135deg, #fff, #fef2f2)' }} onClick={() => setTab('reports')}>
-                    <div className="udp-explore-icon" style={{ color: '#dc2626' }}><BarChart2 size={24} /></div>
-                    <span className="udp-explore-label">{t('profile.analytics') || 'Analytics'}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#b91c1c' }}>{plots.length} {t('profile.activePlots') || 'Plots'}</span>
+                    <div className="udp-explore-icon udp-standard-icon"><BarChart2 size={24} /></div>
+                    <span className="udp-explore-label">{label('profile.analytics', 'Analytics')}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#b91c1c' }}>{plots.length} {label('profile.activePlots', 'active plots')}</span>
                 </div>
             </div>
 
             <div className="udp-section">
-                <SectionHeader icon={<Calendar size={15} />} title={t('profile.recentScans') || 'Recent Activity'} action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'See all'}</button>} />
+                <SectionHeader icon={<Calendar size={15} />} title={label('profile.recentScans', 'Recent Scans')} action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'See all'}</button>} />
                 {recentHistory.length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>{t('profile.noRecentHistory') || 'No recent scans.'}</div>
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>{label('profile.noRecentHistory', 'No recent scans.')}</div>
                 ) : (
                     recentHistory.map((scan) => (
-                        <button key={scan.id} className="udp-scan-row" onClick={() => onSelectAlert(scan)}>
+                        <button
+                            key={scan.id}
+                            className="udp-scan-row"
+                            onClick={() => scan?.id && navigate(`/results/${scan.id}`)}
+                        >
                             <div className="udp-scan-info">
                                 <span className="udp-scan-name">{scan.name || scan.disease}</span>
-                                <span className="udp-scan-cat">{scan.category} · {relDate(scan.timestamp ?? scan.created_at, t)}</span>
+                                <span className="udp-scan-cat">{scan.category} / {relDate(scan.timestamp ?? scan.created_at, t)}</span>
                             </div>
                             <ChevronRight size={16} className="udp-chevron" />
                         </button>
@@ -294,17 +310,17 @@ const OverviewTab = ({
 
             <div style={{ display: 'flex', gap: 12 }}>
                 <button className="udp-task-banner" style={{ flex: 1, background: '#f8fafc', borderColor: '#e2e8f0' }} onClick={() => navigate('/guide')}>
-                    <div className="udp-task-icon">📖</div>
+                    <div className="udp-task-icon udp-standard-icon"><BookOpen size={24} /></div>
                     <div className="udp-task-content">
-                        <div className="udp-task-title" style={{ color: '#334155' }}>{t('profile.userGuide') || 'User Guide'}</div>
-                        <div className="udp-task-desc" style={{ color: '#64748b' }}>{t('profile.learnMore') || 'How to use Plant'}</div>
+                        <div className="udp-task-title" style={{ color: '#334155' }}>{label('profile.userGuide', 'User Guide')}</div>
+                        <div className="udp-task-desc" style={{ color: '#64748b' }}>{label('profile.learnMore', 'How to use Plant')}</div>
                     </div>
                 </button>
                 <button className="udp-task-banner" style={{ flex: 1, background: '#f8fafc', borderColor: '#e2e8f0' }} onClick={() => navigate('/offline-db')}>
-                    <div className="udp-task-icon">🗄️</div>
+                    <div className="udp-task-icon udp-standard-icon"><Database size={24} /></div>
                     <div className="udp-task-content">
-                        <div className="udp-task-title" style={{ color: '#334155' }}>{t('profile.offlineDb') || 'Disease DB'}</div>
-                        <div className="udp-task-desc" style={{ color: '#64748b' }}>{t('profile.browseOffline') || 'Search pests offline'}</div>
+                        <div className="udp-task-title" style={{ color: '#334155' }}>{label('profile.offlineDb', 'Disease DB')}</div>
+                        <div className="udp-task-desc" style={{ color: '#64748b' }}>{label('profile.browseOffline', 'Search pests offline')}</div>
                     </div>
                 </button>
             </div>
@@ -313,3 +329,4 @@ const OverviewTab = ({
 };
 
 export default OverviewTab;
+

@@ -532,7 +532,10 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         });
     }
 
-    const products = options.productRecommendations || getProductRecommendations(scanData.plantType, scanData.disease);
+    const hasExplicitProducts = Object.prototype.hasOwnProperty.call(options, 'productRecommendations');
+    const products = hasExplicitProducts
+        ? (options.productRecommendations || null)
+        : getProductRecommendations(scanData.plantType, scanData.disease);
     const fertilizerProducts = products?.fertilizers || products?.nutrition || [];
     const supplementProducts = products?.supplements || [];
     const fallbackProducts = products?.otherPopular || [];

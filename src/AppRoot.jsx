@@ -23,7 +23,6 @@ const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'), 'guide');
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'), 'notfound');
 
 function App() {
-    console.log('⚛️ App: Rendering full tree...');
     return (
         <ErrorBoundary>
             <AuthProvider>

@@ -356,6 +356,11 @@ export const getScanHistory = (userId = null) => {
 };
 
 export const getScanById = (id, userId = null) => {
+    const getLocalScan = () => {
+        const history = getScanHistory();
+        return history.find((scan) => scan.id === id) || null;
+    };
+
     if (userId && userId !== 'demo-user-123' && supabase) {
         return supabase
             .from('scan_history')
@@ -364,7 +369,7 @@ export const getScanById = (id, userId = null) => {
             .eq('user_id', userId)
             .single()
             .then(({ data, error }) => {
-                if (error || !data) return null;
+                if (error || !data) return getLocalScan();
                 return {
                     ...data.result_json,
                     id: data.id,
@@ -377,10 +382,10 @@ export const getScanById = (id, userId = null) => {
                     leaf_image_url: data.leaf_image_url,
                     locationName: data.location_name,
                 };
-            });
+            })
+            .catch(() => getLocalScan());
     }
-    const history = getScanHistory();
-    return history.find((scan) => scan.id === id) || null;
+    return getLocalScan();
 };
 
 export const deleteScan = async (id, userId = null) => {

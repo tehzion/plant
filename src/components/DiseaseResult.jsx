@@ -1,4 +1,4 @@
-import { useLanguage } from '../i18n/i18n.jsx';
+﻿import { useLanguage } from '../i18n/i18n.jsx';
 import {
   AlertCircle,
   AlertTriangle,
@@ -77,7 +77,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
   const symptomsList = Array.isArray(result.symptoms)
     ? result.symptoms.filter(Boolean)
     : (typeof result.symptoms === 'string'
-      ? result.symptoms.split(/\r?\n|•/g).map(v => v.trim()).filter(Boolean)
+      ? result.symptoms.split(/\r?\n|•|â€¢/g).map(v => v.trim()).filter(Boolean)
       : []);
 
   const stateLabelMap = {
@@ -203,7 +203,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
                   {/* Species Identification (PlantNet) */}
                   {showIdentification && (
-                    <div className="species-id-info" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
+                    <div className="species-id-info" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', width: 'fit-content', maxWidth: '100%', flexWrap: 'wrap' }}>
                       <Leaf size={14} color="#059669" />
                       <span>
 
@@ -908,6 +908,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .nutrition-referral-note {
           display: flex;
           align-items: center;
+          flex-wrap: wrap;
           gap: 6px;
           margin-top: 8px;
           font-size: 0.75rem;
@@ -916,6 +917,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           padding: 6px 12px;
           border-radius: 20px;
           width: fit-content;
+          max-width: 100%;
           border: 1px solid #6EE7B7;
           font-weight: 600;
           animation: fade-in 0.5s ease-out;
@@ -945,6 +947,16 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           .detail-item {
             padding: 10px;
           }
+
+          .status-banner,
+          .retake-banner {
+            align-items: flex-start;
+          }
+
+          .confidence-grid,
+          .evidence-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>
@@ -952,3 +964,4 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 };
 
 export default DiseaseResult;
+

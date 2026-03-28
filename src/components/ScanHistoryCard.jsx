@@ -1,11 +1,11 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { MapPin, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { getStandardizedStatus } from '../utils/statusUtils';
 
 const ScanHistoryCard = ({ scan, onDelete }) => {
   const navigate = useNavigate();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   const standardizedStatus = getStandardizedStatus(scan);
   const healthy = standardizedStatus === 'healthy';
@@ -51,7 +51,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
     <div className="scan-history-card card" onClick={handleClick}>
       <div className="card-content">
         <img
-          src={scan.image}
+          src={scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url}
           alt={scan.disease}
           className="scan-thumbnail"
         />
@@ -64,7 +64,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
                 const translated = t(`home.category${pType.charAt(0).toUpperCase() + pType.slice(1).toLowerCase()}`);
                 return (translated.includes('home.category') ? pType : translated).toUpperCase();
               })()}
-              <span className="meta-separator">•</span>
+              <span className="meta-separator">/</span>
               <span className="meta-date">{formatDate(scan.timestamp)}</span>
             </p>
 
@@ -238,3 +238,4 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
 };
 
 export default ScanHistoryCard;
+

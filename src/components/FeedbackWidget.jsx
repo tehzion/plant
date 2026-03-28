@@ -202,6 +202,8 @@ const FeedbackWidget = ({ scanId, scan }) => {
           border-radius: 12px;
           padding: 12px;
           font-weight: 600;
+          text-align: center;
+          white-space: normal;
         }
 
         .feedback-choice.active {
@@ -243,6 +245,21 @@ const FeedbackWidget = ({ scanId, scan }) => {
           align-items: center;
           justify-content: center;
           gap: 8px;
+        }
+
+        .feedback-submit span {
+          white-space: normal;
+          text-align: center;
+        }
+
+        @media (max-width: 520px) {
+          .feedback-header {
+            flex-direction: column;
+          }
+
+          .feedback-choice-row {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>

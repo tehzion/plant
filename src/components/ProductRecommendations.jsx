@@ -81,9 +81,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         setReasoning(productData.reasoning || '');
         setStoreUrl(productData.storeUrl || '');
         onRecommendationsLoaded?.(productData);
-        return;
 
-        const url = `${import.meta.env.VITE_API_URL || ''}/api/products/search`;
+        /* const url = `${import.meta.env.VITE_API_URL || ''}/api/products/search`;
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -113,7 +112,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         });
         setFallbackMeta(data.fallbackMeta || null);
         setReasoning(data.reasoning || '');
-        setStoreUrl(data.storeUrl || '');
+        setStoreUrl(data.storeUrl || ''); */
       } catch (err) {
         if (isCancelled) return;
         console.error('Failed to load recommended products:', err);

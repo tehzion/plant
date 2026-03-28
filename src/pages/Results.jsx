@@ -18,7 +18,10 @@ import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-
 import { showToast } from '../utils/toast';
 
 import { getStandardizedStatus } from '../utils/statusUtils';
-import { fetchLiveProductRecommendations } from '../utils/liveProductRecommendations.js';
+import {
+  createEmptyProductRecommendations,
+  fetchLiveProductRecommendations,
+} from '../utils/liveProductRecommendations.js';
 
 const Results = () => {
   const { id } = useParams();
@@ -32,11 +35,49 @@ const Results = () => {
   useEffect(() => {
     setScanLoading(true);
     setLiveProductRecommendations(null);
-    Promise.resolve(getScanById(id, user?.id ?? null)).then(result => {
-      setScan(result);
-      setScanLoading(false);
-    });
+    Promise.resolve(getScanById(id, user?.id ?? null))
+      .then(result => {
+        setScan(result);
+        setScanLoading(false);
+      })
+      .catch(() => {
+        setScan(null);
+        setScanLoading(false);
+      });
   }, [id, user?.id]);
+
+  const result = useMemo(() => ({
+    healthStatus: getStandardizedStatus(scan),
+    status: scan?.status || null,
+    plantType: scan?.plantType,
+    disease: scan?.disease,
+    fungusType: scan?.fungusType,
+    pathogenType: scan?.pathogenType,
+    estimatedAge: scan?.estimatedAge,
+    confidence: scan?.confidence,
+    confidenceBreakdown: scan?.confidenceBreakdown,
+    severity: scan?.severity,
+    plantPart: scan?.plantPart,
+    symptoms: scan?.symptoms,
+    immediateActions: scan?.immediateActions,
+    treatments: scan?.treatments,
+    prevention: scan?.prevention,
+    healthyCarePlan: scan?.healthyCarePlan,
+    additionalNotes: scan?.additionalNotes,
+    requiresRetake: scan?.requiresRetake,
+    retakeReason: scan?.retakeReason,
+    abstainReason: scan?.abstainReason,
+    differentialDiagnoses: scan?.differentialDiagnoses,
+    diagnosticEvidence: scan?.diagnosticEvidence,
+    identification: scan?.identification,
+    identificationSource: scan?.identificationSource,
+    speciesAssessment: scan?.speciesAssessment,
+    productSearchTags: scan?.productSearchTags || []
+  }), [scan]);
+
+  const handleRecommendationsLoaded = useCallback((data) => {
+    setLiveProductRecommendations(data);
+  }, []);
 
   if (scanLoading) {
     return (
@@ -79,39 +120,6 @@ const Results = () => {
   const lng = Number(scan?.location?.lng);
   const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
 
-  const result = useMemo(() => ({
-    healthStatus: getStandardizedStatus(scan),
-    status: scan.status || null,
-    plantType: scan.plantType,
-    disease: scan.disease,
-    fungusType: scan.fungusType,
-    pathogenType: scan.pathogenType,
-    estimatedAge: scan.estimatedAge,
-    confidence: scan.confidence,
-    confidenceBreakdown: scan.confidenceBreakdown,
-    severity: scan.severity,
-    plantPart: scan.plantPart,
-    symptoms: scan.symptoms,
-    immediateActions: scan.immediateActions,
-    treatments: scan.treatments,
-    prevention: scan.prevention,
-    healthyCarePlan: scan.healthyCarePlan,
-    additionalNotes: scan.additionalNotes,
-    requiresRetake: scan.requiresRetake,
-    retakeReason: scan.retakeReason,
-    abstainReason: scan.abstainReason,
-    differentialDiagnoses: scan.differentialDiagnoses,
-    diagnosticEvidence: scan.diagnosticEvidence,
-    identification: scan.identification,
-    identificationSource: scan.identificationSource,
-    speciesAssessment: scan.speciesAssessment,
-    productSearchTags: scan.productSearchTags || []
-  }), [scan]);
-
-  const handleRecommendationsLoaded = useCallback((data) => {
-    setLiveProductRecommendations(data);
-  }, []);
-
   const standardizedStatus = result.healthStatus;
   const healthy = standardizedStatus === 'healthy';
 
@@ -133,6 +141,7 @@ const Results = () => {
           });
         } catch (productError) {
           console.warn('Unable to preload live product recommendations for PDF export:', productError);
+          productRecommendations = createEmptyProductRecommendations();
         }
       }
 

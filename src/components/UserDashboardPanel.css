@@ -671,11 +671,17 @@
 }
 
 .udp-task-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .udp-task-content {
     flex: 1;
+}
+
+.udp-standard-icon {
+    color: #64748b;
 }
 
 .udp-task-title {
@@ -727,6 +733,69 @@
     font-size: 0.82rem;
     font-weight: 700;
     color: var(--color-text-primary);
+    text-align: center;
+}
+
+.udp-forecast-panel {
+    padding: 0 16px 12px;
+}
+
+.udp-forecast-strip {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+}
+
+.udp-forecast-card {
+    flex-shrink: 0;
+    width: 96px;
+    min-height: 118px;
+    padding: 12px 10px;
+    border-radius: 14px;
+    border: 1px solid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.udp-forecast-day {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.udp-forecast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.udp-forecast-temp {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+}
+
+.udp-forecast-note {
+    font-size: 0.63rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.udp-empty-forecast {
+    padding: 14px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.82rem;
+    text-align: center;
+    border: 1px dashed #cbd5e1;
 }
 
 .udp-overview,

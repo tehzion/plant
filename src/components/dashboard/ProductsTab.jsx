@@ -25,22 +25,12 @@ const ProductsTab = () => {
             <div className="udp-tab-actions">
                 <div>
                     <h3 className="udp-section-title">
-                        {t('profile.tabProducts') || 'Products'}
+                        {t('nav.shop') || 'Shop'}
                     </h3>
                     <p className="udp-section-subtitle">
-                        {t('profile.productsCatalogSubtitle') || 'Browse the live MojoSense catalog without leaving your dashboard.'}
+                        {t('profile.productsCatalogSubtitle') || 'Browse our catalog for products without leaving your dashboard.'}
                     </p>
                 </div>
-
-                <a
-                    href={SHOP_CATALOG_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="udp-btn udp-btn-primary"
-                >
-                    <ExternalLink size={16} />
-                    <span>{t('profile.openFullCatalog') || 'Open Full Catalog'}</span>
-                </a>
             </div>
 
             <div className="udp-products-frame-shell">
@@ -49,26 +39,18 @@ const ProductsTab = () => {
                         <ShoppingBag size={15} />
                         {t('nav.shop') || 'Shop'}
                     </span>
-                    <a
-                        href={SHOP_CATALOG_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="udp-products-frame-link"
-                    >
-                        {SHOP_CATALOG_URL}
-                    </a>
                 </div>
 
                 <div className="udp-products-frame-wrap">
                     {!isFrameLoaded && (
                         <div className="udp-products-frame-loading">
                             <ShoppingBag size={18} />
-                            <span>{t('profile.loadingCatalog') || 'Loading live catalog…'}</span>
+                            <span>{t('profile.loadingCatalog') || 'Loading live catalog...'}</span>
                         </div>
                     )}
 
                     <iframe
-                        title={t('profile.tabProducts') || 'Products'}
+                        title={t('nav.shop') || 'Shop'}
                         src={SHOP_CATALOG_URL}
                         className="udp-products-frame"
                         loading="lazy"
@@ -80,26 +62,22 @@ const ProductsTab = () => {
                     />
                 </div>
 
-                <div className={`udp-products-fallback${showFallbackHint && !isFrameLoaded ? ' is-active' : ''}`}>
-                    {showFallbackHint && !isFrameLoaded ? (
+                {showFallbackHint && !isFrameLoaded && (
+                    <div className="udp-products-fallback is-active">
                         <p className="udp-products-fallback-text">
                             {t('profile.catalogEmbedFallback') || 'If the catalog does not load inside the dashboard, open the full catalog in a new tab.'}
                         </p>
-                    ) : (
-                        <p className="udp-products-fallback-text">
-                            {t('profile.catalogOpenHint') || 'If the catalog looks blank, open the full catalog in a new tab.'}
-                        </p>
-                    )}
-                    <a
-                        href={SHOP_CATALOG_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="udp-btn udp-btn-secondary"
-                    >
-                        <ExternalLink size={16} />
-                        <span>{t('profile.openFullCatalog') || 'Open Full Catalog'}</span>
-                    </a>
-                </div>
+                        <a
+                            href={SHOP_CATALOG_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="udp-btn udp-btn-secondary"
+                        >
+                            <ExternalLink size={16} />
+                            <span>{t('profile.openFullCatalog') || 'Open Full Catalog'}</span>
+                        </a>
+                    </div>
+                )}
             </div>
         </section>
     );
