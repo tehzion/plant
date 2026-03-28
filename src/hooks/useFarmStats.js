@@ -75,7 +75,7 @@ export const useFarmStats = ({ userId, getLocation, notify }) => {
             setScanHistory(history);
             setChecklistState(checklist);
             setLogbook(loadedLogbook);
-            setNotes(dailyNotes);
+            setNotes((dailyNotes || []).sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
             setPlots(farmPlots);
         };
 
@@ -97,11 +97,86 @@ export const useFarmStats = ({ userId, getLocation, notify }) => {
 
     const recentScans = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
 
+    const autoCheckedItems = useMemo(() => {
+        const hasPesticideLogo = notes.some(n => n.activity_type === 'spray' || (n.activity_type === 'note' && n.chemical_name))
+                               || logbook.some(l => l.type === 'pesticide');
+        const hasScoutLogs = notes.some(n => ['scout', 'inspect', 'prune'].includes(n.activity_type));
+        const hasIrrigationLogs = logbook.some(l => l.type === 'irrigation');
+        const hasTraceability = plots.length > 0 && (notes.length + logbook.length) > 5;
+
+        return {
+            check1: hasPesticideLogo,
+            check3: hasScoutLogs,
+            check4: hasIrrigationLogs,
+            check8: hasTraceability,
+        };
+    }, [notes, logbook, plots]);
+
+    const derivedChecklist = useMemo(() => {
+        const combined = { ...checklistState };
+        Object.keys(autoCheckedItems).forEach(key => {
+            if (autoCheckedItems[key]) combined[key] = true;
+        });
+        return combined;
+    }, [checklistState, autoCheckedItems]);
+
+    const { hasLoggedToday, streak, complianceNudges } = useMemo(() => {
+        // Use local date string YYYY-MM-DD
+        const getLocalDate = (d) => {
+            if (!d) return '';
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return '';
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        };
+
+        const todayStr = getLocalDate(new Date());
+        const allEvents = [...notes, ...logbook, ...scanHistory];
+        
+        const hasLog = allEvents.some(e => getLocalDate(e.created_at || e.timestamp) === todayStr);
+
+        // Helper for days ago
+        const daysOld = (date) => {
+            if (!date) return Infinity;
+            return Math.floor((Date.now() - new Date(date)) / 86400000);
+        };
+
+        const activityDates = new Set(allEvents.map(e => getLocalDate(e.created_at || e.timestamp)));
+
+        // Streak
+        let currentStreak = 0;
+        let d = new Date();
+        for (let i = 0; i < 365; i++) { // cap at 1 year
+            const dateStr = getLocalDate(d);
+            const hasActivity = activityDates.has(dateStr);
+            if (hasActivity) {
+                currentStreak++;
+                d.setDate(d.getDate() - 1);
+            } else {
+                if (dateStr === todayStr) {
+                    d.setDate(d.getDate() - 1);
+                    continue;
+                }
+                break;
+            }
+        }
+
+        // Nudges
+        const nudges = [];
+        const lastSpray = notes.find(n => n.activity_type === 'spray' || (n.activity_type === 'note' && n.chemical_name));
+        const lastScout = notes.find(n => ['scout', 'inspect', 'prune'].includes(n.activity_type));
+        
+        if (daysOld(lastSpray?.created_at) > 14) nudges.push('profile.nudgeStaleSpray');
+        if (daysOld(lastScout?.created_at) > 7) nudges.push('profile.nudgeStaleScout');
+
+        return { hasLoggedToday: hasLog, streak: currentStreak, complianceNudges: nudges };
+    }, [notes, logbook, scanHistory]);
+
     const checklistPct = useMemo(() => {
-        const values = Object.values(checklistState);
+        const values = Object.values(derivedChecklist);
         if (values.length === 0) return 0;
+        // The total number of checklist items in MyGap is 8
         return Math.round((values.filter(Boolean).length / 8) * 100);
-    }, [checklistState]);
+    }, [derivedChecklist]);
 
     const logs = useMemo(() => logbook.slice(0, 5), [logbook]);
 
@@ -215,10 +290,18 @@ export const useFarmStats = ({ userId, getLocation, notify }) => {
         stats,
         scanHistory,
         checklistPct,
+        checklistState,
+        setChecklistState,
+        derivedChecklist,
+        autoCheckedItems,
+        hasLoggedToday,
+        streak,
+        complianceNudges,
         recentScans,
         alerts,
         activeAlerts,
-        logs,
+        logs: logbook,
+        setLogbook,
         notes,
         setNotes,
         plots,
@@ -227,5 +310,9 @@ export const useFarmStats = ({ userId, getLocation, notify }) => {
         setAcknowledgedIds: persistAcknowledgedIds,
         assessingRisk,
         predictiveRisk,
+        hasLoggedToday,
+        streak,
+        complianceNudges,
+        allEvents: [...notes, ...logbook, ...scanHistory]
     };
 };

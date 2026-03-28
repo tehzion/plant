@@ -1,21 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import {
-    ShieldCheck, Sprout, HeartHandshake, Globe, AlertTriangle, ExternalLink,
+    ShieldCheck, Sprout, HeartHandshake, Globe, AlertTriangle, ExternalLink, RefreshCw,
     ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download
 } from 'lucide-react';
-import { getLogbook, saveLogEntry, getChecklistState, saveChecklistState } from '../utils/localStorage';
+import { saveLogEntry, saveChecklistState } from '../utils/localStorage';
 import { useAuth } from '../context/AuthContext';
+import { useFarmStats } from '../hooks/useFarmStats';
+import { useLocation } from '../hooks/useLocation';
+import { useNotifications } from '../context/NotificationProvider.jsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
     const { user } = useAuth();
+    const { notify } = useNotifications();
+    const { getLocation } = useLocation();
+
+    const {
+        logs, setLogbook: setLogs,
+        checklistState: checklist, setChecklistState: setChecklist,
+        derivedChecklist,
+        autoCheckedItems,
+        checklistPct,
+        allEvents
+    } = useFarmStats({ userId: user?.id, getLocation, notify });
+
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
-    const [logs, setLogs] = useState([]);
-    const [checklist, setChecklist] = useState({});
     const [isAddingLog, setIsAddingLog] = useState(false);
     const [newLog, setNewLog] = useState({ type: 'pesticide', notes: '' });
 
@@ -23,18 +37,6 @@ const MyGapPage = () => {
     const [phiDays, setPhiDays] = useState('');
     const [pesticideName, setPesticideName] = useState('');
     const [phiResult, setPhiResult] = useState(null);
-
-    useEffect(() => {
-        const loadData = async () => {
-            const [logs, checklist] = await Promise.all([
-                Promise.resolve(getLogbook(user?.id ?? null)),
-                Promise.resolve(getChecklistState(user?.id ?? null))
-            ]);
-            setLogs(logs);
-            setChecklist(checklist);
-        };
-        loadData();
-    }, [user?.id]);
 
     const handleCheckToggle = async (id) => {
         const newState = { ...checklist, [id]: !checklist[id] };
@@ -138,7 +140,7 @@ const MyGapPage = () => {
 
         // --- Summary Stats Section ---
         const totalChecks = checklistItems.length;
-        const completedChecks = Object.values(checklist).filter(Boolean).length;
+        const completedChecks = Object.values(derivedChecklist).filter(Boolean).length;
         const complianceRate = Math.round((completedChecks / totalChecks) * 100);
         const totalLogs = logs.length;
 
@@ -191,7 +193,7 @@ const MyGapPage = () => {
             { id: 'check8', label: rt('mygap.check8') },
         ].map(item => [
             item.label,
-            checklist[item.id] ? 'COMPLIANT' : 'PENDING'
+            derivedChecklist[item.id] ? 'COMPLIANT' : 'PENDING'
         ]);
 
         doc.autoTable({
@@ -332,6 +334,13 @@ const MyGapPage = () => {
                     <span>{t('mygap.tabLogbook')}</span>
                 </button>
                 <button
+                    className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('calendar')}
+                >
+                    <Calendar size={18} />
+                    <span>{t('mygap.tabCalendar')}</span>
+                </button>
+                <button
                     className={`tab-btn ${activeTab === 'phi' ? 'active' : ''}`}
                     onClick={() => setActiveTab('phi')}
                 >
@@ -400,19 +409,42 @@ const MyGapPage = () => {
                         </div>
 
                         <div className="checklist-items">
-                            {checklistItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className={`checklist-item ${checklist[item.id] ? 'completed' : ''}`}
-                                    onClick={() => handleCheckToggle(item.id)}
-                                >
-                                    <div className="check-icon">
-                                        {checklist[item.id] ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                            {checklistItems.map((item) => {
+                                const isCompleted = derivedChecklist[item.id];
+                                const isAuto = autoCheckedItems[item.id];
+                                
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className={`checklist-item ${isCompleted ? 'completed' : ''}`}
+                                        onClick={() => handleCheckToggle(item.id)}
+                                    >
+                                        <div className="check-icon">
+                                            {isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                                        </div>
+                                        <div className="checklist-item-content">
+                                            <span>{item.label}</span>
+                                            {isAuto && (
+                                                <span className="synced-badge">
+                                                    <RefreshCw size={10} />
+                                                    {t('common.synced') || 'Synced from data'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <span>{item.label}</span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'calendar' && (
+                <div className="fade-in">
+                    <div className="content-card">
+                        <h2 className="section-title">{t('mygap.tabCalendar')}</h2>
+                        <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
+                        <ComplianceCalendar events={allEvents} />
                     </div>
                 </div>
             )}
@@ -667,6 +699,27 @@ const MyGapPage = () => {
                 }
                 .completed .check-icon {
                     color: var(--color-primary);
+                }
+                .checklist-item-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                .synced-badge {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 0.65rem;
+                    color: var(--color-primary);
+                    opacity: 0.8;
+                    font-weight: 600;
+                }
+                .synced-badge svg {
+                    animation: spin 3s linear infinite;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
 
                 .compliance-progress-container {

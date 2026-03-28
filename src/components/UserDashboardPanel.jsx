@@ -82,6 +82,7 @@ const UserDashboardPanel = () => {
         alerts, logs, notes, setNotes, plots, setPlots,
         acknowledgedIds, setAcknowledgedIds,
         assessingRisk, predictiveRisk,
+        hasLoggedToday, streak, complianceNudges
     } = useFarmStats({ userId: user?.id, getLocation, notify });
 
     const [noteForm, setNoteForm] = useState(EMPTY_FORM);
@@ -328,6 +329,86 @@ const UserDashboardPanel = () => {
 
         return (
             <>
+                {/* ── Daily Companion Widget ────────────────────────────────── */}
+                <div className="udp-section" style={{ 
+                    padding: '16px', 
+                    background: hasLoggedToday ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                    border: '1px solid',
+                    borderColor: hasLoggedToday ? '#bcf0da' : '#bfdbfe',
+                    borderRadius: '16px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ 
+                                width: '32px', height: '32px', borderRadius: '10px', 
+                                background: hasLoggedToday ? '#10b981' : '#3b82f6',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                            }}>
+                                {hasLoggedToday ? <CheckCircle2 size={18} /> : <Calendar size={18} />}
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: hasLoggedToday ? '#065f46' : '#1e40af' }}>
+                                    {hasLoggedToday ? (t('profile.dailyProgress') || 'Daily Progress') : (t('profile.whatsHappening') || "What's happening today?")}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: hasLoggedToday ? '#059669' : '#3b82f6', opacity: 0.8 }}>
+                                    {streak > 0 ? `🔥 ${streak} ${t('profile.streak') || 'day streak'}` : (t('profile.startStreak') || 'Start your streak today')}
+                                </div>
+                            </div>
+                        </div>
+                        {!hasLoggedToday && (
+                            <button 
+                                onClick={() => { setTab('notes'); setAddingNote(true); }}
+                                style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                                {t('profile.addNote') || 'Log Now'}
+                            </button>
+                        )}
+                        {hasLoggedToday && <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#059669', background: 'white', padding: '4px 8px', borderRadius: '6px' }}>{t('common.done') || 'Done'}</div>}
+                    </div>
+                    
+                    {complianceNudges.length > 0 && !hasLoggedToday && (
+                        <button 
+                            onClick={() => {
+                                const nudgeKey = complianceNudges[0];
+                                let activity = 'note';
+                                if (nudgeKey.includes('Spray')) activity = 'spray';
+                                if (nudgeKey.includes('Scout')) activity = 'scout';
+                                
+                                setNoteForm({ ...EMPTY_FORM, activity_type: activity });
+                                setAddingNote(true);
+                                setTab('notes');
+                            }}
+                            style={{ 
+                                background: 'rgba(255,255,255,0.6)', 
+                                padding: '10px 12px', 
+                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                borderRadius: '10px',
+                                fontSize: '0.75rem',
+                                color: '#1e40af',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'all 0.2s',
+                                width: '100%',
+                                animation: 'bounceIn 0.5s ease'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = 'white'}
+                            onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.6)'}
+                        >
+                             <Sparkles size={14} style={{ flexShrink: 0 }} /> 
+                             <span style={{ flex: 1 }}>{t(complianceNudges[0])}</span>
+                             <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                        </button>
+                    )}
+                </div>
+
                 {daysSinceScan > 7 && (
                     <div className="udp-task-banner" onClick={() => navigate('/?scan=true')}>
                         <div className="udp-task-icon">📅</div>
