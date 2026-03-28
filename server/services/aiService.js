@@ -278,6 +278,84 @@ export const normalizeDeficientNutrients = (items) => {
         .filter(Boolean);
 };
 
+const normalizePossibleNutrients = (items) => {
+    if (items && typeof items === 'object' && !Array.isArray(items)) {
+        const single = String(items.nutrient || items.name || items.label || '').trim();
+        return single ? [single] : [];
+    }
+
+    if (!Array.isArray(items)) {
+        return normalizeArray(items);
+    }
+
+    return items
+        .map((item) => {
+            if (typeof item === 'string') return item.trim();
+            if (item && typeof item === 'object') {
+                return String(item.nutrient || item.name || item.label || '').trim();
+            }
+            return '';
+        })
+        .filter(Boolean);
+};
+
+export const normalizeNutritionalIssues = (nutritionalIssues = {}) => {
+    const source = nutritionalIssues && typeof nutritionalIssues === 'object' ? nutritionalIssues : {};
+    const deficientNutrients = normalizeDeficientNutrients(source.deficientNutrients);
+    const possibleNutrients = normalizePossibleNutrients(source.possibleNutrients);
+    const symptoms = normalizeArray(source.symptoms);
+    const reasoning = String(source.reasoning || source.notes || '').trim();
+    const explicitStatus = String(source.status || '').trim().toLowerCase();
+
+    let status = ['none', 'possible', 'confirmed'].includes(explicitStatus)
+        ? explicitStatus
+        : '';
+
+    if (!status) {
+        if (source.hasDeficiency || deficientNutrients.length > 0) {
+            status = 'confirmed';
+        } else if (possibleNutrients.length > 0 || reasoning || symptoms.length > 0) {
+            status = 'possible';
+        } else {
+            status = 'none';
+        }
+    }
+
+    if (status === 'confirmed') {
+        return {
+            status,
+            hasDeficiency: true,
+            severity: source.severity || 'Mild',
+            symptoms,
+            deficientNutrients,
+            possibleNutrients: [],
+            reasoning: '',
+        };
+    }
+
+    if (status === 'possible') {
+        return {
+            status,
+            hasDeficiency: false,
+            severity: source.severity || 'Mild',
+            symptoms,
+            deficientNutrients: [],
+            possibleNutrients,
+            reasoning,
+        };
+    }
+
+    return {
+        status: 'none',
+        hasDeficiency: false,
+        severity: source.severity || 'Mild',
+        symptoms: [],
+        deficientNutrients: [],
+        possibleNutrients: [],
+        reasoning: '',
+    };
+};
+
 const normalizeDiseaseCategory = (value = '') => {
     const normalized = String(value).trim().toLowerCase();
     if (!normalized) return 'unknown';
@@ -458,6 +536,7 @@ export function normalizeParsedLogResult(parsed = {}) {
 
 export function normalizeAnalysisResult(result = {}, language = 'en', malaysiaCropInfo = null) {
     const fallbackNames = getFallbackFertilizerNames(language, malaysiaCropInfo, result);
+    const normalizedNutritionalIssues = normalizeNutritionalIssues(result?.nutritionalIssues);
     const originalRecommendations = Array.isArray(result.fertilizerRecommendations)
         ? result.fertilizerRecommendations
         : [];
@@ -476,7 +555,7 @@ export function normalizeAnalysisResult(result = {}, language = 'en', malaysiaCr
         };
     });
 
-    if (normalizedRecommendations.length === 0 && result?.nutritionalIssues?.hasDeficiency) {
+    if (normalizedRecommendations.length === 0 && normalizedNutritionalIssues.hasDeficiency) {
         fallbackNames.slice(0, 2).forEach((name) => {
             normalizedRecommendations.push({
                 fertilizerName: name,
@@ -490,10 +569,7 @@ export function normalizeAnalysisResult(result = {}, language = 'en', malaysiaCr
 
     return {
         ...result,
-        nutritionalIssues: {
-            ...(result.nutritionalIssues || {}),
-            deficientNutrients: normalizeDeficientNutrients(result?.nutritionalIssues?.deficientNutrients),
-        },
+        nutritionalIssues: normalizedNutritionalIssues,
         fertilizerRecommendations: normalizedRecommendations,
     };
 }
@@ -561,6 +637,12 @@ const buildFewShotExampleObject = (language, type) => {
             deficiency: false,
             fertilizers: ['NPK 15-15-15', 'Kieserite'],
             productSearchTags: ['fungicide', 'mancozeb', 'copper'],
+            possibleNutrients: ['Magnesium'],
+            nutritionReasoning: translateText(language, {
+                en: 'There is also mild interveinal yellowing, so nutrient stress may be contributing even though fungal spotting is the primary issue.',
+                ms: 'Terdapat juga kekuningan ringan antara urat daun, jadi tekanan nutrien mungkin turut menyumbang walaupun bintik kulat masih isu utama.',
+                zh: 'åŒæ—¶å¯ä»¥çœ‹åˆ°è½»å¾®è„‰é—´é»„åŒ–ï¼Œè¿™è¡¨æ˜Žè¥å…»åŽ‹åŠ›ä¹Ÿå¯èƒ½åœ¨å½±å“æ¤æ ªï¼Œä½†çœŸèŒæ–‘ç‚¹ä»æ˜¯ä¸»è¦é—®é¢˜ã€‚',
+            }),
         },
         nutrient: {
             disease: translateText(language, { en: 'Potassium Deficiency', ms: 'Kekurangan Kalium', zh: '缺钾' }),
@@ -653,15 +735,18 @@ const buildFewShotExampleObject = (language, type) => {
             ],
         },
         nutritionalIssues: {
+            status: selected.deficiency ? 'confirmed' : (selected.possibleNutrients?.length ? 'possible' : 'none'),
             hasDeficiency: selected.deficiency,
             severity: selected.deficiency ? 'Moderate' : 'Mild',
-            symptoms: selected.deficiency ? selected.symptoms : [],
+            symptoms: selected.deficiency ? selected.symptoms : (selected.possibleNutrients?.length ? selected.symptoms : []),
             deficientNutrients: selected.deficiency ? [{
                 nutrient: 'Potassium',
                 severity: 'Moderate',
                 symptoms: selected.symptoms,
                 recommendations: selected.treatments,
             }] : [],
+            possibleNutrients: selected.possibleNutrients || [],
+            reasoning: selected.nutritionReasoning || '',
         },
         fertilizerRecommendations: selected.fertilizers.map((fertilizerName) => ({
             fertilizerName,
@@ -1457,10 +1542,13 @@ const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) => {
         prevention: buildRetakePrevention(language),
         healthyCarePlan: DEFAULT_CARE_PLANS[language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en'],
         nutritionalIssues: {
+            status: 'none',
             hasDeficiency: false,
             severity: 'Mild',
             symptoms: [],
             deficientNutrients: [],
+            possibleNutrients: [],
+            reasoning: '',
         },
         fertilizerRecommendations: healthy
             ? getFallbackFertilizerNames(language, malaysiaCropInfo, result).slice(0, 2).map((fertilizerName) => ({
@@ -1537,6 +1625,7 @@ Rules:
 - If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
 - Bacterial diagnoses require angular or water-soaked evidence.
 - Nutrient deficiency should match leaf age pattern and diffuse color change, not discrete fungal lesions.
+- If fungal evidence is primary but nutrient stress is still plausible, keep fungal as the main diagnosis and mention the nutrient possibility in differential reasoning instead of forcing a nutrient diagnosis.
 - Healthy plants must remain severity mild and diagnosis "${buildNoIssuesLabel(language)}".
 
 Return STRICT JSON:
@@ -1625,9 +1714,12 @@ Return STRICT JSON:
     "bestPractices": ["item 1", "item 2"]
   },
   "nutritionalIssues": {
+    "status": "none|possible|confirmed",
     "hasDeficiency": false,
     "severity": "Mild",
     "symptoms": [],
+    "possibleNutrients": ["Magnesium"],
+    "reasoning": "short note about overlap",
     "deficientNutrients": [
       { "nutrient": "Potassium", "severity": "Moderate", "symptoms": ["item"], "recommendations": ["item"] }
     ]
@@ -1646,7 +1738,13 @@ Return STRICT JSON:
     "roi": "Low/Medium/High"
   },
   "productSearchTags": ["fungicide", "fertilizer"]
-}`;
+}
+
+Rules for nutritionalIssues:
+- Use "status": "confirmed" only when nutrient deficiency evidence is strong. In that case set "hasDeficiency": true and fill "deficientNutrients".
+- Use "status": "possible" when fungal or other disease signs are primary but nutrient stress may also be contributing. In that case keep "hasDeficiency": false, fill "possibleNutrients", and add concise "reasoning".
+- Use "status": "none" when there is no meaningful nutrient signal.
+- Do not label a possible overlap as a confirmed deficiency.`;
 };
 
 const parseOpenAIJson = (content, errorLabel) => {
@@ -1787,12 +1885,7 @@ const mergeDiagnosisResult = ({
     merged.treatments = normalizeArray(merged.treatments);
     merged.prevention = normalizeArray(merged.prevention);
     merged.productSearchTags = normalizeArray(merged.productSearchTags).slice(0, 5);
-    merged.nutritionalIssues = {
-        hasDeficiency: Boolean(merged.nutritionalIssues?.hasDeficiency),
-        severity: merged.nutritionalIssues?.severity || 'Mild',
-        symptoms: normalizeArray(merged.nutritionalIssues?.symptoms),
-        deficientNutrients: normalizeDeficientNutrients(merged.nutritionalIssues?.deficientNutrients),
-    };
+    merged.nutritionalIssues = normalizeNutritionalIssues(merged.nutritionalIssues);
 
     if (merged.requiresRetake && merged.immediateActions.length === 0) {
         merged.immediateActions = buildRetakeActionItems(language);

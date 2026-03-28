@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
+import { getNutrientNames, normalizeNutritionalIssues } from './nutritionUtils.js';
 
 const PT_TO_MM = 25.4 / 72;
 
@@ -505,7 +506,8 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         });
     }
 
-    if (scanData.nutritionalIssues?.hasDeficiency) {
+    const normalizedNutrition = normalizeNutritionalIssues(scanData.nutritionalIssues);
+    if (normalizedNutrition.status !== 'none') {
         await writeSectionTitle(t('results.nutritionalIssues'), {
             textColor: [217, 119, 6],
             fontSize: 14,
@@ -513,22 +515,69 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             marginBottom: 6,
         });
 
-        const deficientNutrients = Array.isArray(scanData.nutritionalIssues.deficientNutrients)
-            ? scanData.nutritionalIssues.deficientNutrients
-            : [];
+        if (normalizedNutrition.status === 'confirmed') {
+            const nutrientRows = normalizedNutrition.deficientNutrients.map((issue) => {
+                if (typeof issue === 'string') return issue;
+                const symptomsText = normalizeList(issue.symptoms).join(', ');
+                return [issue.nutrient, symptomsText].filter(Boolean).join(': ');
+            });
 
-        const nutrientRows = deficientNutrients.map((issue) => {
-            if (typeof issue === 'string') return issue;
-            const symptomsText = normalizeList(issue.symptoms).join(', ');
-            return [issue.nutrient, symptomsText].filter(Boolean).join(': ');
-        });
+            await writeParagraph(t('results.confirmedDeficiency'), {
+                x: 14,
+                width: pageWidth - 28,
+                fontSize: 10,
+                fontStyle: 'bold',
+                color: darkColor,
+                gapAfter: 4,
+            });
 
-        await writeList(nutrientRows, {
-            x: 14,
-            width: pageWidth - 28,
-            bullet: '!',
-            color: darkColor,
-        });
+            await writeList(nutrientRows, {
+                x: 14,
+                width: pageWidth - 28,
+                bullet: '!',
+                color: darkColor,
+            });
+        } else {
+            const possibleNutrients = getNutrientNames(normalizedNutrition);
+            await writeParagraph(t('results.possibleNutrientOverlap'), {
+                x: 14,
+                width: pageWidth - 28,
+                fontSize: 10,
+                fontStyle: 'bold',
+                color: darkColor,
+                gapAfter: 4,
+            });
+
+            if (possibleNutrients.length > 0) {
+                await writeParagraph(`${t('results.suspectedNutrients')}: ${possibleNutrients.join(', ')}`, {
+                    x: 14,
+                    width: pageWidth - 28,
+                    fontSize: 10,
+                    color: darkColor,
+                    gapAfter: 4,
+                });
+            }
+
+            if (normalizedNutrition.reasoning) {
+                await writeParagraph(`${t('results.nutritionMayAlsoBeContributing')}: ${normalizedNutrition.reasoning}`, {
+                    x: 14,
+                    width: pageWidth - 28,
+                    fontSize: 10,
+                    color: darkColor,
+                    gapAfter: 4,
+                });
+            }
+
+            const symptomRows = normalizeList(normalizedNutrition.symptoms);
+            if (symptomRows.length > 0) {
+                await writeList(symptomRows, {
+                    x: 14,
+                    width: pageWidth - 28,
+                    bullet: '?',
+                    color: darkColor,
+                });
+            }
+        }
     }
 
     const products = options.productRecommendations || null;

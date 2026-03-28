@@ -81,17 +81,17 @@ const OverviewTab = ({
             <div className="udp-stats-row">
                 <div className="udp-stat">
                     <span className="udp-stat-num">{stats.scannedThisMonth}</span>
-                    <span className="udp-stat-label">{t('profile.scansMonth') || 'Scan/Mo'}</span>
+                    <span className="udp-stat-label">{label('profile.scansMonth', 'Scan/Mo')}</span>
                 </div>
                 <div className="udp-stat-divider" />
                 <div className="udp-stat">
                     <span className={`udp-stat-num ${hasLoggedToday ? 'udp-stat-green' : 'udp-stat-warn'}`}>{streak}</span>
-                    <span className="udp-stat-label">{t('profile.streak') || 'Streak'}</span>
+                    <span className="udp-stat-label">{label('profile.streak', 'Streak')}</span>
                 </div>
                 <div className="udp-stat-divider" />
                 <div className="udp-stat">
                     <span className="udp-stat-num">{stats.accuracy}%</span>
-                    <span className="udp-stat-label">{t('profile.healthScore') || 'Health'}</span>
+                    <span className="udp-stat-label">{label('profile.healthScore', 'Health')}</span>
                 </div>
             </div>
 
@@ -99,7 +99,7 @@ const OverviewTab = ({
                 <div className="udp-section udp-section-alert">
                     <SectionHeader
                         icon={<AlertTriangle size={15} color="#ef4444" />}
-                        title={`${activeAlerts.length} ${t('profile.urgentAlerts') || 'Urgent Issues'}`}
+                        title={`${activeAlerts.length} ${label('profile.urgentAlerts', 'Urgent Issues')}`}
                         action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'See all'}</button>}
                     />
                     {activeAlerts.slice(0, 2).map((scan) => (
@@ -109,16 +109,16 @@ const OverviewTab = ({
                                 <span className="udp-scan-name">{scan.name || scan.disease}</span>
                                 <span className="udp-scan-cat">{scan.category} / {relDate(scan.timestamp ?? scan.created_at, t)}</span>
                             </div>
-                            <span className="udp-alert-hint">{t('profile.actionRequired') || 'Action Needed'} <ChevronRight size={14} /></span>
+                            <span className="udp-alert-hint">{label('profile.actionRequired', 'Action Needed')} <ChevronRight size={14} /></span>
                         </button>
                     ))}
                 </div>
             ) : (
                 <div className="udp-section udp-section-resolved">
-                    <SectionHeader icon={<CheckCircle2 size={15} color="#16a34a" />} title={t('profile.allClear') || 'All Plots Healthy'} />
+                    <SectionHeader icon={<CheckCircle2 size={15} color="#16a34a" />} title={label('profile.allClear', 'All Plots Healthy')} />
                     <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a' }}><ShieldCheck size={18} /></div>
-                        <p style={{ fontSize: '0.8rem', color: '#15803d', margin: 0, fontWeight: 500 }}>{t('profile.noUrgentIssues') || 'No pests or diseases detected in recent scans.'}</p>
+                        <p style={{ fontSize: '0.8rem', color: '#15803d', margin: 0, fontWeight: 500 }}>{label('profile.noUrgentIssues', 'No pests or diseases detected in recent scans.')}</p>
                     </div>
                 </div>
             )}

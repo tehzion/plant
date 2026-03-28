@@ -18,6 +18,7 @@ import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-
 import { showToast } from '../utils/toast';
 
 import { getStandardizedStatus } from '../utils/statusUtils';
+import { getNutrientNames, normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
 import {
   createEmptyProductRecommendations,
   fetchLiveProductRecommendations,
@@ -46,6 +47,11 @@ const Results = () => {
       });
   }, [id, user?.id]);
 
+  const normalizedNutrition = useMemo(
+    () => normalizeNutritionalIssues(scan?.nutritionalIssues),
+    [scan?.nutritionalIssues],
+  );
+
   const result = useMemo(() => ({
     healthStatus: getStandardizedStatus(scan),
     status: scan?.status || null,
@@ -72,8 +78,9 @@ const Results = () => {
     identification: scan?.identification,
     identificationSource: scan?.identificationSource,
     speciesAssessment: scan?.speciesAssessment,
+    nutritionalIssues: normalizedNutrition,
     productSearchTags: scan?.productSearchTags || []
-  }), [scan]);
+  }), [scan, normalizedNutrition]);
 
   const handleRecommendationsLoaded = useCallback((data) => {
     setLiveProductRecommendations(data);
@@ -131,12 +138,16 @@ const Results = () => {
     showToast(t('results.generatingPDF'), 'info', 10000);
 
     try {
+      const scanForExport = {
+        ...scan,
+        nutritionalIssues: normalizedNutrition,
+      };
       let productRecommendations = liveProductRecommendations;
-      if (!productRecommendations && (scan.plantType || scan.disease)) {
+      if (!productRecommendations && (scanForExport.plantType || scanForExport.disease)) {
         try {
           productRecommendations = await fetchLiveProductRecommendations({
-            plantType: scan.plantType,
-            disease: scan.disease,
+            plantType: scanForExport.plantType,
+            disease: scanForExport.disease,
             scanResult: result,
           });
         } catch (productError) {
@@ -145,7 +156,7 @@ const Results = () => {
         }
       }
 
-      await generatePDFReport(scan, language, translations, { productRecommendations });
+      await generatePDFReport(scanForExport, language, translations, { productRecommendations });
       showToast(t('results.pdfDownloaded'), 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -171,21 +182,27 @@ const Results = () => {
       return [];
     };
 
-    const normalizeDeficientNutrients = (value) => {
-      if (!Array.isArray(value)) return [];
-      return value
-        .map((item) => {
-          if (typeof item === 'string') return item.trim();
-          if (item && typeof item === 'object') {
-            return String(item.nutrient || item.name || item.label || '').trim();
-          }
-          return '';
-        })
-        .filter(Boolean);
-    };
-
-    const nutrientNames = normalizeDeficientNutrients(scan.nutritionalIssues?.deficientNutrients);
-    const nutrientSymptoms = normalizeList(scan.nutritionalIssues?.symptoms);
+    const nutrientNames = getNutrientNames(normalizedNutrition);
+    const nutrientSymptoms = normalizeList(normalizedNutrition?.symptoms);
+    const nutritionBlock = normalizedNutrition.status === 'confirmed'
+      ? `
+${t('results.nutritionalIssues')}:
+${t('results.nutritionStatusConfirmed')}: ${t('results.confirmedDeficiency')}
+${t('results.lackingNutrients')}: ${nutrientNames.join(', ')}
+${t('results.symptoms')}: ${nutrientSymptoms.join(', ')}
+${t('results.severity')}: ${normalizedNutrition.severity}
+`
+      : normalizedNutrition.status === 'possible'
+        ? [
+`
+${t('results.nutritionalIssues')}:
+${t('results.nutritionStatusPossible')}: ${t('results.possibleNutrientOverlap')}
+`,
+          nutrientNames.length > 0 ? `${t('results.suspectedNutrients')}: ${nutrientNames.join(', ')}` : '',
+          normalizedNutrition.reasoning ? `${t('results.nutritionMayAlsoBeContributing')}: ${normalizedNutrition.reasoning}` : '',
+          nutrientSymptoms.length > 0 ? `${t('results.symptoms')}: ${nutrientSymptoms.join(', ')}` : '',
+        ].filter(Boolean).join('\n')
+        : '';
 
     const report = `
 ${t('pdf.title')}
@@ -234,12 +251,7 @@ ${normalizeList(scan.healthyCarePlan.bestPractices).map((practice, i) => `${i + 
 ${t('results.prevention')}:
 ${normalizeList(scan.prevention).map((prev, i) => `${i + 1}. ${prev}`).join('\n')}
 
-${scan.nutritionalIssues?.hasDeficiency ? `
-${t('results.nutritionalIssues')}:
-${t('results.lackingNutrients')}: ${nutrientNames.join(', ')}
-${t('results.symptoms')}: ${nutrientSymptoms.join(', ')}
-${t('results.severity')}: ${scan.nutritionalIssues.severity}
-` : ''}
+${nutritionBlock}
 
 ${t('common.note')}:
 ${scan.additionalNotes}
@@ -260,6 +272,13 @@ ${t('pdf.generatedBy')}
   };
 
   const handleShare = async () => {
+    const nutrientNames = getNutrientNames(normalizedNutrition);
+    const nutritionSummary = normalizedNutrition.status === 'confirmed'
+      ? `${t('results.nutritionalIssues')}: ${t('results.confirmedDeficiency')}${nutrientNames.length ? ` (${nutrientNames.join(', ')})` : ''}`
+      : normalizedNutrition.status === 'possible'
+        ? `${t('results.nutritionalIssues')}: ${t('results.possibleNutrientOverlap')}${nutrientNames.length ? ` (${nutrientNames.join(', ')})` : ''}`
+        : '';
+
     const shareText = [
       `${t('pdf.title') || 'Plant Analysis Report'}`,
       `${t('results.plantType')}: ${scan.plantType || t('common.unknown')}`,
@@ -267,6 +286,7 @@ ${t('pdf.generatedBy')}
       `${t('results.status')}: ${t(`results.${standardizedStatus}`)}`,
       scan.severity ? `${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}` : '',
       scan.confidence ? `${t('results.confidence')}: ${scan.confidence}%` : '',
+      nutritionSummary,
       scan.additionalNotes || '',
     ].filter(Boolean).join('\n');
 
@@ -332,10 +352,10 @@ ${t('pdf.generatedBy')}
     {
       icon: <Sprout size={20} />,
       title: t('results.nutrition'),
-      badge: scan.nutritionalIssues?.hasDeficiency ? '!' : null,
+      badge: normalizedNutrition.status === 'confirmed' ? '!' : (normalizedNutrition.status === 'possible' ? '?' : null),
       content: (
         <NutritionalAnalysis
-          nutritionalIssues={scan.nutritionalIssues}
+          nutritionalIssues={normalizedNutrition}
           fertilizerRecommendations={scan.fertilizerRecommendations}
         />
       )

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'child_process'
 import fs from 'fs'
+import { createHash } from 'crypto'
 
 const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
 let gitHash = 'unknown';
@@ -11,6 +12,31 @@ try {
 } catch (e) {
   console.warn('Failed to get git hash', e);
 }
+
+const MALAYSIAN_PLANT_ALIASES = [
+  'durian',
+  'rambutan',
+  'manggis',
+  'pisang',
+  'kelapa',
+  'betik',
+  'nanas',
+  'mangga',
+  'petai',
+  'padi',
+  'cili',
+  'sawit',
+];
+
+const createPlantAlias = (seed = 'asset') => {
+  const digest = createHash('sha256')
+    .update(String(seed))
+    .digest('hex');
+  const index = Number.parseInt(digest.slice(0, 8), 16) % MALAYSIAN_PLANT_ALIASES.length;
+  return `${MALAYSIAN_PLANT_ALIASES[index]}-${digest.slice(8, 14)}`;
+};
+
+const createAssetPattern = (seed, extensionPattern) => `assets/${createPlantAlias(seed)}-[hash]${extensionPattern}`;
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -73,12 +99,23 @@ export default defineConfig({
   },
   build: {
     sourcemap: false, // Disable Source Maps as requested
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
-        // Standard naming to prevent 404s/MIME type errors during deployment
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        inlineDynamicImports: true,
+        // Obfuscate emitted filenames so route/page names are not exposed in browser asset URLs.
+        entryFileNames: (chunkInfo) => createAssetPattern(
+          chunkInfo.facadeModuleId || chunkInfo.name || 'entry',
+          '.js',
+        ),
+        chunkFileNames: (chunkInfo) => createAssetPattern(
+          chunkInfo.facadeModuleId || chunkInfo.name || 'chunk',
+          '.js',
+        ),
+        assetFileNames: (assetInfo) => createAssetPattern(
+          assetInfo.originalFileName || assetInfo.name || 'asset',
+          '[extname]',
+        ),
       }
     }
   },

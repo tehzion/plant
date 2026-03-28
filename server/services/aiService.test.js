@@ -105,6 +105,46 @@ describe('aiService helpers', () => {
         ]);
     });
 
+    it('normalizes legacy nutritional issues into a confirmed deficiency state', () => {
+        expect(aiService.normalizeNutritionalIssues({
+            hasDeficiency: true,
+            severity: 'Moderate',
+            deficientNutrients: ['Potassium'],
+        })).toEqual({
+            status: 'confirmed',
+            hasDeficiency: true,
+            severity: 'Moderate',
+            symptoms: [],
+            deficientNutrients: [
+                {
+                    nutrient: 'Potassium',
+                    severity: '',
+                    symptoms: [],
+                    recommendations: [],
+                },
+            ],
+            possibleNutrients: [],
+            reasoning: '',
+        });
+    });
+
+    it('keeps possible nutrient overlap distinct from a confirmed deficiency', () => {
+        expect(aiService.normalizeNutritionalIssues({
+            status: 'possible',
+            possibleNutrients: ['Magnesium', { nutrient: 'Potassium' }],
+            symptoms: ['Interveinal yellowing'],
+            reasoning: 'Fungal spotting is primary, but mild nutrient stress may also be contributing.',
+        })).toEqual({
+            status: 'possible',
+            hasDeficiency: false,
+            severity: 'Mild',
+            symptoms: ['Interveinal yellowing'],
+            deficientNutrients: [],
+            possibleNutrients: ['Magnesium', 'Potassium'],
+            reasoning: 'Fungal spotting is primary, but mild nutrient stress may also be contributing.',
+        });
+    });
+
     it('builds contextual ask-AI summaries from recent notes and alerts', () => {
         const summary = aiService.buildAskAIContextSummary(
             [

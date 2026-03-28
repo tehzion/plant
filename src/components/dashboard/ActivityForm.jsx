@@ -30,30 +30,6 @@ const ActivityForm = ({
 
     return (
         <form className="udp-inline-form" onSubmit={onSubmit}>
-            <div style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)', border: '1.5px solid #ddd6fe', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', boxShadow: '0 4px 6px -1px rgba(139, 92, 246, 0.1)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ background: 'white', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                    <Sparkles size={18} color="#8b5cf6" />
-                </div>
-                <div style={{ flex: 1 }}>
-                    <input
-                        className="udp-input"
-                        style={{ border: 'none', background: 'transparent', padding: '4px', boxShadow: 'none', fontSize: '0.9rem', fontWeight: 500 }}
-                        placeholder={t('form.nlPlaceholder') || "Type naturally... e.g. 'Sprayed 20L Mancozeb'"}
-                        value={enhanceText}
-                        onChange={(event) => setEnhanceText(event.target.value)}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                                event.preventDefault();
-                                onAutoEnhance();
-                            }
-                        }}
-                    />
-                </div>
-                <button type="button" onClick={() => onAutoEnhance()} disabled={enhancing || !enhanceText.trim()} style={{ background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(139, 92, 246, 0.3)' }}>
-                    {enhancing ? '...' : <><Sparkles size={14} />{t('form.autoEnhance') || 'Auto-enhance'}</>}
-                </button>
-            </div>
-
             <div>
                 <label className="udp-form-label">{t('profile.activityType') || 'Activity Type'}</label>
                 <div className="udp-activity-grid">

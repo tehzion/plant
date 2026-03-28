@@ -12,7 +12,6 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
         healthy,
         resultState,
         stateLabel,
-        confidenceBreakdown,
         showIdentification,
         displayName,
         scientificName,
@@ -45,7 +44,7 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
                         </div>
                     )}
 
-                    {result.nutritionalIssues?.hasDeficiency && (
+                    {result.nutritionalIssues?.status && result.nutritionalIssues.status !== 'none' && (
                         <div className="nutrition-referral-note">
                             <Sprout size={14} />
                             <span>{t('results.seeNutritionTab')}</span>
@@ -102,29 +101,6 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
                 </div>
             )}
 
-            {confidenceBreakdown && (
-                <div className="confidence-panel">
-                    <div className="confidence-header">{t('results.confidenceBreakdown') || 'Confidence breakdown'}</div>
-                    <div className="confidence-grid">
-                        <div className="confidence-item">
-                            <span>{t('results.overallConfidence') || 'Overall'}</span>
-                            <strong>{confidenceBreakdown.overallConfidence}%</strong>
-                        </div>
-                        <div className="confidence-item">
-                            <span>{t('results.diagnosisConfidence') || 'Diagnosis'}</span>
-                            <strong>{confidenceBreakdown.diagnosisConfidence}%</strong>
-                        </div>
-                        <div className="confidence-item">
-                            <span>{t('results.imageQualityConfidence') || 'Image quality'}</span>
-                            <strong>{confidenceBreakdown.imageQualityConfidence}%</strong>
-                        </div>
-                        <div className="confidence-item">
-                            <span>{t('results.speciesConfidence') || 'Species'}</span>
-                            <strong>{confidenceBreakdown.speciesConfidence}%</strong>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 };

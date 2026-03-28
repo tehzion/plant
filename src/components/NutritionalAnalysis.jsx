@@ -1,7 +1,8 @@
 import { useLanguage } from '../i18n/i18n.jsx';
-import { CheckCircle, AlertTriangle, Droplet, Pill } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Droplet } from 'lucide-react';
+import { normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
 
-const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) => {
+const NutritionalAnalysis = ({ nutritionalIssues }) => {
   const { t } = useLanguage();
 
   const toTitleCase = (str) => {
@@ -9,8 +10,10 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
     return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   };
 
-  const isHealthy = !nutritionalIssues || !nutritionalIssues.hasDeficiency;
-  const validRecommendations = Array.isArray(fertilizerRecommendations) ? fertilizerRecommendations : [];
+  const normalizedIssues = normalizeNutritionalIssues(nutritionalIssues);
+  const isHealthy = normalizedIssues.status === 'none';
+  const isPossible = normalizedIssues.status === 'possible';
+  const isConfirmed = normalizedIssues.status === 'confirmed';
 
   const getSeverityColor = (severity) => {
     if (!severity) return 'moderate';
@@ -40,25 +43,34 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
       ) : (
         <>
           {/* Deficiency Alert */}
-          <div className={`deficiency-alert severity-${getSeverityColor(nutritionalIssues?.severity)}`}>
+          <div className={`deficiency-alert ${isPossible ? 'possible-alert' : ''} severity-${getSeverityColor(normalizedIssues?.severity)}`}>
             <div className="alert-icon-wrapper">
               <AlertTriangle size={22} />
             </div>
             <div className="alert-content">
               <div className="alert-header">
-                <strong className="alert-title">{t('results.nutrientDeficiencyDetected')}</strong>
-                {nutritionalIssues?.severity && (
-                  <span className={`severity-badge ${getSeverityColor(nutritionalIssues.severity)}`}>
-                    {t(`results.sev${toTitleCase(nutritionalIssues.severity).replace(/\s+/g, '')}`)}
+                <strong className="alert-title">
+                  {isConfirmed ? t('results.nutrientDeficiencyDetected') : t('results.possibleNutrientIssue')}
+                </strong>
+                {isPossible ? (
+                  <span className="severity-badge possible">
+                    {t('results.possibleBadge')}
                   </span>
-                )}
+                ) : normalizedIssues?.severity ? (
+                  <span className={`severity-badge ${getSeverityColor(normalizedIssues.severity)}`}>
+                    {t(`results.sev${toTitleCase(normalizedIssues.severity).replace(/\s+/g, '')}`)}
+                  </span>
+                ) : null}
               </div>
-              {typeof nutritionalIssues?.symptoms === 'string' && (
-                <p className="alert-description">{nutritionalIssues.symptoms}</p>
+              {normalizedIssues?.reasoning && (
+                <p className="alert-description">{normalizedIssues.reasoning}</p>
               )}
-              {Array.isArray(nutritionalIssues?.symptoms) && nutritionalIssues.symptoms.length > 0 && (
+              {!normalizedIssues?.reasoning && isPossible && (
+                <p className="alert-description">{t('results.nutritionMayAlsoBeContributing')}</p>
+              )}
+              {Array.isArray(normalizedIssues?.symptoms) && normalizedIssues.symptoms.length > 0 && (
                 <ul className="symptoms-list">
-                  {nutritionalIssues.symptoms.map((symptom, idx) => (
+                  {normalizedIssues.symptoms.map((symptom, idx) => (
                     <li key={idx}>{symptom}</li>
                   ))}
                 </ul>
@@ -67,14 +79,14 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
           </div>
 
           {/* Deficient Nutrients */}
-          {nutritionalIssues?.deficientNutrients && Array.isArray(nutritionalIssues.deficientNutrients) && nutritionalIssues.deficientNutrients.length > 0 && (
+          {isConfirmed && normalizedIssues?.deficientNutrients && normalizedIssues.deficientNutrients.length > 0 && (
             <div className="nutrients-section">
               <div className="subsection-header">
                 <Droplet size={18} className="subsection-icon" />
                 <h4 className="subsection-title">{t('results.lackingNutrients')}</h4>
               </div>
               <div className="nutrients-grid">
-                {nutritionalIssues.deficientNutrients.map((item, index) => {
+                {normalizedIssues.deficientNutrients.map((item, index) => {
                   const nutrientName = typeof item === 'string' ? item : (item?.nutrient || t('common.unknown'));
                   const severity = typeof item === 'object' && item?.severity ? item.severity : null;
 
@@ -90,6 +102,23 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {isPossible && normalizedIssues.possibleNutrients.length > 0 && (
+            <div className="nutrients-section possible-nutrients-section">
+              <div className="subsection-header">
+                <Droplet size={18} className="subsection-icon" />
+                <h4 className="subsection-title">{t('results.suspectedNutrients')}</h4>
+              </div>
+              <div className="nutrients-grid">
+                {normalizedIssues.possibleNutrients.map((item, index) => (
+                  <div key={`${item}-${index}`} className="nutrient-chip possible-chip">
+                    <span className="nutrient-name">{toTitleCase(item)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="possible-nutrients-note">{t('results.possibleNutrientOverlap')}</p>
             </div>
           )}
 
@@ -199,6 +228,11 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
           border-color: #F87171;
         }
 
+        .deficiency-alert.possible-alert {
+          background: #EFF6FF;
+          border-color: #93C5FD;
+        }
+
         .alert-icon-wrapper {
           width: 44px;
           height: 44px;
@@ -265,6 +299,11 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
         .severity-badge.severe {
           background: #F87171;
           color: #991B1B;
+        }
+
+        .severity-badge.possible {
+          background: #DBEAFE;
+          color: #1D4ED8;
         }
 
         .alert-description {
@@ -356,6 +395,23 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
         .chip-severity.severe {
           background: #FEE2E2;
           color: #991B1B;
+        }
+
+        .possible-nutrients-section {
+          border-color: #BFDBFE;
+          background: #F8FBFF;
+        }
+
+        .possible-chip {
+          background: #EFF6FF;
+          border-color: #BFDBFE;
+        }
+
+        .possible-nutrients-note {
+          margin: 14px 0 0;
+          font-size: 0.875rem;
+          color: #4B5563;
+          line-height: 1.5;
         }
 
         /* Fertilizer Section */
