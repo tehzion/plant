@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, CheckCircle, Info, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useLanguage } from '../i18n/i18n.jsx';
 
 // ─── Theme maps ───────────────────────────────────────────────────────────────
 const THEME = {
@@ -29,6 +30,7 @@ const THEME = {
 // Note: auto-dismiss timing is now handled entirely by NotificationProvider.
 // This component is purely presentational.
 const NotificationToast = ({ notification, onClose, onAction }) => {
+    const { t } = useLanguage();
     if (!notification) return null;
 
     const { type = 'info', message, actionLabel } = notification;
@@ -56,7 +58,7 @@ const NotificationToast = ({ notification, onClose, onAction }) => {
                 <button
                     className="notification-close"
                     onClick={onClose}
-                    aria-label="Dismiss notification"
+                    aria-label={t('common.dismissNotification')}
                 >
                     <X size={16} />
                 </button>

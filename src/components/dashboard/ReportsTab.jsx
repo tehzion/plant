@@ -14,6 +14,14 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import SectionHeader from './SectionHeader';
+
+const QUALITY_COLORS = {
+    Excellent: '#10b981',
+    Good: '#3b82f6',
+    Fair: '#f59e0b',
+    Poor: '#ef4444',
+};
 
 const ReportsTab = ({
     t,
@@ -28,9 +36,28 @@ const ReportsTab = ({
     aiInsights,
     onSelectAlert,
     relDate,
-    SectionHeader,
 }) => {
     const [selectedPlotId, setSelectedPlotId] = useState('all');
+    const locale = t('common.dateLocale') || 'en-MY';
+    const localizeQuality = (quality) => {
+        const qualityKey = {
+            Excellent: 'profile.qualityExcellent',
+            Good: 'profile.qualityGood',
+            Fair: 'profile.qualityFair',
+            Poor: 'profile.qualityPoor',
+        }[quality];
+        return qualityKey ? (t(qualityKey) || quality) : quality;
+    };
+    const localizeExpenseCategory = (category) => {
+        const categoryKey = {
+            Fertilizer: 'profile.catFertilizer',
+            Pesticide: 'profile.catPesticide',
+            Labor: 'profile.catLabor',
+            Equipment: 'profile.catEquipment',
+            Other: 'profile.catOther',
+        }[category];
+        return categoryKey ? (t(categoryKey) || category) : category;
+    };
 
     const healthRate = stats.total > 0 ? Math.round((stats.healthy / stats.total) * 100) : 0;
     const activeAlerts = useMemo(
@@ -67,6 +94,7 @@ const ReportsTab = ({
 
     const expenseData = Object.keys(expenseCounts).map((name) => ({
         name,
+        label: localizeExpenseCategory(name),
         value: expenseCounts[name],
         fill: name === 'Fertilizer' ? '#10b981' : name === 'Pesticide' ? '#f59e0b' : name === 'Labor' ? '#3b82f6' : name === 'Equipment' ? '#8b5cf6' : '#64748b',
     })).sort((left, right) => right.value - left.value);
@@ -77,23 +105,28 @@ const ReportsTab = ({
     ].filter((entry) => entry.value > 0);
 
     const qualityData = Object.keys(qualityCounts).map((name) => ({
-        name,
+        name: localizeQuality(name),
         count: qualityCounts[name],
-        fill: name === 'Excellent' ? '#10b981' : name === 'Good' ? '#3b82f6' : name === 'Fair' ? '#f59e0b' : '#ef4444',
+        fill: QUALITY_COLORS[name] || '#ef4444',
     })).filter((entry) => entry.count > 0);
 
     const yieldChartData = useMemo(() => {
         const byMonth = {};
-        notes.filter((note) => note.activity_type === 'harvest').forEach((note) => {
+        filteredNotes.filter((note) => note.activity_type === 'harvest').forEach((note) => {
             const date = new Date(note.created_at);
             const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            const label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-            if (!byMonth[key]) byMonth[key] = { month: label, kg: 0 };
+            const label = date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
+            if (!byMonth[key]) byMonth[key] = { key, month: label, kg: 0 };
             byMonth[key].kg += Number(note.kg_harvested) || 0;
         });
 
-        const sorted = Object.values(byMonth).sort((left, right) => left.month.localeCompare(right.month));
-        if (sorted.length < 2) return { data: sorted, forecast: null };
+        const sorted = Object.values(byMonth).sort((left, right) => left.key.localeCompare(right.key));
+        if (sorted.length < 2) {
+            return {
+                data: sorted.map(({ key, ...entry }) => entry),
+                forecast: null,
+            };
+        }
 
         const count = sorted.length;
         const sumX = sorted.reduce((sum, _item, index) => sum + index, 0);
@@ -108,10 +141,13 @@ const ReportsTab = ({
         nextDate.setMonth(nextDate.getMonth() + 1);
 
         return {
-            data: [...sorted, { month: nextDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), kg: null, forecast: forecastKg }],
+            data: [
+                ...sorted.map(({ key, ...entry }) => entry),
+                { month: nextDate.toLocaleDateString(locale, { month: 'short', year: '2-digit' }), kg: null, forecast: forecastKg },
+            ],
             forecast: forecastKg,
         };
-    }, [notes]);
+    }, [filteredNotes, locale]);
 
     return (
         <div className="udp-reports">
@@ -164,7 +200,7 @@ const ReportsTab = ({
                     title={t('profile.harvestSummary') || 'Financial & Yield Summary'}
                     action={(
                         <select className="udp-input" style={{ width: 130, padding: 4, height: 26, fontSize: '0.75rem', borderRadius: 6 }} value={selectedPlotId} onChange={(event) => setSelectedPlotId(event.target.value)}>
-                            <option value="all">All Plots</option>
+                            <option value="all">{t('profile.allPlots') || 'All Plots'}</option>
                             {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.name}</option>)}
                         </select>
                     )}
@@ -232,7 +268,7 @@ const ReportsTab = ({
                                 </ResponsiveContainer>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', fontSize: '0.65rem', fontWeight: 600, marginTop: '4px' }}>
-                                {expenseData.map((entry) => <span key={entry.name} style={{ color: entry.fill }}>● {t(`profile.act${entry.name}`) || entry.name}: RM{entry.value}</span>)}
+                                {expenseData.map((entry) => <span key={entry.name} style={{ color: entry.fill }}>● {entry.label}: RM{entry.value}</span>)}
                             </div>
                         </div>
                     )}

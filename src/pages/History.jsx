@@ -31,7 +31,7 @@ const History = () => {
     }, [scanState.loading]);
 
     const handleDelete = async (id) => {
-        if (window.confirm(t('history.confirmDeleteSingle') || 'Delete this scan?')) {
+        if (window.confirm(t('history.confirmDeleteSingle'))) {
             await deleteScan(id, user?.id ?? null);
             refreshHistory();
         }

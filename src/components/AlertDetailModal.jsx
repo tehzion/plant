@@ -61,7 +61,12 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
             setResolution(prev => prev ? `${prev}\n\n${sopText}` : sopText);
         } catch (error) {
             console.error('Failed to generate SOP:', error);
-            alert(t('error.aiGenerationFailed') || 'Failed to generate SOP. Please check connection.');
+            const sopFailureText = t('profile.aiSopFailed');
+            alert(
+                sopFailureText === 'profile.aiSopFailed'
+                    ? (t('home.errorGeneral') || 'Failed to generate SOP. Please check connection.')
+                    : sopFailureText,
+            );
         } finally {
             setGeneratingSOP(false);
         }

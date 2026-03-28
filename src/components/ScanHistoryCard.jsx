@@ -42,7 +42,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
 
   const handleDelete = (e) => {
     e.stopPropagation();
-    if (window.confirm(t('history.confirmDeleteSingle') || 'Delete this scan?')) {
+    if (window.confirm(t('history.confirmDeleteSingle'))) {
       onDelete(scan.id);
     }
   };
@@ -96,7 +96,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
         <button
           className="delete-btn"
           onClick={handleDelete}
-          aria-label="Delete scan"
+          aria-label={t('history.deleteScan') === 'history.deleteScan' ? t('common.delete') : t('history.deleteScan')}
         >
           <Trash2 size={18} />
         </button>

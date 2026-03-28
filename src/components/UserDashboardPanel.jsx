@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext';
@@ -9,16 +9,20 @@ import { useAIAdvisor } from '../hooks/useAIAdvisor';
 import { useWeather, deriveFarmingNotice } from '../hooks/useWeather';
 import { saveDailyNote, savePlot, deletePlot } from '../utils/localStorage';
 import {
-    ScanLine, BookOpen, LogOut,
+    ScanLine, LogOut,
     ShieldCheck, ChevronRight, Calendar, TrendingUp,
     AlertTriangle, BarChart2, MapPin, FileText, Plus,
     Trash2, X, CheckCircle2, Leaf, BrainCircuit, Sparkles, CheckSquare,
-    ShoppingBag, Info, Database, ChevronUp, ChevronDown,
+    Info, ChevronUp, ChevronDown,
     Cloud, Sun, CloudRain, CloudLightning, Snowflake, Droplets, Thermometer
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import AlertDetailModal from './AlertDetailModal';
 import { supabase } from '../lib/supabase';
+import DashboardOverviewTab from './dashboard/OverviewTab';
+import DashboardReportsTab from './dashboard/ReportsTab';
+import DashboardPlotsTab from './dashboard/PlotsTab';
+import DashboardNotesTab from './dashboard/NotesTab';
 
 // ─── Helper: friendly relative date ─────────────────────────────────────────
 const relDate = (ts, t) => {
@@ -78,12 +82,12 @@ const UserDashboardPanel = () => {
 
     // ── Custom hooks: all farm data + AI logic ────────────────────────────────
     const {
-        stats, scanHistory, checklistPct, recentScans,
+        stats, scanHistory, checklistPct,
         alerts, logs, notes, setNotes, plots, setPlots,
         acknowledgedIds, setAcknowledgedIds,
         assessingRisk, predictiveRisk,
         hasLoggedToday, streak, complianceNudges
-    } = useFarmStats({ userId: user?.id, getLocation, notify });
+    } = useFarmStats({ userId: user?.id, getLocation, notify, t });
 
     const [noteForm, setNoteForm] = useState(EMPTY_FORM);
     const [addingNote, setAddingNote] = useState(false);
@@ -99,10 +103,11 @@ const UserDashboardPanel = () => {
     const {
         aiInsights, generatingInsights,
         enhancing,
+        enhanceText, setEnhanceText,
         handleGenerateInsights, handleAutoEnhance,
     } = useAIAdvisor({ t, notes, plots, checklistPct, noteForm, setNoteForm, notifyError, notifySuccess });
     
-    const { weatherTemp, weatherIcon, forecast, fetchWeather } = useWeather();
+    const { forecast, fetchWeather } = useWeather();
     
     // ── Initial Weather Fetch ────────────────────────────────────────────────
     useEffect(() => {
@@ -215,7 +220,6 @@ const UserDashboardPanel = () => {
             type: 'error',
             message: t('profile.confirmDeletePlot') || 'Remove this plot?',
             actionLabel: t('common.confirm') || 'Remove',
-            duration: 8000,
             action: async () => {
                 const ok = await deletePlot(id, user?.id ?? null);
                 if (ok) setPlots(prev => prev.filter(p => p.id !== id));
@@ -223,674 +227,653 @@ const UserDashboardPanel = () => {
         });
     };
 
-    // ── Section header helper ─────────────────────────────────────────────────
-    const SectionHeader = ({ icon, title, action }) => (
-        <div className="udp-section-header">
-            {icon && <span className="udp-sh-icon">{icon}</span>}
-            <span className="udp-sh-title">{title}</span>
-            {action && <span className="udp-sh-action">{action}</span>}
-        </div>
-    );
+    const handlePrefillRecommendedTreatment = (warningMessage, recommendedTreatment) => {
+        setTab('notes');
+        setAddingNote(true);
+        setNoteForm((currentForm) => ({
+            ...EMPTY_FORM,
+            plot_id: currentForm.plot_id,
+            activity_type: recommendedTreatment ? 'spray' : 'inspect',
+            chemical_name: recommendedTreatment || '',
+            note: [
+                warningMessage,
+                recommendedTreatment ? `${t('profile.logSuggestedTreatment') || 'Suggested treatment'}: ${recommendedTreatment}` : '',
+            ].filter(Boolean).join('\n\n'),
+        }));
+    };
 
-    // ── AI Insights card (shared between Overview + Reports) ──────────────────
-    const AIInsightsCard = ({ activeAlerts, harvestLogs }) => (
-        <div className="udp-section">
-            <SectionHeader
-                icon={<BrainCircuit size={15} color="#8b5cf6" />}
-                title="AI Farm Intelligence"
-                action={
-                    <button
-                        className="udp-see-all"
-                        style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }}
-                        onClick={() => handleGenerateInsights(activeAlerts, harvestLogs)}
-                        disabled={generatingInsights}
-                    >
-                        {generatingInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}
-                    </button>
-                }
-            />
-            <div style={{ padding: '0 16px 16px' }}>
-                {generatingInsights ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px', color: '#8b5cf6' }}>
-                        <BrainCircuit size={28} style={{ animation: 'pulse 1.5s infinite' }} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('profile.aiAnalyzingHint') || 'Analyzing logs & alerts...'}</span>
-                    </div>
-                ) : aiInsights ? (
-                    <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '16px' }}>
-                        <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}>
-                            <strong>{t('profile.aiSummary') || 'Summary'}:</strong> {aiInsights.summary}
+// ─── Helper: SectionHeader ─────────────────────────────────────────────────
+const LegacySectionHeader = ({ icon, title, action }) => (
+    <div className="udp-section-header">
+        {icon && <span className="udp-sh-icon">{icon}</span>}
+        <span className="udp-sh-title">{title}</span>
+        {action && <span className="udp-sh-action">{action}</span>}
+    </div>
+);
+
+// ─── Helper: AIInsightsCard ─────────────────────────────────────────────────
+const LegacyAIInsightsCard = ({ activeAlerts, harvestLogs, handleGenerateInsights, generatingInsights, aiInsights, t }) => (
+    <div className="udp-section">
+        <LegacySectionHeader
+            icon={<BrainCircuit size={15} color="#8b5cf6" />}
+            title="AI Farm Intelligence"
+            action={
+                <button
+                    className="udp-see-all"
+                    style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }}
+                    onClick={() => handleGenerateInsights(activeAlerts, harvestLogs)}
+                    disabled={generatingInsights}
+                >
+                    {generatingInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}
+                </button>
+            }
+        />
+        <div style={{ padding: '0 16px 16px' }}>
+            {generatingInsights ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px', color: '#8b5cf6' }}>
+                    <BrainCircuit size={28} style={{ animation: 'pulse 1.5s infinite' }} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('profile.aiAnalyzingHint') || 'Analyzing logs & alerts...'}</span>
+                </div>
+            ) : aiInsights ? (
+                <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '16px' }}>
+                    <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}>
+                        <strong>{t('profile.aiSummary') || 'Summary'}:</strong> {aiInsights.summary}
+                    </p>
+                    {aiInsights.yieldAnalysis && (
+                        <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>
+                            {aiInsights.yieldAnalysis}
                         </p>
-                        {aiInsights.yieldAnalysis && (
-                            <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>
-                                {aiInsights.yieldAnalysis}
-                            </p>
-                        )}
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>
-                            {t('profile.aiRecommendations') || 'Actionable Recommendations'}:
-                        </div>
-                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.8rem', color: '#4c1d95', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {aiInsights.recommendations?.map((rec, i) => <li key={i}>{rec}</li>)}
-                        </ul>
+                    )}
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>
+                        {t('profile.aiRecommendations') || 'Actionable Recommendations'}:
                     </div>
-                ) : (
-                    <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>
-                        {t('profile.aiAskHint') || 'Tap "Ask AI" to get a personalized weekly agronomist report.'}
+                    <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.8rem', color: '#4c1d95', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {aiInsights.recommendations?.map((rec, i) => <li key={i}>{rec}</li>)}
+                    </ul>
+                </div>
+            ) : (
+                <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>
+                    {t('profile.aiAskHint') || 'Tap "Ask AI" to get a personalized weekly agronomist report.'}
+                </div>
+            )}
+        </div>
+    </div>
+);
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    const TABS = [
+        { id: 'overview', label: t('profile.tabOverview') || 'Overview' },
+        { id: 'reports',  label: t('profile.tabReports')  || 'Reports'  },
+        { id: 'plots',    label: t('profile.tabPlots')    || 'Plots'    },
+        { id: 'notes',    label: t('profile.tabNotes')    || 'Daily Log' },
+    ];
+
+    // ── Main render ───────────────────────────────────────────────────────────
+    return (
+        <div className="udp-container">
+            {/* Enhanced Profile Card */}
+            <div className="udp-profile-card">
+                <div className="udp-profile-blob udp-profile-blob-1" />
+                <div className="udp-profile-blob udp-profile-blob-2" />
+                <div className="udp-profile-top-row">
+                    <div className="udp-avatar-wrapper">
+                        <div className="udp-avatar-ring" />
+                        <div className="udp-avatar">{initials}</div>
+                        <span className="udp-avatar-status" title="Online" />
                     </div>
+                    <button className="udp-signout-mini" onClick={handleSignOut} disabled={signingOut} title="Sign out"><LogOut size={15} /></button>
+                </div>
+                <div className="udp-profile-identity">
+                    <h2 className="udp-display-name">{displayName}</h2>
+                    <p className="udp-email"><span className="udp-email-dot" />{email}</p>
+                </div>
+                <div className="udp-profile-badges">
+                    <span className="udp-badge udp-badge-verified"><ShieldCheck size={11} />{t('profile.verifiedFarmer') || 'Verified Farmer'}</span>
+                    {stats.total > 0 && <span className="udp-badge udp-badge-scans"><ScanLine size={11} />{stats.total} {t('profile.totalScans') || 'Scans'}</span>}
+                    {checklistPct >= 50 && <span className="udp-badge udp-badge-gap"><ShieldCheck size={11} />GAP {checklistPct}%</span>}
+                </div>
+                <div className="udp-profile-strip">
+                    <div className="udp-strip-item"><span className="udp-strip-num">{stats.healthy}</span><span className="udp-strip-label">{t('profile.healthy') || 'Healthy'}</span></div>
+                    <div className="udp-strip-divider" />
+                    <div className="udp-strip-item"><span className="udp-strip-num udp-strip-warn">{stats.diseases}</span><span className="udp-strip-label">{t('profile.diseased') || 'Issues'}</span></div>
+                    <div className="udp-strip-divider" />
+                    <div className="udp-strip-item"><span className="udp-strip-num">{plots.length}</span><span className="udp-strip-label">{t('profile.plots') || 'Plots'}</span></div>
+                    <div className="udp-strip-divider" />
+                    <div className="udp-strip-item"><span className="udp-strip-num udp-strip-purple">{notes.length}</span><span className="udp-strip-label">{t('profile.tabNotes') || 'Logs'}</span></div>
+                </div>
+            </div>
+
+            <div className="udp-tabs">
+                {TABS.map(t2 => (
+                    <button key={t2.id} className={`udp-tab ${tab === t2.id ? 'active' : ''}`} onClick={() => setTab(t2.id)}>
+                        {t2.label}
+                        {t2.id === 'overview' && activeAlertCount > 0 && <span className="udp-tab-badge">{activeAlertCount}</span>}
+                    </button>
+                ))}
+            </div>
+
+            <div className="udp-tab-content">
+                {tab === 'overview' && (
+                    <DashboardOverviewTab 
+                        alerts={alerts} acknowledgedIds={acknowledgedIds} notes={notes} 
+                        scanHistory={scanHistory} t={t} stats={stats} hasLoggedToday={hasLoggedToday} 
+                        streak={streak} setTab={setTab} setAddingNote={setAddingNote} 
+                        complianceNudges={complianceNudges} setNoteForm={setNoteForm} 
+                        emptyForm={EMPTY_FORM} navigate={navigate} assessingRisk={assessingRisk} 
+                        predictiveRisk={predictiveRisk} forecast={forecast} 
+                        checklistPct={checklistPct} plots={plots} relDate={relDate} 
+                        onSelectAlert={setSelectedAlert}
+                        onGenerateInsights={handleGenerateInsights}
+                        generatingInsights={generatingInsights}
+                        aiInsights={aiInsights}
+                        onPrefillRecommendedTreatment={handlePrefillRecommendedTreatment}
+                    />
+                )}
+                {tab === 'reports'  && (
+                    <DashboardReportsTab 
+                        t={t}
+                        stats={stats}
+                        checklistPct={checklistPct}
+                        alerts={alerts} acknowledgedIds={acknowledgedIds} notes={notes} 
+                        plots={plots}
+                        onGenerateInsights={handleGenerateInsights}
+                        generatingInsights={generatingInsights}
+                        aiInsights={aiInsights}
+                        onSelectAlert={setSelectedAlert}
+                        relDate={relDate}
+                    />
+                )}
+                {tab === 'plots'    && (
+                    <DashboardPlotsTab 
+                        t={t} setAddingPlot={setAddingPlot} addingPlot={addingPlot} 
+                        handleAddPlot={handleAddPlot} plotForm={plotForm} setPlotForm={setPlotForm} 
+                        setShowSoilFields={setShowSoilFields} showSoilFields={showSoilFields} 
+                        savingPlot={savingPlot} plots={plots} handleDeletePlot={handleDeletePlot}
+                    />
+                )}
+                {tab === 'notes'    && (
+                    <DashboardNotesTab 
+                        t={t} setAddingNote={setAddingNote} addingNote={addingNote} 
+                        handleAddNote={handleAddNote} noteForm={noteForm} setNoteForm={setNoteForm} 
+                        activityTypes={ACTIVITY_TYPES} plots={plots} 
+                        onAutoEnhance={handleAutoEnhance} enhancing={enhancing}
+                        enhanceText={enhanceText} setEnhanceText={setEnhanceText}
+                        notes={notes}
+                        savingNote={savingNote} ACTIVITY_BADGE_COLOR={ACTIVITY_BADGE_COLOR} 
+                        relDate={relDate}
+                    />
                 )}
             </div>
+
+            {selectedAlert && <AlertDetailModal scan={selectedAlert} onClose={() => setSelectedAlert(null)} onAcknowledge={handleAcknowledge} />}
+
+            <style>{`
+                .udp-container { max-width: 480px; margin: 0 auto; padding: 16px 16px 60px; display: flex; flex-direction: column; gap: 16px; }
+                .udp-profile-card { position: relative; overflow: hidden; background: linear-gradient(145deg,#f0fdf4,#dcfce7 55%,#bbf7d0); border: 1.5px solid #86efac; border-radius: 24px; padding: 20px 20px 0; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 20px rgba(0,177,79,0.12),0 1px 4px rgba(0,0,0,0.04); }
+                .udp-profile-blob { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; }
+                .udp-profile-blob-1 { width: 140px; height: 140px; background: radial-gradient(circle,rgba(0,177,79,0.15),transparent 70%); top: -40px; right: -30px; }
+                .udp-profile-blob-2 { width: 90px; height: 90px; background: radial-gradient(circle,rgba(34,197,94,0.12),transparent 70%); bottom: 30px; left: -20px; }
+                .udp-profile-top-row { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; }
+                .udp-avatar-wrapper { position: relative; flex-shrink: 0; }
+                .udp-avatar-ring { position: absolute; inset: -3px; border-radius: 50%; border: 2.5px solid transparent; background: linear-gradient(135deg,#00B14F,#4ade80,#00B14F) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: destination-out; mask-composite: exclude; animation: ring-spin 4s linear infinite; }
+                @keyframes ring-spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+                .udp-avatar { position: relative; z-index: 1; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg,#00B14F,#059669); color: white; font-size: 1.45rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,177,79,0.35); letter-spacing: -0.5px; }
+                .udp-avatar-status { position: absolute; bottom: 3px; right: 3px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; background: #22c55e; border: 2px solid white; animation: status-pulse 2.5s ease-in-out infinite; }
+                @keyframes status-pulse { 0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,0.3)} 50%{box-shadow:0 0 0 5px rgba(34,197,94,0)} }
+                .udp-profile-identity { position: relative; z-index: 1; }
+                .udp-display-name { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .udp-email { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #475569; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .udp-email-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: #00B14F; }
+                .udp-profile-badges { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+                .udp-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 10px; font-size: 0.68rem; font-weight: 700; }
+                .udp-badge-verified { background: white; color: #00B14F; border: 1.5px solid #86efac; }
+                .udp-badge-scans { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
+                .udp-badge-gap { background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; }
+                .udp-profile-strip { position: relative; z-index: 1; display: flex; align-items: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-top: 1px solid rgba(255,255,255,0.9); border-radius: 0 0 20px 20px; margin: 0 -20px; padding: 12px 20px; }
+                .udp-strip-item { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+                .udp-strip-num { font-size: 1.15rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1; }
+                .udp-strip-num.udp-strip-warn { color: #f59e0b; }
+                .udp-strip-num.udp-strip-purple { color: #7c3aed; }
+                .udp-strip-label { font-size: 0.58rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+                .udp-strip-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.08); margin: 0 4px; }
+                .udp-signout-mini { background: rgba(255,255,255,0.8); border: 1px solid #fecaca; color: #ef4444; border-radius: 10px; padding: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+                .udp-signout-mini:hover { background: #fef2f2; transform: scale(1.05); }
+                .udp-signout-mini:disabled { opacity: 0.5; cursor: not-allowed; }
+                .udp-tabs { display: flex; gap: 4px; background: var(--color-bg-secondary); border-radius: var(--radius-lg); padding: 4px; }
+                .udp-tab { flex: 1; padding: var(--radius-sm) 4px; border: none; border-radius: var(--radius-sm); background: none; font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
+                .udp-tab.active { background: white; color: var(--color-primary); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+                .udp-tab-badge { background: #ef4444; color: white; border-radius: 999px; padding: 1px 5px; font-size: 0.62rem; font-weight: 800; }
+                .udp-tab-content { display: flex; flex-direction: column; gap: var(--radius-lg); }
+                .udp-stats-row { display: flex; align-items: center; background: white; border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+                .udp-stat { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 3px; }
+                .udp-stat-divider { width: 1px; height: 32px; background: var(--color-border); margin: 0 2px; }
+                .udp-stat-num { font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary); letter-spacing: -1px; line-height: 1; }
+                .udp-stat-num.udp-stat-warn { color: #f59e0b; }
+                .udp-stat-num.udp-stat-green { color: var(--color-primary); }
+                .udp-stat-label { font-size: 0.62rem; font-weight: 600; color: var(--color-text-light); text-transform: uppercase; }
+                .udp-last-scan { display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: 0.82rem; }
+                .udp-last-scan svg { color: var(--color-primary); }
+                .udp-section { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
+                .udp-section-alert { border-color: #fecaca; }
+                .udp-section-resolved { border-color: #bbf7d0; }
+                .udp-section-alert .udp-sh-icon { color: #ef4444 !important; }
+                .udp-section-alert .udp-sh-title { color: #b91c1c; }
+                .udp-section-resolved .udp-sh-icon { color: #16a34a !important; }
+                .udp-section-resolved .udp-sh-title { color: #15803d; }
+                .udp-section-header { display: flex; align-items: center; gap: var(--radius-sm); padding: var(--radius-md) var(--radius-lg); border-bottom: 1px solid var(--color-bg-secondary); font-size: 0.82rem; font-weight: 700; color: var(--color-text-primary); }
+                .udp-sh-icon { color: var(--color-primary); display: flex; }
+                .udp-sh-title { flex: 1; }
+                .udp-sh-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 999px; background: var(--color-bg-secondary); color: var(--color-text-secondary); font-size: 0.68rem; font-weight: 700; padding: 0 6px; }
+                .udp-sh-action { margin-left: auto; display: flex; align-items: center; }
+                .udp-see-all { display: flex; align-items: center; gap: 2px; background: none; border: none; color: var(--color-primary); font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; }
+                .udp-alert-row { display: flex; align-items: center; gap: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); background: #fff7ed; border: none; border-bottom: 1px solid #fef3c7; cursor: pointer; text-align: left; width: 100%; transition: background 0.15s; }
+                .udp-alert-row:last-child { border-bottom: none; }
+                .udp-alert-row:hover { background: #fef9c3; }
+                .udp-alert-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; flex-shrink: 0; animation: pulse 2s infinite; }
+                @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(239,68,68,0.2)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0.05)} }
+                .udp-alert-hint { font-size: 0.67rem; font-weight: 700; color: #ea580c; flex-shrink: 0; white-space: nowrap; }
+                .udp-scan-row { display: flex; align-items: center; gap: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); background: none; border: none; border-bottom: 1px solid var(--color-bg-secondary); cursor: pointer; text-align: left; transition: background 0.15s; width: 100%; }
+                .udp-scan-row:last-child { border-bottom: none; }
+                .udp-scan-row:hover { background: var(--color-bg-secondary); }
+                .udp-row-resolved { background: #f0fdf4; }
+                .udp-row-resolved:hover { background: #dcfce7; }
+                .udp-resolved-text { color: var(--color-text-secondary) !important; text-decoration: line-through; }
+                .udp-scan-info { flex: 1; min-width: 0; }
+                .udp-scan-name { display: block; font-size: 0.85rem; font-weight: 600; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .udp-scan-cat { display: block; font-size: 0.72rem; color: var(--color-text-light); margin-top: 1px; }
+                .udp-chevron { color: var(--color-border); flex-shrink: 0; }
+                .udp-log-row { display: flex; align-items: flex-start; gap: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); border-bottom: 1px solid var(--color-bg-secondary); }
+                .udp-log-row:last-child { border-bottom: none; }
+                .udp-log-icon { color: var(--color-primary); flex-shrink: 0; margin-top: 2px; }
+                .udp-explore-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; padding: 0 16px 16px; }
+                .udp-explore-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 12px; background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s; }
+                .udp-explore-card:hover { border-color: var(--color-primary); transform: translateY(-2px); }
+                .udp-explore-icon { color: #475569; display: flex; }
+                .udp-explore-label { font-size: 0.82rem; font-weight: 700; color: var(--color-text-primary); }
+                .udp-reports { display: flex; flex-direction: column; gap: var(--radius-lg); }
+                .udp-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--radius-sm); }
+                .udp-report-card { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+                .udp-report-num { font-size: 2rem; font-weight: 800; color: var(--color-text-primary); letter-spacing: -1px; }
+                .udp-report-label { font-size: 0.72rem; font-weight: 600; color: var(--color-text-light); text-transform: uppercase; }
+                .udp-task-banner { display: flex; align-items: center; gap: 14px; padding: 16px; background: linear-gradient(135deg,#fffbeb,#fef3c7); border: 1px solid #fcd34d; border-radius: var(--radius-lg); cursor: pointer; transition: transform 0.2s; }
+                .udp-task-banner:hover { transform: translateY(-2px); }
+                .udp-task-icon { font-size: 1.5rem; }
+                .udp-task-content { flex: 1; }
+                .udp-task-title { font-size: 0.9rem; font-weight: 800; color: #92400e; margin-bottom: 2px; }
+                .udp-task-desc { font-size: 0.78rem; color: #b45309; }
+                .udp-tab-actions { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+                .udp-add-btn { display: flex; align-items: center; gap: 6px; background: var(--gradient-primary); color: white; border: none; border-radius: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+                .udp-inline-form { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--radius-lg); display: flex; flex-direction: column; gap: var(--radius-sm); }
+                .udp-input { width: 100%; padding: var(--radius-sm) var(--radius-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.88rem; color: var(--color-text-primary); outline: none; background: var(--color-bg-secondary); box-sizing: border-box; font-family: inherit; }
+                .udp-input:focus { border-color: var(--color-primary); background: white; }
+                .udp-submit-btn { padding: var(--radius-sm); background: var(--gradient-primary); color: white; border: none; border-radius: var(--radius-sm); font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+                .udp-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+                .udp-form-label { display: block; font-size: 0.78rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
+                .udp-form-required { color: #ef4444; }
+                .udp-form-row { display: flex; gap: 12px; align-items: flex-start; }
+                .udp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                .udp-activity-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+                .udp-activity-chip { padding: 8px 16px; border-radius: 999px; border: 1.5px solid #e2e8f0; background: white; font-size: 0.8rem; font-weight: 500; color: #64748b; cursor: pointer; transition: all 0.2s; }
+                .udp-activity-chip.active { border-color: #00B14F; background: #00B14F; color: white; box-shadow: 0 4px 6px rgba(0,177,79,0.2); }
+                .udp-activity-chip:hover:not(.active) { border-color: #cbd5e1; background: #f8fafc; }
+                .udp-timing-toggle { display: flex; border: 1.5px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+                .udp-timing-btn { flex: 1; padding: 10px 12px; border: none; border-right: 1px solid #e2e8f0; background: white; font-size: 0.8rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+                .udp-timing-btn:last-child { border-right: none; }
+                .udp-timing-btn.active { background: #f1f8f1; color: #008C3E; }
+                .udp-plot-card { display: flex; align-items: center; gap: var(--radius-md); background: white; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--radius-md) var(--radius-lg); margin-bottom: var(--radius-sm); }
+                .udp-plot-card:last-child { margin-bottom: 0; }
+                .udp-plot-icon { background: #d1fae5; color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 8px; border-radius: 8px; }
+                .udp-plot-info { flex: 1; min-width: 0; }
+                .udp-plot-name { display: block; font-size: 0.88rem; font-weight: 700; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .udp-plot-meta { display: block; font-size: 0.72rem; color: var(--color-text-light); margin-top: 2px; }
+                .udp-delete-btn { background: none; border: none; color: var(--color-border); cursor: pointer; padding: 4px; border-radius: 6px; display: flex; transition: color 0.15s,background 0.15s; }
+                .udp-delete-btn:hover { color: #ef4444; background: #fef2f2; }
+                .udp-photo-upload-label:hover { border-color: #94a3b8 !important; background: #f1f5f9 !important; }
+                .udp-note-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .udp-note-card:last-child { margin-bottom: 0; }
+                .udp-note-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+                .udp-note-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+                .udp-note-plot { font-size: 0.75rem; color: #64748b; font-weight: 500; }
+                .udp-note-date { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; white-space: nowrap; }
+                .udp-note-chem { font-size: 0.85rem; color: #1e293b; line-height: 1.4; }
+                .udp-note-chem strong { color: #0f172a; }
+                .udp-note-env { display: flex; gap: 12px; font-size: 0.78rem; color: #64748b; }
+                .udp-note-text { margin: 6px 0 0; font-size: 0.9rem; color: #334155; line-height: 1.6; white-space: pre-wrap; }
+                .udp-empty { display: flex; flex-direction: column; align-items: center; gap: var(--radius-sm); padding: 40px 20px; color: var(--color-text-light); text-align: center; }
+                .udp-empty svg { color: var(--color-border); }
+                .udp-empty p { font-size: 0.88rem; margin: 0; }
+                @media (max-width: 360px) { .udp-tab { font-size: 0.64rem; padding: 7px 2px; } }
+            `}</style>
         </div>
     );
+};
 
-    // ── Overview Tab ──────────────────────────────────────────────────────────
-    const OverviewTab = () => {
-        const activeAlerts = alerts.filter(s => !acknowledgedIds.includes(s.id));
-        const resolvedAlerts = alerts.filter(s => acknowledgedIds.includes(s.id));
-        const harvestLogs = notes.filter(n => n.activity_type === 'harvest');
+// ─── Overview Tab ───────────────────────────────────────────────────────────
+const LegacyOverviewTab = ({ 
+    alerts, acknowledgedIds, notes, scanHistory, t, stats, hasLoggedToday, streak, 
+    setTab, setAddingNote, complianceNudges, setNoteForm, EMPTY_FORM, navigate, 
+    assessingRisk, predictiveRisk, forecast, checklistPct, plots, relDate, 
+    recentScans, logs, setSelectedAlert 
+}) => {
+    const activeAlerts = useMemo(() => alerts.filter(s => !acknowledgedIds.includes(s.id)), [alerts, acknowledgedIds]);
+    const harvestLogs = useMemo(() => notes.filter(n => n.activity_type === 'harvest'), [notes]);
+    const recentHistory = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
 
-        const weekTrends = useMemo(() => {
-            const now = Date.now();
-            const oneWeek = 7 * 86400000;
-            const twoWeeks = 14 * 86400000;
-            const thisWeek = scanHistory.filter(s => new Date(s.timestamp ?? s.created_at).getTime() > now - oneWeek);
-            const lastWeek = scanHistory.filter(s => {
-                const ts = new Date(s.timestamp ?? s.created_at).getTime();
-                return ts > now - twoWeeks && ts <= now - oneWeek;
-            });
-            const thisD = thisWeek.filter(s => s.healthStatus !== 'healthy').length;
-            const lastD = lastWeek.filter(s => s.healthStatus !== 'healthy').length;
-            return { diseaseDelta: thisD - lastD, scanDelta: thisWeek.length - lastWeek.length, lastT: lastWeek.length, lastD };
-        }, []);
+    return (
+        <div className="udp-overview">
+            <div className="udp-stats-row">
+                <div className="udp-stat">
+                    <span className="udp-stat-num">{stats.scannedThisMonth}</span>
+                    <span className="udp-stat-label">{t('profile.scansMonth') || 'Scan/Mo'}</span>
+                </div>
+                <div className="udp-stat-divider" />
+                <div className="udp-stat">
+                    <span className={`udp-stat-num ${hasLoggedToday ? 'udp-stat-green' : 'udp-stat-warn'}`}>{streak}</span>
+                    <span className="udp-stat-label">{t('profile.streak') || 'Streak'}</span>
+                </div>
+                <div className="udp-stat-divider" />
+                <div className="udp-stat">
+                    <span className="udp-stat-num">{stats.accuracy}%</span>
+                    <span className="udp-stat-label">{t('profile.healthScore') || 'Health'}</span>
+                </div>
+            </div>
 
-        const renderTrend = (delta, invert = false) => {
-            if (delta === 0) return <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>→ {t('profile.trendSame') || 'Same'}</span>;
-            const isGood = invert ? delta < 0 : delta > 0;
-            return (
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: isGood ? '#10b981' : '#ef4444' }}>
-                    {delta > 0 ? '↑' : '↓'} {Math.abs(delta)} {t('profile.vsLastWeek') || 'vs last wk'}
-                </span>
-            );
-        };
-
-        const trendData = useMemo(() => {
-            const days = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
-                days.push({ date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), healthy: 0, diseased: 0, rawDate: d.toISOString().split('T')[0] });
-            }
-            alerts.forEach(scan => {
-                const scanDate = (scan.timestamp || scan.created_at || '').split('T')[0];
-                const dayMatch = days.find(d => d.rawDate === scanDate);
-                if (dayMatch) { if (scan.healthStatus === 'healthy' || !scan.disease) dayMatch.healthy++; else dayMatch.diseased++; }
-            });
-            return days;
-        }, []);
-
-        const daysSinceScan = stats.lastScan ? Math.floor((Date.now() - new Date(stats.lastScan)) / 86400000) : Infinity;
-
-        return (
-            <>
-                {/* ── Daily Companion Widget ────────────────────────────────── */}
-                <div className="udp-section" style={{ 
-                    padding: '16px', 
-                    background: hasLoggedToday ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-                    border: '1px solid',
-                    borderColor: hasLoggedToday ? '#bcf0da' : '#bfdbfe',
-                    borderRadius: '16px',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ 
-                                width: '32px', height: '32px', borderRadius: '10px', 
-                                background: hasLoggedToday ? '#10b981' : '#3b82f6',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
-                            }}>
-                                {hasLoggedToday ? <CheckCircle2 size={18} /> : <Calendar size={18} />}
+            {activeAlerts.length > 0 ? (
+                <div className="udp-section udp-section-alert">
+                    <LegacySectionHeader icon={<AlertTriangle size={15} color="#ef4444" />} title={`${activeAlerts.length} ${t('profile.urgentAlerts') || 'Urgent Issues'}`} action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'See all'}</button>} />
+                    {activeAlerts.slice(0, 2).map(scan => (
+                        <button key={scan.id} className="udp-alert-row" onClick={() => setSelectedAlert(scan)}>
+                            <div className="udp-alert-dot" />
+                            <div className="udp-scan-info">
+                                <span className="udp-scan-name">{scan.name}</span>
+                                <span className="udp-scan-cat">{scan.category} · {relDate(scan.timestamp, t)}</span>
                             </div>
-                            <div>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: hasLoggedToday ? '#065f46' : '#1e40af' }}>
-                                    {hasLoggedToday ? (t('profile.dailyProgress') || 'Daily Progress') : (t('profile.whatsHappening') || "What's happening today?")}
-                                </div>
-                                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: hasLoggedToday ? '#059669' : '#3b82f6', opacity: 0.8 }}>
-                                    {streak > 0 ? `🔥 ${streak} ${t('profile.streak') || 'day streak'}` : (t('profile.startStreak') || 'Start your streak today')}
-                                </div>
-                            </div>
-                        </div>
-                        {!hasLoggedToday && (
-                            <button 
-                                onClick={() => { setTab('notes'); setAddingNote(true); }}
-                                style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                            >
-                                {t('profile.addNote') || 'Log Now'}
-                            </button>
-                        )}
-                        {hasLoggedToday && <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#059669', background: 'white', padding: '4px 8px', borderRadius: '6px' }}>{t('common.done') || 'Done'}</div>}
-                    </div>
-                    
-                    {complianceNudges.length > 0 && !hasLoggedToday && (
-                        <button 
-                            onClick={() => {
-                                const nudgeKey = complianceNudges[0];
-                                let activity = 'note';
-                                if (nudgeKey.includes('Spray')) activity = 'spray';
-                                if (nudgeKey.includes('Scout')) activity = 'scout';
-                                
-                                setNoteForm({ ...EMPTY_FORM, activity_type: activity });
-                                setAddingNote(true);
-                                setTab('notes');
-                            }}
-                            style={{ 
-                                background: 'rgba(255,255,255,0.6)', 
-                                padding: '10px 12px', 
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
-                                borderRadius: '10px',
-                                fontSize: '0.75rem',
-                                color: '#1e40af',
-                                fontWeight: 700,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                transition: 'all 0.2s',
-                                width: '100%',
-                                animation: 'bounceIn 0.5s ease'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.background = 'white'}
-                            onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.6)'}
-                        >
-                             <Sparkles size={14} style={{ flexShrink: 0 }} /> 
-                             <span style={{ flex: 1 }}>{t(complianceNudges[0])}</span>
-                             <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                            <span className="udp-alert-hint">{t('profile.actionRequired') || 'Action Needed'} <ChevronRight size={14} /></span>
                         </button>
-                    )}
+                    ))}
                 </div>
-
-                {daysSinceScan > 7 && (
-                    <div className="udp-task-banner" onClick={() => navigate('/?scan=true')}>
-                        <div className="udp-task-icon">📅</div>
-                        <div className="udp-task-content">
-                            <div className="udp-task-title">{t('profile.weeklyScanDue') || 'Weekly Scan Due'}</div>
-                            <div className="udp-task-desc">{t('profile.scanReminderDesc') || 'Keep your farm intelligence accurate with a fresh scan.'}</div>
-                        </div>
-                        <ChevronRight size={16} />
+            ) : (
+                <div className="udp-section udp-section-resolved">
+                    <LegacySectionHeader icon={<CheckCircle2 size={15} color="#16a34a" />} title={t('profile.allClear') || 'All Plots Healthy'} />
+                    <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a' }}><ShieldCheck size={18} /></div>
+                        <p style={{ fontSize: '0.8rem', color: '#15803d', margin: 0, fontWeight: 500 }}>{t('profile.noUrgentIssues') || 'No pests or diseases detected in recent scans.'}</p>
                     </div>
-                )}
+                </div>
+            )}
 
-                {(assessingRisk || predictiveRisk?.hasRisk) && (
-                    <div className="udp-section" style={{ background: assessingRisk ? '#fefce8' : '#fef2f2', borderColor: assessingRisk ? '#fef08a' : '#fecaca', padding: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                        {assessingRisk
-                            ? <BrainCircuit size={20} style={{ color: '#ca8a04', animation: 'pulse 1.5s infinite', marginTop: 2 }} />
-                            : <AlertTriangle size={20} style={{ color: '#dc2626', marginTop: 2 }} />
-                        }
-                        <div style={{ flex: 1 }}>
-                            <h3 style={{ margin: '0 0 4px', fontSize: '0.9rem', color: assessingRisk ? '#854d0e' : '#991b1b', fontWeight: 800 }}>
-                                {assessingRisk ? (t('profile.analyzingRisk') || 'Analyzing Farm Risk Profile...') : (t('profile.riskActionRequired') || 'Action Required: Imminent Risk Detected')}
-                            </h3>
-                            {!assessingRisk && predictiveRisk && (
-                                <>
-                                    <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#b91c1c', lineHeight: 1.4 }}>{predictiveRisk.warningMessage}</p>
-                                    <div style={{ background: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '0.75rem', color: '#991b1b', fontWeight: 700, display: 'inline-block' }}>
-                                        💡 {predictiveRisk.suggestedAction}
-                                    </div>
-                                    {predictiveRisk.recommendedTreatment && (
-                                        <button
-                                            style={{ marginTop: '10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 14px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                            onClick={() => {
-                                                const rec = predictiveRisk.recommendedTreatment;
-                                                const validTypes = ['note', 'scout', 'spray', 'fertilize', 'prune', 'inspect', 'harvest', 'other'];
-                                                setNoteForm(f => ({
-                                                    ...EMPTY_FORM,
-                                                    activity_type: validTypes.includes(rec.activity) ? rec.activity : 'spray',
-                                                    chemical_name: (rec.chemical && rec.chemical !== 'null') ? rec.chemical : '',
-                                                    note: `${t('profile.aiAutoPopulated') || '[AI]'} ${predictiveRisk.warningMessage}`,
-                                                }));
-                                                setAddingNote(true);
-                                                setTab('notes');
-                                            }}
-                                        >
-                                            <Sparkles size={14} /> {t('profile.logSuggestedTreatment') || 'Log Suggested Treatment'}
-                                        </button>
-                                    )}
-                                </>
-                            )}
-                        </div>
+            {!hasLoggedToday && (
+                <div className="udp-task-banner" onClick={() => { setTab('notes'); setAddingNote(true); }}>
+                    <div className="udp-task-icon">✍️</div>
+                    <div className="udp-task-content">
+                        <div className="udp-task-title">{t('profile.logDailyTask')}</div>
+                        <div className="udp-task-desc">{t('profile.logDailyHint')}</div>
                     </div>
-                )}
+                    <ChevronRight size={18} color="#b45309" />
+                </div>
+            )}
 
-                {/* ── Weather & Farming Notice Widgets ────────────────────────── */}
-                {forecast && forecast.length > 0 && (
-                    <div className="udp-section" style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: 'white', marginBottom: '16px' }}>
-                        {/* Farming Notice Banner */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '12px',
-                            borderRadius: '8px',
-                            marginBottom: '16px',
-                            border: '1px solid',
-                            background: forecast[0].notice.status === 'good' ? '#f0fdf4' : forecast[0].notice.status === 'caution' ? '#fffbeb' : '#fef2f2',
-                            borderColor: forecast[0].notice.status === 'good' ? '#bcf0da' : forecast[0].notice.status === 'caution' ? '#fde68a' : '#fecaca',
-                            color: forecast[0].notice.status === 'good' ? '#166534' : forecast[0].notice.status === 'caution' ? '#92400e' : '#991b1b',
-                        }}>
-                            {forecast[0].notice.status === 'good' ? <ShieldCheck size={18} /> : <AlertTriangle size={18} />}
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.025em', marginBottom: '2px' }}>
-                                    {t('profile.farmingNotice') || 'Farming Notice'}
+            {complianceNudges.length > 0 && (
+                <div className="udp-section" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <LegacySectionHeader icon={<CheckSquare size={15} color="#f59e0b" />} title={t('profile.gapCompliance') || 'Compliance Roadmap'} />
+                    <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {complianceNudges.map((nudge, i) => (
+                            <div key={i} style={{ padding: '10px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fef3c7', cursor: 'pointer' }} onClick={() => nudge.type === 'note' && (setTab('notes'), setAddingNote(true), setNoteForm({ ...EMPTY_FORM, activity_type: nudge.activityType }))}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <Info size={14} /> {nudge.title}
                                 </div>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t(forecast[0].notice.key)}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: 3 }}>{nudge.desc}</div>
                             </div>
-                        </div>
-
-                        {/* 5-Day Forecast Row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', overflowX: 'auto', gap: '8px', paddingBottom: '4px' }}>
-                            {forecast.map((day, i) => {
-                                const IconComp = {
-                                    'sun': Sun,
-                                    'cloud-sun': Cloud,
-                                    'cloud': Cloud,
-                                    'cloud-rain': CloudRain,
-                                    'snowflake': Snowflake,
-                                    'cloud-lightning': CloudLightning,
-                                }[day.icon] || Cloud;
-
-                                return (
-                                    <div key={day.date} style={{
-                                        flex: '1 0 60px',
-                                        textAlign: 'center',
-                                        padding: '8px 4px',
-                                        borderRadius: '8px',
-                                        background: i === 0 ? '#f8fafc' : 'transparent',
-                                        border: i === 0 ? '1px solid #e2e8f0' : '1px solid transparent',
-                                    }}>
-                                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
-                                            {i === 0 ? t('profile.relToday') : new Date(day.date).toLocaleDateString(t('common.dateLocale') === 'zh-MY' ? 'zh-MY' : 'en-MY', { weekday: 'short' })}
-                                        </div>
-                                        <IconComp size={20} style={{ color: day.icon === 'sun' ? '#f59e0b' : '#3b82f6', marginBottom: '6px' }} />
-                                        <div style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: '4px' }}>{t(day.descKey)}</div>
-                                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>{Math.round(day.tempMax)}°</div>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', fontSize: '0.6rem', color: '#64748b', marginTop: '2px' }}>
-                                            <Droplets size={8} /> {Math.round(day.precip)}mm
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                <div className="udp-stats-row">
-                    <div className="udp-stat">
-                        <span className="udp-stat-num">{stats.total}</span>
-                        <span className="udp-stat-label">{t('profile.totalScans') || 'Scans'}</span>
-                        {weekTrends.lastT > 0 && renderTrend(weekTrends.scanDelta)}
-                    </div>
-                    <div className="udp-stat-divider" />
-                    <div className="udp-stat">
-                        <span className="udp-stat-num udp-stat-warn">{stats.diseases}</span>
-                        <span className="udp-stat-label">{t('profile.diseasesFound') || 'Diseases'}</span>
-                        {weekTrends.lastD > 0 && renderTrend(weekTrends.diseaseDelta, true)}
-                    </div>
-                    <div className="udp-stat-divider" />
-                    <div className="udp-stat">
-                        <span className="udp-stat-num udp-stat-green">{checklistPct}%</span>
-                        <span className="udp-stat-label">{t('profile.gapCompliance') || 'GAP'}</span>
-                    </div>
-                    <div className="udp-stat-divider" />
-                    <div className="udp-stat">
-                        <span className="udp-stat-num">{plots.length}</span>
-                        <span className="udp-stat-label">{t('profile.plots') || 'Plots'}</span>
-                    </div>
-                </div>
-
-                {stats.lastScan && (
-                    <div className="udp-last-scan">
-                        <Calendar size={13} />
-                        <span>{t('profile.lastScan') || 'Last scan'}: <strong>{relDate(stats.lastScan, t)}</strong></span>
-                    </div>
-                )}
-
-                <div className="udp-section" style={{ padding: '16px 16px 8px' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '12px' }}>{t('profile.scanTrendTitle') || 'Scan Activity (Last 7 Days)'}</div>
-                    <div style={{ width: '100%', height: 160 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={trendData} margin={{ top: 5, right: 0, left: -25, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                <Line type="monotone" dataKey="healthy" name={t('profile.healthy') || 'Healthy'} stroke="#10b981" strokeWidth={2} dot={{ r: 3, fill: '#10b981' }} activeDot={{ r: 5 }} />
-                                <Line type="monotone" dataKey="diseased" name={t('profile.diseased') || 'Diseased'} stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: '#f59e0b' }} activeDot={{ r: 5 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                <AIInsightsCard activeAlerts={activeAlerts} harvestLogs={harvestLogs} />
-
-                {activeAlerts.length > 0 && (
-                    <div className="udp-section udp-section-alert">
-                        <SectionHeader icon={<AlertTriangle size={15} />} title={t('profile.alerts') || `Alerts (${activeAlerts.length})`} />
-                        {activeAlerts.map(scan => (
-                            <button key={scan.id} className="udp-alert-row" onClick={() => setSelectedAlert(scan)}>
-                                <span className="udp-alert-dot" />
-                                <div className="udp-scan-info">
-                                    <span className="udp-scan-name">{scan.disease}</span>
-                                    <span className="udp-scan-cat">{scan.category} · {(scan.severity ?? '').toUpperCase()} · {relDate(scan.timestamp ?? scan.created_at, t)}</span>
-                                </div>
-                                <span className="udp-alert-hint">{t('profile.tapToRespond') || 'Tap to respond'}</span>
-                                <ChevronRight size={13} className="udp-chevron" />
-                            </button>
                         ))}
                     </div>
-                )}
+                </div>
+            )}
 
-                {resolvedAlerts.length > 0 && (
-                    <div className="udp-section udp-section-resolved">
-                        <SectionHeader icon={<CheckCircle2 size={15} />} title={t('profile.resolved') || 'Resolved'} />
-                        {resolvedAlerts.map(scan => (
-                            <button key={scan.id} className="udp-scan-row udp-row-resolved" onClick={() => navigate(`/results/${scan.id}`)}>
-                                <CheckCircle2 size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
-                                <div className="udp-scan-info">
-                                    <span className="udp-scan-name udp-resolved-text">{scan.disease}</span>
-                                    <span className="udp-scan-cat">{relDate(scan.timestamp ?? scan.created_at, t)}</span>
-                                </div>
-                                <ChevronRight size={13} className="udp-chevron" />
-                            </button>
-                        ))}
-                    </div>
-                )}
+            <LegacyAIInsightsCard 
+                activeAlerts={activeAlerts} 
+                harvestLogs={harvestLogs} 
+                handleGenerateInsights={() => navigate('/ai-advisor')} 
+                generatingInsights={assessingRisk} 
+                aiInsights={predictiveRisk ? { summary: predictiveRisk.warningMessage, recommendations: predictiveRisk.suggestedAction ? [predictiveRisk.suggestedAction] : [] } : null} 
+                t={t} 
+            />
 
-                {recentScans.length > 0 && (
-                    <div className="udp-section">
-                        <SectionHeader icon={<TrendingUp size={15} />} title={t('profile.recentActivity') || 'Recent Scans'} action={<button className="udp-see-all" onClick={() => navigate('/history')}>{t('common.seeAll') || 'See all'} <ChevronRight size={13} /></button>} />
-                        {recentScans.map(scan => {
-                            const thumbSrc = scan.image_url || scan.image || null;
+            <div className="udp-section">
+                <LegacySectionHeader icon={<TrendingUp size={15} />} title={t('profile.forecast') || 'Weather & Planning'} />
+                <div style={{ padding: '0 16px 12px' }}>
+                    <div style={{ display: 'flex', overflowX: 'auto', gap: 12, paddingBottom: 8, scrollbarWidth: 'none' }}>
+                        {forecast.slice(0, 4).map((f, i) => {
+                            const nd = deriveFarmingNotice(f);
+                            const notice = {
+                                label: t(nd.key) || 'Good',
+                                color:  nd.status === 'warning' ? '#ef4444' : nd.status === 'caution' ? '#f59e0b' : '#16a34a',
+                                bg:     nd.status === 'warning' ? '#fef2f2' : nd.status === 'caution' ? '#fffbeb' : '#f0fdf4',
+                                border: nd.status === 'warning' ? '#fecaca' : nd.status === 'caution' ? '#fef3c7' : '#dcfce7',
+                                icon:   nd.status === 'warning' ? <AlertTriangle size={16} /> : nd.status === 'caution' ? <Cloud size={16} /> : <Sun size={16} />
+                            };
                             return (
-                                <button key={scan.id} className="udp-scan-row" onClick={() => navigate(`/results/${scan.id}`)}>
-                                    {thumbSrc
-                                        ? <img src={thumbSrc} alt="scan" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0, border: '1px solid #e2e8f0' }} />
-                                        : <div style={{ width: 40, height: 40, borderRadius: 8, background: scan.healthStatus === 'healthy' ? '#d1fae5' : '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Leaf size={18} color={scan.healthStatus === 'healthy' ? '#059669' : '#d97706'} /></div>
-                                    }
-                                    <div className="udp-scan-info">
-                                        <span className="udp-scan-name">{scan.disease || (t('results.healthy') || 'Healthy')}</span>
-                                        <span className="udp-scan-cat">{scan.category || scan.plantType || ''} · {relDate(scan.timestamp ?? scan.created_at, t)}</span>
-                                    </div>
-                                    <ChevronRight size={13} className="udp-chevron" />
-                                </button>
+                                <div key={i} style={{ flexShrink: 0, width: 85, background: notice.bg, padding: '10px 8px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, border: `1px solid ${notice.border}` }}>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>{i === 0 ? (t('profile.today') || 'Today') : new Date(f.date).toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                                    <div style={{ color: notice.color }}>{notice.icon}</div>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{Math.round(f.tempMax)}°C</span>
+                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: notice.color, textAlign: 'center', lineHeight: 1.1 }}>{notice.label}</span>
+                                </div>
                             );
                         })}
                     </div>
-                )}
-
-                {logs.length > 0 && (
-                    <div className="udp-section">
-                        <SectionHeader icon={<FileText size={15} />} title={t('profile.activityLog') || 'Activity Log'} action={<button className="udp-see-all" onClick={() => navigate('/mygap')}>{t('common.seeAll') || 'See all'} <ChevronRight size={13} /></button>} />
-                        {logs.map(log => (
-                            <div key={log.id} className="udp-log-row">
-                                <CheckCircle2 size={14} className="udp-log-icon" />
-                                <div className="udp-scan-info">
-                                    <span className="udp-scan-name">{log.type}</span>
-                                    <span className="udp-scan-cat">{log.notes?.slice(0, 60)}{log.notes?.length > 60 ? '…' : ''} · {relDate(log.timestamp ?? log.created_at, t)}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                <div className="udp-section">
-                    <SectionHeader title={t('profile.explore') || 'Explore'} />
-                    <div className="udp-explore-grid">
-                        {[
-                            { icon: <ShoppingBag size={24} />, label: t('nav.shop') || 'Shop', to: '/shop' },
-                            { icon: <CheckSquare size={24} />, label: t('home.mygapTitle') || 'myGAP', to: '/mygap' },
-                            { icon: <Info size={24} />, label: t('home.keyInfo') || 'Crop Advisor', to: '/encyclopedia' },
-                            { icon: <BookOpen size={24} />, label: t('settings.guide') || 'User Guide', to: '/guide' },
-                        ].map(a => (
-                            <button key={a.to} className="udp-explore-card" onClick={() => navigate(a.to)}>
-                                <div className="udp-explore-icon">{a.icon}</div>
-                                <span className="udp-explore-label">{a.label}</span>
-                            </button>
-                        ))}
-                    </div>
                 </div>
-            </>
-        );
-    };
-
-    // ── Reports Tab ───────────────────────────────────────────────────────────
-    const ReportsTab = () => {
-        const [selectedPlotId, setSelectedPlotId] = useState('all');
-        const activeAlerts = alerts.filter(s => !acknowledgedIds.includes(s.id));
-        const filteredNotes = selectedPlotId === 'all' ? notes : notes.filter(n => n.plot_id === selectedPlotId);
-        const harvestLogs = filteredNotes.filter(n => n.activity_type === 'harvest');
-        const totalKg = harvestLogs.reduce((s, n) => s + (Number(n.kg_harvested) || 0), 0);
-        const totalRevenue = harvestLogs.reduce((s, n) => s + (Number(n.kg_harvested) || 0) * (Number(n.price_per_kg) || 0), 0);
-        const totalExpenses = filteredNotes.reduce((s, n) => s + (Number(n.expense_amount) || 0), 0);
-        const netProfit = totalRevenue - totalExpenses;
-        const healthRate = stats.total > 0 ? Math.round((stats.healthy / stats.total) * 100) : 0;
-        const healthData = [
-            { name: t('results.healthy') || 'Healthy', value: stats.healthy, color: '#10b981' },
-            { name: t('profile.diseased') || 'Diseased', value: stats.diseases, color: '#f59e0b' },
-        ].filter(d => d.value > 0);
-
-        const expenseCounts = {};
-        filteredNotes.forEach(n => {
-            if (n.expense_amount) { const cat = n.expense_category || 'Other'; expenseCounts[cat] = (expenseCounts[cat] || 0) + Number(n.expense_amount); }
-        });
-        const expenseData = Object.keys(expenseCounts).map(k => ({
-            name: k, value: expenseCounts[k],
-            fill: k === 'Fertilizer' ? '#10b981' : k === 'Pesticide' ? '#f59e0b' : k === 'Labor' ? '#3b82f6' : k === 'Equipment' ? '#8b5cf6' : '#64748b',
-        })).sort((a, b) => b.value - a.value);
-
-        const yieldChartData = useMemo(() => {
-            const byMonth = {};
-            notes.filter(n => n.activity_type === 'harvest').forEach(n => {
-                const d = new Date(n.created_at);
-                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                if (!byMonth[key]) byMonth[key] = { month: label, kg: 0 };
-                byMonth[key].kg += Number(n.kg_harvested) || 0;
-            });
-            const sorted = Object.values(byMonth).sort((a, b) => a.month.localeCompare(b.month));
-            if (sorted.length < 2) return { data: sorted, forecast: null };
-            const n = sorted.length;
-            const sumX = sorted.reduce((s, _, i) => s + i, 0);
-            const sumY = sorted.reduce((s, d) => s + d.kg, 0);
-            const sumXY = sorted.reduce((s, d, i) => s + i * d.kg, 0);
-            const sumX2 = sorted.reduce((s, _, i) => s + i * i, 0);
-            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX) || 0;
-            const forecastKg = Math.max(0, Math.round(slope * n + (sumY - slope * sumX) / n));
-            const nextDate = new Date(); nextDate.setMonth(nextDate.getMonth() + 1);
-            return { data: [...sorted, { month: nextDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), kg: null, forecast: forecastKg }], forecast: forecastKg };
-        }, []);
-
-        return (
-            <div className="udp-reports">
-                <div className="udp-report-grid">
-                    <div className="udp-report-card"><span className="udp-report-num udp-stat-green">{healthRate}%</span><span className="udp-report-label">{t('profile.healthRate') || 'Health Rate'}</span></div>
-                    <div className="udp-report-card"><span className="udp-report-num udp-stat-warn">{stats.diseases}</span><span className="udp-report-label">{t('profile.diseasesFound') || 'Diseases'}</span></div>
-                    <div className="udp-report-card"><span className="udp-report-num">{stats.total}</span><span className="udp-report-label">{t('profile.totalScans') || 'Total Scans'}</span></div>
-                    <div className="udp-report-card"><span className="udp-report-num udp-stat-green">{checklistPct}%</span><span className="udp-report-label">{t('profile.gapCompliance') || 'GAP'}</span></div>
-                </div>
-
-                <div className="udp-section">
-                    <SectionHeader icon={<BarChart2 size={15} />} title={t('profile.healthBreakdown') || 'Health Breakdown'} />
-                    <div style={{ padding: '0 16px 16px' }}>
-                        {healthData.length > 0 ? (
-                            <div style={{ width: '100%', height: 180 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={healthData} innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
-                                            {healthData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                                        </Pie>
-                                        <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
-                                    <span style={{ color: '#10b981' }}>● {t('profile.healthy') || 'Healthy'}: {stats.healthy}</span>
-                                    <span style={{ color: '#f59e0b' }}>● {t('profile.diseased') || 'Diseased'}: {stats.diseases}</span>
-                                </div>
-                            </div>
-                        ) : <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '0.8rem' }}>{t('profile.noScanData') || 'No scan data yet'}</div>}
-                    </div>
-                </div>
-
-                <div className="udp-section">
-                    <SectionHeader icon={<TrendingUp size={15} />} title={t('profile.harvestSummary') || 'Financial & Yield Summary'}
-                        action={<select className="udp-input" style={{ width: 130, padding: 4, height: 26, fontSize: '0.75rem', borderRadius: 6 }} value={selectedPlotId} onChange={e => setSelectedPlotId(e.target.value)}>
-                            <option value="all">All Plots</option>
-                            {plots.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>}
-                    />
-                    <div style={{ padding: '0 16px 16px' }}>
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            {[{ label: t('profile.totalYield') || 'Yield', val: `${totalKg.toFixed(1)}kg`, c: '#0f172a', bg: '#f8fafc', border: '#e2e8f0' },
-                              { label: t('profile.estRevenue') || 'Revenue', val: `RM${totalRevenue.toFixed(0)}`, c: '#059669', bg: '#f8fafc', border: '#e2e8f0' },
-                              { label: t('profile.expenses') || 'Expenses', val: `-RM${totalExpenses.toFixed(0)}`, c: '#e11d48', bg: '#fff1f2', border: '#ffe4e6' }].map(item => (
-                                <div key={item.label} style={{ flex: 1, background: item.bg, padding: '12px', borderRadius: '8px', border: `1px solid ${item.border}`, textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{item.label}</div>
-                                    <div style={{ fontSize: '1.2rem', color: item.c, fontWeight: 800 }}>{item.val}</div>
-                                </div>
-                            ))}
-                        </div>
-                        <div style={{ background: netProfit >= 0 ? '#ecfdf5' : '#fef2f2', padding: '16px', borderRadius: '8px', border: `1px solid ${netProfit >= 0 ? '#a7f3d0' : '#fecaca'}`, marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: netProfit >= 0 ? '#065f46' : '#991b1b', textTransform: 'uppercase' }}>{t('profile.netProfit') || 'Net Profit'}</span>
-                            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: netProfit >= 0 ? '#059669' : '#e11d48' }}>{netProfit >= 0 ? '+' : '-'}RM{Math.abs(netProfit).toFixed(2)}</span>
-                        </div>
-
-                        {yieldChartData.data.length >= 2 && (
-                            <div style={{ marginBottom: '16px' }}>
-                                {yieldChartData.forecast !== null && (
-                                    <div style={{ background: 'linear-gradient(90deg,#eff6ff,#f0fdf4)', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ fontSize: '1.1rem' }}>📊</span>
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700 }}>{t('profile.aiForecastNextMonth') || 'AI Forecast: Next Month'}</div>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>~{yieldChartData.forecast} kg</div>
-                                        </div>
-                                        <div style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#6b7280' }}>{t('profile.basedOnHarvestTrends') || 'Based on trends'}</div>
-                                    </div>
-                                )}
-                                <div style={{ width: '100%', height: 180 }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={yieldChartData.data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                            <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                            <RechartsTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                            <Line type="monotone" dataKey="kg" name={t('profile.actual') || 'Actual'} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls={false} />
-                                            <Line type="monotone" dataKey="forecast" name={t('profile.forecast') || 'Forecast'} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#3b82f6' }} />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                        )}
-
-                        {expenseData.length > 0 && (
-                            <div>
-                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{t('profile.expenseBreakdown') || 'Expense Breakdown'}</div>
-                                <div style={{ width: '100%', height: 150 }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={expenseData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
-                                                {expenseData.map((e, i) => <Cell key={i} fill={e.fill} />)}
-                                            </Pie>
-                                            <RechartsTooltip formatter={v => `RM${v}`} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', fontSize: '0.65rem', fontWeight: 600, marginTop: '4px' }}>
-                                    {expenseData.map(d => <span key={d.name} style={{ color: d.fill }}>● {d.name}: RM{d.value}</span>)}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <AIInsightsCard activeAlerts={activeAlerts} harvestLogs={harvestLogs} />
             </div>
-        );
-    };
 
-    // ── Plots Tab ─────────────────────────────────────────────────────────────
-    const PlotsTab = () => (
-        <div>
-            <div className="udp-tab-actions">
-                <button className="udp-add-btn" onClick={() => setAddingPlot(v => !v)}>
-                    {addingPlot ? <X size={16} /> : <Plus size={16} />}
-                    {addingPlot ? (t('common.cancel') || 'Cancel') : (t('profile.addPlot') || 'Add Plot')}
+            <div className="udp-explore-grid">
+                <div className="udp-explore-card" style={{ background: 'linear-gradient(135deg, #fff, #f0fdf4)' }} onClick={() => navigate('/mygap')}>
+                    <div className="udp-explore-icon" style={{ color: '#16a34a' }}><ShieldCheck size={24} /></div>
+                    <span className="udp-explore-label">MyGAP</span>
+                    <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${checklistPct}%`, height: '100%', background: '#22c55e' }} />
+                    </div>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#15803d' }}>{checklistPct}% {t('common.ready') || 'Ready'}</span>
+                </div>
+                <div className="udp-explore-card" style={{ background: 'linear-gradient(135deg, #fff, #fef2f2)' }} onClick={() => setTab('reports')}>
+                    <div className="udp-explore-icon" style={{ color: '#dc2626' }}><BarChart2 size={24} /></div>
+                    <span className="udp-explore-label">{t('profile.analytics') || 'Analytics'}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#b91c1c' }}>{plots.length} {t('profile.activePlots') || 'Plots'}</span>
+                </div>
+            </div>
+
+            <div className="udp-section">
+                <LegacySectionHeader icon={<Calendar size={15} />} title={t('profile.recentScans') || 'Recent Activity'} action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'History'}</button>} />
+                {recentHistory.length === 0 ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>{t('profile.noRecentHistory') || 'No recent scans.'}</div>
+                ) : (
+                    recentHistory.map(scan => (
+                        <button key={scan.id} className="udp-scan-row" onClick={() => setSelectedAlert(scan)}>
+                            <div className="udp-scan-info">
+                                <span className="udp-scan-name">{scan.name}</span>
+                                <span className="udp-scan-cat">{scan.category} · {relDate(scan.timestamp, t)}</span>
+                            </div>
+                            <ChevronRight size={16} className="udp-chevron" />
+                        </button>
+                    ))
+                )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+                <button className="udp-task-banner" style={{ flex: 1, background: '#f8fafc', borderColor: '#e2e8f0' }} onClick={() => navigate('/guide')}>
+                    <div className="udp-task-icon">📖</div>
+                    <div className="udp-task-content">
+                        <div className="udp-task-title" style={{ color: '#334155' }}>{t('profile.userGuide') || 'User Guide'}</div>
+                        <div className="udp-task-desc" style={{ color: '#64748b' }}>{t('profile.learnMore') || 'How to use Plant'}</div>
+                    </div>
+                </button>
+                <button className="udp-task-banner" style={{ flex: 1, background: '#f8fafc', borderColor: '#e2e8f0' }} onClick={() => navigate('/offline-db')}>
+                    <div className="udp-task-icon">🗄️</div>
+                    <div className="udp-task-content">
+                        <div className="udp-task-title" style={{ color: '#334155' }}>{t('profile.offlineDb') || 'Disease DB'}</div>
+                        <div className="udp-task-desc" style={{ color: '#64748b' }}>{t('profile.browseOffline') || 'Search pests offline'}</div>
+                    </div>
                 </button>
             </div>
-            {addingPlot && (
-                <form className="udp-inline-form" onSubmit={handleAddPlot}>
-                    <div><label className="udp-form-label">{t('profile.plotName') || 'Plot / Farm Name'} <span className="udp-form-required">*</span></label>
-                        <input className="udp-input" placeholder="e.g. Block A or Durian Grove" value={plotForm.name} onChange={e => setPlotForm(p => ({ ...p, name: e.target.value }))} required />
-                    </div>
-                    <div><label className="udp-form-label">{t('profile.cropType') || 'Crop Type'}</label>
-                        <input className="udp-input" placeholder="e.g. Durian (Musang King)" value={plotForm.cropType} onChange={e => setPlotForm(p => ({ ...p, cropType: e.target.value }))} />
-                    </div>
-                    <div className="udp-form-grid">
-                        <div><label className="udp-form-label">{t('profile.area') || 'Land Area'}</label>
-                            <input className="udp-input" type="number" min="0" step="0.1" placeholder="e.g. 5.0" value={plotForm.area} onChange={e => setPlotForm(p => ({ ...p, area: e.target.value }))} />
+        </div>
+    );
+};
+
+// ─── Reports Tab ────────────────────────────────────────────────────────────
+const LegacyReportsTab = ({ stats, alerts, logbook, activeAlerts, notes, resolvedLogs, t }) => {
+    const allHarvest = useMemo(() => [
+        ...logbook.filter(l => l.type === 'harvest').map(l => ({ kg: Number(l.kg_harvested) || 0, price: Number(l.price_per_kg) || 0 })),
+        ...notes.filter(n => n.activity_type === 'harvest').map(n => ({ kg: Number(n.kg_harvested) || 0, price: Number(n.price_per_kg) || 0 }))
+    ], [logbook, notes]);
+
+    const totalYield = useMemo(() => allHarvest.reduce((acc, h) => acc + h.kg, 0), [allHarvest]);
+    const totalRevenue = useMemo(() => allHarvest.reduce((acc, h) => acc + (h.kg * h.price), 0), [allHarvest]);
+
+    const chartData = useMemo(() => {
+        const last7Days = [...Array(7)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return d.toISOString().split('T')[0];
+        }).reverse();
+        return last7Days.map(date => {
+            const hFromNotes = notes.filter(n => n.activity_type === 'harvest' && n.created_at?.startsWith(date)).reduce((sum, n) => sum + (Number(n.kg_harvested) || 0), 0);
+            const hFromLogs = logbook.filter(l => l.type === 'harvest' && (l.created_at || l.timestamp)?.startsWith(date)).reduce((sum, l) => sum + (Number(l.kg_harvested) || 0), 0);
+            return {
+                date: date.split('-').slice(1).join('/'),
+                scans: alerts.filter(a => (a.timestamp || a.created_at)?.startsWith(date)).length,
+                harvest: hFromNotes + hFromLogs
+            };
+        });
+    }, [alerts, logbook, notes]);
+
+    return (
+        <div className="udp-reports">
+            <div className="udp-report-grid">
+                <div className="udp-report-card" style={{ borderLeft: '4px solid #00B14F' }}>
+                    <span className="udp-report-num">{totalYield.toFixed(1)}</span>
+                    <span className="udp-report-label">{t('profile.totalYieldKg') || 'Total Yield (kg)'}</span>
+                </div>
+                <div className="udp-report-card" style={{ borderLeft: '4px solid #8b5cf6' }}>
+                    <span className="udp-report-num" style={{ color: '#8b5cf6' }}>{totalRevenue.toFixed(0)}</span>
+                    <span className="udp-report-label">{t('profile.estRevenue') || 'Est. Revenue'} (RM)</span>
+                </div>
+            </div>
+
+            <div className="udp-section">
+                <LegacySectionHeader icon={<BarChart2 size={15} />} title={t('profile.activityOverview') || 'Farm Activity Trend'} />
+                <div style={{ height: 160, padding: '10px 16px 16px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData}>
+                            <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} />
+                            <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} />
+                            <Bar dataKey="scans" fill="#22c55e" radius={[4, 4, 0, 0]} name={t('profile.scans') || 'Scans'} />
+                            <Bar dataKey="harvest" fill="#8b5cf6" radius={[4, 4, 0, 0]} name={t('profile.harvestKg') || 'Harvest (kg)'} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            <div className="udp-section">
+                <LegacySectionHeader icon={<ShieldCheck size={15} color="#16a34a" />} title={t('profile.resolvedIssues') || 'Resolution History'} count={resolvedLogs.length} />
+                {resolvedLogs.length === 0 ? (
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>{t('profile.noResolvedAlerts') || 'No resolved alerts yet.'}</div>
+                ) : (
+                    resolvedLogs.map(scan => (
+                        <div key={scan.id} className="udp-scan-row udp-row-resolved">
+                            <div className="udp-scan-info">
+                                <span className="udp-scan-name udp-resolved-text">{scan.name}</span>
+                                <span className="udp-scan-cat">{scan.category} · {relDate(scan.timestamp, t)}</span>
+                            </div>
+                            <CheckCircle2 size={16} color="#16a34a" />
                         </div>
-                        <div><label className="udp-form-label">{t('profile.unit') || 'Unit'}</label>
-                            <select className="udp-input" value={plotForm.unit} onChange={e => setPlotForm(p => ({ ...p, unit: e.target.value }))}>
-                                <option value="acres">{t('profile.acres') || 'acres'}</option>
-                                <option value="hectares">{t('profile.hectares') || 'hectares'}</option>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ─── Plots Tab ──────────────────────────────────────────────────────────────
+const LegacyPlotsTab = ({ 
+    t, setAddingPlot, addingPlot, handleAddPlot, plotForm, setPlotForm, 
+    setShowSoilFields, showSoilFields, savingPlot, plots, handleDeletePlot 
+}) => (
+    <div>
+        <div className="udp-tab-actions">
+            <button className="udp-add-btn" onClick={() => setAddingPlot(v => !v)}>
+                {addingPlot ? <X size={16} /> : <Plus size={16} />}
+                {addingPlot ? (t('common.cancel') || 'Cancel') : (t('profile.addPlot') || 'Add New Plot')}
+            </button>
+        </div>
+        {addingPlot && (
+            <form className="udp-inline-form" onSubmit={handleAddPlot}>
+                <div className="udp-form-row">
+                    <div style={{ flex: 1 }}>
+                        <label className="udp-form-label">{t('profile.plotName') || 'Plot Name'} <span className="udp-form-required">*</span></label>
+                        <input className="udp-input" required placeholder="e.g. Zone A" value={plotForm.name} onChange={e => setPlotForm(f => ({ ...f, name: e.target.value }))} />
+                    </div>
+                </div>
+                <div className="udp-form-row">
+                    <div style={{ flex: 1 }}>
+                        <label className="udp-form-label">{t('profile.cropType') || 'Crop Type'}</label>
+                        <input className="udp-input" placeholder="e.g. Durian D24" value={plotForm.cropType} onChange={e => setPlotForm(f => ({ ...f, cropType: e.target.value }))} />
+                    </div>
+                    <div>
+                        <label className="udp-form-label">{t('profile.area') || 'Area'}</label>
+                        <div style={{ display: 'flex' }}>
+                            <input className="udp-input" type="number" step="0.1" style={{ width: 60, borderRadius: '8px 0 0 8px' }} value={plotForm.area} onChange={e => setPlotForm(f => ({ ...f, area: e.target.value }))} />
+                            <select className="udp-input" style={{ width: 70, borderRadius: '0 8px 8px 0', borderLeft: 'none' }} value={plotForm.unit} onChange={e => setPlotForm(f => ({ ...f, unit: e.target.value }))}>
+                                <option value="acres">Acres</option><option value="sqft">Sqft</option><option value="hectares">Ha</option>
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <button type="button" onClick={() => setShowSoilFields(v => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', fontSize: '0.8rem', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Database size={14} color="#64748b" />{t('profile.advancedSoilData') || 'Soil Data'} (pH / NPK)</span>
-                            {showSoilFields ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                        {showSoilFields && (
-                            <div className="udp-form-grid" style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                                {[['soil_ph', 'pH Level', '6.5', 0, 14], ['npk_n', 'N (kg/ha)', 'Nitrogen', 0, null], ['npk_p', 'P (kg/ha)', 'Phosphorus', 0, null], ['npk_k', 'K (kg/ha)', 'Potassium', 0, null]].map(([key, label, ph, min, max]) => (
-                                    <div key={key}><label className="udp-form-label">{label}</label>
-                                        <input className="udp-input" type="number" min={min} max={max ?? undefined} step="0.1" placeholder={ph} value={plotForm[key]} onChange={e => setPlotForm(p => ({ ...p, [key]: e.target.value }))} />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    <button type="submit" className="udp-submit-btn" disabled={savingPlot} style={{ marginTop: '16px' }}>{savingPlot ? '…' : (t('common.save') || 'Save Plot')}</button>
-                </form>
-            )}
-            {plots.length === 0 && !addingPlot && <div className="udp-empty"><MapPin size={32} /><p>{t('profile.noPlots') || 'No plots yet.'}</p></div>}
-            {plots.map(plot => (
-                <div key={plot.id} className="udp-plot-card" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-                    <div style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 12 }}>
-                        <div className="udp-plot-icon"><Leaf size={18} /></div>
-                        <div className="udp-plot-info" style={{ flex: 1 }}>
-                            <span className="udp-plot-name">{plot.name}</span>
-                            <span className="udp-plot-meta">{plot.crop_type || '—'} · {plot.area} {plot.unit}</span>
-                        </div>
-                        <button className="udp-delete-btn" onClick={() => handleDeletePlot(plot.id)} title="Remove"><Trash2 size={15} /></button>
-                    </div>
-                    {(plot.soil_ph != null || plot.npk_n != null) && (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingLeft: 4 }}>
-                            {plot.soil_ph != null && <span style={{ fontSize: '0.7rem', fontWeight: 700, background: plot.soil_ph < 5.5 || plot.soil_ph > 7.5 ? '#fef3c7' : '#d1fae5', color: plot.soil_ph < 5.5 || plot.soil_ph > 7.5 ? '#d97706' : '#065f46', padding: '2px 8px', borderRadius: 20 }}>pH {plot.soil_ph} {plot.soil_ph < 5.5 ? 'Acidic' : plot.soil_ph > 7.5 ? 'Alkaline' : 'Optimal'}</span>}
-                            {plot.npk_n != null && <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 20 }}>N: {plot.npk_n}</span>}
-                            {plot.npk_p != null && <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#fdf4ff', color: '#7e22ce', padding: '2px 8px', borderRadius: 20 }}>P: {plot.npk_p}</span>}
-                            {plot.npk_k != null && <span style={{ fontSize: '0.7rem', fontWeight: 600, background: '#f0fdf4', color: '#166534', padding: '2px 8px', borderRadius: 20 }}>K: {plot.npk_k}</span>}
+                </div>
+
+                <div style={{ marginTop: 8 }}>
+                    <button type="button" className="udp-see-all" style={{ fontSize: '0.8rem' }} onClick={() => setShowSoilFields(!showSoilFields)}>
+                        {showSoilFields ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {t('profile.soilNutrientData') || 'Soil & Nutrient Data (Optional)'}
+                    </button>
+                    {showSoilFields && (
+                        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div><label className="udp-form-label">Soil pH</label><input className="udp-input" type="number" step="0.1" placeholder="6.5" value={plotForm.soil_ph} onChange={e => setPlotForm(f => ({ ...f, soil_ph: e.target.value }))} /></div>
+                            <div />
+                            <div><label className="udp-form-label">N (mg/kg)</label><input className="udp-input" type="number" placeholder="20" value={plotForm.npk_n} onChange={e => setPlotForm(f => ({ ...f, npk_n: e.target.value }))} /></div>
+                            <div><label className="udp-form-label">P (mg/kg)</label><input className="udp-input" type="number" placeholder="15" value={plotForm.npk_p} onChange={e => setPlotForm(f => ({ ...f, npk_p: e.target.value }))} /></div>
+                            <div><label className="udp-form-label">K (mg/kg)</label><input className="udp-input" type="number" placeholder="18" value={plotForm.npk_k} onChange={e => setPlotForm(f => ({ ...f, npk_k: e.target.value }))} /></div>
                         </div>
                     )}
                 </div>
+
+                <button type="submit" className="udp-submit-btn" disabled={savingPlot}>{savingPlot ? '…' : (t('common.save') || 'Save Plot')}</button>
+            </form>
+        )}
+
+        <div className="udp-plot-list">
+            {plots.length === 0 && !addingPlot && <div className="udp-empty"><MapPin size={32} /><p>{t('profile.noPlots') || 'No plots mapped.'}</p></div>}
+            {plots.map(p => (
+                <div key={p.id} className="udp-plot-card">
+                    <div className="udp-plot-icon"><Leaf size={20} /></div>
+                    <div className="udp-plot-info">
+                        <span className="udp-plot-name">{p.name} {p.area ? `(${p.area} ${p.unit})` : ''}</span>
+                        <span className="udp-plot-meta">{p.cropType || 'Mix Crop'}</span>
+                        {p.soil_ph && <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 700 }}>pH: {p.soil_ph}</span>}
+                    </div>
+                    <button className="udp-delete-btn" onClick={() => handleDeletePlot(p.id)}><Trash2 size={16} /></button>
+                </div>
             ))}
         </div>
-    );
+    </div>
+);
 
-    // ── Notes Tab ─────────────────────────────────────────────────────────────
-    const currentType = ACTIVITY_TYPES.find(a => a.value === noteForm.activity_type) ?? ACTIVITY_TYPES[0];
+// ─── Notes Tab ──────────────────────────────────────────────────────────────
+const LegacyNotesTab = ({ 
+    t, setAddingNote, addingNote, handleAddNote, noteForm, setNoteForm, 
+    ACTIVITY_TYPES, plots, handleAutoEnhance, enhancing, savingNote, 
+    ACTIVITY_BADGE_COLOR, relDate 
+}) => {
+    const currentType = useMemo(() => ACTIVITY_TYPES.find(a => a.value === noteForm.activity_type) ?? ACTIVITY_TYPES[0], [ACTIVITY_TYPES, noteForm.activity_type]);
     const showChemical = currentType.chemical;
 
-    const NotesTab = () => (
+    return (
         <div>
             <div className="udp-tab-actions">
                 <button className="udp-add-btn" onClick={() => setAddingNote(v => !v)}>
@@ -900,8 +883,6 @@ const UserDashboardPanel = () => {
             </div>
             {addingNote && (
                 <form className="udp-inline-form" onSubmit={handleAddNote}>
-                    {/* Form Fields */}
-
                     <div>
                         <label className="udp-form-label">{t('profile.activityType') || 'Activity Type'}</label>
                         <div className="udp-activity-grid">
@@ -975,16 +956,19 @@ const UserDashboardPanel = () => {
 
                     {noteForm.activity_type === 'inspect' && (
                         <div className="udp-form-row">
-                            <div style={{ flex: 1 }}><label className="udp-form-label">Inspection Type</label>
+                            <div style={{ flex: 1 }}><label className="udp-form-label">{t('profile.inspectionType') || 'Inspection Type'}</label>
                                 <select className="udp-input" value={noteForm.inspection_type} onChange={e => setNoteForm(f => ({ ...f, inspection_type: e.target.value }))}>
-                                    {['Pest/Disease','Soil/Nutrient','Irrigation','Infrastructure'].map(s => <option key={s}>{s}</option>)}
+                                    <option value="Pest/Disease">{t('profile.inspectPestDisease') || 'Pest / Disease'}</option>
+                                    <option value="Soil/Nutrient">{t('profile.inspectSoilNutrient') || 'Soil / Nutrient'}</option>
+                                    <option value="Irrigation">{t('profile.inspectIrrigation') || 'Irrigation'}</option>
+                                    <option value="Infrastructure">{t('profile.inspectInfrastructure') || 'Infrastructure'}</option>
                                 </select>
                             </div>
-                            <div style={{ flex: 1 }}><label className="udp-form-label">Status</label>
+                            <div style={{ flex: 1 }}><label className="udp-form-label">{t('profile.inspectionStatus') || 'Status'}</label>
                                 <select className="udp-input" value={noteForm.inspection_status} onChange={e => setNoteForm(f => ({ ...f, inspection_status: e.target.value }))}>
-                                    <option value="Good">Good / Pass</option>
-                                    <option value="Action Required">Action Required</option>
-                                    <option value="Urgent">Urgent</option>
+                                    <option value="Good">{t('profile.inspectStatusGood') || 'Good / Pass'}</option>
+                                    <option value="Action Required">{t('profile.inspectStatusActionRequired') || 'Action Required'}</option>
+                                    <option value="Urgent">{t('profile.inspectStatusUrgent') || 'Urgent Warning'}</option>
                                 </select>
                             </div>
                         </div>
@@ -992,12 +976,15 @@ const UserDashboardPanel = () => {
 
                     {noteForm.activity_type === 'harvest' && (<>
                         <div className="udp-form-row">
-                            <div style={{ flex: 1 }}><label className="udp-form-label">Yield (kg) <span className="udp-form-required">*</span></label>
-                                <input className="udp-input" type="number" min="0" step="0.1" placeholder="e.g. 50" value={noteForm.kg_harvested} onChange={e => setNoteForm(f => ({ ...f, kg_harvested: e.target.value }))} />
+                            <div style={{ flex: 1 }}><label className="udp-form-label">{t('profile.kgHarvested') || 'Yield (kg)'} <span className="udp-form-required">*</span></label>
+                                <input className="udp-input" type="number" min="0" step="0.1" placeholder={t('form.kgPlaceholder') || 'e.g. 50'} value={noteForm.kg_harvested} onChange={e => setNoteForm(f => ({ ...f, kg_harvested: e.target.value }))} />
                             </div>
-                            <div style={{ flex: 1 }}><label className="udp-form-label">Quality Grade</label>
+                            <div style={{ flex: 1 }}><label className="udp-form-label">{t('profile.qualityGrade') || 'Quality Grade'}</label>
                                 <select className="udp-input" value={noteForm.quality_grade} onChange={e => setNoteForm(f => ({ ...f, quality_grade: e.target.value }))}>
-                                    {['Excellent','Good','Fair','Poor'].map(s => <option key={s}>{s}</option>)}
+                                    <option value="Excellent">{t('profile.qualityExcellent') || 'Excellent'}</option>
+                                    <option value="Good">{t('profile.qualityGood') || 'Good'}</option>
+                                    <option value="Fair">{t('profile.qualityFair') || 'Fair'}</option>
+                                    <option value="Poor">{t('profile.qualityPoor') || 'Poor'}</option>
                                 </select>
                             </div>
                         </div>
@@ -1069,39 +1056,40 @@ const UserDashboardPanel = () => {
                 </form>
             )}
 
-            {notes.length === 0 && !addingNote && <div className="udp-empty"><FileText size={32} /><p>{t('profile.noNotes') || 'No log entries yet.'}</p></div>}
-
-            {notes.map(note => {
-                const badgeCfg = ACTIVITY_BADGE_COLOR[note.activity_type] ?? ACTIVITY_BADGE_COLOR.note;
-                const typeLabel = ACTIVITY_TYPES.find(a => a.value === note.activity_type)?.label ?? 'Note';
-                const plotName = plots.find(p => p.id === note.plot_id)?.name;
-                return (
-                    <div key={note.id} className="udp-note-card">
-                        <div className="udp-note-top">
-                            <span className="udp-note-badge" style={{ background: badgeCfg.bg, color: badgeCfg.color }}>{typeLabel}</span>
-                            {plotName && <span className="udp-note-plot">📍 {plotName}</span>}
-                            <span className="udp-note-date">{relDate(note.created_at, t)}</span>
+            <div className="udp-note-list">
+                {notes.length === 0 && !addingNote && <div className="udp-empty"><FileText size={32} /><p>{t('profile.noNotes') || 'No log entries yet.'}</p></div>}
+                {notes.map(note => {
+                    const badgeCfg = ACTIVITY_BADGE_COLOR[note.activity_type] ?? ACTIVITY_BADGE_COLOR.note;
+                    const typeLabel = ACTIVITY_TYPES.find(a => a.value === note.activity_type)?.label ?? 'Note';
+                    const plotName = plots.find(p => p.id === note.plot_id)?.name;
+                    return (
+                        <div key={note.id} className="udp-note-card">
+                            <div className="udp-note-top">
+                                <span className="udp-note-badge" style={{ background: badgeCfg.bg, color: badgeCfg.color }}>{typeLabel}</span>
+                                {plotName && <span className="udp-note-plot">📍 {plotName}</span>}
+                                <span className="udp-note-date">{relDate(note.created_at, t)}</span>
+                            </div>
+                            {note.chemical_name && <div className="udp-note-chem">🧪 <strong>{note.chemical_name}</strong>{note.chemical_qty && <> · {note.chemical_qty}</>}{note.application_timing && <> · {note.application_timing}</>}</div>}
+                            {note.activity_type === 'scout' && (
+                                <div className="udp-note-chem">
+                                    🔍 <strong>{note.disease_name_observed || 'Field Check'}</strong>{note.growth_stage && <> · {note.growth_stage}</>}{note.disease_incidence != null && <> · {note.disease_incidence}% Incidence</>}
+                                    <br /><span style={{ color: note.scout_severity === 'High' ? '#ef4444' : note.scout_severity === 'Moderate' ? '#f59e0b' : '#374151', fontSize: '0.75rem', fontWeight: 600 }}>Severity: {note.scout_severity || 'Low'}</span>
+                                </div>
+                            )}
+                            {note.activity_type === 'harvest' && (
+                                <div className="udp-note-chem">
+                                    🍎 <strong>{note.kg_harvested} kg</strong> ({note.quality_grade || 'Unrated'}){note.price_per_kg != null && <> · RM{Number(note.price_per_kg).toFixed(2)}/kg</>}{note.buyer_name && <> · {note.buyer_name}</>}
+                                    {(note.kg_harvested != null && note.price_per_kg != null) && <div style={{ color: '#059669', fontWeight: 600 }}>💰 +RM{(note.kg_harvested * note.price_per_kg).toFixed(2)}</div>}
+                                </div>
+                            )}
+                            {(note.expense_amount != null && note.expense_amount !== '') && <div className="udp-note-chem" style={{ color: '#dc2626', fontWeight: 600 }}>💸 -RM{Number(note.expense_amount).toFixed(2)}{note.expense_category && <span style={{ color: '#ef4444', fontWeight: 400 }}> ({note.expense_category})</span>}</div>}
+                            {(note.temperature_am != null || note.humidity != null) && <div className="udp-note-env">{note.temperature_am != null && <span>🌡 {note.temperature_am}°C</span>}{note.humidity != null && <span>💧 {note.humidity}% RH</span>}</div>}
+                            {note.note && <p className="udp-note-text">{note.note}</p>}
+                            {note.photo_url && <img src={note.photo_url} alt="Field photo" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8, marginTop: 8, border: '1px solid #e2e8f0', cursor: 'pointer' }} onClick={() => window.open(note.photo_url, '_blank')} />}
                         </div>
-                        {note.chemical_name && <div className="udp-note-chem">🧪 <strong>{note.chemical_name}</strong>{note.chemical_qty && <> · {note.chemical_qty}</>}{note.application_timing && <> · {note.application_timing}</>}</div>}
-                        {note.activity_type === 'scout' && (
-                            <div className="udp-note-chem">
-                                🔍 <strong>{note.disease_name_observed || 'Field Check'}</strong>{note.growth_stage && <> · {note.growth_stage}</>}{note.disease_incidence != null && <> · {note.disease_incidence}% Incidence</>}
-                                <br /><span style={{ color: note.scout_severity === 'High' ? '#ef4444' : note.scout_severity === 'Moderate' ? '#f59e0b' : '#374151', fontSize: '0.75rem', fontWeight: 600 }}>Severity: {note.scout_severity || 'Low'}</span>
-                            </div>
-                        )}
-                        {note.activity_type === 'harvest' && (
-                            <div className="udp-note-chem">
-                                🍎 <strong>{note.kg_harvested} kg</strong> ({note.quality_grade || 'Unrated'}){note.price_per_kg != null && <> · RM{Number(note.price_per_kg).toFixed(2)}/kg</>}{note.buyer_name && <> · {note.buyer_name}</>}
-                                {(note.kg_harvested != null && note.price_per_kg != null) && <div style={{ color: '#059669', fontWeight: 600 }}>💰 +RM{(note.kg_harvested * note.price_per_kg).toFixed(2)}</div>}
-                            </div>
-                        )}
-                        {(note.expense_amount != null && note.expense_amount !== '') && <div className="udp-note-chem" style={{ color: '#dc2626', fontWeight: 600 }}>💸 -RM{Number(note.expense_amount).toFixed(2)}{note.expense_category && <span style={{ color: '#ef4444', fontWeight: 400 }}> ({note.expense_category})</span>}</div>}
-                        {(note.temperature_am != null || note.humidity != null) && <div className="udp-note-env">{note.temperature_am != null && <span>🌡 {note.temperature_am}°C</span>}{note.humidity != null && <span>💧 {note.humidity}% RH</span>}</div>}
-                        {note.note && <p className="udp-note-text">{note.note}</p>}
-                        {note.photo_url && <img src={note.photo_url} alt="Field photo" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8, marginTop: 8, border: '1px solid #e2e8f0', cursor: 'pointer' }} onClick={() => window.open(note.photo_url, '_blank')} />}
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
 
             <style>{`
                 .udp-form-label { display: block; font-size: 0.78rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
@@ -1127,184 +1115,6 @@ const UserDashboardPanel = () => {
                 .udp-note-chem strong { color: #0f172a; }
                 .udp-note-env { display: flex; gap: 12px; font-size: 0.78rem; color: #64748b; }
                 .udp-note-text { margin: 6px 0 0; font-size: 0.9rem; color: #334155; line-height: 1.6; white-space: pre-wrap; }
-            `}</style>
-        </div>
-    );
-
-    // ── Tabs ──────────────────────────────────────────────────────────────────
-    const TABS = [
-        { id: 'overview', label: t('profile.tabOverview') || 'Overview' },
-        { id: 'reports',  label: t('profile.tabReports')  || 'Reports'  },
-        { id: 'plots',    label: t('profile.tabPlots')    || 'Plots'    },
-        { id: 'notes',    label: t('profile.tabNotes')    || 'Daily Log' },
-    ];
-
-    // ── Main render ───────────────────────────────────────────────────────────
-    return (
-        <div className="udp-container">
-            {/* Enhanced Profile Card */}
-            <div className="udp-profile-card">
-                <div className="udp-profile-blob udp-profile-blob-1" />
-                <div className="udp-profile-blob udp-profile-blob-2" />
-                <div className="udp-profile-top-row">
-                    <div className="udp-avatar-wrapper">
-                        <div className="udp-avatar-ring" />
-                        <div className="udp-avatar">{initials}</div>
-                        <span className="udp-avatar-status" title="Online" />
-                    </div>
-                    <button className="udp-signout-mini" onClick={handleSignOut} disabled={signingOut} title="Sign out"><LogOut size={15} /></button>
-                </div>
-                <div className="udp-profile-identity">
-                    <h2 className="udp-display-name">{displayName}</h2>
-                    <p className="udp-email"><span className="udp-email-dot" />{email}</p>
-                </div>
-                <div className="udp-profile-badges">
-                    <span className="udp-badge udp-badge-verified"><ShieldCheck size={11} />{t('profile.verifiedFarmer') || 'Verified Farmer'}</span>
-                    {stats.total > 0 && <span className="udp-badge udp-badge-scans"><ScanLine size={11} />{stats.total} {t('profile.totalScans') || 'Scans'}</span>}
-                    {checklistPct >= 50 && <span className="udp-badge udp-badge-gap"><ShieldCheck size={11} />GAP {checklistPct}%</span>}
-                </div>
-                <div className="udp-profile-strip">
-                    <div className="udp-strip-item"><span className="udp-strip-num">{stats.healthy}</span><span className="udp-strip-label">{t('profile.healthy') || 'Healthy'}</span></div>
-                    <div className="udp-strip-divider" />
-                    <div className="udp-strip-item"><span className="udp-strip-num udp-strip-warn">{stats.diseases}</span><span className="udp-strip-label">{t('profile.diseased') || 'Issues'}</span></div>
-                    <div className="udp-strip-divider" />
-                    <div className="udp-strip-item"><span className="udp-strip-num">{plots.length}</span><span className="udp-strip-label">{t('profile.plots') || 'Plots'}</span></div>
-                    <div className="udp-strip-divider" />
-                    <div className="udp-strip-item"><span className="udp-strip-num udp-strip-purple">{notes.length}</span><span className="udp-strip-label">{t('profile.tabNotes') || 'Logs'}</span></div>
-                </div>
-            </div>
-
-            <div className="udp-tabs">
-                {TABS.map(t2 => (
-                    <button key={t2.id} className={`udp-tab ${tab === t2.id ? 'active' : ''}`} onClick={() => setTab(t2.id)}>
-                        {t2.label}
-                        {t2.id === 'overview' && activeAlertCount > 0 && <span className="udp-tab-badge">{activeAlertCount}</span>}
-                    </button>
-                ))}
-            </div>
-
-            <div className="udp-tab-content">
-                {tab === 'overview' && <OverviewTab />}
-                {tab === 'reports'  && <ReportsTab />}
-                {tab === 'plots'    && <PlotsTab />}
-                {tab === 'notes'    && <NotesTab />}
-            </div>
-
-            {selectedAlert && <AlertDetailModal scan={selectedAlert} onClose={() => setSelectedAlert(null)} onAcknowledge={handleAcknowledge} />}
-
-            <style>{`
-                .udp-container { max-width: 480px; margin: 0 auto; padding: 16px 16px 60px; display: flex; flex-direction: column; gap: 16px; }
-                .udp-profile-card { position: relative; overflow: hidden; background: linear-gradient(145deg,#f0fdf4,#dcfce7 55%,#bbf7d0); border: 1.5px solid #86efac; border-radius: 24px; padding: 20px 20px 0; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 4px 20px rgba(0,177,79,0.12),0 1px 4px rgba(0,0,0,0.04); }
-                .udp-profile-blob { position: absolute; border-radius: 50%; pointer-events: none; z-index: 0; }
-                .udp-profile-blob-1 { width: 140px; height: 140px; background: radial-gradient(circle,rgba(0,177,79,0.15),transparent 70%); top: -40px; right: -30px; }
-                .udp-profile-blob-2 { width: 90px; height: 90px; background: radial-gradient(circle,rgba(34,197,94,0.12),transparent 70%); bottom: 30px; left: -20px; }
-                .udp-profile-top-row { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; }
-                .udp-avatar-wrapper { position: relative; flex-shrink: 0; }
-                .udp-avatar-ring { position: absolute; inset: -3px; border-radius: 50%; border: 2.5px solid transparent; background: linear-gradient(135deg,#00B14F,#4ade80,#00B14F) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: destination-out; mask-composite: exclude; animation: ring-spin 4s linear infinite; }
-                @keyframes ring-spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-                .udp-avatar { position: relative; z-index: 1; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg,#00B14F,#059669); color: white; font-size: 1.45rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 16px rgba(0,177,79,0.35); letter-spacing: -0.5px; }
-                .udp-avatar-status { position: absolute; bottom: 3px; right: 3px; z-index: 2; width: 12px; height: 12px; border-radius: 50%; background: #22c55e; border: 2px solid white; animation: status-pulse 2.5s ease-in-out infinite; }
-                @keyframes status-pulse { 0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,0.3)} 50%{box-shadow:0 0 0 5px rgba(34,197,94,0)} }
-                .udp-profile-identity { position: relative; z-index: 1; }
-                .udp-display-name { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 4px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .udp-email { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #475569; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-                .udp-email-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: #00B14F; }
-                .udp-profile-badges { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; }
-                .udp-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 10px; font-size: 0.68rem; font-weight: 700; }
-                .udp-badge-verified { background: white; color: #00B14F; border: 1.5px solid #86efac; }
-                .udp-badge-scans { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
-                .udp-badge-gap { background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; }
-                .udp-profile-strip { position: relative; z-index: 1; display: flex; align-items: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border-top: 1px solid rgba(255,255,255,0.9); border-radius: 0 0 20px 20px; margin: 0 -20px; padding: 12px 20px; }
-                .udp-strip-item { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 2px; }
-                .udp-strip-num { font-size: 1.15rem; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1; }
-                .udp-strip-num.udp-strip-warn { color: #f59e0b; }
-                .udp-strip-num.udp-strip-purple { color: #7c3aed; }
-                .udp-strip-label { font-size: 0.58rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
-                .udp-strip-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.08); margin: 0 4px; }
-                .udp-signout-mini { background: rgba(255,255,255,0.8); border: 1px solid #fecaca; color: #ef4444; border-radius: 10px; padding: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-                .udp-signout-mini:hover { background: #fef2f2; transform: scale(1.05); }
-                .udp-signout-mini:disabled { opacity: 0.5; cursor: not-allowed; }
-                .udp-tabs { display: flex; gap: 4px; background: var(--color-bg-secondary); border-radius: var(--radius-lg); padding: 4px; }
-                .udp-tab { flex: 1; padding: var(--radius-sm) 4px; border: none; border-radius: var(--radius-sm); background: none; font-size: 0.72rem; font-weight: 700; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
-                .udp-tab.active { background: white; color: var(--color-primary); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-                .udp-tab-badge { background: #ef4444; color: white; border-radius: 999px; padding: 1px 5px; font-size: 0.62rem; font-weight: 800; }
-                .udp-tab-content { display: flex; flex-direction: column; gap: var(--radius-lg); }
-                .udp-stats-row { display: flex; align-items: center; background: white; border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-                .udp-stat { flex: 1; text-align: center; display: flex; flex-direction: column; gap: 3px; }
-                .udp-stat-divider { width: 1px; height: 32px; background: var(--color-border); margin: 0 2px; }
-                .udp-stat-num { font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary); letter-spacing: -1px; line-height: 1; }
-                .udp-stat-num.udp-stat-warn { color: #f59e0b; }
-                .udp-stat-num.udp-stat-green { color: var(--color-primary); }
-                .udp-stat-label { font-size: 0.62rem; font-weight: 600; color: var(--color-text-light); text-transform: uppercase; }
-                .udp-last-scan { display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary); font-size: 0.82rem; }
-                .udp-last-scan svg { color: var(--color-primary); }
-                .udp-section { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
-                .udp-section-alert { border-color: #fecaca; }
-                .udp-section-resolved { border-color: #bbf7d0; }
-                .udp-section-alert .udp-sh-icon { color: #ef4444 !important; }
-                .udp-section-alert .udp-sh-title { color: #b91c1c; }
-                .udp-section-resolved .udp-sh-icon { color: #16a34a !important; }
-                .udp-section-resolved .udp-sh-title { color: #15803d; }
-                .udp-section-header { display: flex; align-items: center; gap: var(--radius-sm); padding: var(--radius-md) var(--radius-lg); border-bottom: 1px solid var(--color-bg-secondary); font-size: 0.82rem; font-weight: 700; color: var(--color-text-primary); }
-                .udp-sh-icon { color: var(--color-primary); display: flex; }
-                .udp-sh-title { flex: 1; }
-                .udp-see-all { display: flex; align-items: center; gap: 2px; background: none; border: none; color: var(--color-primary); font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0; }
-                .udp-alert-row { display: flex; align-items: center; gap: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); background: #fff7ed; border: none; border-bottom: 1px solid #fef3c7; cursor: pointer; text-align: left; width: 100%; transition: background 0.15s; }
-                .udp-alert-row:last-child { border-bottom: none; }
-                .udp-alert-row:hover { background: #fef9c3; }
-                .udp-alert-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; flex-shrink: 0; animation: pulse 2s infinite; }
-                @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(239,68,68,0.2)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0.05)} }
-                .udp-alert-hint { font-size: 0.67rem; font-weight: 700; color: #ea580c; flex-shrink: 0; white-space: nowrap; }
-                .udp-scan-row { display: flex; align-items: center; gap: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); background: none; border: none; border-bottom: 1px solid var(--color-bg-secondary); cursor: pointer; text-align: left; transition: background 0.15s; width: 100%; }
-                .udp-scan-row:last-child { border-bottom: none; }
-                .udp-scan-row:hover { background: var(--color-bg-secondary); }
-                .udp-row-resolved { background: #f0fdf4; }
-                .udp-row-resolved:hover { background: #dcfce7; }
-                .udp-resolved-text { color: var(--color-text-secondary) !important; text-decoration: line-through; }
-                .udp-scan-info { flex: 1; min-width: 0; }
-                .udp-scan-name { display: block; font-size: 0.85rem; font-weight: 600; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .udp-scan-cat { display: block; font-size: 0.72rem; color: var(--color-text-light); margin-top: 1px; }
-                .udp-chevron { color: var(--color-border); flex-shrink: 0; }
-                .udp-log-row { display: flex; align-items: flex-start; gap: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); border-bottom: 1px solid var(--color-bg-secondary); }
-                .udp-log-row:last-child { border-bottom: none; }
-                .udp-log-icon { color: var(--color-primary); flex-shrink: 0; margin-top: 2px; }
-                .udp-explore-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; padding: 0 16px 16px; }
-                .udp-explore-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 12px; background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s; }
-                .udp-explore-card:hover { border-color: var(--color-primary); transform: translateY(-2px); }
-                .udp-explore-icon { color: #475569; display: flex; }
-                .udp-explore-label { font-size: 0.82rem; font-weight: 700; color: var(--color-text-primary); }
-                .udp-reports { display: flex; flex-direction: column; gap: var(--radius-lg); }
-                .udp-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--radius-sm); }
-                .udp-report-card { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 4px; }
-                .udp-report-num { font-size: 2rem; font-weight: 800; color: var(--color-text-primary); letter-spacing: -1px; }
-                .udp-report-label { font-size: 0.72rem; font-weight: 600; color: var(--color-text-light); text-transform: uppercase; }
-                .udp-task-banner { display: flex; align-items: center; gap: 14px; padding: 16px; background: linear-gradient(135deg,#fffbeb,#fef3c7); border: 1px solid #fcd34d; border-radius: var(--radius-lg); cursor: pointer; transition: transform 0.2s; }
-                .udp-task-banner:hover { transform: translateY(-2px); }
-                .udp-task-icon { font-size: 1.5rem; }
-                .udp-task-content { flex: 1; }
-                .udp-task-title { font-size: 0.9rem; font-weight: 800; color: #92400e; margin-bottom: 2px; }
-                .udp-task-desc { font-size: 0.78rem; color: #b45309; }
-                .udp-tab-actions { display: flex; justify-content: flex-end; margin-bottom: 20px; }
-                .udp-add-btn { display: flex; align-items: center; gap: 6px; background: var(--gradient-primary); color: white; border: none; border-radius: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); font-size: 0.82rem; font-weight: 700; cursor: pointer; }
-                .udp-inline-form { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--radius-lg); display: flex; flex-direction: column; gap: var(--radius-sm); }
-                .udp-input { width: 100%; padding: var(--radius-sm) var(--radius-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.88rem; color: var(--color-text-primary); outline: none; background: var(--color-bg-secondary); box-sizing: border-box; font-family: inherit; }
-                .udp-input:focus { border-color: var(--color-primary); background: white; }
-                .udp-submit-btn { padding: var(--radius-sm); background: var(--gradient-primary); color: white; border: none; border-radius: var(--radius-sm); font-size: 0.88rem; font-weight: 700; cursor: pointer; }
-                .udp-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-                .udp-plot-card { display: flex; align-items: center; gap: var(--radius-md); background: white; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--radius-md) var(--radius-lg); margin-bottom: var(--radius-sm); }
-                .udp-plot-card:last-child { margin-bottom: 0; }
-                .udp-plot-icon { background: #d1fae5; color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 8px; border-radius: 8px; }
-                .udp-plot-info { flex: 1; min-width: 0; }
-                .udp-plot-name { display: block; font-size: 0.88rem; font-weight: 700; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .udp-plot-meta { display: block; font-size: 0.72rem; color: var(--color-text-light); margin-top: 2px; }
-                .udp-delete-btn { background: none; border: none; color: var(--color-border); cursor: pointer; padding: 4px; border-radius: 6px; display: flex; transition: color 0.15s,background 0.15s; }
-                .udp-delete-btn:hover { color: #ef4444; background: #fef2f2; }
-                .udp-note-date { font-size: 0.7rem; font-weight: 700; color: var(--color-text-light); text-transform: uppercase; }
-                .udp-note-text { margin: 6px 0 0; font-size: 0.88rem; color: var(--color-text-primary); line-height: 1.5; white-space: pre-wrap; }
-                .udp-empty { display: flex; flex-direction: column; align-items: center; gap: var(--radius-sm); padding: 40px 20px; color: var(--color-text-light); text-align: center; }
-                .udp-empty svg { color: var(--color-border); }
-                .udp-empty p { font-size: 0.88rem; margin: 0; }
-                @media (max-width: 360px) { .udp-tab { font-size: 0.64rem; padding: 7px 2px; } }
             `}</style>
         </div>
     );

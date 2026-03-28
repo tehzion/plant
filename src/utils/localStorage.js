@@ -187,7 +187,13 @@ export const saveScan = async (scanData, userId = null) => {
             };
             const { error } = await supabase.from('scan_history').insert(row);
             if (error) throw error;
-            return { ...scanData, id, timestamp: row.created_at, image_url: imageUrl };
+            return {
+                ...scanData,
+                id,
+                timestamp: row.created_at,
+                image_url: imageUrl,
+                leaf_image_url: leafImageUrl,
+            };
         } catch (err) {
             console.error('Supabase saveScan error:', err);
             throw err;
@@ -222,6 +228,7 @@ export const getScanHistory = (userId = null) => {
                     severity:     row.severity,
                     category:     row.category,
                     image_url:    row.image_url,
+                    leaf_image_url: row.leaf_image_url,
                     locationName: row.location_name,
                 }));
             });
@@ -248,6 +255,7 @@ export const getScanById = (id, userId = null) => {
                     severity:     data.severity,
                     category:     data.category,
                     image_url:    data.image_url,
+                    leaf_image_url: data.leaf_image_url,
                     locationName: data.location_name,
                 };
             });

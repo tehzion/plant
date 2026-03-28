@@ -160,18 +160,18 @@ const ActivityForm = ({
                     <div style={{ flex: 1 }}>
                         <label className="udp-form-label">{t('profile.inspectionType') || 'Inspection Type'}</label>
                         <select className="udp-input" value={noteForm.inspection_type} onChange={(event) => updateForm({ inspection_type: event.target.value })}>
-                            <option value="Pest/Disease">Pest/Disease</option>
-                            <option value="Soil/Nutrient">Soil/Nutrient</option>
-                            <option value="Irrigation">Irrigation</option>
-                            <option value="Infrastructure">Infrastructure</option>
+                            <option value="Pest/Disease">{t('profile.inspectPestDisease') || 'Pest / Disease'}</option>
+                            <option value="Soil/Nutrient">{t('profile.inspectSoilNutrient') || 'Soil / Nutrient'}</option>
+                            <option value="Irrigation">{t('profile.inspectIrrigation') || 'Irrigation'}</option>
+                            <option value="Infrastructure">{t('profile.inspectInfrastructure') || 'Infrastructure'}</option>
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>
                         <label className="udp-form-label">{t('profile.inspectionStatus') || 'Status'}</label>
                         <select className="udp-input" value={noteForm.inspection_status} onChange={(event) => updateForm({ inspection_status: event.target.value })}>
-                            <option value="Good">Good / Pass</option>
-                            <option value="Action Required">Action Required</option>
-                            <option value="Urgent">Urgent Warning</option>
+                            <option value="Good">{t('profile.inspectStatusGood') || 'Good / Pass'}</option>
+                            <option value="Action Required">{t('profile.inspectStatusActionRequired') || 'Action Required'}</option>
+                            <option value="Urgent">{t('profile.inspectStatusUrgent') || 'Urgent Warning'}</option>
                         </select>
                     </div>
                 </div>

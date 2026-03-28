@@ -3,412 +3,202 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import { ArrowLeft, CheckCircle, AlertCircle, XCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react';
 
 const UserGuide = () => {
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
-    const content = {
-        en: {
-            title: 'Understanding Your Scan Results',
-            intro: 'This guide helps you understand what each indicator means and what actions to take.',
-
-            healthTitle: 'Plant Health Status',
-            healthSubtitle: 'What you see after scanning',
-
-            healthy: {
-                title: 'Healthy',
-                meaning: 'Your plant shows no signs of disease or deficiency',
-                when: 'You\'ll see this when:',
-                points: [
-                    'No fungal infections detected',
-                    'No pest damage visible',
-                    'Leaves show healthy color and structure'
-                ],
-                action: 'Continue regular care and monitoring'
-            },
-
-            unhealthy: {
-                title: 'Unhealthy',
-                meaning: 'Issues detected that need attention',
-                when: 'You\'ll see this when:',
-                points: [
-                    'Fungal infections present',
-                    'Pest damage detected',
-                    'Nutrient deficiencies visible',
-                    'Other disease symptoms found'
-                ],
-                action: 'Follow the recommended treatment plan'
-            },
-
-            riskTitle: 'Severity Levels',
-            riskSubtitle: 'How serious is the problem?',
-
-            mild: {
-                title: 'Mild',
-                meaning: 'Early stage or minor issue',
-                description: 'The problem is just starting or affects a small area. Early intervention can prevent it from spreading.',
-                example: 'Few spots on leaves, minimal damage',
-                action: 'Monitor closely and apply preventive treatments'
-            },
-
-            moderate: {
-                title: 'Moderate',
-                meaning: 'Needs attention soon',
-                description: 'The issue is established and spreading. Treatment is needed to prevent serious damage.',
-                example: 'Multiple affected leaves, visible symptoms',
-                action: 'Start treatment within 1-2 days'
-            },
-
-            high: {
-                title: 'High',
-                meaning: 'Critical - Act immediately',
-                description: 'Severe infection or damage. Immediate action required to save the plant and prevent spread to others.',
-                example: 'Widespread damage, rapid deterioration',
-                action: 'Treat today, consider isolating plant'
-            },
-
-            treatmentTitle: 'Treatment Recommendations',
-            treatmentSubtitle: 'What to do next',
-
-            noTreatment: {
-                title: 'No Treatment Needed',
-                description: 'Your plant is healthy! Just maintain your current care routine.',
-                tips: 'Continue monitoring during regular watering'
-            },
-
-            immediate: {
-                title: 'Immediate Actions',
-                description: 'Critical steps to take right away:',
-                steps: [
-                    'Follow the specific treatment plan shown',
-                    'Isolate plant if disease is contagious',
-                    'Remove severely affected parts',
-                    'Apply recommended products'
-                ]
-            },
-
-            tipTitle: 'Pro Tips',
-            tips: [
-                'Scan regularly to catch problems early',
-                'Always check the confidence score - higher is more reliable',
-                'Save scan history to track plant health over time',
-                'Compare scans to see if treatment is working'
-            ]
-        },
-        ms: {
-            title: 'Memahami Keputusan Imbasan',
-            intro: 'Panduan ini membantu anda memahami maksud setiap penunjuk dan tindakan yang perlu diambil.',
-
-            healthTitle: 'Status Kesihatan Tumbuhan',
-            healthSubtitle: 'Yang anda lihat selepas mengimbas',
-
-            healthy: {
-                title: 'Sihat',
-                meaning: 'Tumbuhan anda tidak menunjukkan tanda penyakit atau kekurangan',
-                when: 'Anda akan melihat ini apabila:',
-                points: [
-                    'Tiada jangkitan kulat dikesan',
-                    'Tiada kerosakan perosak kelihatan',
-                    'Daun menunjukkan warna dan struktur yang sihat'
-                ],
-                action: 'Teruskan penjagaan dan pemantauan biasa'
-            },
-
-            unhealthy: {
-                title: 'Tidak Sihat',
-                meaning: 'Masalah dikesan yang memerlukan perhatian',
-                when: 'Anda akan melihat ini apabila:',
-                points: [
-                    'Jangkitan kulat hadir',
-                    'Kerosakan perosak dikesan',
-                    'Kekurangan nutrien kelihatan',
-                    'Simptom penyakit lain ditemui'
-                ],
-                action: 'Ikuti pelan rawatan yang disyorkan'
-            },
-
-            riskTitle: 'Tahap Keterukan',
-            riskSubtitle: 'Seberapa serius masalahnya?',
-
-            mild: {
-                title: 'Ringan',
-                meaning: 'Peringkat awal atau isu kecil',
-                description: 'Masalah baru bermula atau menjejaskan kawasan kecil. Campur tangan awal boleh menghalangnya daripada merebak.',
-                example: 'Beberapa bintik pada daun, kerosakan minimum',
-                action: 'Pantau rapi dan guna rawatan pencegahan'
-            },
-
-            moderate: {
-                title: 'Sederhana',
-                meaning: 'Perlu perhatian tidak lama lagi',
-                description: 'Masalah sudah stabil dan merebak. Rawatan diperlukan untuk mengelakkan kerosakan serius.',
-                example: 'Banyak daun terjejas, simptom jelas',
-                action: 'Mulakan rawatan dalam 1-2 hari'
-            },
-
-            high: {
-                title: 'Tinggi',
-                meaning: 'Kritikal - Bertindak segera',
-                description: 'Jangkitan atau kerosakan teruk. Tindakan segera diperlukan untuk menyelamatkan tumbuhan dan mencegah rebakan kepada yang lain.',
-                example: 'Kerosakan meluas, kemerosotan pesat',
-                action: 'Rawat hari ini, pertimbangkan pengasingan'
-            },
-
-            treatmentTitle: 'Cadangan Rawatan',
-            treatmentSubtitle: 'Apa yang perlu dilakukan seterusnya',
-
-            noTreatment: {
-                title: 'Tiada Rawatan Diperlukan',
-                description: 'Tumbuhan anda sihat! Kekalkan rutin penjagaan semasa.',
-                tips: 'Terus pantau semasa penyiraman biasa'
-            },
-
-            immediate: {
-                title: 'Tindakan Segera',
-                description: 'Langkah kritikal untuk diambil sekarang:',
-                steps: [
-                    'Ikuti pelan rawatan khusus yang ditunjukkan',
-                    'Asingkan tumbuhan jika penyakit berjangkit',
-                    'Buang bahagian yang terjejas teruk',
-                    'Guna produk yang disyorkan'
-                ]
-            },
-
-            tipTitle: 'Petua Profesional',
-            tips: [
-                'Imbas kerap untuk kesan masalah awal',
-                'Sentiasa semak skor keyakinan - lebih tinggi lebih boleh dipercayai',
-                'Simpan sejarah imbasan untuk jejak kesihatan tumbuhan',
-                'Bandingkan imbasan untuk lihat sama ada rawatan berkesan'
-            ]
-        },
-        zh: {
-            title: '了解您的扫描结果',
-            intro: '本指南可帮助您了解每个指标的含义以及应采取的操作。',
-
-            healthTitle: '植物健康状况',
-            healthSubtitle: '扫描后您会看到什么',
-
-            healthy: {
-                title: '健康',
-                meaning: '您的植物没有疾病或缺陷的迹象',
-                when: '您在以下情况下会看到此信息：',
-                points: [
-                    '未检测到真菌感染',
-                    '无明显可见害虫破坏',
-                    '叶片显示健康的颜色和结构'
-                ],
-                action: '继续日常的护理和监测'
-            },
-
-            unhealthy: {
-                title: '不健康',
-                meaning: '检测到需要注意的问题',
-                when: '您在以下情况下会看到此信息：',
-                points: [
-                    '存在真菌感染',
-                    '检测到害虫破坏',
-                    '可见营养缺乏',
-                    '发现其他疾病症状'
-                ],
-                action: '请按照推荐的治疗计划进行操作'
-            },
-
-            riskTitle: '严重程度',
-            riskSubtitle: '问题有多严重？',
-
-            mild: {
-                title: '轻度',
-                meaning: '早期阶段或次要问题',
-                description: '问题刚刚开始或影响面积很小。早期干预可以防止其蔓延。',
-                example: '叶子上有少量斑点，损伤极小',
-                action: '密切关注并进行预防性治疗'
-            },
-
-            moderate: {
-                title: '中度',
-                meaning: '需要尽快注意',
-                description: '问题已经确立并正在蔓延。需要进行治疗以防止造成严重损害。',
-                example: '多片叶子受影响，症状明显',
-                action: '在1-2天内开始治疗'
-            },
-
-            high: {
-                title: '重度',
-                meaning: '严重 - 立即行动',
-                description: '感染或损害严重。需要立即采取行动拯救植物并防止其传播给其他植物。',
-                example: '广泛受到破坏，迅速恶化',
-                action: '今天就进行治疗，考虑隔离植物'
-            },
-
-            treatmentTitle: '治疗建议',
-            treatmentSubtitle: '下一步该做什么',
-
-            noTreatment: {
-                title: '无需治疗',
-                description: '您的植物很健康！请保持当前的护理常规即可。',
-                tips: '在日常浇水期间继续监测'
-            },
-
-            immediate: {
-                title: '立即行动',
-                description: '需立即采取的关键步骤：',
-                steps: [
-                    '按照显示的具体治疗计划进行操作',
-                    '如果是传染病，隔离植物',
-                    '去除受影响严重的部位',
-                    '使用推荐的产品'
-                ]
-            },
-
-            tipTitle: '专业提示',
-            tips: [
-                '定期扫描以便及早发现问题',
-                '始终检查置信度得分 - 得分越高越可靠',
-                '保存扫描历史记录以长期跟踪植物健康状况',
-                '比较扫描结果以查看治疗是否有效'
-            ]
-        }
+    const getList = (key) => {
+        const value = t(key);
+        return Array.isArray(value) ? value : [];
     };
 
-    const lang = content[language] || content.en;
+    const guide = {
+        title: t('userGuide.title'),
+        intro: t('userGuide.intro'),
+        healthTitle: t('userGuide.healthTitle'),
+        healthSubtitle: t('userGuide.healthSubtitle'),
+        healthy: {
+            title: t('userGuide.healthy.title'),
+            meaning: t('userGuide.healthy.meaning'),
+            when: t('userGuide.healthy.when'),
+            points: getList('userGuide.healthy.points'),
+            action: t('userGuide.healthy.action'),
+        },
+        unhealthy: {
+            title: t('userGuide.unhealthy.title'),
+            meaning: t('userGuide.unhealthy.meaning'),
+            when: t('userGuide.unhealthy.when'),
+            points: getList('userGuide.unhealthy.points'),
+            action: t('userGuide.unhealthy.action'),
+        },
+        riskTitle: t('userGuide.riskTitle'),
+        riskSubtitle: t('userGuide.riskSubtitle'),
+        mild: {
+            title: t('userGuide.mild.title'),
+            meaning: t('userGuide.mild.meaning'),
+            description: t('userGuide.mild.description'),
+            example: t('userGuide.mild.example'),
+            action: t('userGuide.mild.action'),
+        },
+        moderate: {
+            title: t('userGuide.moderate.title'),
+            meaning: t('userGuide.moderate.meaning'),
+            description: t('userGuide.moderate.description'),
+            example: t('userGuide.moderate.example'),
+            action: t('userGuide.moderate.action'),
+        },
+        high: {
+            title: t('userGuide.high.title'),
+            meaning: t('userGuide.high.meaning'),
+            description: t('userGuide.high.description'),
+            example: t('userGuide.high.example'),
+            action: t('userGuide.high.action'),
+        },
+        treatmentTitle: t('userGuide.treatmentTitle'),
+        treatmentSubtitle: t('userGuide.treatmentSubtitle'),
+        noTreatment: {
+            title: t('userGuide.noTreatment.title'),
+            description: t('userGuide.noTreatment.description'),
+            tips: t('userGuide.noTreatment.tips'),
+        },
+        immediate: {
+            title: t('userGuide.immediate.title'),
+            description: t('userGuide.immediate.description'),
+            steps: getList('userGuide.immediate.steps'),
+        },
+        tipTitle: t('userGuide.tipTitle'),
+        tips: getList('userGuide.tips'),
+    };
 
     return (
         <div className="page guide-page">
             <div className="container" style={{ paddingBottom: '100px' }}>
-                {/* Header */}
                 <div className="guide-header">
                     <button onClick={() => navigate(-1)} className="back-btn">
                         <ArrowLeft size={24} />
                     </button>
                     <div>
-                        <h1>{lang.title}</h1>
-                        <p className="guide-intro">{lang.intro}</p>
+                        <h1>{guide.title}</h1>
+                        <p className="guide-intro">{guide.intro}</p>
                     </div>
                 </div>
 
                 <div className="guide-content">
-                    {/* Health Status Section */}
                     <div className="guide-section">
                         <div className="section-header">
-                            <h2>{lang.healthTitle}</h2>
-                            <p className="section-subtitle">{lang.healthSubtitle}</p>
+                            <h2>{guide.healthTitle}</h2>
+                            <p className="section-subtitle">{guide.healthSubtitle}</p>
                         </div>
 
-                        {/* Healthy */}
                         <div className="educational-card healthy">
                             <div className="card-header">
                                 <div className="status-icon"><CheckCircle size={24} /></div>
                                 <div>
-                                    <h3>{lang.healthy.title}</h3>
-                                    <p className="card-meaning">{lang.healthy.meaning}</p>
+                                    <h3>{guide.healthy.title}</h3>
+                                    <p className="card-meaning">{guide.healthy.meaning}</p>
                                 </div>
                             </div>
                             <div className="card-body">
-                                <p className="when-label">{lang.healthy.when}</p>
+                                <p className="when-label">{guide.healthy.when}</p>
                                 <ul className="indicator-list">
-                                    {lang.healthy.points.map((point, i) => (
-                                        <li key={i}><CheckCircle size={14} /> {point}</li>
+                                    {guide.healthy.points.map((point, index) => (
+                                        <li key={`healthy-${index}`}><CheckCircle size={14} /> {point}</li>
                                     ))}
                                 </ul>
                                 <div className="action-box success">
                                     <Lightbulb size={16} />
-                                    <span>{lang.healthy.action}</span>
+                                    <span>{guide.healthy.action}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Unhealthy */}
                         <div className="educational-card unhealthy">
                             <div className="card-header">
                                 <div className="status-icon"><XCircle size={24} /></div>
                                 <div>
-                                    <h3>{lang.unhealthy.title}</h3>
-                                    <p className="card-meaning">{lang.unhealthy.meaning}</p>
+                                    <h3>{guide.unhealthy.title}</h3>
+                                    <p className="card-meaning">{guide.unhealthy.meaning}</p>
                                 </div>
                             </div>
                             <div className="card-body">
-                                <p className="when-label">{lang.unhealthy.when}</p>
+                                <p className="when-label">{guide.unhealthy.when}</p>
                                 <ul className="indicator-list">
-                                    {lang.unhealthy.points.map((point, i) => (
-                                        <li key={i}><AlertCircle size={14} /> {point}</li>
+                                    {guide.unhealthy.points.map((point, index) => (
+                                        <li key={`unhealthy-${index}`}><AlertCircle size={14} /> {point}</li>
                                     ))}
                                 </ul>
                                 <div className="action-box warning">
                                     <AlertTriangle size={16} />
-                                    <span>{lang.unhealthy.action}</span>
+                                    <span>{guide.unhealthy.action}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Risk Levels Section */}
                     <div className="guide-section">
                         <div className="section-header">
-                            <h2>{lang.riskTitle}</h2>
-                            <p className="section-subtitle">{lang.riskSubtitle}</p>
+                            <h2>{guide.riskTitle}</h2>
+                            <p className="section-subtitle">{guide.riskSubtitle}</p>
                         </div>
 
                         <div className="severity-timeline">
                             {['mild', 'moderate', 'high'].map((level) => (
                                 <div key={level} className={`severity-card ${level}`}>
-                                    <div className="severity-badge">{lang[level].title}</div>
-                                    <h4>{lang[level].meaning}</h4>
-                                    <p className="severity-desc">{lang[level].description}</p>
+                                    <div className="severity-badge">{guide[level].title}</div>
+                                    <h4>{guide[level].meaning}</h4>
+                                    <p className="severity-desc">{guide[level].description}</p>
                                     <div className="example-box">
                                         <Info size={14} />
-                                        <span><strong>{t('common.example')}:</strong> {lang[level].example}</span>
+                                        <span><strong>{t('common.example')}:</strong> {guide[level].example}</span>
                                     </div>
                                     <div className="action-box">
                                         <AlertTriangle size={14} />
-                                        <span>{lang[level].action}</span>
+                                        <span>{guide[level].action}</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Treatment Section */}
                     <div className="guide-section">
                         <div className="section-header">
-                            <h2>{lang.treatmentTitle}</h2>
-                            <p className="section-subtitle">{lang.treatmentSubtitle}</p>
+                            <h2>{guide.treatmentTitle}</h2>
+                            <p className="section-subtitle">{guide.treatmentSubtitle}</p>
                         </div>
 
                         <div className="treatment-grid">
                             <div className="treatment-card success">
                                 <CheckCircle size={20} />
-                                <h4>{lang.noTreatment.title}</h4>
-                                <p>{lang.noTreatment.description}</p>
+                                <h4>{guide.noTreatment.title}</h4>
+                                <p>{guide.noTreatment.description}</p>
                                 <div className="tip-box">
                                     <Lightbulb size={14} />
-                                    <span>{lang.noTreatment.tips}</span>
+                                    <span>{guide.noTreatment.tips}</span>
                                 </div>
                             </div>
 
                             <div className="treatment-card urgent">
                                 <AlertTriangle size={20} />
-                                <h4>{lang.immediate.title}</h4>
-                                <p>{lang.immediate.description}</p>
+                                <h4>{guide.immediate.title}</h4>
+                                <p>{guide.immediate.description}</p>
                                 <ol className="steps-list">
-                                    {lang.immediate.steps.map((step, i) => (
-                                        <li key={i}>{step}</li>
+                                    {guide.immediate.steps.map((step, index) => (
+                                        <li key={`step-${index}`}>{step}</li>
                                     ))}
                                 </ol>
                             </div>
                         </div>
                     </div>
 
-                    {/* Pro Tips */}
                     <div className="guide-section">
                         <div className="tips-section">
                             <div className="tips-header">
                                 <Lightbulb size={24} />
-                                <h3>{lang.tipTitle}</h3>
+                                <h3>{guide.tipTitle}</h3>
                             </div>
                             <div className="tips-grid">
-                                {lang.tips.map((tip, i) => (
-                                    <div key={i} className="tip-card">
-                                        <div className="tip-number">{i + 1}</div>
+                                {guide.tips.map((tip, index) => (
+                                    <div key={`tip-${index}`} className="tip-card">
+                                        <div className="tip-number">{index + 1}</div>
                                         <p>{tip}</p>
                                     </div>
                                 ))}
@@ -418,6 +208,308 @@ const UserGuide = () => {
                 </div>
             </div>
 
+            <style>{`
+                .guide-page {
+                    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+                    min-height: 100vh;
+                }
+
+                .guide-header {
+                    display: flex;
+                    gap: 16px;
+                    align-items: flex-start;
+                    margin-bottom: 32px;
+                    padding-top: 24px;
+                }
+
+                .back-btn {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 14px;
+                    border: 1px solid #e5e7eb;
+                    background: white;
+                    color: #111827;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+                    flex-shrink: 0;
+                }
+
+                .guide-header h1 {
+                    margin: 0 0 8px;
+                    font-size: 2rem;
+                    color: #0f172a;
+                }
+
+                .guide-intro {
+                    margin: 0;
+                    color: #64748b;
+                    max-width: 700px;
+                    line-height: 1.6;
+                }
+
+                .guide-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
+                }
+
+                .guide-section {
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 24px;
+                    padding: 24px;
+                    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+                }
+
+                .section-header {
+                    margin-bottom: 20px;
+                }
+
+                .section-header h2 {
+                    margin: 0 0 6px;
+                    font-size: 1.35rem;
+                    color: #111827;
+                }
+
+                .section-subtitle {
+                    margin: 0;
+                    color: #64748b;
+                    font-size: 0.95rem;
+                }
+
+                .educational-card,
+                .treatment-card {
+                    border-radius: 20px;
+                    padding: 20px;
+                    border: 1px solid #e5e7eb;
+                }
+
+                .educational-card + .educational-card {
+                    margin-top: 16px;
+                }
+
+                .educational-card.healthy,
+                .treatment-card.success {
+                    background: #f0fdf4;
+                    border-color: #bbf7d0;
+                }
+
+                .educational-card.unhealthy,
+                .treatment-card.urgent {
+                    background: #fff7ed;
+                    border-color: #fed7aa;
+                }
+
+                .card-header {
+                    display: flex;
+                    gap: 14px;
+                    align-items: flex-start;
+                    margin-bottom: 14px;
+                }
+
+                .status-icon {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 255, 255, 0.75);
+                    color: #111827;
+                    flex-shrink: 0;
+                }
+
+                .card-header h3,
+                .tips-header h3,
+                .treatment-card h4,
+                .severity-card h4 {
+                    margin: 0 0 6px;
+                    color: #111827;
+                }
+
+                .card-meaning,
+                .severity-desc,
+                .treatment-card p {
+                    margin: 0;
+                    color: #475569;
+                    line-height: 1.6;
+                }
+
+                .when-label {
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin: 0 0 10px;
+                }
+
+                .indicator-list,
+                .steps-list {
+                    margin: 0;
+                    padding-left: 0;
+                    list-style: none;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .indicator-list li,
+                .steps-list li {
+                    display: flex;
+                    gap: 10px;
+                    align-items: flex-start;
+                    color: #334155;
+                    line-height: 1.5;
+                }
+
+                .steps-list {
+                    list-style: decimal;
+                    padding-left: 18px;
+                }
+
+                .steps-list li {
+                    display: list-item;
+                    padding-left: 4px;
+                }
+
+                .action-box,
+                .example-box,
+                .tip-box {
+                    margin-top: 14px;
+                    border-radius: 14px;
+                    padding: 12px 14px;
+                    display: flex;
+                    gap: 10px;
+                    align-items: flex-start;
+                    line-height: 1.5;
+                }
+
+                .action-box.success,
+                .tip-box {
+                    background: rgba(255, 255, 255, 0.75);
+                    color: #166534;
+                }
+
+                .action-box.warning,
+                .action-box {
+                    background: rgba(255, 255, 255, 0.75);
+                    color: #9a3412;
+                }
+
+                .example-box {
+                    background: #eff6ff;
+                    color: #1e3a8a;
+                }
+
+                .severity-timeline,
+                .treatment-grid,
+                .tips-grid {
+                    display: grid;
+                    gap: 16px;
+                }
+
+                .severity-timeline {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+
+                .treatment-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .severity-card {
+                    border-radius: 20px;
+                    padding: 18px;
+                    border: 1px solid #e5e7eb;
+                    background: #f8fafc;
+                }
+
+                .severity-card.mild { border-color: #d9f99d; }
+                .severity-card.moderate { border-color: #fde68a; }
+                .severity-card.high { border-color: #fecaca; }
+
+                .severity-badge {
+                    display: inline-flex;
+                    padding: 5px 10px;
+                    border-radius: 999px;
+                    font-size: 0.72rem;
+                    font-weight: 800;
+                    margin-bottom: 12px;
+                    background: white;
+                    color: #334155;
+                }
+
+                .tips-section {
+                    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+                    border-radius: 20px;
+                    padding: 20px;
+                    border: 1px solid #bfdbfe;
+                }
+
+                .tips-header {
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                    color: #1d4ed8;
+                    margin-bottom: 16px;
+                }
+
+                .tips-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .tip-card {
+                    background: white;
+                    border: 1px solid #dbeafe;
+                    border-radius: 16px;
+                    padding: 16px;
+                    display: flex;
+                    gap: 12px;
+                    align-items: flex-start;
+                }
+
+                .tip-number {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 999px;
+                    background: #dbeafe;
+                    color: #1d4ed8;
+                    font-weight: 800;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                .tip-card p {
+                    margin: 0;
+                    color: #334155;
+                    line-height: 1.55;
+                }
+
+                @media (max-width: 900px) {
+                    .severity-timeline,
+                    .treatment-grid,
+                    .tips-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+
+                @media (max-width: 640px) {
+                    .guide-header {
+                        flex-direction: column;
+                    }
+
+                    .guide-section {
+                        padding: 18px;
+                        border-radius: 20px;
+                    }
+
+                    .guide-header h1 {
+                        font-size: 1.65rem;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

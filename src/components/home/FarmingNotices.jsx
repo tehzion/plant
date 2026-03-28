@@ -3,17 +3,17 @@ import { CheckCircle2, AlertTriangle, XCircle, CloudRain, Sun, ThermometerSun, D
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS = {
-    good:    { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', Icon: CheckCircle2,  label: 'Good'    },
-    caution: { color: '#d97706', bg: '#fffbeb', border: '#fde68a', Icon: AlertTriangle, label: 'Caution' },
-    warning: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', Icon: XCircle,       label: 'Warning' },
+    good:    { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', Icon: CheckCircle2,  labelKey: 'common.good'    },
+    caution: { color: '#d97706', bg: '#fffbeb', border: '#fde68a', Icon: AlertTriangle, labelKey: 'common.caution' },
+    warning: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', Icon: XCircle,       labelKey: 'common.warning' },
 };
 
 // ── Day label helper ──────────────────────────────────────────────────────────
-const dayLabel = (dateStr, index) => {
-    if (index === 0) return 'Today';
-    if (index === 1) return 'Tomorrow';
+const dayLabel = (dateStr, index, t) => {
+    if (index === 0) return t('common.today');
+    if (index === 1) return t('common.tomorrow');
     const d    = new Date(dateStr);
-    return d.toLocaleDateString('en-MY', { weekday: 'short', day: 'numeric', month: 'short' });
+    return d.toLocaleDateString(t('common.dateLocale') || 'en-MY', { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
 // ── Icon for notice context ───────────────────────────────────────────────────
@@ -48,7 +48,7 @@ const FarmingNotices = ({ forecast = [] }) => {
                         {t('home.farmingNotices') || 'Farming Notices'}
                     </span>
                     <span className="fn-status-badge" style={{ background: todayCfg.color }}>
-                        {todayCfg.label}
+                        {t(todayCfg.labelKey)}
                     </span>
                 </div>
                 <p className="fn-today-msg">{today.notice.message}</p>
@@ -67,7 +67,7 @@ const FarmingNotices = ({ forecast = [] }) => {
                     const Icon = cfg.Icon;
                     return (
                         <div key={day.date} className="fn-day-row">
-                            <span className="fn-day-label">{dayLabel(day.date, i + 1)}</span>
+                            <span className="fn-day-label">{dayLabel(day.date, i + 1, t)}</span>
                             <ContextIcon
                                 precip={day.precip} uvIndex={day.uvIndex}
                                 tempMax={day.tempMax} humidity={day.humidity}
@@ -75,7 +75,7 @@ const FarmingNotices = ({ forecast = [] }) => {
                             <span className="fn-day-msg">{day.notice.message}</span>
                             <span className="fn-day-badge" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
                                 <Icon size={10} />
-                                {cfg.label}
+                                {t(cfg.labelKey)}
                             </span>
                         </div>
                     );

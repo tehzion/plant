@@ -59,8 +59,8 @@ const AppHeader = ({ isHome }) => {
                     <button 
                         onClick={() => window.location.reload()} 
                         className="refresh-btn"
-                        title="Refresh App"
-                        aria-label="Refresh App"
+                        title={t('common.refreshApp')}
+                        aria-label={t('common.refreshApp')}
                     >
                         <RefreshCw size={20} />
                     </button>

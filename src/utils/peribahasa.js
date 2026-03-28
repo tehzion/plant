@@ -1,65 +1,45 @@
-// Utility to get random peribahasa (Malaysian proverbs)
-// Usage: import { getRandomPeribahasa } from './utils/peribahasa';
-
 import { translations } from '../i18n/translations';
 
-/**
- * Get a random peribahasa (proverb) based on current language
- * @param {string} language - 'en', 'ms', or 'zh'
- * @returns {string} Random peribahasa
- */
+const getFallbackPeribahasa = (language = 'en') => (
+    translations[language]?.home?.peribahasaFallback
+    || translations.en?.home?.peribahasaFallback
+    || 'Your plants are growing strong! 🌱'
+);
+
 export const getRandomPeribahasa = (language = 'en') => {
     const peribahasa = translations[language]?.home?.peribahasa || [];
 
     if (peribahasa.length === 0) {
-        if (language === 'ms') return 'Tanaman anda membesar dengan sihat! 🌱';
-        if (language === 'zh') return '您的植物正在茁壮成长！ 🌱';
-        return 'Your plants are growing strong! 🌱';
+        return getFallbackPeribahasa(language);
     }
 
     const randomIndex = Math.floor(Math.random() * peribahasa.length);
     return peribahasa[randomIndex];
 };
 
-/**
- * Get multiple random peribahasa (without duplicates)
- * @param {string} language - 'en', 'ms', or 'zh'
- * @param {number} count - Number of peribahasa to get
- * @returns {string[]} Array of random peribahasa
- */
 export const getRandomPeribahasaList = (language = 'en', count = 3) => {
     const peribahasa = translations[language]?.home?.peribahasa || [];
 
     if (peribahasa.length === 0) {
-        if (language === 'ms') return ['Tanaman anda membesar dengan sihat! 🌱'];
-        if (language === 'zh') return ['您的植物正在茁壮成长！ 🌱'];
-        return ['Your plants are growing strong! 🌱'];
+        return [getFallbackPeribahasa(language)];
     }
 
-    // Shuffle and take first 'count' items
     const shuffled = [...peribahasa].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, Math.min(count, peribahasa.length));
 };
 
-/**
- * Get a contextual peribahasa based on the situation
- * @param {string} language - 'en', 'ms', or 'zh'
- * @param {string} context - 'loading', 'success', 'healthy', 'diseased'
- * @returns {string} Contextual peribahasa
- */
-export const getContextualPeribahasa = (language = 'en', context = 'loading') => {
+export const getContextualPeribahasa = (language = 'en', _context = 'loading') => {
     const peribahasa = translations[language]?.home?.peribahasa || [];
 
     if (peribahasa.length === 0) {
         return getRandomPeribahasa(language);
     }
 
-    // For now, return random. Can be enhanced to filter by context
     return getRandomPeribahasa(language);
 };
 
 export default {
     getRandomPeribahasa,
     getRandomPeribahasaList,
-    getContextualPeribahasa
+    getContextualPeribahasa,
 };

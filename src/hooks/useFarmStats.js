@@ -28,7 +28,7 @@ const createScoutAlert = (note) => ({
     },
 });
 
-export const useFarmStats = ({ userId, getLocation, notify }) => {
+export const useFarmStats = ({ userId, getLocation, notify, t }) => {
     const [scanHistory,    setScanHistory]    = useState([]);
     const [checklistState, setChecklistState] = useState({});
     const [logbook,        setLogbook]        = useState([]);
@@ -87,10 +87,19 @@ export const useFarmStats = ({ userId, getLocation, notify }) => {
     const stats = useMemo(() => {
         const total   = scanHistory.length;
         const healthy = scanHistory.filter((s) => s.healthStatus === 'healthy').length;
+        const now = new Date();
+        const scannedThisMonth = scanHistory.filter(s => {
+            const d = new Date(s.timestamp || s.created_at);
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        }).length;
+        const accuracy = total > 0 ? Math.round((healthy / total) * 100) : 100;
+
         return {
             total,
             healthy,
             diseases: total - healthy,
+            scannedThisMonth,
+            accuracy,
             lastScan: scanHistory[0]?.timestamp ?? scanHistory[0]?.created_at ?? null,
         };
     }, [scanHistory]);
@@ -165,11 +174,27 @@ export const useFarmStats = ({ userId, getLocation, notify }) => {
         const lastSpray = notes.find(n => n.activity_type === 'spray' || (n.activity_type === 'note' && n.chemical_name));
         const lastScout = notes.find(n => ['scout', 'inspect', 'prune'].includes(n.activity_type));
         
-        if (daysOld(lastSpray?.created_at) > 14) nudges.push('profile.nudgeStaleSpray');
-        if (daysOld(lastScout?.created_at) > 7) nudges.push('profile.nudgeStaleScout');
+        if (daysOld(lastSpray?.created_at) > 14) {
+            nudges.push({
+                id: 'stale-spray',
+                title: t?.('profile.nudgeStaleSprayTitle') || 'Spray Record Stale',
+                desc: t?.('profile.nudgeStaleSpray') || 'No spray records for 14 days. Need an update?',
+                type: 'note',
+                activityType: 'spray'
+            });
+        }
+        if (daysOld(lastScout?.created_at) > 7) {
+            nudges.push({
+                id: 'stale-scout',
+                title: t?.('profile.nudgeStaleScoutTitle') || 'Scouting Overdue',
+                desc: t?.('profile.nudgeStaleScout') || 'It has been 7 days since your last scout. Time for a field check?',
+                type: 'note',
+                activityType: 'scout'
+            });
+        }
 
         return { hasLoggedToday: hasLog, streak: currentStreak, complianceNudges: nudges };
-    }, [notes, logbook, scanHistory]);
+    }, [notes, logbook, scanHistory, t]);
 
     const checklistPct = useMemo(() => {
         const values = Object.values(derivedChecklist);

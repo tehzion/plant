@@ -33,7 +33,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                         return finalName.toUpperCase();
                                     })()} • {new Date(scan.timestamp).toLocaleDateString(t('common.dateLocale') || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 </p>
-                                {scan.locationName && scan.locationName !== 'N/A' && !scan.locationName.includes('N/A') && (
+                                {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
                                     <p className="scan-location">
                                         <MapPin size={12} strokeWidth={1.5} /> {scan.locationName.startsWith('common.') 
                                             ? t(scan.locationName) 

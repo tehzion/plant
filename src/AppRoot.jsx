@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { LanguageProvider } from './i18n/i18n.jsx';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -10,16 +10,17 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import { ScanProvider } from './context/ScanContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationProvider.jsx';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-const Home = lazy(() => import('./pages/Home'));
-const Results = lazy(() => import('./pages/Results'));
-const History = lazy(() => import('./pages/History'));
-const Encyclopedia = lazy(() => import('./pages/Encyclopedia'));
-const Login = lazy(() => import('./pages/Login'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
-const MyGap = lazy(() => import('./pages/MyGap'));
-const UserGuide = lazy(() => import('./pages/UserGuide'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+const Home = lazyWithRetry(() => import('./pages/Home'), 'home');
+const Results = lazyWithRetry(() => import('./pages/Results'), 'results');
+const History = lazyWithRetry(() => import('./pages/History'), 'history');
+const Encyclopedia = lazyWithRetry(() => import('./pages/Encyclopedia'), 'encyclopedia');
+const Login = lazyWithRetry(() => import('./pages/Login'), 'login');
+const Onboarding = lazyWithRetry(() => import('./pages/Onboarding'), 'onboarding');
+const MyGap = lazyWithRetry(() => import('./pages/MyGap'), 'mygap');
+const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'), 'guide');
+const NotFound = lazyWithRetry(() => import('./pages/NotFound'), 'notfound');
 
 function App() {
     console.log('⚛️ App: Rendering full tree...');

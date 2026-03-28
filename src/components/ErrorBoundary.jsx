@@ -1,10 +1,19 @@
 import { Component } from 'react';
 import translations from '../i18n/translations';
+import { isRetryableLazyLoadError } from '../utils/lazyWithRetry';
 
 class ErrorBoundary extends Component {
     constructor(props) {
         super(props);
         this.state = { hasError: false, error: null };
+    }
+
+    componentDidMount() {
+        try {
+            sessionStorage.removeItem('error-boundary-reload');
+        } catch {
+            // Ignore storage failures.
+        }
     }
 
     static getDerivedStateFromError(error) {
@@ -13,6 +22,29 @@ class ErrorBoundary extends Component {
 
     componentDidCatch(error, errorInfo) {
         console.error('Error caught by boundary:', error, errorInfo);
+
+        if (typeof window === 'undefined') return;
+
+        const retryKey = 'error-boundary-reload';
+        if (isRetryableLazyLoadError(error)) {
+            try {
+                const hasRetried = sessionStorage.getItem(retryKey) === '1';
+                if (!hasRetried) {
+                    sessionStorage.setItem(retryKey, '1');
+                    window.location.reload();
+                    return;
+                }
+            } catch {
+                window.location.reload();
+                return;
+            }
+        }
+
+        try {
+            sessionStorage.removeItem(retryKey);
+        } catch {
+            // Ignore storage failures.
+        }
     }
 
     // Helper to get translation without hooks
@@ -89,7 +121,7 @@ class ErrorBoundary extends Component {
                                 overflow: 'auto',
                                 maxHeight: '200px'
                             }}>
-                                <div style={{ fontWeight: 700, marginBottom: '8px' }}>Error Details</div>
+                                <div style={{ fontWeight: 700, marginBottom: '8px' }}>{t('common.errorDetails')}</div>
                                 <div style={{ whiteSpace: 'pre-wrap' }}>
                                     {this.state.error?.message || String(this.state.error)}
                                 </div>

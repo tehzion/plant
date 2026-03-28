@@ -364,7 +364,7 @@ ${t('pdf.generatedBy')}
             </div>
 
             {/* Location */}
-            {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== t('common.locationNA') && (
+            {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
               <div className="metadata-item">
                 <div className="metadata-icon location-icon">
                   <MapPin size={20} />

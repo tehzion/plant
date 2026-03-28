@@ -11,8 +11,8 @@ import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
+import { createPdfTextRenderer } from '../utils/pdfTextRenderer';
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
@@ -86,11 +86,10 @@ const MyGapPage = () => {
         { id: 'check8', label: t('mygap.check8') },
     ];
 
-    const generateReport = () => {
+    const generateReport = async () => {
         const doc = new jsPDF();
-        
-        // Helper to get translation for report (force English if Chinese)
-        const reportLang = language === 'zh' ? 'en' : (language || 'en');
+        const renderer = createPdfTextRenderer(doc);
+        const reportLang = language || 'en';
         const rt = (key) => {
             const keys = key.split('.');
             let value = translations[reportLang];
@@ -100,45 +99,106 @@ const MyGapPage = () => {
             return value || key;
         };
 
-        // Brand Colors
-        const primaryColor = [0, 177, 79]; // #00B14F (Grab-like green)
-        const secondaryColor = [232, 245, 233]; // #E8F5E9 (Light green)
-        const darkColor = [28, 36, 52]; // #1C2434 (Dark text)
-        const lightText = [100, 116, 139]; // #64748B (Secondary text)
-        
-        // --- Header Section ---
-        // Green header background
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const primaryColor = [0, 177, 79];
+        const secondaryColor = [232, 245, 233];
+        const darkColor = [28, 36, 52];
+        const lightText = [100, 116, 139];
+        let yPos = 60;
+
+        const pendingLabel = rt('common.pending');
+        const pageLabel = rt('common.page');
+        const ofLabel = rt('common.of');
+
+        const checkPageBreak = (requiredSpace = 20) => {
+            if (yPos + requiredSpace > pageHeight - 20) {
+                doc.addPage();
+                yPos = 24;
+            }
+        };
+
+        const writeLines = async (lines, options = {}) => {
+            const {
+                x = 14,
+                width = pageWidth - 28,
+                fontSize = 10,
+                fontStyle = 'normal',
+                color = darkColor,
+                gapAfter = 0,
+                align = 'left',
+                lineHeight = 1.35,
+            } = options;
+
+            for (const line of lines) {
+                const text = line || ' ';
+                const textHeight = renderer.measureTextHeight(text, width, { fontSize, fontStyle, lineHeight });
+                checkPageBreak(textHeight + 2);
+                await renderer.drawText(text, x, yPos, {
+                    maxWidth: width,
+                    fontSize,
+                    fontStyle,
+                    color,
+                    align,
+                    lineHeight,
+                });
+                yPos += textHeight;
+            }
+
+            yPos += gapAfter;
+        };
+
+        const writeParagraph = async (text, options = {}) => {
+            const lines = renderer.getWrappedLines(text, options.width ?? pageWidth - 28, options);
+            await writeLines(lines, options);
+        };
+
+        const writeSectionTitle = async (title, options = {}) => {
+            const {
+                fontSize = 14,
+                color = darkColor,
+                marginBottom = 6,
+            } = options;
+
+            const height = renderer.measureTextHeight(title, pageWidth - 28, { fontSize, fontStyle: 'bold' });
+            checkPageBreak(height + marginBottom + 4);
+            await renderer.drawText(title, 14, yPos, {
+                maxWidth: pageWidth - 28,
+                fontSize,
+                fontStyle: 'bold',
+                color,
+            });
+            yPos += height + marginBottom;
+        };
+
         doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 45, 'F');
-        
-        // Logo Placeholder (White Circle)
+        doc.rect(0, 0, pageWidth, 45, 'F');
         doc.setFillColor(255, 255, 255);
         doc.circle(25, 22, 12, 'F');
-        // Leaf Icon (Simplified drawing)
         doc.setFillColor(...primaryColor);
         doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
         doc.fill();
 
-        // App Name
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Smart Plant Advisor', 42, 20);
-        
-        // Report Title
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.text(rt('mygap.reportTitle').toUpperCase(), 42, 28);
-        
-        // Date Badge
+        await renderer.drawText('Smart Plant Advisor', 42, 14, {
+            maxWidth: 90,
+            fontSize: 18,
+            fontStyle: 'bold',
+            color: [255, 255, 255],
+        });
+        await renderer.drawText(rt('mygap.reportTitle').toUpperCase(), 42, 24, {
+            maxWidth: 90,
+            fontSize: 12,
+            color: [255, 255, 255],
+        });
+
         const dateStr = new Date().toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : 'en-MY');
-        doc.setFontSize(10);
-        doc.setTextColor(255, 255, 255);
-        doc.text(`${rt('pdf.reportDate') || 'Date'}: ${dateStr}`, 160, 25);
+        await renderer.drawText(`${rt('pdf.reportDate') || 'Date'}: ${dateStr}`, pageWidth - 74, 18, {
+            maxWidth: 60,
+            fontSize: 10,
+            color: [255, 255, 255],
+            align: 'right',
+        });
 
-        let yPos = 60;
-
-        // --- Summary Stats Section ---
         const totalChecks = checklistItems.length;
         const completedChecks = Object.values(derivedChecklist).filter(Boolean).length;
         const complianceRate = Math.round((completedChecks / totalChecks) * 100);
@@ -148,40 +208,46 @@ const MyGapPage = () => {
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(14, 50, 182, 25, 3, 3, 'FD');
 
-        doc.setTextColor(...darkColor);
-        doc.setFontSize(10);
-        doc.text('Compliance Score', 30, 60);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text(`${complianceRate}%`, 30, 68);
+        await renderer.drawText(rt('mygap.complianceProgress') || 'Compliance Progress', 22, 56, {
+            maxWidth: 42,
+            fontSize: 10,
+            color: darkColor,
+        });
+        await renderer.drawText(`${complianceRate}%`, 22, 63, {
+            maxWidth: 42,
+            fontSize: 14,
+            fontStyle: 'bold',
+            color: primaryColor,
+        });
 
-        doc.setTextColor(...darkColor);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Checklist Status', 90, 60);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${completedChecks}/${totalChecks}`, 90, 68);
+        await renderer.drawText(rt('mygap.checklistTitle'), 82, 56, {
+            maxWidth: 42,
+            fontSize: 10,
+            color: darkColor,
+        });
+        await renderer.drawText(`${completedChecks}/${totalChecks}`, 82, 63, {
+            maxWidth: 42,
+            fontSize: 14,
+            fontStyle: 'bold',
+            color: darkColor,
+        });
 
-        doc.setTextColor(...darkColor);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Total Activities', 150, 60);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${totalLogs}`, 150, 68);
+        await renderer.drawText(rt('mygap.logbookTitle'), 142, 56, {
+            maxWidth: 42,
+            fontSize: 10,
+            color: darkColor,
+        });
+        await renderer.drawText(`${totalLogs}`, 142, 63, {
+            maxWidth: 42,
+            fontSize: 14,
+            fontStyle: 'bold',
+            color: darkColor,
+        });
 
         yPos = 85;
 
-        // --- Checklist Section ---
-        doc.setTextColor(...darkColor);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text(rt('mygap.checklistTitle'), 14, yPos);
-        yPos += 8;
+        await writeSectionTitle(rt('mygap.checklistTitle'));
 
-        // Re-map checklist items with report language
         const checklistData = [
             { id: 'check1', label: rt('mygap.check1') },
             { id: 'check2', label: rt('mygap.check2') },
@@ -191,114 +257,107 @@ const MyGapPage = () => {
             { id: 'check6', label: rt('mygap.check6') },
             { id: 'check7', label: rt('mygap.check7') },
             { id: 'check8', label: rt('mygap.check8') },
-        ].map(item => [
-            item.label,
-            derivedChecklist[item.id] ? 'COMPLIANT' : 'PENDING'
-        ]);
+        ].map((item) => ({
+            label: item.label,
+            complete: Boolean(derivedChecklist[item.id]),
+        }));
 
-        doc.autoTable({
-            startY: yPos,
-            head: [['Requirement Standard', 'Status']],
-            body: checklistData,
-            theme: 'grid',
-            headStyles: { 
-                fillColor: secondaryColor, 
-                textColor: primaryColor, 
+        for (const item of checklistData) {
+            const statusText = item.complete ? (rt('common.completed') || 'Completed') : pendingLabel;
+            const rowHeight = Math.max(
+                renderer.measureTextHeight(item.label, 112, { fontSize: 10 }),
+                renderer.measureTextHeight(statusText, 30, { fontSize: 9, fontStyle: 'bold' }),
+                10 * PT_TO_MM,
+            ) + 8;
+
+            checkPageBreak(rowHeight + 4);
+            doc.setFillColor(...(item.complete ? [240, 253, 244] : [248, 250, 252]));
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(14, yPos, pageWidth - 28, rowHeight, 3, 3, 'FD');
+
+            await renderer.drawText(item.label, 18, yPos + 4, {
+                maxWidth: 112,
+                fontSize: 10,
+                color: darkColor,
+            });
+
+            const badgeWidth = 34;
+            const badgeX = pageWidth - 14 - badgeWidth - 4;
+            doc.setFillColor(...(item.complete ? primaryColor : [239, 68, 68]));
+            doc.roundedRect(badgeX, yPos + 4, badgeWidth, rowHeight - 8, 3, 3, 'F');
+            await renderer.drawText(statusText, badgeX, yPos + (rowHeight - 8 - (9 * PT_TO_MM * 1.35)) / 2 + 4, {
+                maxWidth: badgeWidth,
+                fontSize: 9,
                 fontStyle: 'bold',
-                lineWidth: 0
-            },
-            styles: { 
-                fontSize: 10, 
-                cellPadding: 6,
-                lineColor: [226, 232, 240],
-                textColor: darkColor
-            },
-            columnStyles: {
-                0: { cellWidth: 'auto' },
-                1: { cellWidth: 40, halign: 'center', fontStyle: 'bold' }
-            },
-            didParseCell: function(data) {
-                if (data.section === 'body' && data.column.index === 1) {
-                    if (data.cell.raw === 'COMPLIANT') {
-                        data.cell.styles.textColor = [0, 177, 79]; // Green
-                    } else {
-                        data.cell.styles.textColor = [239, 68, 68]; // Red
-                    }
-                }
-            }
-        });
+                color: [255, 255, 255],
+                align: 'center',
+            });
 
-        yPos = doc.lastAutoTable.finalY + 20;
-
-        // --- Logbook Section ---
-        // Check if we need a new page
-        if (yPos > 250) {
-            doc.addPage();
-            yPos = 30;
+            yPos += rowHeight + 4;
         }
 
-        doc.setTextColor(...darkColor);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text(rt('mygap.logbookSummary'), 14, yPos);
         yPos += 8;
+        await writeSectionTitle(rt('mygap.logbookSummary'));
 
-        const logData = logs.length > 0 ? logs.slice(0, 50).map(log => [
-            new Date(log.timestamp).toLocaleDateString(),
-            rt(`mygap.${log.type}Log`).split(' ')[0],
-            log.notes
-        ]) : [[ '-', '-', rt('mygap.noLogs') ]];
+        if (logs.length === 0) {
+            await writeParagraph(rt('mygap.noLogs'), {
+                x: 14,
+                width: pageWidth - 28,
+                fontSize: 10,
+                color: lightText,
+                gapAfter: 6,
+            });
+        } else {
+            for (const log of logs.slice(0, 50)) {
+                const dateLabel = new Date(log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
+                const typeLabel = rt(`mygap.${log.type}Log`).split(' ')[0];
+                const notesHeight = renderer.measureTextHeight(log.notes || '-', pageWidth - 36, { fontSize: 9 });
+                const cardHeight = notesHeight + 18;
 
-        doc.autoTable({
-            startY: yPos,
-            head: [['Date', 'Type', 'Activity Notes']],
-            body: logData,
-            theme: 'grid',
-            headStyles: { 
-                fillColor: secondaryColor, 
-                textColor: primaryColor, 
-                fontStyle: 'bold',
-                lineWidth: 0
-            },
-            styles: { 
-                fontSize: 9, 
-                cellPadding: 5,
-                lineColor: [226, 232, 240],
-                textColor: lightText
-            },
-            columnStyles: {
-                0: { cellWidth: 30 },
-                1: { cellWidth: 30, fontStyle: 'bold' },
-                2: { cellWidth: 'auto' }
-            },
-            alternateRowStyles: {
-                fillColor: [248, 250, 252]
+                checkPageBreak(cardHeight + 4);
+                doc.setFillColor(248, 250, 252);
+                doc.setDrawColor(226, 232, 240);
+                doc.roundedRect(14, yPos, pageWidth - 28, cardHeight, 3, 3, 'FD');
+
+                await renderer.drawText(typeLabel, 18, yPos + 4, {
+                    maxWidth: 70,
+                    fontSize: 9,
+                    fontStyle: 'bold',
+                    color: primaryColor,
+                });
+                await renderer.drawText(dateLabel, pageWidth - 66, yPos + 4, {
+                    maxWidth: 48,
+                    fontSize: 8,
+                    color: lightText,
+                    align: 'right',
+                });
+                await renderer.drawText(log.notes || '-', 18, yPos + 11, {
+                    maxWidth: pageWidth - 36,
+                    fontSize: 9,
+                    color: darkColor,
+                });
+
+                yPos += cardHeight + 4;
             }
-        });
+        }
 
-        // --- Footer ---
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            
-            // Footer Line
             doc.setDrawColor(226, 232, 240);
-            doc.line(14, 280, 196, 280);
-            
-            doc.setFontSize(8);
-            doc.setTextColor(...lightText);
-            doc.text(
-                `Smart Plant Advisor - myGAP Compliance Report`,
-                14,
-                288
-            );
-            
-            doc.text(
-                `Page ${i} of ${pageCount}`,
-                196,
-                288,
-                { align: 'right' }
-            );
+            doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+
+            await renderer.drawText(`Smart Plant Advisor - ${rt('mygap.reportTitle')}`, 14, pageHeight - 12, {
+                maxWidth: 110,
+                fontSize: 8,
+                color: lightText,
+            });
+            await renderer.drawText(`${pageLabel} ${i} ${ofLabel} ${pageCount}`, pageWidth - 44, pageHeight - 12, {
+                maxWidth: 30,
+                fontSize: 8,
+                color: lightText,
+                align: 'right',
+            });
         }
 
         doc.save('myGAP_Compliance_Report.pdf');
