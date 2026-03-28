@@ -1,25 +1,21 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import translations from './translations';
 
-// Create Language Context
 const LanguageContext = createContext();
 
-// Language Provider Component
 export const LanguageProvider = ({ children }) => {
     const [language, setLanguage] = useState(() => {
-        // Get saved language from localStorage, default to Bahasa Malaysia
         const savedLanguage = localStorage.getItem('appLanguage');
-        return savedLanguage || 'ms'; // Changed default from 'en' to 'ms'
+        return savedLanguage || 'ms';
     });
 
-    // Save language preference to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('appLanguage', language);
     }, [language]);
 
     const isBrokenLocalizedString = (value, activeLanguage) => {
         if (activeLanguage !== 'zh' || typeof value !== 'string') return false;
-        return /\?{2,}|Â|Ã|ðŸ|â|/.test(value);
+        return /\?{2,}|Ã‚|Ãƒ|Ã°Å¸|Ã¢|ï¿½/.test(value);
     };
 
     const lookupValue = (languageKey, keys) => {
@@ -31,8 +27,7 @@ export const LanguageProvider = ({ children }) => {
         return value;
     };
 
-    // Get translation for a given key
-    const t = (key) => {
+    const resolveTranslation = (key) => {
         const keys = key.split('.');
 
         let value = lookupValue(language, keys);
@@ -43,17 +38,22 @@ export const LanguageProvider = ({ children }) => {
                 return key;
             }
         }
+
         return value || key;
+    };
+
+    const t = (key) => resolveTranslation(key);
+
+    const label = (key, fallback) => {
+        const value = resolveTranslation(key);
+        return value && value !== key ? value : fallback;
     };
 
     const value = {
         language,
         setLanguage,
         t,
-        label: (key, fallback) => {
-            const val = t(key);
-            return val && val !== key ? val : fallback;
-        },
+        label,
     };
 
     return (
@@ -63,7 +63,6 @@ export const LanguageProvider = ({ children }) => {
     );
 };
 
-// Custom hook to use language context
 export const useLanguage = () => {
     const context = useContext(LanguageContext);
     if (!context) {

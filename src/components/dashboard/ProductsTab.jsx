@@ -4,7 +4,14 @@ import { useLanguage } from '../../i18n/i18n.jsx';
 
 const SHOP_CATALOG_URL = 'https://www.mojosense.app/kanb/products/';
 
-const ProductsTab = ({ label }) => {
+const ProductsTab = ({ label: labelProp }) => {
+    const { t, label: i18nLabel } = useLanguage();
+    const label = (key, fallback) => {
+        if (typeof labelProp === 'function') return labelProp(key, fallback);
+        if (typeof i18nLabel === 'function') return i18nLabel(key, fallback);
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const [isFrameLoaded, setIsFrameLoaded] = useState(false);
     const [showFallbackHint, setShowFallbackHint] = useState(false);
 

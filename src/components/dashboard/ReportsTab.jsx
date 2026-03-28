@@ -37,14 +37,21 @@ const ReportsTab = ({
     aiInsights,
     onSelectAlert,
     relDate,
-    label,
+    label: labelProp,
 }) => {
+    const label = (key, fallback) => {
+        if (typeof labelProp === 'function') return labelProp(key, fallback);
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const [selectedPlotId, setSelectedPlotId] = useState('all');
-    const locale = t('common.dateLocale') || 'en-MY';
+    const locale = label('common.dateLocale', 'en-MY');
+
     const selectedPlot = useMemo(
         () => plots.find((plot) => plot.id === selectedPlotId) || null,
         [plots, selectedPlotId],
     );
+
     const localizeQuality = (quality) => {
         const qualityKey = {
             Excellent: 'profile.qualityExcellent',
@@ -52,8 +59,9 @@ const ReportsTab = ({
             Fair: 'profile.qualityFair',
             Poor: 'profile.qualityPoor',
         }[quality];
-        return qualityKey ? (t(qualityKey) || quality) : quality;
+        return qualityKey ? label(qualityKey, quality) : quality;
     };
+
     const localizeExpenseCategory = (category) => {
         const categoryKey = {
             Fertilizer: 'profile.catFertilizer',
@@ -62,22 +70,26 @@ const ReportsTab = ({
             Equipment: 'profile.catEquipment',
             Other: 'profile.catOther',
         }[category];
-        return categoryKey ? (t(categoryKey) || category) : category;
+        return categoryKey ? label(categoryKey, category) : category;
     };
 
     const healthRate = stats.total > 0 ? Math.round((stats.healthy / stats.total) * 100) : 0;
+
     const activeAlerts = useMemo(
         () => alerts.filter((scan) => !acknowledgedIds.includes(scan.id)),
         [acknowledgedIds, alerts],
     );
+
     const filteredPlots = useMemo(
         () => (selectedPlotId === 'all' ? plots : plots.filter((plot) => plot.id === selectedPlotId)),
         [plots, selectedPlotId],
     );
+
     const filteredNotes = useMemo(
         () => (selectedPlotId === 'all' ? notes : notes.filter((note) => note.plot_id === selectedPlotId)),
         [notes, selectedPlotId],
     );
+
     const filteredAlerts = useMemo(() => {
         if (selectedPlotId === 'all') return activeAlerts;
 
@@ -103,10 +115,12 @@ const ReportsTab = ({
             return haystack.includes(cropNeedle);
         });
     }, [activeAlerts, selectedPlot, selectedPlotId]);
+
     const harvestLogs = useMemo(
         () => filteredNotes.filter((note) => note.activity_type === 'harvest'),
         [filteredNotes],
     );
+
     const reportScopeKey = `reports:${selectedPlotId}`;
     const scopedAiInsights = aiInsights?.scopeKey === reportScopeKey ? aiInsights : null;
     const isGeneratingScopedInsights = generatingInsights && generatingInsightsScopeKey === reportScopeKey;
@@ -130,33 +144,47 @@ const ReportsTab = ({
         expenseCounts[category] = (expenseCounts[category] || 0) + Number(note.expense_amount);
     });
 
-    const expenseData = Object.keys(expenseCounts).map((name) => ({
-        name,
-        label: localizeExpenseCategory(name),
-        value: expenseCounts[name],
-        fill: name === 'Fertilizer' ? '#10b981' : name === 'Pesticide' ? '#f59e0b' : name === 'Labor' ? '#3b82f6' : name === 'Equipment' ? '#8b5cf6' : '#64748b',
-    })).sort((left, right) => right.value - left.value);
+    const expenseData = Object.keys(expenseCounts)
+        .map((name) => ({
+            name,
+            label: localizeExpenseCategory(name),
+            value: expenseCounts[name],
+            fill: name === 'Fertilizer'
+                ? '#10b981'
+                : name === 'Pesticide'
+                    ? '#f59e0b'
+                    : name === 'Labor'
+                        ? '#3b82f6'
+                        : name === 'Equipment'
+                            ? '#8b5cf6'
+                            : '#64748b',
+        }))
+        .sort((left, right) => right.value - left.value);
 
     const healthData = [
         { name: label('results.healthy', 'Healthy'), value: stats.healthy, color: '#10b981' },
         { name: label('profile.diseased', 'Diseased'), value: stats.diseases, color: '#f59e0b' },
     ].filter((entry) => entry.value > 0);
 
-    const qualityData = Object.keys(qualityCounts).map((name) => ({
-        name: localizeQuality(name),
-        count: qualityCounts[name],
-        fill: QUALITY_COLORS[name] || '#ef4444',
-    })).filter((entry) => entry.count > 0);
+    const qualityData = Object.keys(qualityCounts)
+        .map((name) => ({
+            name: localizeQuality(name),
+            count: qualityCounts[name],
+            fill: QUALITY_COLORS[name] || '#ef4444',
+        }))
+        .filter((entry) => entry.count > 0);
 
     const yieldChartData = useMemo(() => {
         const byMonth = {};
-        filteredNotes.filter((note) => note.activity_type === 'harvest').forEach((note) => {
-            const date = new Date(note.created_at);
-            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            const label = date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
-            if (!byMonth[key]) byMonth[key] = { key, month: label, kg: 0 };
-            byMonth[key].kg += Number(note.kg_harvested) || 0;
-        });
+        filteredNotes
+            .filter((note) => note.activity_type === 'harvest')
+            .forEach((note) => {
+                const date = new Date(note.created_at);
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const monthLabel = date.toLocaleDateString(locale, { month: 'short', year: '2-digit' });
+                if (!byMonth[key]) byMonth[key] = { key, month: monthLabel, kg: 0 };
+                byMonth[key].kg += Number(note.kg_harvested) || 0;
+            });
 
         const sorted = Object.values(byMonth).sort((left, right) => left.key.localeCompare(right.key));
         if (sorted.length < 2) {
@@ -221,7 +249,7 @@ const ReportsTab = ({
                                     <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
-                             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
                                 <span style={{ color: '#10b981' }}>● {label('profile.healthy', 'Healthy')}: {stats.healthy}</span>
                                 <span style={{ color: '#f59e0b' }}>● {label('profile.diseased', 'Diseased')}: {stats.diseases}</span>
                             </div>
@@ -237,7 +265,12 @@ const ReportsTab = ({
                     icon={<TrendingUp size={15} />}
                     title={label('profile.harvestSummary', 'Financial & Yield Summary')}
                     action={(
-                        <select className="udp-input" style={{ width: 130, padding: 4, height: 26, fontSize: '0.75rem', borderRadius: 6 }} value={selectedPlotId} onChange={(event) => setSelectedPlotId(event.target.value)}>
+                        <select
+                            className="udp-input"
+                            style={{ width: 130, padding: 4, height: 26, fontSize: '0.75rem', borderRadius: 6 }}
+                            value={selectedPlotId}
+                            onChange={(event) => setSelectedPlotId(event.target.value)}
+                        >
                             <option value="all">{label('profile.allPlots', 'All Plots')}</option>
                             {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.name}</option>)}
                         </select>
@@ -266,10 +299,12 @@ const ReportsTab = ({
 
                     {yieldChartData.data.length >= 2 ? (
                         <div style={{ marginBottom: '16px' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>📈 {label('profile.yieldHistoryForecast', 'Yield History & Trend Forecast')}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>
+                                {label('profile.yieldHistoryForecast', 'Yield History & Trend Forecast')}
+                            </div>
                             {yieldChartData.forecast !== null && (
                                 <div style={{ background: 'linear-gradient(90deg, #eff6ff, #f0fdf4)', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontSize: '1.1rem' }}>📊</span>
+                                    <TrendingUp size={18} color="#3b82f6" />
                                     <div>
                                         <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700 }}>{label('profile.aiForecastNextMonth', 'Trend Forecast: Next Month')}</div>
                                         <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>~{yieldChartData.forecast} kg</div>
@@ -283,7 +318,10 @@ const ReportsTab = ({
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                         <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                         <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip formatter={(value, name) => [value ? `${value} kg` : '-', name === 'kg' ? label('profile.actual', 'Actual') : label('profile.forecast', 'Forecast')]} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                        <RechartsTooltip
+                                            formatter={(value, name) => [value ? `${value} kg` : '-', name === 'kg' ? label('profile.actual', 'Actual') : label('profile.forecast', 'Forecast')]}
+                                            contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        />
                                         <Line type="monotone" dataKey="kg" name={label('profile.actual', 'Actual')} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls={false} />
                                         <Line type="monotone" dataKey="forecast" name={label('profile.forecast', 'Forecast')} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#3b82f6' }} />
                                     </LineChart>
@@ -342,13 +380,22 @@ const ReportsTab = ({
                 <SectionHeader
                     icon={<BrainCircuit size={15} color="#8b5cf6" />}
                     title={label('profile.aiFarmIntelligence', 'AI Farm Intelligence')}
-                    action={<button className="udp-see-all" style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }} onClick={() => onGenerateInsights({
-                        activeAlerts: filteredAlerts,
-                        harvestLogs,
-                        notesOverride: filteredNotes,
-                        plotsOverride: filteredPlots,
-                        scopeKey: reportScopeKey,
-                    })} disabled={isGeneratingScopedInsights}>{isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.askAI', 'Ask AI')}</>}</button>}
+                    action={(
+                        <button
+                            className="udp-see-all"
+                            style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }}
+                            onClick={() => onGenerateInsights({
+                                activeAlerts: filteredAlerts,
+                                harvestLogs,
+                                notesOverride: filteredNotes,
+                                plotsOverride: filteredPlots,
+                                scopeKey: reportScopeKey,
+                            })}
+                            disabled={isGeneratingScopedInsights}
+                        >
+                            {isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.askAI', 'Ask AI')}</>}
+                        </button>
+                    )}
                 />
                 <div style={{ padding: '0 16px 16px' }}>
                     {isGeneratingScopedInsights ? (
@@ -358,8 +405,14 @@ const ReportsTab = ({
                         </div>
                     ) : scopedAiInsights ? (
                         <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '16px' }}>
-                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}><strong>{label('profile.aiSummary', 'Summary')}:</strong> {scopedAiInsights.summary}</p>
-                            {scopedAiInsights.yieldAnalysis && <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>{scopedAiInsights.yieldAnalysis}</p>}
+                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}>
+                                <strong>{label('profile.aiSummary', 'Summary')}:</strong> {scopedAiInsights.summary}
+                            </p>
+                            {scopedAiInsights.yieldAnalysis && (
+                                <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>
+                                    {scopedAiInsights.yieldAnalysis}
+                                </p>
+                            )}
                             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>{label('profile.aiRecommendations', 'Actionable Recommendations')}</div>
                             <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.8rem', color: '#4c1d95', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {scopedAiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}

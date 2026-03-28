@@ -40,8 +40,13 @@ const NotesTab = ({
     notes,
     ACTIVITY_BADGE_COLOR,
     relDate,
-    label,
+    label: labelProp,
 }) => {
+    const label = (key, fallback) => {
+        if (typeof labelProp === 'function') return labelProp(key, fallback);
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const localizeTiming = (timing) => {
         const key = TIMING_KEY_MAP[timing];
         return key ? label(key, timing) : timing;

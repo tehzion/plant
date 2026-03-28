@@ -73,16 +73,23 @@ export const EMPTY_FORM = {
 // ─── Main component ──────────────────────────────────────────────────────────
 const UserDashboardPanel = () => {
     const { user, signOut }                 = useAuth();
-    const { t, label } = useLanguage();
+    const { t, label: i18nLabel } = useLanguage();
     const navigate                          = useNavigate();
     const { notify, notifyError, notifySuccess, notifyWarning } = useNotifications();
     const { getLocation }                   = useLocation();
     const { forecast, error: weatherError, fetchWeather } = useWeather();
+    const label = useCallback((key, fallback) => {
+        if (typeof i18nLabel === 'function') {
+            return i18nLabel(key, fallback);
+        }
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    }, [i18nLabel, t]);
 
     // ── Activity types with i18n labels ──────────────────────────────────────
     const ACTIVITY_TYPES = useMemo(
-        () => ACTIVITY_TYPES_CFG.map(a => ({ ...a, label: t(`profile.${a.key}`) || a.label })),
-        [t],
+        () => ACTIVITY_TYPES_CFG.map(a => ({ ...a, label: label(`profile.${a.key}`, a.label) })),
+        [label],
     );
 
     // ── Custom hooks: all farm data + AI logic ────────────────────────────────
@@ -139,11 +146,11 @@ const UserDashboardPanel = () => {
 
     // ── Tab definitions ───────────────────────────────────────────────────────
     const TABS = [
-        { id: 'overview', label: t('profile.tabOverview') || 'Overview'  },
-        { id: 'reports',  label: t('profile.tabReports')  || 'Reports'   },
-        { id: 'plots',    label: t('profile.tabPlots')    || 'Plots'     },
-        { id: 'notes',    label: t('profile.tabNotes')    || 'Daily Log' },
-        { id: 'products', label: t('profile.tabProducts') || 'Products'  },
+        { id: 'overview', label: label('profile.tabOverview', 'Overview')  },
+        { id: 'reports',  label: label('profile.tabReports', 'Reports')   },
+        { id: 'plots',    label: label('profile.tabPlots', 'Plots')     },
+        { id: 'notes',    label: label('profile.tabNotes', 'Daily Log') },
+        { id: 'products', label: label('profile.tabProducts', 'Products')  },
     ];
 
     // ── Handlers ──────────────────────────────────────────────────────────────
@@ -176,7 +183,7 @@ const UserDashboardPanel = () => {
             ...EMPTY_FORM,
             activity_type: actType,
             chemical_name: chemical,
-            note: `${t('profile.aiAutoPopulated') || '[AI Suggested]'} ${warningMessage}`,
+            note: `${label('profile.aiAutoPopulated', '[AI Suggested]')} ${warningMessage}`,
         });
         setAddingNote(true);
         setTab('notes');
@@ -250,13 +257,12 @@ const UserDashboardPanel = () => {
             setAddingNote(false);
             if (cleanupNotice) {
                 notifyWarning(
-                    t('common.storageCleanupNotice')
-                    || 'Old records were cleaned up to save your latest data.',
+                    label('common.storageCleanupNotice', 'Old records were cleaned up to save your latest data.'),
                 );
             }
-            notifySuccess(t('common.savedSuccess') || 'Activity log saved!');
+            notifySuccess(label('common.savedSuccess', 'Activity log saved!'));
         } else {
-            notifyError(t('error.saveFailed') || 'Failed to save. Please try again.');
+            notifyError(label('error.saveFailed', 'Failed to save. Please try again.'));
         }
         setSavingNote(false);
     };
@@ -280,7 +286,7 @@ const UserDashboardPanel = () => {
             setPlotForm({ name: '', cropType: '', area: '', unit: 'acres', soil_ph: '', npk_n: '', npk_p: '', npk_k: '' });
             setShowSoilFields(false);
             setAddingPlot(false);
-            notifySuccess(t('profile.plotSaved') || 'Plot added successfully!');
+            notifySuccess(label('profile.plotSaved', 'Plot added successfully!'));
         }
         setSavingPlot(false);
     };
@@ -288,8 +294,8 @@ const UserDashboardPanel = () => {
     const handleDeletePlot = useCallback((id) => {
         notify({
             type:        'error',
-            message:     t('profile.confirmDeletePlot') || 'Remove this plot?',
-            actionLabel: t('common.confirm') || 'Remove',
+            message:     label('profile.confirmDeletePlot', 'Remove this plot?'),
+            actionLabel: label('common.confirm', 'Remove'),
             duration:    8000,
             action:      async () => {
                 const ok = await deletePlot(id, user?.id ?? null);
@@ -311,13 +317,13 @@ const UserDashboardPanel = () => {
                     <div className="udp-avatar-wrapper">
                         <div className="udp-avatar-ring" />
                         <div className="udp-avatar">{initials}</div>
-                        <span className="udp-avatar-status" title={t('home.onlineStatus') || 'Online'} />
+                        <span className="udp-avatar-status" title={label('home.onlineStatus', 'Online')} />
                     </div>
                     <button
                         className="udp-signout-mini"
                         onClick={handleSignOut}
                         disabled={signingOut}
-                        title={t('common.signOut') || 'Sign out'}
+                        title={label('common.signOut', 'Sign out')}
                     >
                         <LogOut size={15} />
                     </button>
@@ -331,12 +337,12 @@ const UserDashboardPanel = () => {
                 <div className="udp-profile-badges">
                     <span className="udp-badge udp-badge-verified">
                         <ShieldCheck size={11} />
-                        {t('profile.verifiedFarmer') || 'Verified Farmer'}
+                        {label('profile.verifiedFarmer', 'Verified Farmer')}
                     </span>
                     {stats.total > 0 && (
                         <span className="udp-badge udp-badge-scans">
                             <ScanLine size={11} />
-                            {stats.total} {t('profile.totalScans') || 'Scans'}
+                            {stats.total} {label('profile.totalScans', 'Scans')}
                         </span>
                     )}
                     {checklistPct >= 50 && (
@@ -350,22 +356,22 @@ const UserDashboardPanel = () => {
                 <div className="udp-profile-strip">
                     <div className="udp-strip-item">
                         <span className="udp-strip-num">{stats.healthy}</span>
-                        <span className="udp-strip-label">{t('profile.healthy') || 'Healthy'}</span>
+                        <span className="udp-strip-label">{label('profile.healthy', 'Healthy')}</span>
                     </div>
                     <div className="udp-strip-divider" />
                     <div className="udp-strip-item">
                         <span className="udp-strip-num udp-strip-warn">{stats.diseases}</span>
-                        <span className="udp-strip-label">{t('profile.diseased') || 'Issues'}</span>
+                        <span className="udp-strip-label">{label('profile.diseased', 'Issues')}</span>
                     </div>
                     <div className="udp-strip-divider" />
                     <div className="udp-strip-item">
                         <span className="udp-strip-num">{plots.length}</span>
-                        <span className="udp-strip-label">{t('profile.plots') || 'Plots'}</span>
+                        <span className="udp-strip-label">{label('profile.plots', 'Plots')}</span>
                     </div>
                     <div className="udp-strip-divider" />
                     <div className="udp-strip-item">
                         <span className="udp-strip-num udp-strip-purple">{notes.length}</span>
-                        <span className="udp-strip-label">{t('profile.tabNotes') || 'Logs'}</span>
+                        <span className="udp-strip-label">{label('profile.tabNotes', 'Logs')}</span>
                     </div>
                 </div>
             </div>
@@ -479,7 +485,7 @@ const UserDashboardPanel = () => {
                 )}
 
                 {tab === 'products' && (
-                    <ProductsTab />
+                    <ProductsTab label={label} />
                 )}
             </div>
 

@@ -46,8 +46,13 @@ const OverviewTab = ({
     generatingInsights,
     aiInsights,
     onPrefillRecommendedTreatment,
-    label,
+    label: labelProp,
 }) => {
+    const label = (key, fallback) => {
+        if (typeof labelProp === 'function') return labelProp(key, fallback);
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const activeAlerts = useMemo(
         () => alerts.filter((scan) => !acknowledgedIds.includes(scan.id)),
         [acknowledgedIds, alerts],
@@ -57,12 +62,7 @@ const OverviewTab = ({
         [notes],
     );
     const recentHistory = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
-    const resolvedWeatherError = weatherError
-        ? (() => {
-            const value = t(weatherError);
-            return value && value !== weatherError ? value : weatherError;
-        })()
-        : '';
+    const resolvedWeatherError = weatherError ? label(weatherError, weatherError) : '';
 
     const aiCardData = (aiInsights?.scopeKey === 'overview' ? aiInsights : null) || (
         predictiveRisk

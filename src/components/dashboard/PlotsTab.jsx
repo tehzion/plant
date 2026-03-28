@@ -12,8 +12,13 @@ const PlotsTab = ({
     savingPlot,
     plots,
     handleDeletePlot,
-    label,
+    label: labelProp,
 }) => {
+    const label = (key, fallback) => {
+        if (typeof labelProp === 'function') return labelProp(key, fallback);
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const getUnitLabel = (unit) => {
         const unitKey = { acres: 'acres', sqft: 'sqft', hectares: 'hectares' }[unit];
         return unitKey ? label(`profile.${unitKey}`, unit) : unit;
