@@ -43,6 +43,11 @@ const loadImageToCanvasDataUrl = (url) => new Promise((resolve, reject) => {
     image.src = url;
 });
 
+const sanitizeProductText = (value) => String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 const resolvePdfImageData = async (source) => {
     if (!source || typeof source !== 'string') {
         return null;
@@ -117,7 +122,7 @@ const formatLocationValue = (scanData, t) => {
     return t('common.locationNA');
 };
 
-export const generatePDFReport = async (scanData, inputLanguage = 'en', translations = {}) => {
+export const generatePDFReport = async (scanData, inputLanguage = 'en', translations = {}, options = {}) => {
     const language = inputLanguage || 'en';
     const doc = new jsPDF();
     const renderer = createPdfTextRenderer(doc);
@@ -527,14 +532,16 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         });
     }
 
-    const products = getProductRecommendations(scanData.plantType, scanData.disease);
+    const products = options.productRecommendations || getProductRecommendations(scanData.plantType, scanData.disease);
     const fertilizerProducts = products?.fertilizers || products?.nutrition || [];
     const supplementProducts = products?.supplements || [];
+    const fallbackProducts = products?.otherPopular || [];
 
     if (products && (
         products.diseaseControl?.length > 0
         || fertilizerProducts.length > 0
         || supplementProducts.length > 0
+        || fallbackProducts.length > 0
     )) {
         await writeSectionTitle(t('pdf.productRecommendations'), {
             textColor: primaryColor,
@@ -556,8 +563,8 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             });
 
             for (const product of productList) {
-                const countLabel = product.count || t('common.notAvailable');
-                const name = `${t(product.name)} (${countLabel})`;
+                const detailLabel = product.count || (product.price ? `RM ${product.price}` : '');
+                const name = detailLabel ? `${t(product.name)} (${detailLabel})` : t(product.name);
                 await writeParagraph(name, {
                     x: 20,
                     width: pageWidth - 34,
@@ -566,13 +573,16 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
                     color: darkColor,
                     gapAfter: 2,
                 });
-                await writeParagraph(t(product.description), {
-                    x: 20,
-                    width: pageWidth - 34,
-                    fontSize: 10,
-                    color: lightText,
-                    gapAfter: 6,
-                });
+                const description = sanitizeProductText(product.shortDescription || product.description);
+                if (description) {
+                    await writeParagraph(t(description), {
+                        x: 20,
+                        width: pageWidth - 34,
+                        fontSize: 10,
+                        color: lightText,
+                        gapAfter: 6,
+                    });
+                }
             }
         };
 
@@ -584,6 +594,28 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
                 : t('results.fertilizersAndNutrition'),
         );
         await renderProductList(supplementProducts, t('results.recommendedSupplements'));
+
+        if (fallbackProducts.length > 0) {
+            if (products?.fallbackMeta?.used) {
+                await writeParagraph(
+                    t('results.fallbackProductsLabel'),
+                    {
+                        x: 14,
+                        width: pageWidth - 28,
+                        fontSize: 9,
+                        color: lightText,
+                        gapAfter: 6,
+                    },
+                );
+            }
+
+            await renderProductList(
+                fallbackProducts,
+                products?.fallbackMeta?.used
+                    ? t('results.fallbackProductsTitle')
+                    : t('results.otherPopular'),
+            );
+        }
     }
 
     const pageCount = doc.internal.getNumberOfPages();

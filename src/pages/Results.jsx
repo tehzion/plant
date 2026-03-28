@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
@@ -18,6 +18,7 @@ import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-
 import { showToast } from '../utils/toast';
 
 import { getStandardizedStatus } from '../utils/statusUtils';
+import { fetchLiveProductRecommendations } from '../utils/liveProductRecommendations.js';
 
 const Results = () => {
   const { id } = useParams();
@@ -26,9 +27,11 @@ const Results = () => {
   const { user } = useAuth();
   const [scan, setScan] = useState(null);
   const [scanLoading, setScanLoading] = useState(true);
+  const [liveProductRecommendations, setLiveProductRecommendations] = useState(null);
 
   useEffect(() => {
     setScanLoading(true);
+    setLiveProductRecommendations(null);
     Promise.resolve(getScanById(id, user?.id ?? null)).then(result => {
       setScan(result);
       setScanLoading(false);
@@ -76,7 +79,7 @@ const Results = () => {
   const lng = Number(scan?.location?.lng);
   const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
 
-  const result = {
+  const result = useMemo(() => ({
     healthStatus: getStandardizedStatus(scan),
     status: scan.status || null,
     plantType: scan.plantType,
@@ -103,7 +106,11 @@ const Results = () => {
     identificationSource: scan.identificationSource,
     speciesAssessment: scan.speciesAssessment,
     productSearchTags: scan.productSearchTags || []
-  };
+  }), [scan]);
+
+  const handleRecommendationsLoaded = useCallback((data) => {
+    setLiveProductRecommendations(data);
+  }, []);
 
   const standardizedStatus = result.healthStatus;
   const healthy = standardizedStatus === 'healthy';
@@ -116,7 +123,20 @@ const Results = () => {
     showToast(t('results.generatingPDF'), 'info', 10000);
 
     try {
-      await generatePDFReport(scan, language, translations);
+      let productRecommendations = liveProductRecommendations;
+      if (!productRecommendations && (scan.plantType || scan.disease)) {
+        try {
+          productRecommendations = await fetchLiveProductRecommendations({
+            plantType: scan.plantType,
+            disease: scan.disease,
+            scanResult: result,
+          });
+        } catch (productError) {
+          console.warn('Unable to preload live product recommendations for PDF export:', productError);
+        }
+      }
+
+      await generatePDFReport(scan, language, translations, { productRecommendations });
       showToast(t('results.pdfDownloaded'), 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -321,6 +341,7 @@ ${t('pdf.generatedBy')}
             disease={scan.disease}
             farmScale={scan.farmScale}
             scanResult={result}
+            onRecommendationsLoaded={handleRecommendationsLoaded}
           />
         </div>
       )

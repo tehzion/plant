@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
 import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX } from 'lucide-react';
 import { showToast } from '../utils/toast';
+import {
+  buildProductDiagnosisPayload,
+  createEmptyProductRecommendations,
+  createProductRecommendationsKey,
+  fetchLiveProductRecommendations,
+} from '../utils/liveProductRecommendations.js';
 
 const sanitizeProductDescription = (value) => {
   if (!value) return '';
@@ -23,7 +29,7 @@ const sanitizeProductDescription = (value) => {
     .trim();
 };
 
-const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) => {
+const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onRecommendationsLoaded }) => {
   const { t } = useLanguage();
   const [products, setProducts] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -33,14 +39,29 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
   const [fallbackMeta, setFallbackMeta] = useState(null);
   const [storeUrl, setStoreUrl] = useState('');
 
+  const diagnosis = useMemo(
+    () => buildProductDiagnosisPayload({ plantType, disease, scanResult }),
+    [plantType, disease, scanResult?.healthStatus, scanResult?.pathogenType, scanResult?.symptoms, scanResult?.treatments, scanResult?.productSearchTags],
+  );
+
+  const recommendationKey = useMemo(
+    () => createProductRecommendationsKey(diagnosis),
+    [diagnosis],
+  );
+
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchProducts = async () => {
-      if (!plantType && !disease) {
-        setProducts({ diseaseControl: [], fertilizers: [], supplements: [], otherPopular: [] });
+      if (!diagnosis.plantType && diagnosis.disease === 'None') {
+        const emptyProducts = createEmptyProductRecommendations();
+        setProducts(emptyProducts);
         setFallbackMeta(null);
         setSelectedProductIds(new Set());
         setReasoning('');
         setStoreUrl('');
+        setError(null);
+        onRecommendationsLoaded?.(emptyProducts);
         return;
       }
 
@@ -48,6 +69,20 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
       setError(null);
       setSelectedProductIds(new Set());
       try {
+        const productData = await fetchLiveProductRecommendations({
+          plantType: diagnosis.plantType,
+          disease: diagnosis.disease,
+          scanResult: diagnosis,
+        });
+        if (isCancelled) return;
+
+        setProducts(productData);
+        setFallbackMeta(productData.fallbackMeta || null);
+        setReasoning(productData.reasoning || '');
+        setStoreUrl(productData.storeUrl || '');
+        onRecommendationsLoaded?.(productData);
+        return;
+
         const url = `${import.meta.env.VITE_API_URL || ''}/api/products/search`;
         const response = await fetch(url, {
           method: 'POST',
@@ -80,15 +115,22 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
         setReasoning(data.reasoning || '');
         setStoreUrl(data.storeUrl || '');
       } catch (err) {
+        if (isCancelled) return;
         console.error('Failed to load recommended products:', err);
         setError(t('results.productsError') || 'Could not load specialized products at this time.');
+        onRecommendationsLoaded?.(null);
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProducts();
-  }, [plantType, disease, scanResult, t]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [onRecommendationsLoaded, recommendationKey]);
 
   const toggleProductSelection = (productId) => {
     if (!productId) return;
@@ -217,16 +259,16 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
           <p className="product-description">{sanitizeProductDescription(product.description)}</p>
 
           <div className="product-actions">
-            {product.cartUrl ? (
+            {product.cartUrl || product.permalink ? (
               <a
-                href={product.cartUrl}
+                href={product.cartUrl || product.permalink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="add-to-cart-button"
                 onClick={(e) => e.stopPropagation()}
               >
                 <ShoppingCart size={14} />
-                <span>{t('results.addToCart') || 'Add to Cart'}</span>
+                <span>{product.cartUrl ? (t('results.addToCart') || 'Add to Cart') : (t('results.viewProduct') || 'View Product')}</span>
               </a>
             ) : (
               <button

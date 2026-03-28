@@ -363,6 +363,7 @@
     overflow: hidden;
     background: #ffffff;
     min-height: 72vh;
+    position: relative;
 }
 
 .udp-products-frame {
@@ -370,6 +371,72 @@
     min-height: 72vh;
     border: 0;
     background: #ffffff;
+}
+
+.udp-products-frame-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(236, 253, 245, 0.97));
+    color: #0f766e;
+    font-size: 0.92rem;
+    font-weight: 600;
+    z-index: 1;
+}
+
+.udp-products-fallback {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid #d1fae5;
+    background: #f0fdf4;
+}
+
+.udp-products-fallback.is-active {
+    border-color: #fdba74;
+    background: #fff7ed;
+}
+
+.udp-products-fallback-text {
+    margin: 0;
+    color: #475569;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    flex: 1;
+    min-width: 220px;
+}
+
+.udp-products-fallback.is-active .udp-products-fallback-text {
+    color: #9a3412;
+}
+
+.udp-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    border: 1px solid #99f6e4;
+    background: #ffffff;
+    color: #0f766e;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.udp-btn-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(15, 118, 110, 0.12);
+    border-color: #5eead4;
 }
 
 .udp-section {
