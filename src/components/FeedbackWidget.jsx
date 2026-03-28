@@ -1,20 +1,38 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { CheckCircle2, MessageSquareWarning, Send } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
-const FeedbackWidget = ({ scanId }) => {
-  const { t } = useLanguage();
-  const [feedbackGiven, setFeedbackGiven] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const ISSUE_TYPES = [
+  'wrong_species',
+  'wrong_disease',
+  'wrong_severity',
+  'bad_treatment',
+  'bad_language',
+  'poor_image',
+];
 
-  const handleFeedback = async (isHelpful) => {
-    if (feedbackGiven || isSubmitting) return;
+const FeedbackWidget = ({ scanId, scan }) => {
+  const { t } = useLanguage();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [wasCorrect, setWasCorrect] = useState(null);
+  const [issueType, setIssueType] = useState('');
+  const [correctCrop, setCorrectCrop] = useState('');
+  const [correctDisease, setCorrectDisease] = useState('');
+  const [note, setNote] = useState('');
+
+  const issueOptions = useMemo(() => ISSUE_TYPES.map((value) => ({
+    value,
+    label: t(`feedback.issueTypes.${value}`),
+  })), [t]);
+
+  const handleSubmit = async () => {
+    if (isSubmitting || wasCorrect === null) return;
 
     setIsSubmitting(true);
 
     try {
-      // Send feedback to backend
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${apiUrl}/api/feedback`, {
         method: 'POST',
@@ -23,48 +41,210 @@ const FeedbackWidget = ({ scanId }) => {
         },
         body: JSON.stringify({
           scanId,
-          rating: isHelpful ? 5 : 1,
-          comment: isHelpful ? 'Helpful' : 'Not helpful',
+          rating: wasCorrect ? 5 : 2,
+          comment: wasCorrect ? 'correct' : 'needs_correction',
+          wasCorrect,
+          correctCrop: correctCrop.trim() || undefined,
+          correctDisease: correctDisease.trim() || undefined,
+          issueType: issueType || undefined,
+          note: note.trim() || undefined,
+          correction: note.trim() || undefined,
         }),
       });
 
-      if (response.ok) {
-        setFeedbackGiven(true);
-        showToast(t('feedback.thankYou'), 'success');
+      if (!response.ok) {
+        throw new Error('feedback_failed');
       }
+
+      setIsSubmitted(true);
+      showToast(t('feedback.thankYou'), 'success');
     } catch (error) {
       console.error('Failed to submit feedback:', error);
-      // Still mark as given to prevent spam
-      setFeedbackGiven(true);
+      showToast(t('feedback.submitFailed') || 'Failed to submit feedback. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (isSubmitted) {
+    return (
+      <div className="feedback-widget feedback-widget-success">
+        <CheckCircle2 size={18} />
+        <span>{t('feedback.thankYou')}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="feedback-widget">
-      <div className="feedback-content">
-        <span className="feedback-question">{t('feedback.helpful')}</span>
-        <div className="feedback-buttons">
-          <button
-            className={`feedback-btn ${feedbackGiven ? 'disabled' : ''}`}
-            onClick={() => handleFeedback(true)}
-            disabled={feedbackGiven || isSubmitting}
-            aria-label={t('feedback.yes')}
-          >
-            <ThumbsUp size={16} />
-          </button>
-          <button
-            className={`feedback-btn ${feedbackGiven ? 'disabled' : ''}`}
-            onClick={() => handleFeedback(false)}
-            disabled={feedbackGiven || isSubmitting}
-            aria-label={t('feedback.no')}
-          >
-            <ThumbsDown size={16} />
-          </button>
+      <div className="feedback-header">
+        <MessageSquareWarning size={18} />
+        <div>
+          <strong>{t('feedback.title') || 'Review this result'}</strong>
+          <p>{t('feedback.description') || 'Tell us if the diagnosis looks right, or share a correction.'}</p>
         </div>
       </div>
 
+      <div className="feedback-choice-row">
+        <button
+          type="button"
+          className={`feedback-choice ${wasCorrect === true ? 'active' : ''}`}
+          onClick={() => setWasCorrect(true)}
+        >
+          {t('feedback.correct') || 'Looks correct'}
+        </button>
+        <button
+          type="button"
+          className={`feedback-choice ${wasCorrect === false ? 'active' : ''}`}
+          onClick={() => setWasCorrect(false)}
+        >
+          {t('feedback.needsCorrection') || 'Needs correction'}
+        </button>
+      </div>
+
+      {wasCorrect === false && (
+        <div className="feedback-form">
+          <label className="feedback-field">
+            <span>{t('feedback.issueLabel') || 'What seems off?'}</span>
+            <select value={issueType} onChange={(event) => setIssueType(event.target.value)}>
+              <option value="">{t('feedback.issuePlaceholder') || 'Select an issue'}</option>
+              {issueOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="feedback-field">
+            <span>{t('feedback.correctCropLabel') || 'Correct crop (optional)'}</span>
+            <input
+              type="text"
+              value={correctCrop}
+              onChange={(event) => setCorrectCrop(event.target.value)}
+              placeholder={scan?.plantType || t('feedback.correctCropPlaceholder') || 'e.g. Banana'}
+            />
+          </label>
+
+          <label className="feedback-field">
+            <span>{t('feedback.correctDiseaseLabel') || 'Correct disease (optional)'}</span>
+            <input
+              type="text"
+              value={correctDisease}
+              onChange={(event) => setCorrectDisease(event.target.value)}
+              placeholder={scan?.disease || t('feedback.correctDiseasePlaceholder') || 'e.g. Potassium deficiency'}
+            />
+          </label>
+
+          <label className="feedback-field">
+            <span>{t('feedback.noteLabel') || 'Notes (optional)'}</span>
+            <textarea
+              rows="3"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder={t('feedback.notePlaceholder') || 'Share what looked wrong or what you observed in the field.'}
+            />
+          </label>
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="btn btn-primary feedback-submit"
+        onClick={handleSubmit}
+        disabled={wasCorrect === null || isSubmitting}
+      >
+        <Send size={16} />
+        <span>{isSubmitting ? (t('feedback.submitting') || 'Submitting...') : (t('feedback.submit') || 'Submit review')}</span>
+      </button>
+
+      <style>{`
+        .feedback-widget {
+          margin-top: 20px;
+          padding: 16px;
+          border-radius: 18px;
+          background: #ffffff;
+          border: 1px solid rgba(5, 150, 105, 0.12);
+          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .feedback-widget-success {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #047857;
+          font-weight: 600;
+        }
+
+        .feedback-header {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          margin-bottom: 14px;
+          color: #0f172a;
+        }
+
+        .feedback-header p {
+          margin: 4px 0 0;
+          color: #475569;
+          font-size: 0.95rem;
+        }
+
+        .feedback-choice-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-bottom: 12px;
+        }
+
+        .feedback-choice {
+          border: 1px solid #cbd5e1;
+          background: #f8fafc;
+          color: #0f172a;
+          border-radius: 12px;
+          padding: 12px;
+          font-weight: 600;
+        }
+
+        .feedback-choice.active {
+          border-color: #059669;
+          background: #ecfdf5;
+          color: #047857;
+        }
+
+        .feedback-form {
+          display: grid;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+
+        .feedback-field {
+          display: grid;
+          gap: 6px;
+        }
+
+        .feedback-field span {
+          font-size: 0.92rem;
+          color: #334155;
+          font-weight: 600;
+        }
+
+        .feedback-field input,
+        .feedback-field textarea,
+        .feedback-field select {
+          border: 1px solid #cbd5e1;
+          border-radius: 10px;
+          padding: 10px 12px;
+          font: inherit;
+          background: #fff;
+        }
+
+        .feedback-submit {
+          width: 100%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+      `}</style>
     </div>
   );
 };

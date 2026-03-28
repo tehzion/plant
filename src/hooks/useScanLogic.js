@@ -1,9 +1,15 @@
 import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { imageToBase64, analyzePlantDisease } from '../utils/diseaseDetection';
-import { saveScan, saveDailyNote, saveLogEntry } from '../utils/localStorage';
+import { imageToBase64, analyzePlantDisease, analyzeLocalImageQuality } from '../utils/diseaseDetection';
+import {
+    consumeStorageCleanupNotice,
+    saveScan,
+    saveDailyNote,
+    saveLogEntry,
+} from '../utils/localStorage';
 import { getStandardizedStatus } from '../utils/statusUtils';
 import { useAuth } from '../context/AuthContext';
+import { showToast } from '../utils/toast.js';
 
 // Scan state reducer
 const scanReducer = (state, action) => {
@@ -92,6 +98,16 @@ export const useScanLogic = () => {
                 };
 
                 await performStep(0, 1500);
+                const treeQuality = await analyzeLocalImageQuality(currentState.selectedImage);
+                const leafQuality = currentState.selectedLeafImage
+                    ? await analyzeLocalImageQuality(currentState.selectedLeafImage)
+                    : null;
+                if (treeQuality.requiresRetake) {
+                    const qualityError = new Error(treeQuality.retakeReason || 'LOW_IMAGE_QUALITY');
+                    qualityError.code = treeQuality.retakeReason || 'LOW_IMAGE_QUALITY';
+                    throw qualityError;
+                }
+
                 const treeImageBase64 = await imageToBase64(currentState.selectedImage);
                 const leafImageBase64 = currentState.selectedLeafImage ? await imageToBase64(currentState.selectedLeafImage) : null;
 
@@ -101,7 +117,8 @@ export const useScanLogic = () => {
                     currentState.selectedCategory || 'Vegetables',
                     leafImageBase64,
                     language,
-                    locationName || 'Malaysia'
+                    locationName || 'Malaysia',
+                    { tree: treeQuality, leaf: leafQuality }
                 );
 
                 await performStep(2, 1000);
@@ -123,6 +140,15 @@ export const useScanLogic = () => {
                     location: location,
                     locationName: locationName || result.locationName
                 }, user?.id ?? null);
+                const cleanupNotice = consumeStorageCleanupNotice();
+                if (cleanupNotice) {
+                    showToast(
+                        t('common.storageCleanupNotice')
+                        || 'Old records were cleaned up to save your latest data.',
+                        'warning',
+                        4500,
+                    );
+                }
 
                 // ── Sync: Auto-log a "Scouting" activity for the dashboard ──────
                 if (savedScan) {
@@ -150,7 +176,16 @@ export const useScanLogic = () => {
                 return await Promise.race([analysisTask(), timeoutPromise]);
             } catch (err) {
                 console.error('Analysis error:', err);
-                const errorMessage = err.message === 'NOT_A_PLANT' ? t('home.errorNotPlant') : (err.message || t('home.errorAnalysis'));
+                const qualityErrors = {
+                    IMAGE_TOO_DARK: t('home.errorImageTooDark') || 'The photo is too dark. Please retake it in brighter light.',
+                    IMAGE_TOO_BLURRY: t('home.errorImageTooBlurry') || 'The photo is too blurry. Please retake it with clearer focus.',
+                    IMAGE_TOO_LITTLE_LEAF: t('home.errorImageTooLittleLeaf') || 'The leaf is too small in the frame. Please move closer.',
+                    IMAGE_NOT_PLANT: t('home.errorImageNotPlantLike') || 'The image does not look like a clear plant photo. Please try again.',
+                };
+                const errorCode = err.code || err.message;
+                const errorMessage = err.message === 'NOT_A_PLANT'
+                    ? t('home.errorNotPlant')
+                    : (qualityErrors[errorCode] || err.message || t('home.errorAnalysis'));
                 dispatch({ type: 'SET_ERROR', payload: errorMessage });
                 dispatch({ type: 'SET_STEP', payload: 2 });
                 throw err;

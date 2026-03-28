@@ -90,7 +90,12 @@ app.use('/api/', limiter);
 // General AI Question Endpoint (Cached)
 app.post('/api/ask', async (req, res, next) => {
     try {
-        const { question, language = 'en' } = req.body;
+        const {
+            question,
+            language = 'en',
+            recentNotes = [],
+            recentAlerts = [],
+        } = req.body;
 
         if (!question) {
             return res.status(400).json({ error: 'Question is required' });
@@ -102,7 +107,15 @@ app.post('/api/ask', async (req, res, next) => {
 
         // 1. Normalize Cache Key
         const normalizedQuestion = question.toLowerCase().trim().replace(/[^\w\s]/gi, '');
-        const cacheKey = `ask_${language}_${normalizedQuestion}`;
+        const contextHash = crypto
+            .createHash('md5')
+            .update(JSON.stringify({
+                recentNotes: Array.isArray(recentNotes) ? recentNotes.slice(0, 5) : [],
+                recentAlerts: Array.isArray(recentAlerts) ? recentAlerts.slice(0, 3) : [],
+            }))
+            .digest('hex')
+            .slice(0, 12);
+        const cacheKey = `ask_${language}_${normalizedQuestion}_${contextHash}`;
 
         // 2. Check Cache
         const cachedAnswer = aiCache.get(cacheKey);
@@ -114,7 +127,7 @@ app.post('/api/ask', async (req, res, next) => {
         console.log(`🧠 Cache MISS for question: "${question.substring(0, 30)}..." - Calling OpenAI...`);
 
         // 3. Call Service
-        const answer = await askAI(question, language);
+        const answer = await askAI(question, language, recentNotes, recentAlerts);
 
         // 4. Save to Cache (7 Days = 604800 seconds)
         const result = { answer, timestamp: Date.now() };
@@ -130,13 +143,33 @@ app.post('/api/ask', async (req, res, next) => {
 // Feedback Endpoint
 app.post('/api/feedback', async (req, res, next) => {
     try {
-        const { scanId, rating, comment, correction } = req.body;
+        const {
+            scanId,
+            rating,
+            comment,
+            correction,
+            wasCorrect,
+            correctCrop,
+            correctDisease,
+            issueType,
+            note,
+        } = req.body;
 
-        if (!scanId || !rating) {
-            return res.status(400).json({ error: 'scanId and rating are required' });
+        if (!scanId || (typeof rating === 'undefined' && typeof wasCorrect === 'undefined')) {
+            return res.status(400).json({ error: 'scanId and either rating or wasCorrect are required' });
         }
 
-        const success = await logFeedback({ scanId, rating, comment, correction });
+        const success = await logFeedback({
+            scanId,
+            rating,
+            comment,
+            correction,
+            wasCorrect,
+            correctCrop,
+            correctDisease,
+            issueType,
+            note,
+        });
 
         if (success) {
             res.json({ message: 'Feedback received' });
@@ -162,7 +195,7 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // Fix: Extract treeImage/leafImage to match Frontend Payload (src/utils/diseaseDetection.js)
         // Fallback to 'image' for backward compatibility
-        const { treeImage, leafImage, image, category, language = 'en', location } = req.body;
+        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null } = req.body;
 
         const mainImage = treeImage || image;
 
@@ -216,7 +249,8 @@ app.post('/api/analyze', async (req, res, next) => {
             leafImage,
             category,
             language,
-            location
+            location,
+            imageQuality,
         );
 
         const finalResult = {
@@ -240,7 +274,12 @@ app.post('/api/analyze', async (req, res, next) => {
             metadata: {
                 language,
                 location,
-                source: identificationSource
+                source: identificationSource,
+                imageQuality,
+                plantNetCandidates: plantNetResult?.allMatches || [],
+                confidenceBreakdown: finalResult.confidenceBreakdown || null,
+                status: finalResult.status || null,
+                differentialDiagnoses: finalResult.differentialDiagnoses || [],
             }
         }).catch(err => console.error('Data logging failed:', err));
 

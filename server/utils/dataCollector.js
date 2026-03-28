@@ -31,7 +31,7 @@ export const logTrainingData = async (data) => {
         const LOG_FILE = path.join(DATASET_DIR, `data_log_${dateStr}.jsonl`);
 
         const timestamp = now.toISOString();
-        const { id, treeImage, leafImage, category, result } = data;
+        const { id, treeImage, leafImage, category, result, metadata = {} } = data;
         const scanId = id || `scan_${Date.now()}`;
 
         // 1. Save Images to Disk (Convert Base64 to File)
@@ -67,7 +67,15 @@ export const logTrainingData = async (data) => {
             prediction: {
                 disease: result.disease,
                 confidence: result.confidence,
-                healthStatus: result.healthStatus
+                healthStatus: result.healthStatus,
+                status: result.status || null,
+                confidenceBreakdown: result.confidenceBreakdown || null,
+                differentialDiagnoses: result.differentialDiagnoses || [],
+            },
+            metadata: {
+                ...metadata,
+                imageQuality: metadata.imageQuality || null,
+                plantNetCandidates: metadata.plantNetCandidates || [],
             },
             // Full raw result (optional, but good for debugging)
             raw_result: result,
@@ -96,6 +104,11 @@ export const logTrainingData = async (data) => {
  * @param {number} feedbackData.rating - Rating (1-5)
  * @param {string} feedbackData.comment - Optional comment
  * @param {string} feedbackData.correction - Optional correction
+ * @param {boolean} feedbackData.wasCorrect - Whether the diagnosis was correct
+ * @param {string} feedbackData.correctCrop - Optional corrected crop
+ * @param {string} feedbackData.correctDisease - Optional corrected disease
+ * @param {string} feedbackData.issueType - Optional issue category
+ * @param {string} feedbackData.note - Optional detailed note
  */
 export const logFeedback = async (feedbackData) => {
     try {

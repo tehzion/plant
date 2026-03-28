@@ -64,11 +64,24 @@ const DiseaseResult = ({ result, image, leafImage }) => {
   };
 
   const healthy = isHealthy(result);
+  const resultState = result.status || (healthy ? 'confirmed' : 'likely');
+  const differentials = Array.isArray(result.differentialDiagnoses)
+    ? result.differentialDiagnoses.filter(Boolean)
+    : [];
+  const confidenceBreakdown = result.confidenceBreakdown || null;
+  const diagnosticEvidence = result.diagnosticEvidence || null;
   const symptomsList = Array.isArray(result.symptoms)
     ? result.symptoms.filter(Boolean)
     : (typeof result.symptoms === 'string'
       ? result.symptoms.split(/\r?\n|•/g).map(v => v.trim()).filter(Boolean)
       : []);
+
+  const stateLabelMap = {
+    confirmed: t('results.confirmedDiagnosis') || 'Confirmed diagnosis',
+    likely: t('results.likelyDiagnosis') || 'Likely diagnosis',
+    uncertain: t('results.uncertainDiagnosis') || 'Uncertain diagnosis',
+    retake_required: t('results.retakeRequired') || 'Need a clearer leaf close-up',
+  };
 
   /* 
      Details section logic moved inline for robustness 
@@ -261,6 +274,40 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                   </div>
                 </div>
               )}
+
+              {(result.requiresRetake || resultState === 'uncertain') && (
+                <div className="retake-banner">
+                  <AlertCircle size={18} />
+                  <div>
+                    <strong>{stateLabelMap[resultState]}</strong>
+                    <p>{result.retakeReason || result.abstainReason || t('results.retakeHint') || 'Please upload a clearer close-up leaf photo for a safer diagnosis.'}</p>
+                  </div>
+                </div>
+              )}
+
+              {confidenceBreakdown && (
+                <div className="confidence-panel">
+                  <div className="confidence-header">{t('results.confidenceBreakdown') || 'Confidence breakdown'}</div>
+                  <div className="confidence-grid">
+                    <div className="confidence-item">
+                      <span>{t('results.overallConfidence') || 'Overall'}</span>
+                      <strong>{confidenceBreakdown.overallConfidence}%</strong>
+                    </div>
+                    <div className="confidence-item">
+                      <span>{t('results.diagnosisConfidence') || 'Diagnosis'}</span>
+                      <strong>{confidenceBreakdown.diagnosisConfidence}%</strong>
+                    </div>
+                    <div className="confidence-item">
+                      <span>{t('results.imageQualityConfidence') || 'Image quality'}</span>
+                      <strong>{confidenceBreakdown.imageQualityConfidence}%</strong>
+                    </div>
+                    <div className="confidence-item">
+                      <span>{t('results.speciesConfidence') || 'Species'}</span>
+                      <strong>{confidenceBreakdown.speciesConfidence}%</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           );
         })()}
@@ -355,6 +402,41 @@ const DiseaseResult = ({ result, image, leafImage }) => {
             <ul className="symptoms-list">
               {symptomsList.map((symptom, idx) => (
                 <li key={idx} className="symptom-item">{symptom}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {diagnosticEvidence && (
+          <div className="evidence-section">
+            <h4 className="subsection-title">
+              <Info size={18} className="subsection-icon" />
+              {t('results.diagnosticEvidence') || 'Diagnostic evidence'}
+            </h4>
+            <div className="evidence-grid">
+              <div className="evidence-item"><span>{t('results.leafAgeAffected') || 'Leaf age affected'}</span><strong>{diagnosticEvidence.leafAgeAffected}</strong></div>
+              <div className="evidence-item"><span>{t('results.lesionShape') || 'Lesion shape'}</span><strong>{diagnosticEvidence.lesionShape}</strong></div>
+              <div className="evidence-item"><span>{t('results.lesionBorderHalo') || 'Lesion border / halo'}</span><strong>{diagnosticEvidence.lesionBorderHalo}</strong></div>
+              <div className="evidence-item"><span>{t('results.distributionPattern') || 'Distribution'}</span><strong>{diagnosticEvidence.distributionPattern}</strong></div>
+              <div className="evidence-item"><span>{t('results.colorPattern') || 'Color pattern'}</span><strong>{diagnosticEvidence.colorPattern}</strong></div>
+              <div className="evidence-item"><span>{t('results.likelyCauseCategory') || 'Likely cause'}</span><strong>{diagnosticEvidence.likelyCauseCategory}</strong></div>
+            </div>
+          </div>
+        )}
+
+        {differentials.length > 0 && (
+          <div className="differentials-section">
+            <h4 className="subsection-title">
+              <AlertTriangle size={18} className="subsection-icon" />
+              {t('results.possibleAlternatives') || 'Possible alternatives'}
+            </h4>
+            <ul className="symptoms-list">
+              {differentials.map((item, index) => (
+                <li key={`${item.name}-${index}`} className="symptom-item">
+                  <strong>{item.name}</strong>
+                  {typeof item.likelihood === 'number' ? ` (${item.likelihood}%)` : ''}
+                  {item.reason ? ` - ${item.reason}` : ''}
+                </li>
               ))}
             </ul>
           </div>
@@ -684,6 +766,61 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           padding: 16px;
           border-radius: 12px;
           border: 1px solid #E5E7EB;
+        }
+
+        .retake-banner,
+        .confidence-panel,
+        .evidence-section,
+        .differentials-section {
+          margin-top: 20px;
+          padding: 16px;
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+        }
+
+        .retake-banner {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          background: #fff7ed;
+          border-color: #fdba74;
+          color: #9a3412;
+        }
+
+        .retake-banner p {
+          margin: 6px 0 0;
+          color: #9a3412;
+        }
+
+        .confidence-header {
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 12px;
+        }
+
+        .confidence-grid,
+        .evidence-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          gap: 12px;
+        }
+
+        .confidence-item,
+        .evidence-item {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          padding: 12px;
+          border-radius: 12px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+        }
+
+        .confidence-item span,
+        .evidence-item span {
+          font-size: 0.85rem;
+          color: #64748b;
         }
 
         .subsection-title {

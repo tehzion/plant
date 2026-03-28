@@ -79,12 +79,14 @@ const Results = () => {
 
   const result = {
     healthStatus: getStandardizedStatus(scan),
+    status: scan.status || 'confirmed',
     plantType: scan.plantType,
     disease: scan.disease,
     fungusType: scan.fungusType,
     pathogenType: scan.pathogenType,
     estimatedAge: scan.estimatedAge,
     confidence: scan.confidence,
+    confidenceBreakdown: scan.confidenceBreakdown,
     severity: scan.severity,
     plantPart: scan.plantPart,
     symptoms: scan.symptoms,
@@ -93,6 +95,11 @@ const Results = () => {
     prevention: scan.prevention,
     healthyCarePlan: scan.healthyCarePlan,
     additionalNotes: scan.additionalNotes,
+    requiresRetake: scan.requiresRetake,
+    retakeReason: scan.retakeReason,
+    abstainReason: scan.abstainReason,
+    differentialDiagnoses: scan.differentialDiagnoses,
+    diagnosticEvidence: scan.diagnosticEvidence,
     identification: scan.identification,
     identificationSource: scan.identificationSource,
     productSearchTags: scan.productSearchTags || []
@@ -150,6 +157,8 @@ ${t('results.disease')}: ${scan.disease}
 ${scan.fungusType ? `${t('results.fungusSpecies')}: ${scan.fungusType}` : ''}
 ${scan.pathogenType ? `${t('results.pathogenType')}: ${scan.pathogenType}` : ''}
 ${t('results.confidence')}: ${scan.confidence}%
+${scan.confidenceBreakdown ? `${t('results.diagnosisConfidence') || 'Diagnosis confidence'}: ${scan.confidenceBreakdown.diagnosisConfidence}%` : ''}
+${scan.confidenceBreakdown ? `${t('results.imageQualityConfidence') || 'Image quality confidence'}: ${scan.confidenceBreakdown.imageQualityConfidence}%` : ''}
 ${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}
 
 ${t('results.symptoms')}:
@@ -425,7 +434,7 @@ ${t('pdf.generatedBy')}
         <TabbedResults tabs={tabs} />
 
         {/* Feedback Widget */}
-        <FeedbackWidget scanId={id} />
+        <FeedbackWidget scanId={id} scan={scan} />
 
 
 

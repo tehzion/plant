@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext';
-import { saveLogEntry } from '../utils/localStorage';
+import { useNotifications } from '../context/NotificationProvider.jsx';
+import { consumeStorageCleanupNotice, saveLogEntry } from '../utils/localStorage';
 import {
     X, AlertTriangle, ShieldCheck, CheckCircle2,
     Clock, FileText, ChevronDown, ChevronUp, Leaf, Sparkles
@@ -33,6 +34,7 @@ const extractSteps = (scan) => {
 const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
     const { t } = useLanguage();
     const { user } = useAuth();
+    const { notifyError, notifyWarning } = useNotifications();
     const [showSteps, setShowSteps]         = useState(true);
     const [resolution, setResolution]       = useState('');
     const [status, setStatus]               = useState('in_progress'); // in_progress | resolved
@@ -62,7 +64,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
         } catch (error) {
             console.error('Failed to generate SOP:', error);
             const sopFailureText = t('profile.aiSopFailed');
-            alert(
+            notifyError(
                 sopFailureText === 'profile.aiSopFailed'
                     ? (t('home.errorGeneral') || 'Failed to generate SOP. Please check connection.')
                     : sopFailureText,
@@ -83,6 +85,13 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
             treatmentStatus: status,
         };
         await Promise.resolve(saveLogEntry(logEntry, user?.id ?? null));
+        const cleanupNotice = consumeStorageCleanupNotice();
+        if (cleanupNotice) {
+            notifyWarning(
+                t('common.storageCleanupNotice')
+                || 'Old records were cleaned up to save your latest data.',
+            );
+        }
         setSubmitted(true);
         setSubmitting(false);
         // Notify parent so the alert gets acknowledged after logging

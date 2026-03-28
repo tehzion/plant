@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Image, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
+import { useNotifications } from '../context/NotificationProvider.jsx';
 import { compressImage } from '../utils/imageCompressor';
 
 const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     const { t } = useLanguage();
+    const { notifyError } = useNotifications();
     const [preview, setPreview] = useState(null);
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
@@ -87,13 +89,13 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
-            alert(t('common.errorSelectImage'));
+            notifyError(t('common.errorSelectImage'));
             return;
         }
 
         // Initial size check (max 10MB)
         if (file.size > 10 * 1024 * 1024) {
-            alert(t('common.errorImageSize'));
+            notifyError(t('common.errorImageSize'));
             return;
         }
 

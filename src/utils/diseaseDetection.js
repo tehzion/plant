@@ -56,6 +56,122 @@ export const imageToBase64 = (file, maxWidth = 1024) => {
   });
 };
 
+const QUALITY_REASON_CODES = {
+  too_dark: 'IMAGE_TOO_DARK',
+  too_blurry: 'IMAGE_TOO_BLURRY',
+  too_little_leaf: 'IMAGE_TOO_LITTLE_LEAF',
+  not_plant_like: 'IMAGE_NOT_PLANT',
+};
+
+const estimateImageQuality = (imageData) => {
+  const { data, width, height } = imageData;
+  let totalBrightness = 0;
+  let greenishPixels = 0;
+  let edgeAccumulator = 0;
+  let sampleCount = 0;
+
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      const index = (y * width + x) * 4;
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+      const brightness = (0.299 * r) + (0.587 * g) + (0.114 * b);
+      totalBrightness += brightness;
+      sampleCount += 1;
+
+      if (g > r * 0.9 && g > b * 0.9 && g > 55) {
+        greenishPixels += 1;
+      }
+
+      if (x < width - 2 && y < height - 2) {
+        const rightIndex = (y * width + (x + 2)) * 4;
+        const downIndex = (((y + 2) * width) + x) * 4;
+        const rightBrightness = (0.299 * data[rightIndex]) + (0.587 * data[rightIndex + 1]) + (0.114 * data[rightIndex + 2]);
+        const downBrightness = (0.299 * data[downIndex]) + (0.587 * data[downIndex + 1]) + (0.114 * data[downIndex + 2]);
+        edgeAccumulator += Math.abs(brightness - rightBrightness) + Math.abs(brightness - downBrightness);
+      }
+    }
+  }
+
+  const brightness = sampleCount > 0 ? totalBrightness / sampleCount : 0;
+  const greenRatio = sampleCount > 0 ? greenishPixels / sampleCount : 0;
+  const blurScore = sampleCount > 0 ? edgeAccumulator / sampleCount : 0;
+  const qualityConfidence = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        (Math.min(brightness, 160) / 160) * 40
+        + (Math.min(blurScore, 35) / 35) * 40
+        + (Math.min(greenRatio, 0.25) / 0.25) * 20
+      ),
+    ),
+  );
+
+  const flags = [];
+  if (brightness < 38) flags.push('too_dark');
+  if (blurScore < 10) flags.push('too_blurry');
+  if (greenRatio < 0.04) flags.push('too_little_leaf');
+  if (greenRatio < 0.02 && brightness < 55 && blurScore < 9) flags.push('not_plant_like');
+
+  return {
+    brightness,
+    greenRatio,
+    blurScore,
+    qualityConfidence,
+    flags,
+  };
+};
+
+export const analyzeLocalImageQuality = (file, maxWidth = 640) => {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type?.startsWith('image/')) {
+      reject(new Error('INVALID_IMAGE_FILE'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else if (height > maxWidth) {
+          width = Math.round((width * maxWidth) / height);
+          height = maxWidth;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const metrics = estimateImageQuality(ctx.getImageData(0, 0, width, height));
+        const primaryIssue = metrics.flags[0] || null;
+
+        resolve({
+          ...metrics,
+          primaryIssue,
+          requiresRetake: Boolean(primaryIssue),
+          retakeReason: primaryIssue ? QUALITY_REASON_CODES[primaryIssue] : null,
+        });
+      };
+      img.onerror = reject;
+      img.src = event.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 /**
  * Call backend API to analyze plant disease
  * @param {string} treeImageBase64 - Base64 encoded tree image
@@ -72,7 +188,8 @@ export const analyzePlantDisease = async (
   category,
   leafImageBase64 = null,
   language = 'en',
-  location = null
+  location = null,
+  imageQuality = null
 ) => {
   try {
     const response = await fetch(`${API_URL}/api/analyze`, {
@@ -85,7 +202,8 @@ export const analyzePlantDisease = async (
         category,
         leafImage: leafImageBase64,
         language,
-        location
+        location,
+        imageQuality
       })
     });
 

@@ -1,0 +1,86 @@
+[
+  {
+    "scanId": "1768833803082",
+    "timestamp": "2026-01-19T14:43:23.082Z",
+    "category": "Coconut",
+    "images": {
+      "tree": "/dataset/images/1768833803082_tree.jpg",
+      "leaf": null
+    },
+    "predictedCrop": "Boleko-nut (Ongokea gore)",
+    "predictedDisease": "Reput Buah",
+    "predictedHealthStatus": "Tidak Sihat",
+    "predictedPathogenType": "Fungal",
+    "predictedSeverity": "severe",
+    "confidence": 80,
+    "confidenceBreakdown": null,
+    "differentialDiagnoses": [],
+    "identification": {
+      "scientificName": "Ongokea gore",
+      "commonNames": [
+        "Boleko-nut",
+        "Boleko",
+        "Isano"
+      ],
+      "family": "Olacaceae",
+      "genus": "Ongokea",
+      "confidence": 17,
+      "allMatches": [
+        {
+          "name": "Ongokea gore",
+          "commonNames": [
+            "Boleko-nut",
+            "Boleko",
+            "Isano"
+          ],
+          "confidence": 17
+        },
+        {
+          "name": "Diospyros crassiflora",
+          "commonNames": [
+            "Benin ebony",
+            "Ebony",
+            "Gaboon ebony"
+          ],
+          "confidence": 8
+        },
+        {
+          "name": "Panda oleosa",
+          "commonNames": [
+            "Panda"
+          ],
+          "confidence": 7
+        },
+        {
+          "name": "Borassus aethiopum",
+          "commonNames": [
+            "African fan palm",
+            "Black-rum palm",
+            "Borassus palm"
+          ],
+          "confidence": 4
+        },
+        {
+          "name": "Mesua ferrea",
+          "commonNames": [
+            "Mesua",
+            "Indian Rose Chestnut",
+            "Ceylon ironwood"
+          ],
+          "confidence": 3
+        }
+      ]
+    },
+    "reviewStatus": "pending_expert_review",
+    "expertLabelTemplate": {
+      "wasCorrect": null,
+      "correctCrop": null,
+      "correctDisease": null,
+      "issueType": null,
+      "note": null,
+      "reviewedBy": null
+    },
+    "hasLegacyHelpfulFeedback": false,
+    "legacyFeedbackSummary": null
+  }
+]

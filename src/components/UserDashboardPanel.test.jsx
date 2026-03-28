@@ -55,6 +55,7 @@ vi.mock('../context/NotificationProvider.jsx', () => ({
         notify: vi.fn(),
         notifyError: vi.fn(),
         notifySuccess: vi.fn(),
+        notifyWarning: vi.fn(),
     }),
 }));
 
@@ -91,6 +92,7 @@ vi.mock('../hooks/useAIAdvisor', () => ({
 }));
 
 vi.mock('../utils/localStorage', () => ({
+    consumeStorageCleanupNotice: vi.fn(() => null),
     saveDailyNote: vi.fn(),
     savePlot: vi.fn(),
     deletePlot: vi.fn(),

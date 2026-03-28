@@ -121,3 +121,43 @@ export const predictFarmRisk = async (plots, logs, alerts, location, language = 
     return { hasRisk: false }; // Failsafe
   }
 };
+
+/**
+ * Call backend API for contextual farm Q&A.
+ * @param {string} question - User question for the AI advisor
+ * @param {string} language - Language code ('en', 'ms', or 'zh')
+ * @param {Array} recentNotes - Recent daily notes for lightweight context
+ * @param {Array} recentAlerts - Active or recent alerts for lightweight context
+ * @returns {Promise<Object>} Ask result { answer, timestamp, cached }
+ */
+export const askFarmQuestion = async (
+  question,
+  language = 'en',
+  recentNotes = [],
+  recentAlerts = [],
+) => {
+  try {
+    const response = await fetch(`${API_URL}/api/ask`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        question,
+        language,
+        recentNotes,
+        recentAlerts,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('AI Ask API failed:', error);
+    throw error;
+  }
+};

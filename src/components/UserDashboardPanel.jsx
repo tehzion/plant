@@ -7,7 +7,12 @@ import { useWeather } from '../hooks/useWeather';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useAIAdvisor } from '../hooks/useAIAdvisor';
-import { saveDailyNote, savePlot, deletePlot } from '../utils/localStorage';
+import {
+    consumeStorageCleanupNotice,
+    saveDailyNote,
+    savePlot,
+    deletePlot,
+} from '../utils/localStorage';
 import { LogOut, ShieldCheck, ScanLine } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './UserDashboardPanel.css';
@@ -69,7 +74,7 @@ const UserDashboardPanel = () => {
     const { user, signOut }                 = useAuth();
     const { t }                             = useLanguage();
     const navigate                          = useNavigate();
-    const { notify, notifyError, notifySuccess } = useNotifications();
+    const { notify, notifyError, notifySuccess, notifyWarning } = useNotifications();
     const { getLocation }                   = useLocation();
     const { forecast, fetchWeather }        = useWeather();
 
@@ -234,9 +239,16 @@ const UserDashboardPanel = () => {
         }, user?.id ?? null);
 
         if (saved) {
+            const cleanupNotice = consumeStorageCleanupNotice();
             setNotes(prev => [saved, ...prev]);
             setNoteForm(EMPTY_FORM);
             setAddingNote(false);
+            if (cleanupNotice) {
+                notifyWarning(
+                    t('common.storageCleanupNotice')
+                    || 'Old records were cleaned up to save your latest data.',
+                );
+            }
             notifySuccess(t('common.savedSuccess') || 'Activity log saved!');
         } else {
             notifyError(t('error.saveFailed') || 'Failed to save. Please try again.');

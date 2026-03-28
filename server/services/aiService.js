@@ -82,6 +82,1050 @@ function cleanJsonString(str) {
     return cleaned.trim();
 }
 
+const GENERIC_PRODUCT_TERMS = new Set([
+    'chemical',
+    'chemicals',
+    'kimia',
+    'organic',
+    'organik',
+    'fertilizer',
+    'fertilisers',
+    'fertiliser',
+    'baja',
+    'pesticide',
+    'racun',
+    'fungicide',
+    'insecticide',
+    'herbicide',
+    'product',
+    'produk',
+    'unknown',
+    'tidak diketahui',
+    'n/a',
+    'na',
+    'none',
+    'null',
+    '-',
+]);
+
+const normalizeLookupText = (value = '') =>
+    String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s/%+-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const PRODUCT_WORD_BLOCKLIST = new Set([
+    'chemical',
+    'chemicals',
+    'kimia',
+    'organic',
+    'organik',
+    'fertilizer',
+    'fertilisers',
+    'fertiliser',
+    'baja',
+    'pesticide',
+    'racun',
+    'fungicide',
+    'insecticide',
+    'herbicide',
+    'product',
+    'produk',
+    'unknown',
+    'tidak',
+    'diketahui',
+    'none',
+    'null',
+    'na',
+    'n/a',
+]);
+
+export function isGenericProductName(name) {
+    const normalized = normalizeLookupText(name);
+    if (!normalized) return true;
+    if (GENERIC_PRODUCT_TERMS.has(normalized)) return true;
+
+    const words = normalized.split(' ').filter(Boolean);
+    return words.length > 0 && words.every((word) => PRODUCT_WORD_BLOCKLIST.has(word));
+}
+
+const translateText = (language, variants) => {
+    if (language === 'ms') return variants.ms;
+    if (language === 'zh') return variants.zh;
+    return variants.en;
+};
+
+const inferDeficiencyKeyword = (result = {}) => {
+    const joined = [
+        result?.disease,
+        result?.additionalNotes,
+        result?.pathogenType,
+        ...(result?.nutritionalIssues?.deficientNutrients || []).map((item) => item?.nutrient),
+        ...(result?.nutritionalIssues?.symptoms || []),
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    if (joined.includes('nitrogen') || joined.includes('nitrogen deficiency')) return 'nitrogen';
+    if (joined.includes('potassium') || joined.includes('kalium')) return 'potassium';
+    if (joined.includes('magnesium')) return 'magnesium';
+    if (joined.includes('phosphorus') || joined.includes('phosphate')) return 'phosphorus';
+    if (joined.includes('boron')) return 'boron';
+    if (joined.includes('calcium')) return 'calcium';
+    if (joined.includes('iron')) return 'iron';
+    return null;
+};
+
+const getFallbackFertilizerNames = (language, malaysiaCropInfo, result = {}) => {
+    const deficiency = inferDeficiencyKeyword(result);
+    const cropSpecific = malaysiaCropInfo?.info?.localFertilizers || [];
+    const defaultsByDeficiency = {
+        nitrogen: ['Urea 46%', 'NPK 21-0-0+24S', 'Ammonium Sulphate'],
+        potassium: ['MOP (Muriate of Potash)', 'NPK 12-12-17+2MgO', 'SOP (Sulphate of Potash)'],
+        magnesium: ['Kieserite', 'Dolomite', 'NPK 12-12-17+2MgO'],
+        phosphorus: ['Rock Phosphate', 'MAP (Monoammonium Phosphate)', 'NPK 15-15-15'],
+        boron: ['Borax', 'Solubor', 'NPK 12-12-17+2MgO'],
+        calcium: ['Calcium Nitrate', 'Agricultural Lime', 'Calcium Borate'],
+        iron: ['Chelated Iron (Fe-EDTA)', 'Ferrous Sulphate', 'Micronutrient Foliar Mix'],
+    };
+    const generalDefaults = [
+        ...cropSpecific,
+        'NPK 15-15-15',
+        'Baja Organik Ayam',
+        'Kieserite',
+    ];
+
+    const base = deficiency ? (defaultsByDeficiency[deficiency] || generalDefaults) : generalDefaults;
+    const unique = [...new Set([...base, ...cropSpecific].filter(Boolean))].slice(0, 3);
+    return unique.length > 0 ? unique : ['NPK 15-15-15', 'Baja Organik Ayam'];
+};
+
+const getFallbackApplicationMethod = (language) => translateText(language, {
+    en: 'Apply evenly around the drip line and water in after application',
+    ms: 'Tabur sekata di keliling kanopi dan siram selepas aplikasi',
+    zh: '沿树冠滴水线均匀施用，并在施肥后浇水',
+});
+
+const getFallbackFrequency = (language) => translateText(language, {
+    en: 'Every 2-4 weeks depending on crop stage',
+    ms: 'Setiap 2-4 minggu mengikut peringkat tanaman',
+    zh: '根据作物生长阶段每2到4周施用一次',
+});
+
+const getFallbackAmount = (language) => translateText(language, {
+    en: 'Follow label rate or local extension guidance',
+    ms: 'Ikut kadar label atau panduan pegawai pertanian tempatan',
+    zh: '按产品标签剂量或当地农技指导施用',
+});
+
+const clampConfidence = (value, fallback = 0) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.max(0, Math.min(100, Math.round(numeric)));
+};
+
+const normalizeArray = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string') {
+        return value
+            .split(/\r?\n|•|;/g)
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+    return [];
+};
+
+const normalizeDiseaseCategory = (value = '') => {
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized) return 'unknown';
+    if (normalized.includes('nutri')) return 'nutrient';
+    if (normalized.includes('fung')) return 'fungal';
+    if (normalized.includes('bacter')) return 'bacterial';
+    if (normalized.includes('viral') || normalized.includes('virus')) return 'viral';
+    if (normalized.includes('pest') || normalized.includes('insect')) return 'pest';
+    if (normalized.includes('healthy')) return 'healthy';
+    if (normalized.includes('environment')) return 'environmental';
+    return normalized;
+};
+
+const buildNoIssuesLabel = (language) => translateText(language, {
+    en: 'No Issues',
+    ms: 'Tiada Masalah',
+    zh: '无问题',
+});
+
+const buildRetakeGuidance = (language) => translateText(language, {
+    en: 'Please retake a closer, brighter leaf photo before applying treatment.',
+    ms: 'Sila ambil semula foto daun yang lebih dekat dan lebih terang sebelum membuat rawatan.',
+    zh: '请先重新拍摄一张更近、更明亮的叶片照片，再决定处理方案。',
+});
+
+const buildGeneralDiagnosisFallback = (language) => translateText(language, {
+    en: 'The image suggests a plant issue, but the evidence is not strong enough to confirm a single diagnosis yet.',
+    ms: 'Imej ini menunjukkan kemungkinan isu tanaman, tetapi bukti masih belum cukup kuat untuk mengesahkan satu diagnosis.',
+    zh: '图像显示植物可能存在问题，但证据仍不足以确认单一诊断。',
+});
+
+const buildRetakeActionItems = (language) => ([
+    translateText(language, {
+        en: 'Retake the photo in bright natural light',
+        ms: 'Ambil semula foto dalam cahaya semula jadi yang terang',
+        zh: '请在明亮自然光下重新拍照',
+    }),
+    translateText(language, {
+        en: 'Fill most of the frame with one affected leaf',
+        ms: 'Pastikan satu daun yang terjejas memenuhi kebanyakan bingkai',
+        zh: '让一片受影响叶片占据画面的大部分',
+    }),
+    translateText(language, {
+        en: 'Add a second close-up if the spots are small',
+        ms: 'Tambah satu lagi foto dekat jika tompok sangat kecil',
+        zh: '如果病斑很小，请再添加一张近距离照片',
+    }),
+]);
+
+const buildRetakePrevention = (language) => ([
+    translateText(language, {
+        en: 'Avoid spraying until the diagnosis is clearer',
+        ms: 'Elakkan semburan sehingga diagnosis lebih jelas',
+        zh: '在诊断更明确前，避免贸然喷药',
+    }),
+    translateText(language, {
+        en: 'Monitor nearby leaves for the same pattern',
+        ms: 'Pantau daun berhampiran untuk corak yang sama',
+        zh: '观察附近叶片是否出现相同症状',
+    }),
+]);
+
+export function assessSpeciesIdentification(plantNetResult, category = '') {
+    if (!plantNetResult) {
+        return {
+            confirmed: false,
+            confidence: 55,
+            margin: 0,
+            primaryName: category || 'Unknown crop',
+            scientificName: null,
+            topCandidates: category ? [{ name: category, confidence: 55 }] : [],
+        };
+    }
+
+    const confidence = clampConfidence(plantNetResult.confidence ?? plantNetResult.score, 0);
+    const allMatches = Array.isArray(plantNetResult.allMatches)
+        ? plantNetResult.allMatches
+            .map((match, index) => ({
+                name: match?.name || match?.scientificName || (index === 0 ? plantNetResult.scientificName : ''),
+                commonNames: Array.isArray(match?.commonNames) ? match.commonNames : [],
+                confidence: clampConfidence(match?.confidence, 0),
+            }))
+            .filter((match) => match.name)
+        : [];
+
+    const normalizedMatches = allMatches.length > 0
+        ? allMatches
+        : [{
+            name: plantNetResult.scientificName,
+            commonNames: plantNetResult.commonNames || [],
+            confidence,
+        }];
+
+    const secondConfidence = normalizedMatches[1]?.confidence ?? 0;
+    const margin = confidence - secondConfidence;
+    const confirmed = confidence >= 60 && margin >= 15;
+    const primaryCommon = plantNetResult.commonNames?.[0] || category || plantNetResult.scientificName;
+
+    return {
+        confirmed,
+        confidence,
+        margin,
+        primaryName: primaryCommon,
+        scientificName: plantNetResult.scientificName,
+        topCandidates: normalizedMatches.slice(0, 3),
+    };
+}
+
+const getSpeciesContextBlock = (speciesAssessment, plantNetResult, category, language) => {
+    if (!speciesAssessment || !plantNetResult) {
+        return translateText(language, {
+            en: `Crop category hint: ${category || 'Unknown crop'}. Treat this as a hint, not a confirmed species.`,
+            ms: `Petunjuk kategori tanaman: ${category || 'Tanaman tidak diketahui'}. Anggap ini sebagai petunjuk sahaja, bukan spesies yang disahkan.`,
+            zh: `作物类别提示：${category || '未知作物'}。请仅将其视为提示，不要当作已确认物种。`,
+        });
+    }
+
+    const candidateLines = speciesAssessment.topCandidates
+        .map((candidate) => `- ${candidate.name} (${candidate.confidence}%)`)
+        .join('\n');
+
+    if (speciesAssessment.confirmed) {
+        return translateText(language, {
+            en: `Species context: treat ${plantNetResult.scientificName} as the likely crop. Confidence ${speciesAssessment.confidence}% with ${speciesAssessment.margin}% gap to the next candidate.\nTop candidates:\n${candidateLines}`,
+            ms: `Konteks spesies: anggap ${plantNetResult.scientificName} sebagai tanaman yang paling mungkin. Keyakinan ${speciesAssessment.confidence}% dengan jurang ${speciesAssessment.margin}% berbanding calon kedua.\nCalon teratas:\n${candidateLines}`,
+            zh: `物种上下文：可将 ${plantNetResult.scientificName} 视为最可能的作物。置信度 ${speciesAssessment.confidence}% ，且领先下一候选 ${speciesAssessment.margin}% 。\n候选列表：\n${candidateLines}`,
+        });
+    }
+
+    return translateText(language, {
+        en: `Species context is weak. Do NOT treat any species as confirmed. Use these only as hypotheses plus the user-selected category "${category || 'Unknown crop'}".\nTop candidates:\n${candidateLines}`,
+        ms: `Spesies masih tidak pasti. JANGAN anggap mana-mana spesies sebagai disahkan. Gunakan senarai ini hanya sebagai hipotesis bersama kategori pengguna "${category || 'Tanaman tidak diketahui'}".\nCalon teratas:\n${candidateLines}`,
+        zh: `物种判断较弱。请不要把任何物种当作已确认结果，只能把它们当作假设，并结合用户选择的类别“${category || '未知作物'}”。\n候选列表：\n${candidateLines}`,
+    });
+};
+
+const buildImageQualityContext = (imageQuality = {}, language = 'en') => {
+    if (!imageQuality || typeof imageQuality !== 'object') return '';
+
+    const tree = imageQuality.tree || {};
+    const leaf = imageQuality.leaf || {};
+    const lines = [];
+
+    if (Number.isFinite(tree.brightness)) {
+        lines.push(`Tree image brightness: ${tree.brightness.toFixed(1)} / 255`);
+    }
+    if (Number.isFinite(tree.blurScore)) {
+        lines.push(`Tree image detail score: ${tree.blurScore.toFixed(1)}`);
+    }
+    if (Number.isFinite(tree.greenRatio)) {
+        lines.push(`Tree image green ratio: ${(tree.greenRatio * 100).toFixed(1)}%`);
+    }
+    if (tree.primaryIssue) {
+        lines.push(`Tree image quality flag: ${tree.primaryIssue}`);
+    }
+    if (leaf.primaryIssue) {
+        lines.push(`Leaf image quality flag: ${leaf.primaryIssue}`);
+    }
+
+    if (lines.length === 0) return '';
+
+    const label = translateText(language, {
+        en: 'Frontend image-quality hints',
+        ms: 'Petunjuk kualiti imej dari frontend',
+        zh: '前端图像质量提示',
+    });
+
+    return `${label}:\n${lines.map((line) => `- ${line}`).join('\n')}`;
+};
+
+export function normalizeParsedLogResult(parsed = {}) {
+    const normalizedChemical = isGenericProductName(parsed.chemicalName) ? null : parsed.chemicalName;
+    return {
+        ...parsed,
+        chemicalName: normalizedChemical,
+    };
+}
+
+export function normalizeAnalysisResult(result = {}, language = 'en', malaysiaCropInfo = null) {
+    const fallbackNames = getFallbackFertilizerNames(language, malaysiaCropInfo, result);
+    const originalRecommendations = Array.isArray(result.fertilizerRecommendations)
+        ? result.fertilizerRecommendations
+        : [];
+
+    const normalizedRecommendations = originalRecommendations.map((entry, index) => {
+        const safeName = isGenericProductName(entry?.fertilizerName)
+            ? fallbackNames[index] || fallbackNames[0]
+            : entry.fertilizerName;
+
+        return {
+            fertilizerName: safeName,
+            type: entry?.type || 'Chemical',
+            applicationMethod: entry?.applicationMethod || getFallbackApplicationMethod(language),
+            frequency: entry?.frequency || getFallbackFrequency(language),
+            amount: entry?.amount || getFallbackAmount(language),
+        };
+    });
+
+    if (normalizedRecommendations.length === 0 && result?.nutritionalIssues?.hasDeficiency) {
+        fallbackNames.slice(0, 2).forEach((name) => {
+            normalizedRecommendations.push({
+                fertilizerName: name,
+                type: 'Chemical',
+                applicationMethod: getFallbackApplicationMethod(language),
+                frequency: getFallbackFrequency(language),
+                amount: getFallbackAmount(language),
+            });
+        });
+    }
+
+    return {
+        ...result,
+        fertilizerRecommendations: normalizedRecommendations,
+    };
+}
+
+const buildFewShotExampleObject = (language, type) => {
+    const templates = {
+        healthy: {
+            disease: translateText(language, { en: 'No Issues', ms: 'Tiada Masalah', zh: '无问题' }),
+            additionalNotes: translateText(language, {
+                en: 'Leaves look vibrant and evenly colored, so the plant appears healthy and actively growing.',
+                ms: 'Daun kelihatan segar dan warnanya sekata, jadi tanaman ini nampak sihat dan sedang membesar dengan baik.',
+                zh: '叶片颜色均匀且有活力，因此植株看起来健康并保持良好生长。',
+            }),
+            healthStatus: 'healthy',
+            severity: 'mild',
+            confidence: 91,
+            pathogenType: 'None',
+            symptoms: [
+                translateText(language, { en: 'Even green foliage', ms: 'Daun hijau sekata', zh: '叶色均匀翠绿' }),
+                translateText(language, { en: 'No visible lesions', ms: 'Tiada lesi kelihatan', zh: '未见明显病斑' }),
+            ],
+            actions: [
+                translateText(language, { en: 'Maintain regular irrigation', ms: 'Teruskan pengairan berkala', zh: '保持规律灌溉' }),
+                translateText(language, { en: 'Continue weekly scouting', ms: 'Teruskan pemantauan mingguan', zh: '继续每周巡查' }),
+            ],
+            treatments: [
+                translateText(language, { en: 'No curative treatment needed', ms: 'Tiada rawatan pemulihan diperlukan', zh: '无需治疗性处理' }),
+                translateText(language, { en: 'Use balanced maintenance fertilizer only', ms: 'Gunakan baja penyelenggaraan seimbang sahaja', zh: '仅施用均衡维护肥即可' }),
+            ],
+            prevention: [
+                translateText(language, { en: 'Keep canopy ventilated', ms: 'Pastikan kanopi mempunyai pengudaraan baik', zh: '保持树冠通风' }),
+                translateText(language, { en: 'Avoid waterlogging after heavy rain', ms: 'Elakkan takungan air selepas hujan lebat', zh: '大雨后避免积水' }),
+            ],
+            deficiency: false,
+            fertilizers: ['NPK 15-15-15', 'Baja Organik Ayam'],
+            productSearchTags: ['fertilizer', 'foliar-feed'],
+        },
+        fungal: {
+            disease: translateText(language, { en: 'Leaf Spot', ms: 'Bintik Daun', zh: '叶斑病' }),
+            additionalNotes: translateText(language, {
+                en: 'We estimate a fungal leaf spot because the lesions are circular with dark margins and scattered across older leaves.',
+                ms: 'Kami anggarkan ini ialah bintik daun kulat kerana lesi berbentuk bulat dengan tepi gelap pada daun tua.',
+                zh: '我们推测这是真菌性叶斑，因为病斑呈圆形并带有深色边缘，集中在较老叶片上。',
+            }),
+            healthStatus: 'unhealthy',
+            severity: 'moderate',
+            confidence: 88,
+            pathogenType: 'Fungal',
+            symptoms: [
+                translateText(language, { en: 'Circular brown lesions', ms: 'Lesi bulat berwarna perang', zh: '圆形褐色病斑' }),
+                translateText(language, { en: 'Yellow halo around spots', ms: 'Halo kuning di sekeliling tompok', zh: '病斑周围有黄晕' }),
+            ],
+            actions: [
+                translateText(language, { en: 'Prune badly affected leaves', ms: 'Pangkas daun yang teruk terjejas', zh: '修剪受害严重的叶片' }),
+                translateText(language, { en: 'Improve airflow before next rain event', ms: 'Baiki pengudaraan sebelum hujan seterusnya', zh: '在下一轮降雨前改善通风' }),
+            ],
+            treatments: [
+                translateText(language, { en: 'Apply Mancozeb foliar spray', ms: 'Lakukan semburan daun Mancozeb', zh: '喷施代森锰锌叶面药剂' }),
+                translateText(language, { en: 'Repeat with copper fungicide if pressure stays high', ms: 'Ulang dengan racun kulat kuprum jika tekanan penyakit kekal tinggi', zh: '若病压持续偏高，可重复使用铜制杀菌剂' }),
+            ],
+            prevention: [
+                translateText(language, { en: 'Avoid overhead irrigation late in the day', ms: 'Elakkan pengairan renjis lewat petang', zh: '避免傍晚进行高位喷灌' }),
+                translateText(language, { en: 'Remove infected debris from the field', ms: 'Buang sisa berpenyakit dari kebun', zh: '清除田间带病残体' }),
+            ],
+            deficiency: false,
+            fertilizers: ['NPK 15-15-15', 'Kieserite'],
+            productSearchTags: ['fungicide', 'mancozeb', 'copper'],
+        },
+        nutrient: {
+            disease: translateText(language, { en: 'Potassium Deficiency', ms: 'Kekurangan Kalium', zh: '缺钾' }),
+            additionalNotes: translateText(language, {
+                en: 'We estimate a potassium deficiency because the leaf edges are yellowing and scorching first on older leaves.',
+                ms: 'Kami anggarkan kekurangan kalium kerana tepi daun menguning dan terbakar pada daun tua terlebih dahulu.',
+                zh: '我们推测是缺钾，因为较老叶片边缘先出现黄化和焦枯。',
+            }),
+            healthStatus: 'unhealthy',
+            severity: 'moderate',
+            confidence: 86,
+            pathogenType: 'Nutritional',
+            symptoms: [
+                translateText(language, { en: 'Leaf margin yellowing', ms: 'Tepi daun menguning', zh: '叶缘黄化' }),
+                translateText(language, { en: 'Scorching on older leaves', ms: 'Kesan terbakar pada daun tua', zh: '老叶边缘焦枯' }),
+            ],
+            actions: [
+                translateText(language, { en: 'Correct the potassium shortage promptly', ms: 'Betulkan kekurangan kalium dengan segera', zh: '尽快纠正缺钾问题' }),
+                translateText(language, { en: 'Check drainage to avoid root stress', ms: 'Semak saliran untuk elak tekanan akar', zh: '检查排水以避免根系受压' }),
+            ],
+            treatments: [
+                translateText(language, { en: 'Apply MOP around the root zone', ms: 'Tabur MOP di zon akar', zh: '在根区施用氯化钾' }),
+                translateText(language, { en: 'Follow with balanced NPK after recovery', ms: 'Susuli dengan NPK seimbang selepas pemulihan', zh: '恢复后再补施均衡复合肥' }),
+            ],
+            prevention: [
+                translateText(language, { en: 'Track leaf symptoms by age', ms: 'Pantau simptom mengikut umur daun', zh: '按叶龄追踪症状变化' }),
+                translateText(language, { en: 'Use scheduled soil and leaf analysis', ms: 'Gunakan analisis tanah dan daun secara berkala', zh: '定期进行土壤和叶片分析' }),
+            ],
+            deficiency: true,
+            fertilizers: ['MOP (Muriate of Potash)', 'NPK 12-12-17+2MgO'],
+            productSearchTags: ['potash', 'fertilizer', 'npk-12-12-17'],
+        },
+    };
+
+    const selected = templates[type];
+
+    return {
+        diagnosticReasoning: {
+            leafLocationAnalysis: selected.deficiency
+                ? translateText(language, { en: 'Symptoms start on older leaves', ms: 'Gejala bermula pada daun tua', zh: '症状先出现在老叶上' })
+                : translateText(language, { en: 'Symptoms are scattered on mature leaves', ms: 'Gejala bertabur pada daun matang', zh: '症状分布在成熟叶片上' }),
+            symptomPatternAnalysis: selected.deficiency
+                ? translateText(language, { en: 'Marginal yellowing and scorch pattern fits potassium stress', ms: 'Corak kekuningan tepi daun sesuai dengan tekanan kalium', zh: '叶缘黄化和焦枯符合缺钾特征' })
+                : translateText(language, { en: 'Spot pattern suggests a fungal lesion', ms: 'Corak tompok menunjukkan lesi kulat', zh: '病斑形态提示真菌性病斑' }),
+            lesionAnalysis: type === 'healthy'
+                ? translateText(language, { en: 'No lesion or necrotic area detected', ms: 'Tiada lesi atau kawasan nekrosis dikesan', zh: '未检测到病斑或坏死区域' })
+                : translateText(language, { en: 'Round lesions with dark border are visible', ms: 'Lesi bulat dengan sempadan gelap kelihatan', zh: '可见带深色边缘的圆形病斑' }),
+            conclusion: selected.additionalNotes,
+        },
+        disease: selected.disease,
+        additionalNotes: selected.additionalNotes,
+        healthStatus: selected.healthStatus,
+        severity: selected.severity,
+        confidence: selected.confidence,
+        plantType: translateText(language, {
+            en: 'Durian (Durio zibethinus)',
+            ms: 'Durian (Durio zibethinus)',
+            zh: '榴莲 (Durio zibethinus)',
+        }),
+        malaysianContext: {
+            variety: translateText(language, { en: 'Musang King', ms: 'Musang King', zh: '猫山王' }),
+            region: translateText(language, { en: 'Pahang and Johor', ms: 'Pahang dan Johor', zh: '彭亨与柔佛' }),
+            seasonalConsideration: translateText(language, {
+                en: 'Monitor humidity during monsoon transitions',
+                ms: 'Pantau kelembapan semasa peralihan monsun',
+                zh: '在季风转换期密切留意湿度变化',
+            }),
+        },
+        pathogenType: selected.pathogenType,
+        symptoms: selected.symptoms,
+        immediateActions: selected.actions,
+        treatments: selected.treatments,
+        prevention: selected.prevention,
+        healthyCarePlan: {
+            dailyCare: [
+                translateText(language, { en: 'Check soil moisture before watering', ms: 'Periksa kelembapan tanah sebelum menyiram', zh: '浇水前先检查土壤湿度' }),
+                translateText(language, { en: 'Inspect leaf color and vigor', ms: 'Periksa warna dan kesegaran daun', zh: '观察叶色和长势' }),
+            ],
+            weeklyCare: [
+                translateText(language, { en: 'Scout for new lesions or pests', ms: 'Pantau lesi baharu atau perosak', zh: '每周巡查新病斑和虫害' }),
+                translateText(language, { en: 'Clear weeds around the canopy', ms: 'Bersihkan rumpai di sekitar kanopi', zh: '清理树冠周围杂草' }),
+            ],
+            monthlyCare: [
+                translateText(language, { en: 'Review fertilizer schedule', ms: 'Semak jadual pembajaan', zh: '检查施肥计划' }),
+                translateText(language, { en: 'Check drainage after heavy rain', ms: 'Semak saliran selepas hujan lebat', zh: '大雨后检查排水情况' }),
+            ],
+            bestPractices: [
+                translateText(language, { en: 'Keep tools clean between plots', ms: 'Pastikan alat bersih antara plot', zh: '不同地块之间注意工具清洁' }),
+                translateText(language, { en: 'Record changes in the daily log', ms: 'Catat perubahan dalam log harian', zh: '将变化记录在每日日志中' }),
+            ],
+        },
+        nutritionalIssues: {
+            hasDeficiency: selected.deficiency,
+            severity: selected.deficiency ? 'Moderate' : 'Mild',
+            symptoms: selected.deficiency ? selected.symptoms : [],
+            deficientNutrients: selected.deficiency ? [{
+                nutrient: 'Potassium',
+                severity: 'Moderate',
+                symptoms: selected.symptoms,
+                recommendations: selected.treatments,
+            }] : [],
+        },
+        fertilizerRecommendations: selected.fertilizers.map((fertilizerName) => ({
+            fertilizerName,
+            type: 'Chemical',
+            applicationMethod: getFallbackApplicationMethod(language),
+            frequency: getFallbackFrequency(language),
+            amount: getFallbackAmount(language),
+        })),
+        malaysianGovernmentSupport: {
+            recommendedAgency: selected.deficiency ? 'DOA' : 'MARDI',
+            services: [
+                translateText(language, { en: 'Field advisory visit', ms: 'Lawatan nasihat lapangan', zh: '田间技术指导' }),
+                translateText(language, { en: 'Soil and leaf analysis support', ms: 'Sokongan analisis tanah dan daun', zh: '土壤与叶片分析支持' }),
+            ],
+            contactInfo: translateText(language, {
+                en: 'Contact the nearest district agriculture office',
+                ms: 'Hubungi pejabat pertanian daerah terdekat',
+                zh: '联系最近的县农业局',
+            }),
+        },
+        economicImpact: {
+            estimatedYieldLoss: selected.deficiency
+                ? translateText(language, { en: '5-10% if untreated', ms: '5-10% jika tidak dirawat', zh: '若不处理，预计减产5-10%' })
+                : translateText(language, { en: 'Low if handled early', ms: 'Rendah jika ditangani awal', zh: '若及早处理，影响较低' }),
+            treatmentCost: 'RM 40 - 120',
+            roi: 'High',
+        },
+        productSearchTags: selected.productSearchTags,
+    };
+};
+
+export function buildAnalyzeFewShotExamples(language = 'en') {
+    return [
+        { label: 'Healthy example', payload: buildFewShotExampleObject(language, 'healthy') },
+        { label: 'Fungal disease example', payload: buildFewShotExampleObject(language, 'fungal') },
+        { label: 'Nutrient deficiency example', payload: buildFewShotExampleObject(language, 'nutrient') },
+    ]
+        .map(({ label, payload }) => `${label}:\n${JSON.stringify(payload, null, 2)}`)
+        .join('\n\n');
+}
+
+const buildDiagnosisStageFewShotExamples = (language = 'en') => {
+    const examples = [
+        {
+            label: 'Healthy leaf vs mild stress',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 90,
+                    leafDetailSufficient: true,
+                    requiresRetake: false,
+                    retakeReason: '',
+                    qualityFlags: [],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Chili (Capsicum annuum)', ms: 'Cili (Capsicum annuum)', zh: '辣椒 (Capsicum annuum)' }),
+                    primaryDiagnosis: buildNoIssuesLabel(language),
+                    healthStatus: 'healthy',
+                    severity: 'mild',
+                    diagnosisConfidence: 88,
+                    diseaseCategory: 'healthy',
+                    pathogenType: 'None',
+                    symptoms: [
+                        translateText(language, { en: 'Even green color', ms: 'Warna hijau sekata', zh: '叶色均匀翠绿' }),
+                        translateText(language, { en: 'No lesions or chewing damage', ms: 'Tiada lesi atau kesan gigitan', zh: '未见病斑或啃食痕迹' }),
+                    ],
+                    additionalNotes: translateText(language, {
+                        en: 'The leaf looks healthy overall, so no treatment is needed right now.',
+                        ms: 'Daun kelihatan sihat secara keseluruhan, jadi tiada rawatan diperlukan buat masa ini.',
+                        zh: '叶片整体看起来健康，目前不需要特别处理。',
+                    }),
+                    needsMoreEvidence: false,
+                    abstainReason: '',
+                    differentialDiagnoses: [],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'No clear age pattern', ms: 'Tiada corak umur daun yang jelas', zh: '无明显叶龄分布' }),
+                        lesionShape: translateText(language, { en: 'None seen', ms: 'Tiada kelihatan', zh: '未见明显病斑' }),
+                        lesionBorderHalo: translateText(language, { en: 'No halo or dark border', ms: 'Tiada halo atau tepi gelap', zh: '无晕圈或深色边缘' }),
+                        distributionPattern: translateText(language, { en: 'Uniform leaf surface', ms: 'Permukaan daun seragam', zh: '叶面分布均匀' }),
+                        colorPattern: translateText(language, { en: 'Consistent green', ms: 'Hijau sekata', zh: '颜色稳定偏绿' }),
+                        likelyCauseCategory: 'healthy',
+                        evidenceFor: [translateText(language, { en: 'No disease lesions are visible', ms: 'Tiada lesi penyakit yang kelihatan', zh: '未见病害斑点' })],
+                        evidenceAgainst: [translateText(language, { en: 'No sign of marginal scorch or angular spots', ms: 'Tiada tanda tepi terbakar atau tompok bersegi', zh: '没有叶缘灼伤或角斑迹象' })],
+                        rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
+                        rejectedReason: translateText(language, { en: 'No necrotic lesion pattern is visible', ms: 'Corak lesi nekrotik tidak kelihatan', zh: '未见坏死病斑形态' }),
+                    },
+                },
+            },
+        },
+        {
+            label: 'Fungal spot vs nutrient deficiency',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 84,
+                    leafDetailSufficient: true,
+                    requiresRetake: false,
+                    retakeReason: '',
+                    qualityFlags: [],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Durian (Durio zibethinus)', ms: 'Durian (Durio zibethinus)', zh: '榴莲 (Durio zibethinus)' }),
+                    primaryDiagnosis: translateText(language, { en: 'Leaf Spot', ms: 'Bintik Daun', zh: '叶斑病' }),
+                    healthStatus: 'unhealthy',
+                    severity: 'moderate',
+                    diagnosisConfidence: 82,
+                    diseaseCategory: 'fungal',
+                    pathogenType: 'Fungal',
+                    symptoms: [
+                        translateText(language, { en: 'Circular brown lesions', ms: 'Lesi bulat perang', zh: '圆形褐色病斑' }),
+                        translateText(language, { en: 'Yellow halo around several spots', ms: 'Halo kuning di beberapa tompok', zh: '多处病斑周围有黄晕' }),
+                    ],
+                    additionalNotes: translateText(language, {
+                        en: 'The round lesions and dark margins fit a fungal spot better than a nutrient shortage.',
+                        ms: 'Lesi bulat dan tepi gelap lebih sesuai dengan bintik daun kulat berbanding kekurangan nutrien.',
+                        zh: '圆形病斑和深色边缘更符合真菌性叶斑，而不是单纯缺肥。',
+                    }),
+                    needsMoreEvidence: false,
+                    abstainReason: '',
+                    differentialDiagnoses: [
+                        {
+                            name: translateText(language, { en: 'Potassium deficiency', ms: 'Kekurangan kalium', zh: '缺钾' }),
+                            likelihood: 32,
+                            reason: translateText(language, { en: 'Yellowing is present, but lesion halos point away from pure nutrient stress', ms: 'Walaupun ada kekuningan, halo lesi tidak menyokong tekanan nutrien semata-mata', zh: '虽然有黄化，但病斑晕圈并不支持单纯缺肥' }),
+                        },
+                    ],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'Mostly mature leaves', ms: 'Kebanyakannya daun matang', zh: '主要在成熟叶片上' }),
+                        lesionShape: translateText(language, { en: 'Circular spots', ms: 'Tompok bulat', zh: '圆形病斑' }),
+                        lesionBorderHalo: translateText(language, { en: 'Dark margin with yellow halo', ms: 'Tepi gelap dengan halo kuning', zh: '深色边缘并带黄晕' }),
+                        distributionPattern: translateText(language, { en: 'Scattered spots', ms: 'Tompok bertaburan', zh: '病斑分散分布' }),
+                        colorPattern: translateText(language, { en: 'Brown center with chlorotic halo', ms: 'Tengah perang dengan halo klorosis', zh: '褐色中心伴黄化晕圈' }),
+                        likelyCauseCategory: 'fungal',
+                        evidenceFor: [translateText(language, { en: 'Classic lesion margins are visible', ms: 'Sempadan lesi klasik kelihatan', zh: '可见典型病斑边缘' })],
+                        evidenceAgainst: [translateText(language, { en: 'Not mainly marginal scorching', ms: 'Bukan corak tepi daun terbakar utama', zh: '并非以叶缘灼伤为主' })],
+                        rejectedDiagnosis: translateText(language, { en: 'Potassium deficiency', ms: 'Kekurangan kalium', zh: '缺钾' }),
+                        rejectedReason: translateText(language, { en: 'The lesions are discrete instead of diffuse leaf-edge stress', ms: 'Lesi adalah berasingan, bukan tekanan tepi daun yang merebak', zh: '病斑是离散的，而不是弥散性叶缘失调' }),
+                    },
+                },
+            },
+        },
+        {
+            label: 'Bacterial angular lesion vs fungal spot',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 80,
+                    leafDetailSufficient: true,
+                    requiresRetake: false,
+                    retakeReason: '',
+                    qualityFlags: [],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Cucumber (Cucumis sativus)', ms: 'Timun (Cucumis sativus)', zh: '黄瓜 (Cucumis sativus)' }),
+                    primaryDiagnosis: translateText(language, { en: 'Angular Leaf Spot', ms: 'Bintik Daun Bersudut', zh: '角斑病' }),
+                    healthStatus: 'unhealthy',
+                    severity: 'moderate',
+                    diagnosisConfidence: 76,
+                    diseaseCategory: 'bacterial',
+                    pathogenType: 'Bacterial',
+                    symptoms: [
+                        translateText(language, { en: 'Angular lesions limited by veins', ms: 'Lesi bersudut mengikut urat daun', zh: '病斑受叶脉限制呈角形' }),
+                        translateText(language, { en: 'Water-soaked patches', ms: 'Tompok berair', zh: '出现水渍状斑块' }),
+                    ],
+                    additionalNotes: translateText(language, {
+                        en: 'The vein-limited angular pattern supports a bacterial lesion more than a fungal round spot.',
+                        ms: 'Corak bersudut yang mengikut urat daun lebih menyokong lesi bakteria berbanding bintik kulat bulat.',
+                        zh: '受叶脉限制的角斑更支持细菌性病害，而不是圆形真菌斑。',
+                    }),
+                    needsMoreEvidence: false,
+                    abstainReason: '',
+                    differentialDiagnoses: [
+                        {
+                            name: translateText(language, { en: 'Leaf spot', ms: 'Bintik daun', zh: '叶斑病' }),
+                            likelihood: 38,
+                            reason: translateText(language, { en: 'Some spots overlap, but the angular vein pattern is stronger', ms: 'Walaupun ada tompok bertindih, corak mengikut urat lebih kuat', zh: '虽然部分病斑重叠，但角形叶脉限制更明显' }),
+                        },
+                    ],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'Mixed leaf ages', ms: 'Daun pelbagai umur', zh: '不同叶龄均可见' }),
+                        lesionShape: translateText(language, { en: 'Angular', ms: 'Bersudut', zh: '角形' }),
+                        lesionBorderHalo: translateText(language, { en: 'Water-soaked edge without a strong halo', ms: 'Tepi berair tanpa halo yang jelas', zh: '水渍边缘，无明显晕圈' }),
+                        distributionPattern: translateText(language, { en: 'Patchy but vein-limited', ms: 'Bertompok tetapi dihadkan urat daun', zh: '分布不均，但受叶脉限制' }),
+                        colorPattern: translateText(language, { en: 'Dark wet-looking lesions', ms: 'Lesi gelap seperti basah', zh: '深色且带湿润感的病斑' }),
+                        likelyCauseCategory: 'bacterial',
+                        evidenceFor: [translateText(language, { en: 'Angular water-soaked lesions are visible', ms: 'Lesi berair yang bersudut kelihatan', zh: '可见角形水渍病斑' })],
+                        evidenceAgainst: [translateText(language, { en: 'No strong circular halo pattern', ms: 'Tiada corak halo bulat yang kuat', zh: '没有明显的圆形晕圈模式' })],
+                        rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
+                        rejectedReason: translateText(language, { en: 'The lesions follow veins instead of forming round necrotic spots', ms: 'Lesi mengikut urat daun, bukan tompok nekrotik bulat', zh: '病斑沿叶脉分布，而非圆形坏死斑' }),
+                    },
+                },
+            },
+        },
+        {
+            label: 'Nutrient deficiency vs fungal disease',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 87,
+                    leafDetailSufficient: true,
+                    requiresRetake: false,
+                    retakeReason: '',
+                    qualityFlags: [],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Banana (Musa spp.)', ms: 'Pisang (Musa spp.)', zh: '香蕉 (Musa spp.)' }),
+                    primaryDiagnosis: translateText(language, { en: 'Potassium Deficiency', ms: 'Kekurangan Kalium', zh: '缺钾' }),
+                    healthStatus: 'unhealthy',
+                    severity: 'moderate',
+                    diagnosisConfidence: 84,
+                    diseaseCategory: 'nutrient',
+                    pathogenType: 'Nutritional',
+                    symptoms: [
+                        translateText(language, { en: 'Yellowing at leaf margins', ms: 'Kekuningan di tepi daun', zh: '叶缘黄化' }),
+                        translateText(language, { en: 'Older leaves show scorching first', ms: 'Daun tua menunjukkan kesan terbakar terlebih dahulu', zh: '老叶先出现焦边' }),
+                    ],
+                    additionalNotes: translateText(language, {
+                        en: 'The age pattern and leaf-edge scorch fit potassium stress better than a fungal spot.',
+                        ms: 'Corak umur daun dan tepi daun terbakar lebih sesuai dengan tekanan kalium berbanding bintik kulat.',
+                        zh: '叶龄分布和叶缘焦枯更符合缺钾，而不是典型真菌病斑。',
+                    }),
+                    needsMoreEvidence: false,
+                    abstainReason: '',
+                    differentialDiagnoses: [
+                        {
+                            name: translateText(language, { en: 'Leaf spot', ms: 'Bintik daun', zh: '叶斑病' }),
+                            likelihood: 25,
+                            reason: translateText(language, { en: 'Necrotic areas exist, but they are not discrete fungal lesions', ms: 'Walaupun ada nekrosis, ia bukan lesi kulat yang berasingan', zh: '虽然有坏死区，但不像离散的真菌病斑' }),
+                        },
+                    ],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'Older leaves first', ms: 'Daun tua dahulu', zh: '先发生在老叶' }),
+                        lesionShape: translateText(language, { en: 'No distinct lesion shape', ms: 'Tiada bentuk lesi yang jelas', zh: '没有明确病斑形态' }),
+                        lesionBorderHalo: translateText(language, { en: 'No halo; margin scorch instead', ms: 'Tiada halo; sebaliknya tepi daun terbakar', zh: '没有晕圈，主要是叶缘焦枯' }),
+                        distributionPattern: translateText(language, { en: 'Diffuse along the leaf edge', ms: 'Merebak di sepanjang tepi daun', zh: '沿叶缘弥散分布' }),
+                        colorPattern: translateText(language, { en: 'Yellow to brown margin stress', ms: 'Tepi kuning ke perang', zh: '叶缘由黄变褐' }),
+                        likelyCauseCategory: 'nutrient',
+                        evidenceFor: [translateText(language, { en: 'Older leaves are affected first', ms: 'Daun tua terjejas dahulu', zh: '老叶先受影响' })],
+                        evidenceAgainst: [translateText(language, { en: 'No round halo lesions are seen', ms: 'Tiada lesi bulat berhalo kelihatan', zh: '未见圆形带晕圈病斑' })],
+                        rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
+                        rejectedReason: translateText(language, { en: 'The pattern is diffuse nutrient stress instead of discrete lesions', ms: 'Corak ini ialah tekanan nutrien yang merebak, bukan lesi berasingan', zh: '该模式更像弥散性缺素，而不是离散病斑' }),
+                    },
+                },
+            },
+        },
+    ];
+
+    return examples
+        .map(({ label, payload }) => `${label}:\n${JSON.stringify(payload, null, 2)}`)
+        .join('\n\n');
+};
+
+export function buildAskAIContextSummary(recentNotes = [], recentAlerts = [], language = 'en') {
+    const notes = Array.isArray(recentNotes)
+        ? [...recentNotes]
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0))
+            .slice(0, 5)
+        : [];
+
+    const alerts = Array.isArray(recentAlerts)
+        ? [...recentAlerts]
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0))
+            .slice(0, 3)
+        : [];
+
+    if (notes.length === 0 && alerts.length === 0) return '';
+
+    const noteLabel = translateText(language, {
+        en: 'Recent farm notes',
+        ms: 'Catatan ladang terkini',
+        zh: '近期农场记录',
+    });
+    const alertLabel = translateText(language, {
+        en: 'Active or recent alerts',
+        ms: 'Amaran aktif atau terkini',
+        zh: '当前或近期预警',
+    });
+
+    const noteLines = notes.map((note) => {
+        const date = note.created_at || note.timestamp || 'Unknown date';
+        const activity = note.activity_type || note.type || 'note';
+        const plot = note.plot_id ? ` | plot: ${note.plot_id}` : '';
+        const chemical = note.chemical_name ? ` | input: ${note.chemical_name}` : '';
+        const disease = note.disease_name_observed ? ` | issue: ${note.disease_name_observed}` : '';
+        const text = note.note || note.notes || '';
+        return `- ${date} | ${activity}${plot}${chemical}${disease} | ${text}`.trim();
+    });
+
+    const alertLines = alerts.map((alert) => {
+        const date = alert.created_at || alert.timestamp || 'Unknown date';
+        const severity = alert.severity || 'unknown';
+        const disease = alert.disease || alert.title || 'Unknown alert';
+        const category = alert.category ? ` | crop: ${alert.category}` : '';
+        return `- ${date} | ${disease} | severity: ${severity}${category}`;
+    });
+
+    return [
+        `${noteLabel}:`,
+        ...(noteLines.length > 0 ? noteLines : ['- None']),
+        '',
+        `${alertLabel}:`,
+        ...(alertLines.length > 0 ? alertLines : ['- None']),
+    ].join('\n');
+}
+
+const normalizeDifferentialDiagnoses = (differentials = []) => {
+    if (!Array.isArray(differentials)) return [];
+    return differentials
+        .map((entry) => {
+            if (!entry) return null;
+            if (typeof entry === 'string') {
+                return { name: entry, likelihood: null, reason: '' };
+            }
+            const name = entry.name || entry.disease || entry.diagnosis;
+            if (!name) return null;
+            return {
+                name,
+                likelihood: Number.isFinite(Number(entry.likelihood)) ? clampConfidence(entry.likelihood) : null,
+                reason: entry.reason || entry.why || '',
+            };
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+};
+
+const normalizeDiagnosticEvidence = (evidence = {}, language = 'en') => ({
+    leafAgeAffected: evidence.leafAgeAffected || evidence.leaf_location || translateText(language, {
+        en: 'Not clearly observed',
+        ms: 'Tidak dapat diperhatikan dengan jelas',
+        zh: '未能清楚观察',
+    }),
+    lesionShape: evidence.lesionShape || evidence.lesion_shape || translateText(language, {
+        en: 'Not clearly observed',
+        ms: 'Tidak dapat diperhatikan dengan jelas',
+        zh: '未能清楚观察',
+    }),
+    lesionBorderHalo: evidence.lesionBorderHalo || evidence.lesion_border_halo || translateText(language, {
+        en: 'Not clearly observed',
+        ms: 'Tidak dapat diperhatikan dengan jelas',
+        zh: '未能清楚观察',
+    }),
+    distributionPattern: evidence.distributionPattern || evidence.distribution_pattern || translateText(language, {
+        en: 'Not clearly observed',
+        ms: 'Tidak dapat diperhatikan dengan jelas',
+        zh: '未能清楚观察',
+    }),
+    colorPattern: evidence.colorPattern || evidence.color_pattern || translateText(language, {
+        en: 'Not clearly observed',
+        ms: 'Tidak dapat diperhatikan dengan jelas',
+        zh: '未能清楚观察',
+    }),
+    likelyCauseCategory: normalizeDiseaseCategory(evidence.likelyCauseCategory || evidence.likely_cause || ''),
+    evidenceFor: normalizeArray(evidence.evidenceFor || evidence.evidence_for),
+    evidenceAgainst: normalizeArray(evidence.evidenceAgainst || evidence.evidence_against),
+    rejectedDiagnosis: evidence.rejectedDiagnosis || evidence.rejected_diagnosis || '',
+    rejectedReason: evidence.rejectedReason || evidence.rejected_reason || '',
+});
+
+const getPlausibleDiseaseTokens = (malaysiaCropInfo) => {
+    const diseaseTokens = new Set(['spot', 'blight', 'rot', 'wilt', 'rust', 'mildew', 'anthracnose', 'scab', 'canker']);
+    malaysiaCropInfo?.info?.commonDiseases?.forEach((name) => {
+        normalizeLookupText(name)
+            .split(' ')
+            .filter((token) => token.length > 3)
+            .forEach((token) => diseaseTokens.add(token));
+    });
+    return diseaseTokens;
+};
+
+const isLikelyNutrientDiagnosis = (result) => {
+    const joined = [
+        result.disease,
+        result.pathogenType,
+        result.diseaseCategory,
+        result.additionalNotes,
+        result.diagnosticEvidence?.likelyCauseCategory,
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    return joined.includes('nutri')
+        || joined.includes('deficien')
+        || joined.includes('kalium')
+        || joined.includes('nitrogen')
+        || joined.includes('magnesium')
+        || joined.includes('phosphorus')
+        || joined.includes('potassium');
+};
+
+export function applyDiseaseSanityFilters(result = {}, language = 'en', malaysiaCropInfo = null) {
+    const next = { ...result };
+    const evidence = normalizeDiagnosticEvidence(next.diagnosticEvidence, language);
+    next.diagnosticEvidence = evidence;
+
+    const isHealthyDiagnosis = String(next.healthStatus || '').toLowerCase() === 'healthy';
+    if (isHealthyDiagnosis) {
+        next.disease = buildNoIssuesLabel(language);
+        next.severity = 'mild';
+        next.pathogenType = 'None';
+        next.diseaseCategory = 'healthy';
+    }
+
+    if (isHealthyDiagnosis && String(next.severity || '').toLowerCase() !== 'mild') {
+        next.severity = 'mild';
+    }
+
+    const nutrientDiagnosis = isLikelyNutrientDiagnosis(next);
+    const evidenceText = [
+        evidence.lesionShape,
+        evidence.lesionBorderHalo,
+        ...evidence.evidenceFor,
+        ...evidence.evidenceAgainst,
+    ].join(' ').toLowerCase();
+
+    if (nutrientDiagnosis && /fungal|fungus|kulat/.test(String(next.pathogenType || '').toLowerCase()) && !/halo|circular|round|spore|bulat/.test(evidenceText)) {
+        next.pathogenType = 'Nutritional';
+        next.diseaseCategory = 'nutrient';
+        next.status = next.status === 'confirmed' ? 'likely' : next.status;
+        next.abstainReason = next.abstainReason || translateText(language, {
+            en: 'The symptom pattern leans toward nutrient stress more than a fungal lesion.',
+            ms: 'Corak gejala lebih cenderung kepada tekanan nutrien berbanding lesi kulat.',
+            zh: '症状模式更偏向缺素胁迫，而不是典型真菌病斑。',
+        });
+    }
+
+    if (/bacter/i.test(String(next.pathogenType || '')) && !/water|watery|water-soaked|angular|bersudut|berair/.test(evidenceText)) {
+        next.status = next.status === 'confirmed' ? 'likely' : 'uncertain';
+        next.needsMoreEvidence = true;
+        next.abstainReason = next.abstainReason || translateText(language, {
+            en: 'Bacterial diagnosis should show angular or water-soaked lesions, but that evidence is weak here.',
+            ms: 'Diagnosis bakteria sepatutnya menunjukkan lesi berair atau bersudut, tetapi bukti itu lemah di sini.',
+            zh: '细菌性病害通常应出现角斑或水渍状病斑，但这里的证据较弱。',
+        });
+    }
+
+    if (malaysiaCropInfo && !isHealthyDiagnosis && !nutrientDiagnosis) {
+        const diseaseTokens = getPlausibleDiseaseTokens(malaysiaCropInfo);
+        const normalizedDisease = normalizeLookupText(next.disease);
+        const plausible = normalizedDisease
+            .split(' ')
+            .some((token) => diseaseTokens.has(token));
+
+        if (!plausible && normalizedDisease) {
+            const currentPrimary = next.disease;
+            next.differentialDiagnoses = normalizeDifferentialDiagnoses([
+                {
+                    name: currentPrimary,
+                    likelihood: next.confidence || next.diagnosisConfidence || 50,
+                    reason: translateText(language, {
+                        en: 'This pattern is not a strong crop-specific match, so it is safer as a differential only.',
+                        ms: 'Corak ini bukan padanan spesifik tanaman yang kuat, jadi lebih selamat diletakkan sebagai diagnosis pembezaan.',
+                        zh: '该模式与此作物的常见病害匹配度不高，更适合作为鉴别诊断。',
+                    }),
+                },
+                ...(next.differentialDiagnoses || []),
+            ]);
+            next.status = next.status === 'confirmed' ? 'likely' : 'uncertain';
+            next.needsMoreEvidence = true;
+            next.abstainReason = next.abstainReason || translateText(language, {
+                en: 'The predicted disease is not a confident crop-specific match for this Malaysian crop profile.',
+                ms: 'Penyakit yang diramalkan bukan padanan spesifik tanaman yang meyakinkan untuk profil tanaman Malaysia ini.',
+                zh: '该预测病害与此马来西亚作物类型的常见病害并不十分匹配。',
+            });
+        }
+    }
+
+    return next;
+}
+
+const getPlantTypeLabel = (plantNetResult, category, language, speciesAssessment) => {
+    if (speciesAssessment?.confirmed && plantNetResult?.scientificName) {
+        const commonName = plantNetResult.commonNames?.[0] || category || plantNetResult.scientificName;
+        return `${commonName} (${plantNetResult.scientificName})`;
+    }
+
+    if (category) {
+        return translateText(language, {
+            en: `${category} crop`,
+            ms: `Tanaman ${category}`,
+            zh: `${category} 作物`,
+        });
+    }
+
+    return plantNetResult?.scientificName || translateText(language, {
+        en: 'Unknown crop',
+        ms: 'Tanaman tidak diketahui',
+        zh: '未知作物',
+    });
+};
+
+const computeOverallConfidence = (speciesConfidence, imageQualityConfidence, diagnosisConfidence) => {
+    const weightedBlend = Math.round(
+        (diagnosisConfidence * 0.55) +
+        (imageQualityConfidence * 0.3) +
+        (speciesConfidence * 0.15)
+    );
+    return Math.max(0, Math.min(100, Math.min(weightedBlend, diagnosisConfidence, imageQualityConfidence)));
+};
+
+const deriveStatus = (result) => {
+    if (result.requiresRetake) return 'retake_required';
+    if (result.needsMoreEvidence || result.abstainReason) {
+        return result.confidence >= 60 ? 'likely' : 'uncertain';
+    }
+    if (result.confidence >= 80) return 'confirmed';
+    if (result.confidence >= 60) return 'likely';
+    return 'uncertain';
+};
+
 /**
  * Fallback: Identify plant using GPT Vision
  */
@@ -235,7 +1279,378 @@ function getMalaysiaCropInfo(plantNetResult, category) {
 /**
  * Analyze plant with GPT-5 Nano (optimized for Malaysia)
  */
-export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation) {
+const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) => {
+    const healthy = String(result.healthStatus).toLowerCase() === 'healthy';
+
+    return {
+        immediateActions: healthy ? [] : buildRetakeActionItems(language),
+        treatments: healthy ? [] : buildRetakeActionItems(language),
+        prevention: buildRetakePrevention(language),
+        healthyCarePlan: DEFAULT_CARE_PLANS[language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en'],
+        nutritionalIssues: {
+            hasDeficiency: false,
+            severity: 'Mild',
+            symptoms: [],
+            deficientNutrients: [],
+        },
+        fertilizerRecommendations: healthy
+            ? getFallbackFertilizerNames(language, malaysiaCropInfo, result).slice(0, 2).map((fertilizerName) => ({
+                fertilizerName,
+                type: 'Chemical',
+                applicationMethod: getFallbackApplicationMethod(language),
+                frequency: getFallbackFrequency(language),
+                amount: getFallbackAmount(language),
+            }))
+            : [],
+        malaysianGovernmentSupport: {
+            recommendedAgency: 'DOA',
+            services: [
+                translateText(language, { en: 'Field advisory visit', ms: 'Lawatan nasihat lapangan', zh: '田间技术指导' }),
+                translateText(language, { en: 'Lab confirmation if symptoms worsen', ms: 'Pengesahan makmal jika gejala bertambah teruk', zh: '如症状加重可进行实验室确认' }),
+            ],
+            contactInfo: translateText(language, {
+                en: 'Contact the nearest district agriculture office if symptoms spread.',
+                ms: 'Hubungi pejabat pertanian daerah terdekat jika gejala merebak.',
+                zh: '如果症状扩散，请联系最近的县农业办公室。',
+            }),
+        },
+        economicImpact: {
+            estimatedYieldLoss: healthy
+                ? translateText(language, { en: 'Low', ms: 'Rendah', zh: '较低' })
+                : translateText(language, { en: 'Unknown until diagnosis is clearer', ms: 'Belum pasti sehingga diagnosis lebih jelas', zh: '需待诊断更明确后才能评估' }),
+            treatmentCost: 'RM 0 - 50',
+            roi: healthy ? 'High' : 'Unknown',
+        },
+        productSearchTags: healthy ? ['fertilizer', 'foliar-feed'] : [],
+    };
+};
+
+const buildDiagnosisStagePrompt = ({
+    plantNetResult,
+    speciesAssessment,
+    category,
+    language,
+    userLocation,
+    malaysiaCropInfo,
+    leafImage,
+    imageQuality,
+}) => {
+    const isMalay = language === 'ms';
+    const isChinese = language === 'zh';
+    const speciesBlock = getSpeciesContextBlock(speciesAssessment, plantNetResult, category, language);
+    const cropBlock = malaysiaCropInfo
+        ? `${isMalay ? 'KONTEKS TANAMAN MALAYSIA' : isChinese ? '马来西亚作物背景' : 'MALAYSIA CROP CONTEXT'}:\n${malaysiaCropInfo.info.commonDiseases.map((d) => `- ${d}`).join('\n')}\n${malaysiaCropInfo.info.nutrientIssues.map((n) => `- ${n}`).join('\n')}`
+        : '';
+    const qualityBlock = buildImageQualityContext(imageQuality, language);
+    const fewShotExamples = buildDiagnosisStageFewShotExamples(language);
+    const languageInstruction = isMalay
+        ? 'Berikan semua kandungan JSON dalam Bahasa Malaysia.'
+        : isChinese
+            ? '所有 JSON 文本字段必须使用简体中文。'
+            : 'Provide all JSON text fields in English.';
+
+    return `${languageInstruction}
+
+You are a Malaysian crop-disease triage specialist. Diagnose carefully and abstain when the evidence is weak.
+
+${speciesBlock}
+${cropBlock}
+${qualityBlock}
+
+Location: ${userLocation || 'Malaysia'}
+Leaf close-up provided: ${leafImage ? 'yes' : 'no'}
+
+Rules:
+- Separate image capture quality from diagnosis confidence.
+- Do not state any species is confirmed unless the species context says it is confirmed.
+- Use ranked differentials when a single diagnosis is not secure.
+- If image quality is weak, set requiresRetake to true and explain why.
+- If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
+- Bacterial diagnoses require angular or water-soaked evidence.
+- Nutrient deficiency should match leaf age pattern and diffuse color change, not discrete fungal lesions.
+- Healthy plants must remain severity mild and diagnosis "${buildNoIssuesLabel(language)}".
+
+Return STRICT JSON:
+{
+  "capture_assessment": {
+    "imageQualityConfidence": 0,
+    "leafDetailSufficient": true,
+    "requiresRetake": false,
+    "retakeReason": "",
+    "qualityFlags": ["too_dark", "too_blurry"]
+  },
+  "diagnosis_assessment": {
+    "plantType": "Common crop name (Scientific name if known)",
+    "primaryDiagnosis": "short label",
+    "healthStatus": "healthy or unhealthy",
+    "severity": "mild | moderate | severe",
+    "diagnosisConfidence": 0,
+    "diseaseCategory": "healthy | fungal | bacterial | viral | pest | nutrient | environmental | unknown",
+    "pathogenType": "None/Fungal/Bacterial/Viral/Pest/Nutritional/Environmental",
+    "symptoms": ["item 1", "item 2"],
+    "additionalNotes": "short friendly explanation",
+    "needsMoreEvidence": false,
+    "abstainReason": "",
+    "differentialDiagnoses": [
+      { "name": "alternative diagnosis", "likelihood": 42, "reason": "why this remains possible" }
+    ],
+    "diagnosticEvidence": {
+      "leafAgeAffected": "older/newer/mixed/unclear",
+      "lesionShape": "round/angular/diffuse/none/unclear",
+      "lesionBorderHalo": "dark margin/yellow halo/water-soaked/none/unclear",
+      "distributionPattern": "vein-limited/diffuse/scattered/uniform",
+      "colorPattern": "green/yellow/brown/mosaic/interveinal chlorosis",
+      "likelyCauseCategory": "fungal/bacterial/viral/pest/nutrient/healthy/unknown",
+      "evidenceFor": ["short point"],
+      "evidenceAgainst": ["short point"],
+      "rejectedDiagnosis": "what you rejected",
+      "rejectedReason": "why you rejected it"
+    }
+  }
+}
+
+Few-shot examples:
+${fewShotExamples}`;
+};
+
+const buildTreatmentStagePrompt = ({
+    language,
+    userLocation,
+    malaysiaCropInfo,
+    diagnosisResult,
+    speciesAssessment,
+}) => {
+    const isMalay = language === 'ms';
+    const isChinese = language === 'zh';
+    const languageInstruction = isMalay
+        ? 'Berikan semua kandungan JSON dalam Bahasa Malaysia.'
+        : isChinese
+            ? '所有 JSON 文本字段必须使用简体中文。'
+            : 'Provide all JSON text fields in English.';
+
+    const cropContext = speciesAssessment?.confirmed && malaysiaCropInfo
+        ? `${isMalay ? 'Tanaman dikenal pasti dengan lebih yakin.' : isChinese ? '作物识别相对更可靠。' : 'Crop identification is relatively reliable.'}`
+        : `${isMalay ? 'Jangan gunakan nasihat yang terlalu spesifik spesies.' : isChinese ? '不要给出过于物种专属的建议。' : 'Avoid overly species-specific advice.'}`;
+
+    return `${languageInstruction}
+You are a Malaysian agronomy advisor.
+Create practical next-step advice only after the diagnosis below.
+Avoid e-commerce language. Product tags should be generic search hints only.
+
+Location: ${userLocation || 'Malaysia'}
+${cropContext}
+${malaysiaCropInfo ? `Known crop context: ${malaysiaCropInfo.cropType}` : ''}
+
+Diagnosis summary:
+${JSON.stringify(diagnosisResult, null, 2)}
+
+Return STRICT JSON:
+{
+  "immediateActions": ["item 1", "item 2"],
+  "treatments": ["item 1", "item 2"],
+  "prevention": ["item 1", "item 2"],
+  "healthyCarePlan": {
+    "dailyCare": ["item 1", "item 2"],
+    "weeklyCare": ["item 1", "item 2"],
+    "monthlyCare": ["item 1", "item 2"],
+    "bestPractices": ["item 1", "item 2"]
+  },
+  "nutritionalIssues": {
+    "hasDeficiency": false,
+    "severity": "Mild",
+    "symptoms": [],
+    "deficientNutrients": [
+      { "nutrient": "Potassium", "severity": "Moderate", "symptoms": ["item"], "recommendations": ["item"] }
+    ]
+  },
+  "fertilizerRecommendations": [
+    { "fertilizerName": "NPK 15-15-15", "type": "Chemical", "applicationMethod": "how", "frequency": "when", "amount": "how much" }
+  ],
+  "malaysianGovernmentSupport": {
+    "recommendedAgency": "DOA/MARDI/MPOB/LGM",
+    "services": ["service 1", "service 2"],
+    "contactInfo": "how to contact"
+  },
+  "economicImpact": {
+    "estimatedYieldLoss": "short estimate",
+    "treatmentCost": "RM 40 - 120",
+    "roi": "Low/Medium/High"
+  },
+  "productSearchTags": ["fungicide", "fertilizer"]
+}`;
+};
+
+const parseOpenAIJson = (content, errorLabel) => {
+    const cleanedContent = cleanJsonString(content);
+    const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+        console.error(`❌ Failed to extract JSON from ${errorLabel}. Raw content:`, content?.substring?.(0, 200));
+        throw new Error(`Failed to parse ${errorLabel}`);
+    }
+
+    return JSON.parse(jsonMatch[0]);
+};
+
+const createModelMessagesWithImages = (prompt, treeImage, leafImage = null) => {
+    const content = [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: treeImage, detail: 'high' } },
+    ];
+
+    if (leafImage) {
+        content.push({ type: 'image_url', image_url: { url: leafImage, detail: 'high' } });
+    }
+
+    return [
+        {
+            role: 'system',
+            content: 'You are a careful Malaysian agricultural analyst. Always return valid JSON only.',
+        },
+        {
+            role: 'user',
+            content,
+        },
+    ];
+};
+
+const callOpenAIJson = async (messages, maxTokens = 2400) => {
+    let model = 'gpt-4o-mini';
+
+    try {
+        return await openai.chat.completions.create({
+            model,
+            response_format: { type: 'json_object' },
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.2,
+        });
+    } catch (primaryError) {
+        console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
+        model = 'gpt-5-mini';
+        return await openai.chat.completions.create({
+            model,
+            response_format: { type: 'json_object' },
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.2,
+        });
+    }
+};
+
+const mergeDiagnosisResult = ({
+    stageOne,
+    stageTwo,
+    plantNetResult,
+    category,
+    language,
+    malaysiaCropInfo,
+    speciesAssessment,
+    imageQuality,
+}) => {
+    const captureAssessment = stageOne?.capture_assessment || {};
+    const diagnosisAssessment = stageOne?.diagnosis_assessment || {};
+    const frontendTreeQuality = imageQuality?.tree || {};
+
+    const imageQualityConfidence = clampConfidence(
+        Math.min(
+            Number.isFinite(Number(captureAssessment.imageQualityConfidence)) ? Number(captureAssessment.imageQualityConfidence) : 100,
+            Number.isFinite(Number(frontendTreeQuality.qualityConfidence)) ? Number(frontendTreeQuality.qualityConfidence) : 100,
+        ),
+        70,
+    );
+    const diagnosisConfidence = clampConfidence(diagnosisAssessment.diagnosisConfidence, 55);
+    const speciesConfidence = clampConfidence(speciesAssessment?.confidence, plantNetResult ? 50 : 55);
+    const requiresRetake = Boolean(
+        captureAssessment.requiresRetake
+        || frontendTreeQuality.requiresRetake
+        || imageQualityConfidence < 45
+    );
+    const retakeReason = captureAssessment.retakeReason
+        || frontendTreeQuality.retakeReason
+        || (requiresRetake ? buildRetakeGuidance(language) : '');
+
+    const baseResult = {
+        plantType: diagnosisAssessment.plantType || getPlantTypeLabel(plantNetResult, category, language, speciesAssessment),
+        disease: diagnosisAssessment.primaryDiagnosis || buildNoIssuesLabel(language),
+        healthStatus: String(diagnosisAssessment.healthStatus || '').toLowerCase() === 'healthy' ? 'healthy' : 'unhealthy',
+        severity: String(diagnosisAssessment.severity || 'mild').toLowerCase(),
+        confidence: diagnosisConfidence,
+        diagnosisConfidence,
+        pathogenType: diagnosisAssessment.pathogenType || (String(diagnosisAssessment.healthStatus || '').toLowerCase() === 'healthy' ? 'None' : 'Unknown'),
+        diseaseCategory: normalizeDiseaseCategory(diagnosisAssessment.diseaseCategory || diagnosisAssessment.pathogenType || ''),
+        symptoms: normalizeArray(diagnosisAssessment.symptoms),
+        additionalNotes: diagnosisAssessment.additionalNotes || buildGeneralDiagnosisFallback(language),
+        differentialDiagnoses: normalizeDifferentialDiagnoses(diagnosisAssessment.differentialDiagnoses),
+        diagnosticEvidence: normalizeDiagnosticEvidence(diagnosisAssessment.diagnosticEvidence, language),
+        needsMoreEvidence: Boolean(diagnosisAssessment.needsMoreEvidence || requiresRetake),
+        abstainReason: diagnosisAssessment.abstainReason || '',
+        captureAssessment: {
+            imageQualityConfidence,
+            leafDetailSufficient: captureAssessment.leafDetailSufficient !== false,
+            requiresRetake,
+            retakeReason,
+            qualityFlags: normalizeArray(captureAssessment.qualityFlags || frontendTreeQuality.flags),
+        },
+        confidenceBreakdown: {
+            speciesConfidence,
+            imageQualityConfidence,
+            diagnosisConfidence,
+            overallConfidence: computeOverallConfidence(speciesConfidence, imageQualityConfidence, diagnosisConfidence),
+        },
+        speciesAssessment,
+    };
+
+    baseResult.status = deriveStatus(baseResult);
+    baseResult.requiresRetake = baseResult.status === 'retake_required';
+    if (baseResult.requiresRetake) {
+        baseResult.additionalNotes = retakeReason || buildRetakeGuidance(language);
+    }
+
+    const treatmentFallback = createFallbackTreatmentPlan(baseResult, language, malaysiaCropInfo);
+    const merged = {
+        ...treatmentFallback,
+        ...(stageTwo || {}),
+        ...baseResult,
+    };
+
+    merged.immediateActions = normalizeArray(merged.immediateActions);
+    merged.treatments = normalizeArray(merged.treatments);
+    merged.prevention = normalizeArray(merged.prevention);
+    merged.productSearchTags = normalizeArray(merged.productSearchTags).slice(0, 5);
+    merged.nutritionalIssues = {
+        hasDeficiency: Boolean(merged.nutritionalIssues?.hasDeficiency),
+        severity: merged.nutritionalIssues?.severity || 'Mild',
+        symptoms: normalizeArray(merged.nutritionalIssues?.symptoms),
+        deficientNutrients: Array.isArray(merged.nutritionalIssues?.deficientNutrients)
+            ? merged.nutritionalIssues.deficientNutrients
+            : [],
+    };
+
+    if (merged.requiresRetake && merged.immediateActions.length === 0) {
+        merged.immediateActions = buildRetakeActionItems(language);
+        merged.treatments = buildRetakeActionItems(language);
+        merged.prevention = buildRetakePrevention(language);
+    }
+
+    const filtered = applyDiseaseSanityFilters(merged, language, malaysiaCropInfo);
+    filtered.confidenceBreakdown = {
+        ...filtered.confidenceBreakdown,
+        overallConfidence: computeOverallConfidence(
+            filtered.confidenceBreakdown.speciesConfidence,
+            filtered.confidenceBreakdown.imageQualityConfidence,
+            filtered.confidenceBreakdown.diagnosisConfidence,
+        ),
+    };
+    filtered.confidence = filtered.confidenceBreakdown.overallConfidence;
+    filtered.status = deriveStatus(filtered);
+    filtered.requiresRetake = filtered.status === 'retake_required';
+    filtered.retakeReason = filtered.requiresRetake ? (filtered.captureAssessment?.retakeReason || retakeReason) : '';
+
+    return ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
+};
+
+export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation, imageQuality = null) {
     console.log(`🌿 PlantNet Data Used: ${plantNetResult ? 'Yes' : 'No'}`);
     if (plantNetResult) {
         console.log(`   - Species: ${plantNetResult.scientificName}`);
@@ -249,6 +1664,72 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
 
         // Get Malaysia-specific crop information
         const malaysiaCropInfo = getMalaysiaCropInfo(plantNetResult, category);
+        const speciesAssessment = assessSpeciesIdentification(plantNetResult, category);
+
+        const diagnosisPrompt = buildDiagnosisStagePrompt({
+            plantNetResult,
+            speciesAssessment,
+            category,
+            language,
+            userLocation,
+            malaysiaCropInfo,
+            leafImage,
+            imageQuality,
+        });
+
+        const diagnosisMessages = createModelMessagesWithImages(diagnosisPrompt, treeImage, leafImage);
+        const diagnosisResponse = await callOpenAIJson(diagnosisMessages, 2600);
+        const stageOne = parseOpenAIJson(diagnosisResponse.choices[0].message.content, 'diagnosis stage');
+
+        const provisional = mergeDiagnosisResult({
+            stageOne,
+            stageTwo: null,
+            plantNetResult,
+            category,
+            language,
+            malaysiaCropInfo,
+            speciesAssessment,
+            imageQuality,
+        });
+
+        let stageTwo = null;
+        if (!provisional.requiresRetake && provisional.status !== 'uncertain') {
+            const treatmentPrompt = buildTreatmentStagePrompt({
+                language,
+                userLocation,
+                malaysiaCropInfo,
+                diagnosisResult: provisional,
+                speciesAssessment,
+            });
+
+            const treatmentMessages = [
+                {
+                    role: 'system',
+                    content: 'You are a careful Malaysian agronomy advisor. Always return valid JSON only.',
+                },
+                {
+                    role: 'user',
+                    content: treatmentPrompt,
+                },
+            ];
+
+            const treatmentResponse = await callOpenAIJson(treatmentMessages, 2200);
+            stageTwo = parseOpenAIJson(treatmentResponse.choices[0].message.content, 'treatment stage');
+        }
+
+        const finalResult = mergeDiagnosisResult({
+            stageOne,
+            stageTwo,
+            plantNetResult,
+            category,
+            language,
+            malaysiaCropInfo,
+            speciesAssessment,
+            imageQuality,
+        });
+
+        console.log('âœ… Analysis complete');
+        return finalResult;
 
         // Build enhanced context with Malaysian agricultural knowledge
         let enhancedContext = '';
@@ -373,7 +1854,7 @@ Government Agencies: ${MALAYSIA_SUPPLIERS.govtAgencies.slice(0, 3).join(', ')}`;
                 : 'Provide responses in English using Malaysian agricultural terminology where appropriate.';
 
 
-        const exampleSymptom = isMalay ? 'Tompok hitam pada daun' : 'Black spots on leaves';
+        const fewShotExamples = buildAnalyzeFewShotExamples(language);
 
 
         // If PlantNet failed, we rely on the AI model as the Primary Backup for identification
@@ -520,7 +2001,10 @@ IMPORTANT RULES:
 - CRITICAL: ALWAYS populate arrays with MULTIPLE items (2-4 minimum). Single-item arrays or empty arrays are NOT acceptable.
 - CRITICAL: For healthy plants, ALWAYS provide healthyCarePlan with complete dailyCare, weeklyCare, monthlyCare, and bestPractices (3+ items each).
 - CRITICAL: fertilizerRecommendations must use SPECIFIC product names, never generic words like "Chemical" or "Organic".
-- CRITICAL: "productSearchTags" MUST be an array of 2-5 distinct, single-word or hyphenated-word product search tags (e.g. ["fungicide", "neem-oil", "fertilizer"]) based on the diagnosed issue. These MUST be primarily in English for the WooCommerce search engine regardless of the user language.`
+- CRITICAL: "productSearchTags" MUST be an array of 2-5 distinct, single-word or hyphenated-word product search tags (e.g. ["fungicide", "neem-oil", "fertilizer"]) based on the diagnosed issue. These MUST be primarily in English for the WooCommerce search engine regardless of the user language.
+
+FEW-SHOT EXAMPLES FOR STYLE, LANGUAGE, AND DATA SPECIFICITY:
+${fewShotExamples}`
                     },
                     {
                         type: 'image_url',
@@ -585,7 +2069,7 @@ IMPORTANT RULES:
         const result = JSON.parse(jsonMatch[0]);
 
         console.log('✅ Analysis complete');
-        return ensureCarePlan(result, language);
+        return ensureCarePlan(normalizedResult, language);
 
     } catch (error) {
         console.error('❌ GPT Analysis failed:', error.message, error.status ? `(Status: ${error.status})` : '');
@@ -620,7 +2104,11 @@ const DEFAULT_CARE_PLANS = {
 /**
  * Ask general agricultural question
  */
-export async function askAI(question, language) {
+export async function askAI(question, language, recentNotes = [], recentAlerts = []) {
+    const contextSummary = buildAskAIContextSummary(recentNotes, recentAlerts, language);
+    const userPrompt = contextSummary
+        ? `Farmer question:\n${question}\n\nRelevant farm context:\n${contextSummary}\n\nUse the context only when it is relevant to the answer.`
+        : question;
     const response = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -629,7 +2117,7 @@ export async function askAI(question, language) {
                 content: `You are a helpful agricultural expert. Answer the user's question concisely (max 3-4 sentences). 
                 ${language === 'ms' ? 'Provide answer in Bahasa Malaysia.' : language === 'zh' ? 'Provide answer in Simplified Chinese (简体中文).' : 'Provide answer in English.'}`
             },
-            { role: 'user', content: question }
+            { role: 'user', content: userPrompt }
         ],
         max_tokens: 300,
         temperature: 0.5
@@ -924,6 +2412,7 @@ STRICT RULES:
 1. "type" MUST exactly match one of ["note", "spray", "fertilize", "prune", "inspect", "scout", "harvest"]. Infer the best fit.
 2. If the user mentions a local Malaysian term (e.g., "baja" -> fertilize, "racun" -> spray, "tuai" -> harvest), map it to the correct English type value.
 3. Only extract values explicitly present in the text. Return null for missing fields.
+4. If the farmer only mentions a generic product word like "chemical", "fertilizer", "baja", "organic", "kimia", "racun", "none", or "n/a" without a specific product name, set "chemicalName" to null.
 Extract these exact fields (Return JSON):
 - "type": String
 - "plotId": String (e.g. "Plot A", "Farm 1", "Durian Block")
@@ -955,7 +2444,7 @@ Extract these exact fields (Return JSON):
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
-        const parsed = JSON.parse(content);
+        const parsed = normalizeParsedLogResult(JSON.parse(content));
         console.log('✅ AI Parsed Result:', JSON.stringify(parsed, null, 2));
         return parsed;
     } catch (error) {
