@@ -212,7 +212,7 @@ const commonTranslations = {
             "offlineReady": "应用已可离线使用。",
             "refreshApp": "刷新应用",
             "dismissNotification": "关闭通知",
-            "storageCleanupNotice": "Older records were cleaned up to save your latest data.",
+            "storageCleanupNotice": "旧记录已清理，以便保存您最新的数据。",
             "dateLocale": "zh-MY",
             "authFeatureComingSoon": "身份验证功能即将推出！",
             "alreadyHaveAccount": "已有账户？",
