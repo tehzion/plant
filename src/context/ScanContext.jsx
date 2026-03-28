@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import { createContext, useContext, useEffect, useRef, useMemo } from 'react';
 import { useScanLogic } from '../hooks/useScanLogic';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
+import { useNotifications } from './NotificationProvider.jsx';
 
 const ScanContext = createContext();
 
@@ -10,8 +11,7 @@ export const ScanProvider = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { t } = useLanguage();
-
-    const [notification, setNotification] = useState(null);
+    const { notify, dismissNotification } = useNotifications();
 
     // Track location for async operations
     const locationRef = useRef(location);
@@ -19,24 +19,28 @@ export const ScanProvider = ({ children }) => {
         locationRef.current = location;
     }, [location]);
 
+    // Track the background notification ID
+    const backgroundNotifId = useRef(null);
+
     // Background Scan Notification
     useEffect(() => {
-        // If loading and NOT on home page, show background notification
-        if (state.loading && location.pathname !== '/') {
-            setNotification({
-                type: 'info',
-                message: t('home.analyzingInBackground') || 'Analysis running in background...',
-                duration: 5000
-            });
-        }
-    }, [location.pathname, state.loading, t]);
+        // If loading and NOT on home page scan view, show or update background notification
+        const searchParams = new URLSearchParams(location.search);
+        const isScanView = location.pathname === '/' && searchParams.get('scan') === 'true';
 
-    // Clear background scan notification when arriving at results
-    useEffect(() => {
-        if (location.pathname.startsWith('/results') && notification?.type === 'info') {
-            setNotification(null);
+        if (state.loading && !isScanView) {
+            if (!backgroundNotifId.current) {
+                backgroundNotifId.current = notify({
+                    type: 'info',
+                    message: t('home.analyzingInBackground') || 'Analysis running in background...',
+                    duration: 0 // Persistent
+                });
+            }
+        } else if (!state.loading && backgroundNotifId.current) {
+            dismissNotification(backgroundNotifId.current);
+            backgroundNotifId.current = null;
         }
-    }, [location.pathname, notification]);
+    }, [location.pathname, location.search, notify, state.loading, t, dismissNotification]);
 
     // Enhanced Actions wrapper
     const wrappedActions = useMemo(() => ({
@@ -45,32 +49,43 @@ export const ScanProvider = ({ children }) => {
             try {
                 const id = await logicActions.performAnalyze(loc, locName);
 
+                // Dismiss any background notification immediately
+                if (backgroundNotifId.current) {
+                    dismissNotification(backgroundNotifId.current);
+                    backgroundNotifId.current = null;
+                }
+
                 // Check if we are in background (not actively on the scan loading screen)
                 const currentPath = locationRef.current.pathname;
                 const currentSearch = locationRef.current.search;
                 const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
 
                 if (!isActivelyScanning) {
-                    setNotification({
+                    notify({
                         type: 'success',
                         message: t('home.analysisComplete') || 'Analysis Complete!',
                         actionLabel: t('home.viewResults') || 'View Now',
-                        duration: 8000, // Longer duration for completion
+                        duration: 8000, 
                         action: () => {
                             navigate(`/results/${id}`);
-                            setNotification(null);
+                            dismissNotification();
                         }
                     });
                 }
                 return id;
             } catch (e) {
-                // Error handling is done in logicActions, but we can show toast if in background
+                // Dismiss any background notification
+                if (backgroundNotifId.current) {
+                    dismissNotification(backgroundNotifId.current);
+                    backgroundNotifId.current = null;
+                }
+
                 const currentPath = locationRef.current.pathname;
                 const currentSearch = locationRef.current.search;
                 const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
 
                 if (!isActivelyScanning) {
-                    setNotification({
+                    notify({
                         type: 'error',
                         message: e.message || 'Analysis Failed',
                         duration: 5000
@@ -80,17 +95,19 @@ export const ScanProvider = ({ children }) => {
             }
         },
         showBackgroundNotification: () => {
-            setNotification({
-                type: 'info',
-                message: t('home.analyzingInBackground') || 'Analysis running in background...',
-                duration: 5000
-            });
+            if (!backgroundNotifId.current) {
+                backgroundNotifId.current = notify({
+                    type: 'info',
+                    message: t('home.analyzingInBackground') || 'Analysis running in background...',
+                    duration: 0
+                });
+            }
         },
-        dismissNotification: () => setNotification(null)
-    }), [logicActions, navigate, t]);
+        dismissNotification
+    }), [dismissNotification, logicActions, navigate, notify, t]);
 
     return (
-        <ScanContext.Provider value={{ state, actions: wrappedActions, notification }}>
+        <ScanContext.Provider value={{ state, actions: wrappedActions }}>
             {children}
         </ScanContext.Provider>
     );
