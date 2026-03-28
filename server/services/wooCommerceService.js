@@ -234,6 +234,11 @@ export const getProductsByTagIds = async (tagIds, categoryIds = []) => {
         .slice(0, 10);
 };
 
+export const getStoreUrl = () => {
+    const config = getWooConfig();
+    return config ? config.url : null;
+};
+
 /**
  * Check if WooCommerce is configured
  */

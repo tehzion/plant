@@ -12,6 +12,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
   const [error, setError] = useState(null);
   const [reasoning, setReasoning] = useState('');
+  const [storeUrl, setStoreUrl] = useState('https://www.mojosense.app/kanb');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -47,9 +48,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
         // Server returns pre-categorized data — use it directly
         setProducts({
           diseaseControl: data.diseaseControl || [],
-          nutrition: data.nutrition || []
+          fertilizers: data.fertilizers || [],
+          supplements: data.supplements || [],
+          otherPopular: data.otherPopular || []
         });
         if (data.reasoning) setReasoning(data.reasoning);
+        if (data.storeUrl) setStoreUrl(data.storeUrl);
       } catch (err) {
         console.error('Failed to load recommended products:', err);
         setError(t('results.productsError') || 'Could not load specialized products at this time.');
@@ -81,9 +85,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
     const ids = Array.from(selectedProductIds).join(',');
     const quantities = Array(selectedProductIds.size).fill('1').join(',');
     
-    // Construct local store url or fallback if not configured on frontend
-    const wooCommerceBaseUrl = 'https://www.mojosense.app/kanb';
-    const checkoutUrl = `${wooCommerceBaseUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`;
+    // Construct checkout URL using dynamically fetched storeUrl
+    const checkoutUrl = `${storeUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`;
     
     window.open(checkoutUrl, '_blank');
   };
@@ -109,7 +112,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
 
   if (!products) return null;
 
-  const hasNoProducts = !products.diseaseControl?.length && !products.nutrition?.length;
+  const hasNoProducts = !products.diseaseControl?.length && 
+                       !products.fertilizers?.length && 
+                       !products.supplements?.length && 
+                       !products.otherPopular?.length;
 
   // Get scale-specific recommendations
   const getScaleRecommendation = () => {
@@ -223,7 +229,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
       {products.diseaseControl && products.diseaseControl.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
-            <h3 className="section-title">{t('results.diseaseControlProducts')}</h3>
+            <h3 className="section-title">{t('results.diseaseControl')}</h3>
           </div>
 
           <div className="products-grid">
@@ -232,11 +238,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
         </div>
       )}
 
-      {/* Nutritional & Fertilizer Products */}
-      {products.nutrition && products.nutrition.length > 0 && (
+      {/* Recommended Fertilizers */}
+      {products.fertilizers && products.fertilizers.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
-            <h3 className="section-title">{(!disease || isHealthy(disease)) ? t('results.growthAndMaintenance') : t('results.fertilizersAndNutrition')}</h3>
+            <h3 className="section-title">{t('results.recommendedFertilizers')}</h3>
           </div>
 
           {scaleInfo.label && (
@@ -246,7 +252,33 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
           )}
 
           <div className="products-grid">
-            {products.nutrition.map((product, index) => renderProductCard(product, index))}
+            {products.fertilizers.map((product, index) => renderProductCard(product, index))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommended Supplements */}
+      {products.supplements && products.supplements.length > 0 && (
+        <div className="product-section">
+          <div className="section-header-centered">
+            <h3 className="section-title">{t('results.recommendedSupplements')}</h3>
+          </div>
+
+          <div className="products-grid">
+            {products.supplements.map((product, index) => renderProductCard(product, index))}
+          </div>
+        </div>
+      )}
+
+      {/* Other Popular Products */}
+      {products.otherPopular && products.otherPopular.length > 0 && (
+        <div className="product-section">
+          <div className="section-header-centered">
+            <h3 className="section-title">{t('results.otherPopular')}</h3>
+          </div>
+
+          <div className="products-grid">
+            {products.otherPopular.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}

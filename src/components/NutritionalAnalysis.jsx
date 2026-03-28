@@ -93,78 +93,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations }) =
             </div>
           )}
 
-          {/* Fertilizer Recommendations */}
-          {validRecommendations.length > 0 && (
-            <div className="fertilizer-section">
-              <div className="subsection-header">
-                <Pill size={18} className="subsection-icon" />
-                <h4 className="subsection-title">{t('results.fertilizerRecommendations')}</h4>
-              </div>
-              <p className="subsection-description">
-                {t('results.fertilizerDesc')}
-              </p>
-              <div className="fertilizers-list">
-                {validRecommendations.map((rec, index) => (
-                  <div key={index} className="fertilizer-card">
-                    <div className="fertilizer-header">
-                      <div className="fertilizer-icon-circle">
-                        <Pill size={18} />
-                      </div>
-                      <span className="fertilizer-name">
-                        {(() => {
-                          const rawName = rec.fertilizerName || rec.product || rec.name || '';
-                          const normalizedName = rawName.toLowerCase().trim();
-
-                          // List of generic names to filter out (expanded)
-                          const genericNames = [
-                            'chemical', 'kimia', 'baja kimia',
-                            'organic', 'organik', 'baja organik',
-                            'fertilizer', 'baja',
-                            'compound', 'kompaun'
-                          ];
-
-                          // Check if the name is too generic
-                          const isGeneric = genericNames.includes(normalizedName) ||
-                            normalizedName.length < 3 ||
-                            normalizedName === 'n/a' ||
-                            normalizedName === '-';
-
-                          if (!isGeneric && rawName) {
-                            return toTitleCase(rawName);
-                          }
-
-                          // Fallback: use type-based translation with more specific naming
-                          const recType = rec.type?.toLowerCase();
-                          if (recType === 'organic' || recType === 'organik') {
-                            return t('results.organicFertilizer');
-                          } else if (recType === 'chemical' || recType === 'kimia') {
-                            return t('results.chemicalFertilizer');
-                          }
-
-                          // Ultimate fallback
-                          return t('results.generalFertilizer');
-                        })()}
-                      </span>
-                    </div>
-                    <div className="fertilizer-details">
-                      <div className="detail-row">
-                        <span className="detail-label">{t('results.application')}:</span>
-                        <span className="detail-value">{rec.application || rec.applicationMethod || t('results.asDirected')}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">{t('results.frequency')}:</span>
-                        <span className="detail-value">{rec.frequency || t('results.asNeeded')}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">{t('results.amount')}:</span>
-                        <span className="detail-value">{rec.amount || rec.dosage || t('results.followInstructions')}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Fertilizer advice is now handled in the Products tab with actual products */}
         </>
       )}
 

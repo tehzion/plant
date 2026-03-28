@@ -718,15 +718,16 @@ export async function recommendProductTags(diagnosisInfo, availableTags, availab
                     role: 'system',
                     content: `You are an agricultural product recommendation expert for a Malaysian e-commerce store. Given a plant disease diagnosis, you must select the most relevant product tags AND categories from the store's catalog.
 
-You MUST split your recommendations into TWO groups:
+You MUST split your recommendations into THREE groups:
 1. **Treatment**: Products to treat the diagnosed disease/issue (fungicides, disease control, pest control, soil treatment, recovery products)
-2. **Nutrition**: Products for general plant health, growth, and maintenance (fertilizers, nutrients, growth boosters, soil conditioners)
+2. **Fertilizer**: Primary nutrients and base fertilizers (NPK, compost, organic-fertilizer, urea, potash, phosphate)
+3. **Supplement**: Secondary nutrients, bio-stimulants, and enhancers (trace-elements, seaweed extract, humic acid, amino acids, root boosters)
 
 Rules:
-- Select 1-5 tag IDs AND 1-3 category IDs for EACH group (treatment and nutrition)
-- CRITICAL: Even if the plant is healthy or no specific treatment exists, you MUST ALWAYS return at least 1-2 tag/category IDs for 'nutrition' (e.g. general fertilizer, soil enhancer) so the user always gets an enhancement recommendation. Never return completely empty arrays for BOTH groups.
+- Select 1-3 tag IDs AND 1-2 category IDs for EACH group (if applicable)
+- CRITICAL: Even if the plant is healthy, you MUST ALWAYS return at least 1-2 IDs for 'fertilizer' OR 'supplement' so the user always gets an enhancement recommendation.
 - IMPORTANT: You MUST heavily prioritize selecting WooCommerce Tags/Categories that contain or exactly match the "EXPLICIT PRODUCT SEARCH HINTS" provided below.
-- For healthy plants: treatment group can be empty, but focus heavily on nutrition.
+- For healthy plants: treatment group can be empty, but focus on fertilizer and supplement.
 - For unhealthy plants: treatment group should address the specific disease.
 - Return ONLY IDs that exist in the provided catalogs
 - Output valid JSON only`
@@ -750,15 +751,19 @@ ${tagCatalog}
 AVAILABLE PRODUCT CATEGORIES:
 ${categoryCatalog}
 
-Return JSON with two separate recommendation groups:
+Return JSON with three separate recommendation groups:
 {
   "treatment": {
-    "tagIds": [123, 456],
-    "categoryIds": [10, 20]
+    "tagIds": [123],
+    "categoryIds": [10]
   },
-  "nutrition": {
-    "tagIds": [789, 101],
+  "fertilizer": {
+    "tagIds": [456],
     "categoryIds": [30]
+  },
+  "supplement": {
+    "tagIds": [789],
+    "categoryIds": [40]
   },
   "reasoning": "Brief explanation"
 }`
@@ -774,7 +779,7 @@ Return JSON with two separate recommendation groups:
 
         if (!jsonMatch) {
             console.error('❌ GPT-5 mini product recommendation: Failed to parse response');
-            return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
+            return { treatmentTagIds: [], treatmentCategoryIds: [], fertilizerTagIds: [], fertilizerCategoryIds: [], supplementTagIds: [], supplementCategoryIds: [] };
         }
 
         const result = JSON.parse(jsonMatch[0]);
@@ -782,12 +787,14 @@ Return JSON with two separate recommendation groups:
         const output = {
             treatmentTagIds: result.treatment?.tagIds || [],
             treatmentCategoryIds: result.treatment?.categoryIds || [],
-            nutritionTagIds: result.nutrition?.tagIds || [],
-            nutritionCategoryIds: result.nutrition?.categoryIds || [],
+            fertilizerTagIds: result.fertilizer?.tagIds || [],
+            fertilizerCategoryIds: result.fertilizer?.categoryIds || [],
+            supplementTagIds: result.supplement?.tagIds || [],
+            supplementCategoryIds: result.supplement?.categoryIds || [],
             reasoning: result.reasoning || ''
         };
 
-        console.log(`✅ GPT-5 mini recommended Treatment: ${output.treatmentTagIds.length} tags + ${output.treatmentCategoryIds.length} cats | Nutrition: ${output.nutritionTagIds.length} tags + ${output.nutritionCategoryIds.length} cats`);
+        console.log(`✅ GPT-5 mini recommended Treatment: ${output.treatmentTagIds.length} | Fertilizer: ${output.fertilizerTagIds.length} | Supplement: ${output.supplementTagIds.length}`);
         console.log(`   Reason: ${output.reasoning}`);
 
         // Cache this recommendation

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext';
@@ -6,13 +6,15 @@ import { useLocation } from '../hooks/useLocation';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useAIAdvisor } from '../hooks/useAIAdvisor';
+import { useWeather, deriveFarmingNotice } from '../hooks/useWeather';
 import { saveDailyNote, savePlot, deletePlot } from '../utils/localStorage';
 import {
     ScanLine, BookOpen, LogOut,
     ShieldCheck, ChevronRight, Calendar, TrendingUp,
     AlertTriangle, BarChart2, MapPin, FileText, Plus,
     Trash2, X, CheckCircle2, Leaf, BrainCircuit, Sparkles, CheckSquare,
-    ShoppingBag, Info, Database, ChevronUp, ChevronDown
+    ShoppingBag, Info, Database, ChevronUp, ChevronDown,
+    Cloud, Sun, CloudRain, CloudLightning, Snowflake, Droplets, Thermometer
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
 import AlertDetailModal from './AlertDetailModal';
@@ -95,9 +97,16 @@ const UserDashboardPanel = () => {
 
     const {
         aiInsights, generatingInsights,
-        enhancing, enhanceText, setEnhanceText,
+        enhancing,
         handleGenerateInsights, handleAutoEnhance,
     } = useAIAdvisor({ t, notes, plots, checklistPct, noteForm, setNoteForm, notifyError, notifySuccess });
+    
+    const { weatherTemp, weatherIcon, forecast, fetchWeather } = useWeather();
+    
+    // ── Initial Weather Fetch ────────────────────────────────────────────────
+    useEffect(() => {
+        getLocation().then(loc => loc && fetchWeather(loc.lat, loc.lng));
+    }, [getLocation, fetchWeather]);
 
     // ── Derived ───────────────────────────────────────────────────────────────
     const email = user?.email ?? '';
@@ -371,6 +380,68 @@ const UserDashboardPanel = () => {
                     </div>
                 )}
 
+                {/* ── Weather & Farming Notice Widgets ────────────────────────── */}
+                {forecast && forecast.length > 0 && (
+                    <div className="udp-section" style={{ padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', background: 'white', marginBottom: '16px' }}>
+                        {/* Farming Notice Banner */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            marginBottom: '16px',
+                            border: '1px solid',
+                            background: forecast[0].notice.status === 'good' ? '#f0fdf4' : forecast[0].notice.status === 'caution' ? '#fffbeb' : '#fef2f2',
+                            borderColor: forecast[0].notice.status === 'good' ? '#bcf0da' : forecast[0].notice.status === 'caution' ? '#fde68a' : '#fecaca',
+                            color: forecast[0].notice.status === 'good' ? '#166534' : forecast[0].notice.status === 'caution' ? '#92400e' : '#991b1b',
+                        }}>
+                            {forecast[0].notice.status === 'good' ? <ShieldCheck size={18} /> : <AlertTriangle size={18} />}
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.025em', marginBottom: '2px' }}>
+                                    {t('profile.farmingNotice') || 'Farming Notice'}
+                                </div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t(forecast[0].notice.key)}</div>
+                            </div>
+                        </div>
+
+                        {/* 5-Day Forecast Row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', overflowX: 'auto', gap: '8px', paddingBottom: '4px' }}>
+                            {forecast.map((day, i) => {
+                                const IconComp = {
+                                    'sun': Sun,
+                                    'cloud-sun': Cloud,
+                                    'cloud': Cloud,
+                                    'cloud-rain': CloudRain,
+                                    'snowflake': Snowflake,
+                                    'cloud-lightning': CloudLightning,
+                                }[day.icon] || Cloud;
+
+                                return (
+                                    <div key={day.date} style={{
+                                        flex: '1 0 60px',
+                                        textAlign: 'center',
+                                        padding: '8px 4px',
+                                        borderRadius: '8px',
+                                        background: i === 0 ? '#f8fafc' : 'transparent',
+                                        border: i === 0 ? '1px solid #e2e8f0' : '1px solid transparent',
+                                    }}>
+                                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', marginBottom: '6px' }}>
+                                            {i === 0 ? t('profile.relToday') : new Date(day.date).toLocaleDateString(t('common.dateLocale') === 'zh-MY' ? 'zh-MY' : 'en-MY', { weekday: 'short' })}
+                                        </div>
+                                        <IconComp size={20} style={{ color: day.icon === 'sun' ? '#f59e0b' : '#3b82f6', marginBottom: '6px' }} />
+                                        <div style={{ fontSize: '0.6rem', color: '#64748b', marginBottom: '4px' }}>{t(day.descKey)}</div>
+                                        <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>{Math.round(day.tempMax)}°</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', fontSize: '0.6rem', color: '#64748b', marginTop: '2px' }}>
+                                            <Droplets size={8} /> {Math.round(day.precip)}mm
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 <div className="udp-stats-row">
                     <div className="udp-stat">
                         <span className="udp-stat-num">{stats.total}</span>
@@ -496,7 +567,7 @@ const UserDashboardPanel = () => {
                         {[
                             { icon: <ShoppingBag size={24} />, label: t('nav.shop') || 'Shop', to: '/shop' },
                             { icon: <CheckSquare size={24} />, label: t('home.mygapTitle') || 'myGAP', to: '/mygap' },
-                            { icon: <Info size={24} />, label: t('home.keyInfo') || 'Crop Advisor', to: '/key-info' },
+                            { icon: <Info size={24} />, label: t('home.keyInfo') || 'Crop Advisor', to: '/encyclopedia' },
                             { icon: <BookOpen size={24} />, label: t('settings.guide') || 'User Guide', to: '/guide' },
                         ].map(a => (
                             <button key={a.to} className="udp-explore-card" onClick={() => navigate(a.to)}>
@@ -748,21 +819,7 @@ const UserDashboardPanel = () => {
             </div>
             {addingNote && (
                 <form className="udp-inline-form" onSubmit={handleAddNote}>
-                    {/* AI Auto-Enhance bar */}
-                    <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div style={{ background: 'white', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Sparkles size={18} color="#8b5cf6" />
-                        </div>
-                        <input className="udp-input" style={{ border: 'none', background: 'transparent', padding: '4px', boxShadow: 'none', fontSize: '0.9rem', fontWeight: 500 }}
-                            placeholder={t('form.nlPlaceholder') || "Type naturally… e.g. 'Sprayed 20L Mancozeb'"}
-                            value={enhanceText} onChange={e => setEnhanceText(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAutoEnhance(); } }}
-                        />
-                        <button type="button" onClick={() => handleAutoEnhance()} disabled={enhancing || !enhanceText.trim()}
-                            style={{ background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: (enhancing || !enhanceText.trim()) ? 0.5 : 1 }}>
-                            {enhancing ? '…' : <><Sparkles size={14} />{t('form.autoEnhance') || 'Enhance'}</>}
-                        </button>
-                    </div>
+                    {/* Form Fields */}
 
                     <div>
                         <label className="udp-form-label">{t('profile.activityType') || 'Activity Type'}</label>
@@ -1146,7 +1203,7 @@ const UserDashboardPanel = () => {
                 .udp-task-content { flex: 1; }
                 .udp-task-title { font-size: 0.9rem; font-weight: 800; color: #92400e; margin-bottom: 2px; }
                 .udp-task-desc { font-size: 0.78rem; color: #b45309; }
-                .udp-tab-actions { display: flex; justify-content: flex-end; }
+                .udp-tab-actions { display: flex; justify-content: flex-end; margin-bottom: 20px; }
                 .udp-add-btn { display: flex; align-items: center; gap: 6px; background: var(--gradient-primary); color: white; border: none; border-radius: var(--radius-sm); padding: var(--radius-sm) var(--radius-lg); font-size: 0.82rem; font-weight: 700; cursor: pointer; }
                 .udp-inline-form { background: white; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--radius-lg); display: flex; flex-direction: column; gap: var(--radius-sm); }
                 .udp-input { width: 100%; padding: var(--radius-sm) var(--radius-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.88rem; color: var(--color-text-primary); outline: none; background: var(--color-bg-secondary); box-sizing: border-box; font-family: inherit; }

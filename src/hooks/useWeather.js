@@ -12,44 +12,44 @@ const wmoIcon = (code) => {
 };
 
 /**
- * Maps a WMO code to a short description string.
+ * Maps a WMO code to a translation key.
  */
-const wmoDesc = (code) => {
-    if (code === 0)            return 'Clear sky';
-    if (code <= 3)             return 'Partly cloudy';
-    if (code <= 49)            return 'Fog / haze';
-    if (code <= 55)            return 'Drizzle';
-    if (code <= 65)            return 'Rain';
-    if (code <= 69)            return 'Freezing rain';
-    if (code <= 79)            return 'Snow';
-    if (code <= 82)            return 'Rain showers';
-    if (code <= 86)            return 'Snow showers';
-    if (code <= 99)            return 'Thunderstorm';
-    return 'Unknown';
+const wmoDescKey = (code) => {
+    if (code === 0)            return 'weather.descClearSky';
+    if (code <= 3)             return 'weather.descPartlyCloudy';
+    if (code <= 49)            return 'weather.descFog';
+    if (code <= 55)            return 'weather.descDrizzle';
+    if (code <= 65)            return 'weather.descRain';
+    if (code <= 69)            return 'weather.descFreezingRain';
+    if (code <= 79)            return 'weather.descSnow';
+    if (code <= 82)            return 'weather.descRainShowers';
+    if (code <= 86)            return 'weather.descSnowShowers';
+    if (code <= 99)            return 'weather.descThunderstorm';
+    return 'weather.descUnknown';
 };
 
 /**
- * Derives farming notice from daily forecast values.
+ * Derives farming notice translation key from daily forecast values.
  * @param {{ precip: number, humidity: number, uvIndex: number, tempMax: number }} day
- * @returns {{ status: 'good'|'caution'|'warning', message: string }}
+ * @returns {{ status: 'good'|'caution'|'warning', key: string }}
  */
 export const deriveFarmingNotice = ({ precip = 0, humidity = 70, uvIndex = 5, tempMax = 30 }) => {
     if (precip > 25) {
-        return { status: 'warning', message: 'Heavy rain expected — avoid spraying, check drainage' };
+        return { status: 'warning', key: 'weather.noticeHeavyRain' };
     }
     if (precip > 8) {
-        return { status: 'caution', message: 'Moderate rain — delay foliar applications' };
+        return { status: 'caution', key: 'weather.noticeModerateRain' };
     }
     if (uvIndex > 9) {
-        return { status: 'caution', message: 'High UV — spray before 9am or after 5pm' };
+        return { status: 'caution', key: 'weather.noticeHighUV' };
     }
     if (tempMax > 36) {
-        return { status: 'caution', message: 'Heat stress risk — irrigate and monitor soil moisture' };
+        return { status: 'caution', key: 'weather.noticeHeatStress' };
     }
     if (humidity < 50) {
-        return { status: 'caution', message: 'Low humidity — watch for spider mite activity' };
+        return { status: 'caution', key: 'weather.noticeLowHumidity' };
     }
-    return { status: 'good', message: 'Good spray window — dry, calm conditions' };
+    return { status: 'good', key: 'weather.noticeGood' };
 };
 
 export const useWeather = () => {
@@ -97,9 +97,9 @@ export const useWeather = () => {
                         humidity,
                         uvIndex,
                         tempMax,
-                        icon:   wmoIcon(code),
-                        desc:   wmoDesc(code),
-                        notice: deriveFarmingNotice({ precip, humidity, uvIndex, tempMax }),
+                        icon:      wmoIcon(code),
+                        descKey:   wmoDescKey(code),
+                        notice:    deriveFarmingNotice({ precip, humidity, uvIndex, tempMax }),
                     };
                 });
                 setForecast(days);

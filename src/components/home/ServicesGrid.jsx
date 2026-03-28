@@ -20,11 +20,10 @@ const ServicesGrid = ({ onNavigate }) => {
             iconClass: 'mygap-icon'
         },
         {
-            path: '/key-info',
+            path: '/encyclopedia',
             icon: <Info size={24} strokeWidth={1.5} />,
             label: t('home.keyInfo'),
             iconClass: 'guide-icon',
-            isStub: true // Mark this as a stub feature
         },
         {
             path: '/guide',

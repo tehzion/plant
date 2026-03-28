@@ -117,7 +117,7 @@ const OverviewTab = ({
 
     const renderTrend = (delta, invert = false) => {
         if (delta === 0) {
-            return <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>-> {t('profile.trendSame') || 'Same'}</span>;
+            return <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{'->'} {t('profile.trendSame') || 'Same'}</span>;
         }
         const isGood = invert ? delta < 0 : delta > 0;
         return (
@@ -345,7 +345,7 @@ const OverviewTab = ({
                         <div className="udp-explore-icon"><CheckSquare size={24} /></div>
                         <span className="udp-explore-label">{t('home.mygapTitle') || 'myGAP Guide'}</span>
                     </button>
-                    <button className="udp-explore-card" onClick={() => navigate('/key-info')}>
+                    <button className="udp-explore-card" onClick={() => navigate('/encyclopedia')}>
                         <div className="udp-explore-icon"><Info size={24} /></div>
                         <span className="udp-explore-label">{t('home.keyInfo') || 'Crop Advisor'}</span>
                     </button>

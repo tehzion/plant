@@ -8,7 +8,7 @@ import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk } from './services/aiService.js';
-import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds } from './services/wooCommerceService.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl } from './services/wooCommerceService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -274,42 +274,59 @@ app.post('/api/products/search', async (req, res, next) => {
             return res.json({ diseaseControl: [], nutrition: [] });
         }
         
-        // 2. Ask GPT-5-mini to pick the best tags & categories, split into treatment vs nutrition
-        console.log(`🛒 GPT-5-mini: Analyzing diagnosis for "${diagnosis.disease}" with ${availableTags.length} tags + ${availableCategories.length} categories...`);
+        // 2. Ask GPT to pick the best tags & categories
+        console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
         const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories);
         
         // 3. Fetch products for each category in parallel
-        const [treatmentProducts, nutritionProducts, allStoreProducts] = await Promise.all([
+        const [treatmentProducts, fertilizerProducts, supplementProducts, allStoreProducts] = await Promise.all([
             getProductsByTagIds(recommendation.treatmentTagIds, recommendation.treatmentCategoryIds),
-            getProductsByTagIds(recommendation.nutritionTagIds, recommendation.nutritionCategoryIds),
+            getProductsByTagIds(recommendation.fertilizerTagIds, recommendation.fertilizerCategoryIds),
+            getProductsByTagIds(recommendation.supplementTagIds, recommendation.supplementCategoryIds),
             getAllProducts()
         ]);
         
-        // Deduplicate (a product might appear in both lists)
-        const treatmentIds = new Set(treatmentProducts.map(p => p.id));
-        let dedupedNutrition = nutritionProducts.filter(p => !treatmentIds.has(p.id));
+        // 4. Group and deduplicate
+        const includedIds = new Set();
         
-        // 4. Fill to 5 products if needed
-        const totalProducts = treatmentProducts.length + dedupedNutrition.length;
-        if (totalProducts < 5 && allStoreProducts.length > 0) {
-            console.log(`ℹ️ Result has ${totalProducts} products. Filling up to 5...`);
-            const existingIds = new Set([...treatmentIds, ...dedupedNutrition.map(p => p.id)]);
-            
-            // Add from allStoreProducts (excluding already included ones)
+        const finalizeList = (list) => {
+            const result = [];
+            for (const p of list) {
+                if (!includedIds.has(p.id)) {
+                    result.push(p);
+                    includedIds.add(p.id);
+                }
+            }
+            return result;
+        };
+
+        const finalTreatment = finalizeList(treatmentProducts);
+        const finalFertilizers = finalizeList(fertilizerProducts);
+        const finalSupplements = finalizeList(supplementProducts);
+        
+        // 5. Fill to 5 products total using "Other Popular"
+        const otherPopular = [];
+        const totalCount = finalTreatment.length + finalFertilizers.length + finalSupplements.length;
+        
+        if (totalCount < 5 && allStoreProducts.length > 0) {
+            console.log(`ℹ️ Result has ${totalCount} products. Adding fillers to Other Popular...`);
             for (const product of allStoreProducts) {
-                if (dedupedNutrition.length + treatmentProducts.length >= 5) break;
-                if (!existingIds.has(product.id)) {
-                    dedupedNutrition.push(product);
-                    existingIds.add(product.id);
+                if (finalTreatment.length + finalFertilizers.length + finalSupplements.length + otherPopular.length >= 5) break;
+                if (!includedIds.has(product.id)) {
+                    otherPopular.push(product);
+                    includedIds.add(product.id);
                 }
             }
         }
 
-        console.log(`✅ Returning ${treatmentProducts.length} treatment + ${dedupedNutrition.length} nutrition/filler products`);
+        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular`);
         res.json({
-            diseaseControl: treatmentProducts,
-            nutrition: dedupedNutrition,
-            reasoning: recommendation.reasoning
+            diseaseControl: finalTreatment,
+            fertilizers: finalFertilizers,
+            supplements: finalSupplements,
+            otherPopular: otherPopular,
+            reasoning: recommendation.reasoning,
+            storeUrl: getStoreUrl()
         });
     } catch (error) {
         console.error('❌ Product search failed:', error);
