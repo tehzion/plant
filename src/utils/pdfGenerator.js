@@ -1,5 +1,4 @@
 import jsPDF from 'jspdf';
-import { getProductRecommendations } from '../data/productRecommendations.js';
 import { isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
 
@@ -532,10 +531,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         });
     }
 
-    const hasExplicitProducts = Object.prototype.hasOwnProperty.call(options, 'productRecommendations');
-    const products = hasExplicitProducts
-        ? (options.productRecommendations || null)
-        : getProductRecommendations(scanData.plantType, scanData.disease);
+    const products = options.productRecommendations || null;
     const fertilizerProducts = products?.fertilizers || products?.nutrition || [];
     const supplementProducts = products?.supplements || [];
     const fallbackProducts = products?.otherPopular || [];

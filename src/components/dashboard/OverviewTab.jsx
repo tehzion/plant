@@ -60,6 +60,12 @@ const OverviewTab = ({
         const value = t(key);
         return value && value !== key ? value : fallback;
     };
+    const resolvedWeatherError = weatherError
+        ? (() => {
+            const value = t(weatherError);
+            return value && value !== weatherError ? value : weatherError;
+        })()
+        : '';
 
     const aiCardData = (aiInsights?.scopeKey === 'overview' ? aiInsights : null) || (
         predictiveRisk
@@ -241,11 +247,11 @@ const OverviewTab = ({
                 <div className="udp-forecast-panel">
                     {(forecast || []).length === 0 ? (
                         <div className="udp-empty-forecast">
-                            {weatherError || label('profile.weatherForecastUnavailable', 'Forecast will appear here after weather data is loaded.')}
+                            {resolvedWeatherError || label('profile.weatherForecastUnavailable', 'Forecast will appear here after weather data is loaded.')}
                         </div>
                     ) : (
                         <>
-                            {weatherError && (
+                            {resolvedWeatherError && (
                                 <div
                                     style={{
                                         margin: '0 0 12px',
@@ -259,7 +265,7 @@ const OverviewTab = ({
                                         fontWeight: 600,
                                     }}
                                 >
-                                    {weatherError}
+                                    {resolvedWeatherError}
                                 </div>
                             )}
                             <div className="udp-forecast-strip">

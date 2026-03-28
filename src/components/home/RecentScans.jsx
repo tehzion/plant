@@ -3,6 +3,23 @@ import { MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { getStandardizedStatus } from '../../utils/statusUtils';
 
+const resolveCategoryLabel = (scan, t) => {
+    const plantType = scan.plantType || '';
+    const key = `home.category${plantType.charAt(0).toUpperCase()}${plantType.slice(1).toLowerCase()}`;
+    const translated = t(key);
+    const finalName = translated.includes('home.category') ? plantType : translated;
+    return finalName.toUpperCase();
+};
+
+const resolveLocationLabel = (scan, t) => {
+    if (!scan.locationName) return '';
+    if (scan.locationName.startsWith('common.')) return t(scan.locationName);
+
+    const translationKey = `common.${scan.locationName}`;
+    const translated = t(translationKey);
+    return translated && translated !== translationKey ? translated : scan.locationName;
+};
+
 const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
     const { t } = useLanguage();
 
@@ -17,57 +34,52 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                     scans.map((scan) => {
                         const standardizedStatus = getStandardizedStatus(scan);
                         const healthy = standardizedStatus === 'healthy';
+                        const imageSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url || '';
+                        const scanTimestamp = scan.timestamp || scan.created_at;
+                        const locationLabel = resolveLocationLabel(scan, t);
 
                         return (
                             <div key={scan.id} className="scan-card" onClick={() => onScanClick(scan.id)}>
-                            <div className="scan-thumbnail">
-                                <img src={scan.image} alt={scan.disease} />
-                            </div>
-                            <div className="scan-details">
-                                <h4 className="scan-disease" title={scan.disease}>{scan.disease}</h4>
-                                <p className="scan-meta">
-                                    {(() => {
-                                        const pType = scan.plantType || '';
-                                        const translated = t(`home.category${pType.charAt(0).toUpperCase() + pType.slice(1).toLowerCase()}`);
-                                        const finalName = translated.includes('home.category') ? pType : translated;
-                                        return finalName.toUpperCase();
-                                    })()} • {new Date(scan.timestamp).toLocaleDateString(t('common.dateLocale') || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </p>
-                                {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
-                                    <p className="scan-location">
-                                        <MapPin size={12} strokeWidth={1.5} /> {scan.locationName.startsWith('common.') 
-                                            ? t(scan.locationName) 
-                                            : t(`common.${scan.locationName}`, scan.locationName)}
-                                    </p>
-                                )}
-                                <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                    <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
-                                        <span className="status-icon" style={{ display: 'flex' }}>
-                                            {healthy ?
-                                                <CheckCircle size={10} strokeWidth={3} /> :
-                                                <AlertTriangle size={10} strokeWidth={3} />
-                                            }
-                                        </span>
-                                        <span className="status-text">{t(`results.${standardizedStatus}`)}</span>
-                                    </div>
-
-                                    {scan.severity && (
-                                        <div className={`badge-severity ${(() => {
-                                            switch (scan.severity?.toLowerCase()) {
-                                                case 'mild':
-                                                case 'rendah': return 'badge-mild';
-                                                case 'moderate':
-                                                case 'sederhana': return 'badge-moderate';
-                                                case 'severe':
-                                                case 'tinggi': return 'badge-severe';
-                                                default: return '';
-                                            }
-                                        })()}`}>
-                                            {t(`results.${(scan.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.severity}
-                                        </div>
-                                    )}
+                                <div className="scan-thumbnail">
+                                    <img src={imageSrc} alt={scan.disease} />
                                 </div>
-                            </div>
+                                <div className="scan-details">
+                                    <h4 className="scan-disease" title={scan.disease}>{scan.disease}</h4>
+                                    <p className="scan-meta">
+                                        {resolveCategoryLabel(scan, t)} • {new Date(scanTimestamp).toLocaleDateString(t('common.dateLocale') || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </p>
+                                    {locationLabel && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
+                                        <p className="scan-location">
+                                            <MapPin size={12} strokeWidth={1.5} /> {locationLabel}
+                                        </p>
+                                    )}
+                                    <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                        <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
+                                            <span className="status-icon" style={{ display: 'flex' }}>
+                                                {healthy
+                                                    ? <CheckCircle size={10} strokeWidth={3} />
+                                                    : <AlertTriangle size={10} strokeWidth={3} />}
+                                            </span>
+                                            <span className="status-text">{t(`results.${standardizedStatus}`)}</span>
+                                        </div>
+
+                                        {scan.severity && (
+                                            <div className={`badge-severity ${(() => {
+                                                switch (scan.severity?.toLowerCase()) {
+                                                    case 'mild':
+                                                    case 'rendah': return 'badge-mild';
+                                                    case 'moderate':
+                                                    case 'sederhana': return 'badge-moderate';
+                                                    case 'severe':
+                                                    case 'tinggi': return 'badge-severe';
+                                                    default: return '';
+                                                }
+                                            })()}`}>
+                                                {t(`results.${(scan.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.severity}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         );
                     })

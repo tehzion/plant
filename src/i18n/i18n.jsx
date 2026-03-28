@@ -17,27 +17,32 @@ export const LanguageProvider = ({ children }) => {
         localStorage.setItem('appLanguage', language);
     }, [language]);
 
+    const isBrokenLocalizedString = (value, activeLanguage) => {
+        if (activeLanguage !== 'zh' || typeof value !== 'string') return false;
+        return /\?{2,}|Â|Ã|ðŸ|â|�/.test(value);
+    };
+
+    const lookupValue = (languageKey, keys) => {
+        let value = translations[languageKey];
+        for (const keyPart of keys) {
+            value = value?.[keyPart];
+            if (value === undefined) return undefined;
+        }
+        return value;
+    };
+
     // Get translation for a given key
     const t = (key) => {
         const keys = key.split('.');
-        let value = translations[language];
 
-        for (const k of keys) {
-            value = value?.[k];
+        let value = lookupValue(language, keys);
+        if (value === undefined || isBrokenLocalizedString(value, language)) {
+            value = lookupValue('en', keys);
             if (value === undefined) {
-                // Fallback to English if translation not found
-                value = translations.en;
-                for (const k2 of keys) {
-                    value = value?.[k2];
-                    if (value === undefined) {
-                        console.warn(`Translation missing for key: ${key}`);
-                        return key;
-                    }
-                }
-                break;
+                console.warn(`Translation missing for key: ${key}`);
+                return key;
             }
         }
-
         return value || key;
     };
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getStandardizedSeverity, getStandardizedStatus } from '../utils/statusUtils';
 import {
     getChecklistState,
     getDailyNotes,
@@ -97,7 +98,7 @@ export const useFarmStats = ({ userId, getLocation, notify, t }) => {
     // ── Derived stats ─────────────────────────────────────────────────────────
     const stats = useMemo(() => {
         const total   = scanHistory.length;
-        const healthy = scanHistory.filter((s) => s.healthStatus === 'healthy').length;
+        const healthy = scanHistory.filter((s) => getStandardizedStatus(s) === 'healthy').length;
         const now = new Date();
         const scannedThisMonth = scanHistory.filter(s => {
             const d = new Date(s.timestamp || s.created_at);
@@ -222,10 +223,11 @@ export const useFarmStats = ({ userId, getLocation, notify, t }) => {
 
         const scanAlerts = scanHistory.filter((scan) => {
             const ts  = new Date(scan.timestamp ?? scan.created_at).getTime();
-            const sev = (scan.severity ?? '').toLowerCase();
+            const standardizedStatus = getStandardizedStatus(scan);
+            const sev = getStandardizedSeverity(scan.severity);
             return ts > cutoff
-                && scan.healthStatus !== 'healthy'
-                && (sev === 'severe' || sev === 'critical' || sev === 'sederhana');
+                && standardizedStatus !== 'healthy'
+                && (sev === 'moderate' || sev === 'severe' || sev === 'critical');
         });
 
         const scoutAlerts = notes

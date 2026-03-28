@@ -408,7 +408,7 @@ ${t('pdf.generatedBy')}
                       {/* Show Estimated Trees for Acre Scale */}
                       {scan.farmScale === 'acre' && (
                         <span style={{ color: '#059669', fontWeight: '600', fontSize: '0.9em' }}>
-                          â‰ˆ {(() => {
+                          ~ {(() => {
                             const densityMap = {
                               'Durian': 35, 'Coconut': 60, 'Banana': 500, 'Cocoa': 450,
                               'Pepper': 700, 'Pineapple': 12000, 'Corn': 20000, 'Rubber': 190,

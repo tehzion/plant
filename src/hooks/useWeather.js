@@ -16,17 +16,17 @@ const wmoIcon = (code) => {
 };
 
 const wmoDescKey = (code) => {
-    if (code === 0) return 'weather.descClearSky';
-    if (code <= 3) return 'weather.descPartlyCloudy';
-    if (code <= 49) return 'weather.descFog';
-    if (code <= 55) return 'weather.descDrizzle';
-    if (code <= 65) return 'weather.descRain';
-    if (code <= 69) return 'weather.descFreezingRain';
-    if (code <= 79) return 'weather.descSnow';
-    if (code <= 82) return 'weather.descRainShowers';
-    if (code <= 86) return 'weather.descSnowShowers';
-    if (code <= 99) return 'weather.descThunderstorm';
-    return 'weather.descUnknown';
+    if (code === 0) return 'profile.weather.descClearSky';
+    if (code <= 3) return 'profile.weather.descPartlyCloudy';
+    if (code <= 49) return 'profile.weather.descFog';
+    if (code <= 55) return 'profile.weather.descDrizzle';
+    if (code <= 65) return 'profile.weather.descRain';
+    if (code <= 69) return 'profile.weather.descFreezingRain';
+    if (code <= 79) return 'profile.weather.descSnow';
+    if (code <= 82) return 'profile.weather.descRainShowers';
+    if (code <= 86) return 'profile.weather.descSnowShowers';
+    if (code <= 99) return 'profile.weather.descThunderstorm';
+    return 'profile.weather.descUnknown';
 };
 
 const buildWeatherCacheKey = (lat, lng) => {
@@ -84,21 +84,21 @@ const writeWeatherCache = (lat, lng, payload) => {
  */
 export const deriveFarmingNotice = ({ precip = 0, humidity = 70, uvIndex = 5, tempMax = 30 }) => {
     if (precip > 25) {
-        return { status: 'warning', key: 'weather.noticeHeavyRain' };
+        return { status: 'warning', key: 'profile.weather.noticeHeavyRain' };
     }
     if (precip > 8) {
-        return { status: 'caution', key: 'weather.noticeModerateRain' };
+        return { status: 'caution', key: 'profile.weather.noticeModerateRain' };
     }
     if (uvIndex > 9) {
-        return { status: 'caution', key: 'weather.noticeHighUV' };
+        return { status: 'caution', key: 'profile.weather.noticeHighUV' };
     }
     if (tempMax > 36) {
-        return { status: 'caution', key: 'weather.noticeHeatStress' };
+        return { status: 'caution', key: 'profile.weather.noticeHeatStress' };
     }
     if (humidity < 50) {
-        return { status: 'caution', key: 'weather.noticeLowHumidity' };
+        return { status: 'caution', key: 'profile.weather.noticeLowHumidity' };
     }
-    return { status: 'good', key: 'weather.noticeGood' };
+    return { status: 'good', key: 'profile.weather.noticeGood' };
 };
 
 export const useWeather = () => {
@@ -129,9 +129,9 @@ export const useWeather = () => {
                 {},
                 {
                     timeoutMs: 10000,
-                    timeoutMessage: 'Weather data is taking too long to load.',
-                    networkMessage: 'Could not reach the weather service.',
-                    unavailableMessage: 'Weather service is temporarily unavailable.',
+                    timeoutMessage: 'profile.weatherErrorTimeout',
+                    networkMessage: 'profile.weatherErrorNetwork',
+                    unavailableMessage: 'profile.weatherErrorUnavailable',
                 },
             );
 
@@ -183,12 +183,18 @@ export const useWeather = () => {
                 setWeatherTemp(cached.weatherTemp);
                 setWeatherIcon(cached.weatherIcon);
                 setForecast(cached.forecast);
-                setError('Showing a recent saved forecast while live weather data is unavailable.');
+                setError('profile.weatherUsingCached');
             } else {
                 setWeatherTemp(null);
                 setWeatherIcon('cloud-sun');
                 setForecast([]);
-                setError(e?.message || 'Weather service is unavailable right now.');
+                if (e?.message === 'profile.weatherErrorTimeout') {
+                    setError('profile.weatherErrorTimeout');
+                } else if (e?.message === 'profile.weatherErrorNetwork') {
+                    setError('profile.weatherErrorNetwork');
+                } else {
+                    setError('profile.weatherErrorUnavailable');
+                }
             }
         } finally {
             setLoading(false);

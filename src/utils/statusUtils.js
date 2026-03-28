@@ -40,13 +40,39 @@ const UNHEALTHY_SEVERITY_KEYWORDS = [
     'mild',
     'moderate',
     'severe',
+    'critical',
     'low',
     'high',
     'rendah',
     'sederhana',
     'tinggi',
-    'kritikal'
+    'kritikal',
+    'kritikal',
+    '严重',
+    '中等',
+    '轻微'
 ];
+
+const SEVERITY_ALIASES = {
+    mild: 'mild',
+    low: 'mild',
+    rendah: 'mild',
+    ringan: 'mild',
+    milds: 'mild',
+    moderate: 'moderate',
+    sederhana: 'moderate',
+    medium: 'moderate',
+    sedang: 'moderate',
+    中等: 'moderate',
+    中度: 'moderate',
+    severe: 'severe',
+    high: 'severe',
+    tinggi: 'severe',
+    teruk: 'severe',
+    严重: 'severe',
+    critical: 'critical',
+    kritikal: 'critical',
+};
 
 /**
  * Checks if a scan result indicates a healthy plant.
@@ -86,4 +112,15 @@ export const isHealthy = (scanOrStatus) => {
  */
 export const getStandardizedStatus = (rawStatus) => {
     return isHealthy(rawStatus) ? 'healthy' : 'unhealthy';
+};
+
+/**
+ * Normalizes stored severity strings across languages/legacy values.
+ * @param {string} rawSeverity
+ * @returns {'mild' | 'moderate' | 'severe' | 'critical' | ''}
+ */
+export const getStandardizedSeverity = (rawSeverity) => {
+    if (!rawSeverity) return '';
+    const normalized = String(rawSeverity).trim().toLowerCase();
+    return SEVERITY_ALIASES[normalized] || '';
 };

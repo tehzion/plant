@@ -38,7 +38,7 @@ const Home = () => {
   // Custom Hooks
   const { getGreeting } = useGreeting();
   const { location, locationName, isLocating, getLocation, setLocationName } = useLocation();
-  const { weatherTemp, weatherIcon, forecast, fetchWeather } = useWeather();
+  const { weatherTemp, weatherIcon, forecast, error: weatherError, fetchWeather } = useWeather();
   const { state: scanState, actions: scanActions } = useScanContext();
   const { user } = useAuth();
   const isMounted = useRef(true);
@@ -282,7 +282,7 @@ const Home = () => {
             onLocationClick={handleLocationClick}
             weatherTemp={weatherTemp}
             weatherIcon={weatherIcon}
-            language={language}
+            weatherError={weatherError}
           />
 
           <ActionGrid onScan={handleStartScan} />
