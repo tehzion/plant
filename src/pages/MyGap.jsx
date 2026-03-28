@@ -13,6 +13,7 @@ import { useNotifications } from '../context/NotificationProvider.jsx';
 import { jsPDF } from 'jspdf';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
 import { createPdfTextRenderer } from '../utils/pdfTextRenderer';
+import { createPdfPageFlow, getPdfTranslation } from '../utils/pdfReportLayout';
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
@@ -90,14 +91,7 @@ const MyGapPage = () => {
         const doc = new jsPDF();
         const renderer = createPdfTextRenderer(doc);
         const reportLang = language || 'en';
-        const rt = (key) => {
-            const keys = key.split('.');
-            let value = translations[reportLang];
-            for (const k of keys) {
-                value = value?.[k];
-            }
-            return value || key;
-        };
+        const rt = (key) => getPdfTranslation(translations, reportLang, key);
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -105,70 +99,26 @@ const MyGapPage = () => {
         const secondaryColor = [232, 245, 233];
         const darkColor = [28, 36, 52];
         const lightText = [100, 116, 139];
-        let yPos = 60;
 
         const pendingLabel = rt('common.pending');
         const pageLabel = rt('common.page');
         const ofLabel = rt('common.of');
-
-        const checkPageBreak = (requiredSpace = 20) => {
-            if (yPos + requiredSpace > pageHeight - 20) {
-                doc.addPage();
-                yPos = 24;
-            }
-        };
-
-        const writeLines = async (lines, options = {}) => {
-            const {
-                x = 14,
-                width = pageWidth - 28,
-                fontSize = 10,
-                fontStyle = 'normal',
-                color = darkColor,
-                gapAfter = 0,
-                align = 'left',
-                lineHeight = 1.35,
-            } = options;
-
-            for (const line of lines) {
-                const text = line || ' ';
-                const textHeight = renderer.measureTextHeight(text, width, { fontSize, fontStyle, lineHeight });
-                checkPageBreak(textHeight + 2);
-                await renderer.drawText(text, x, yPos, {
-                    maxWidth: width,
-                    fontSize,
-                    fontStyle,
-                    color,
-                    align,
-                    lineHeight,
-                });
-                yPos += textHeight;
-            }
-
-            yPos += gapAfter;
-        };
-
-        const writeParagraph = async (text, options = {}) => {
-            const lines = renderer.getWrappedLines(text, options.width ?? pageWidth - 28, options);
-            await writeLines(lines, options);
-        };
-
+        const flow = createPdfPageFlow({
+            doc,
+            renderer,
+            pageWidth,
+            pageHeight,
+            initialY: 60,
+            darkColor,
+        });
+        const { checkPageBreak, writeParagraph } = flow;
         const writeSectionTitle = async (title, options = {}) => {
-            const {
-                fontSize = 14,
-                color = darkColor,
-                marginBottom = 6,
-            } = options;
-
-            const height = renderer.measureTextHeight(title, pageWidth - 28, { fontSize, fontStyle: 'bold' });
-            checkPageBreak(height + marginBottom + 4);
-            await renderer.drawText(title, 14, yPos, {
-                maxWidth: pageWidth - 28,
-                fontSize,
-                fontStyle: 'bold',
-                color,
+            await flow.writeSectionTitle(title, {
+                fontSize: 14,
+                textColor: darkColor,
+                marginBottom: 6,
+                ...options,
             });
-            yPos += height + marginBottom;
         };
 
         doc.setFillColor(...primaryColor);
@@ -244,7 +194,7 @@ const MyGapPage = () => {
             color: darkColor,
         });
 
-        yPos = 85;
+        flow.yPos = 85;
 
         await writeSectionTitle(rt('mygap.checklistTitle'));
 
@@ -273,9 +223,9 @@ const MyGapPage = () => {
             checkPageBreak(rowHeight + 4);
             doc.setFillColor(...(item.complete ? [240, 253, 244] : [248, 250, 252]));
             doc.setDrawColor(226, 232, 240);
-            doc.roundedRect(14, yPos, pageWidth - 28, rowHeight, 3, 3, 'FD');
+            doc.roundedRect(14, flow.yPos, pageWidth - 28, rowHeight, 3, 3, 'FD');
 
-            await renderer.drawText(item.label, 18, yPos + 4, {
+            await renderer.drawText(item.label, 18, flow.yPos + 4, {
                 maxWidth: 112,
                 fontSize: 10,
                 color: darkColor,
@@ -284,8 +234,8 @@ const MyGapPage = () => {
             const badgeWidth = 34;
             const badgeX = pageWidth - 14 - badgeWidth - 4;
             doc.setFillColor(...(item.complete ? primaryColor : [239, 68, 68]));
-            doc.roundedRect(badgeX, yPos + 4, badgeWidth, rowHeight - 8, 3, 3, 'F');
-            await renderer.drawText(statusText, badgeX, yPos + (rowHeight - 8 - (9 * PT_TO_MM * 1.35)) / 2 + 4, {
+            doc.roundedRect(badgeX, flow.yPos + 4, badgeWidth, rowHeight - 8, 3, 3, 'F');
+            await renderer.drawText(statusText, badgeX, flow.yPos + (rowHeight - 8 - (9 * PT_TO_MM * 1.35)) / 2 + 4, {
                 maxWidth: badgeWidth,
                 fontSize: 9,
                 fontStyle: 'bold',
@@ -293,10 +243,10 @@ const MyGapPage = () => {
                 align: 'center',
             });
 
-            yPos += rowHeight + 4;
+            flow.yPos += rowHeight + 4;
         }
 
-        yPos += 8;
+        flow.yPos += 8;
         await writeSectionTitle(rt('mygap.logbookSummary'));
 
         if (logs.length === 0) {
@@ -317,27 +267,27 @@ const MyGapPage = () => {
                 checkPageBreak(cardHeight + 4);
                 doc.setFillColor(248, 250, 252);
                 doc.setDrawColor(226, 232, 240);
-                doc.roundedRect(14, yPos, pageWidth - 28, cardHeight, 3, 3, 'FD');
+                doc.roundedRect(14, flow.yPos, pageWidth - 28, cardHeight, 3, 3, 'FD');
 
-                await renderer.drawText(typeLabel, 18, yPos + 4, {
+                await renderer.drawText(typeLabel, 18, flow.yPos + 4, {
                     maxWidth: 70,
                     fontSize: 9,
                     fontStyle: 'bold',
                     color: primaryColor,
                 });
-                await renderer.drawText(dateLabel, pageWidth - 66, yPos + 4, {
+                await renderer.drawText(dateLabel, pageWidth - 66, flow.yPos + 4, {
                     maxWidth: 48,
                     fontSize: 8,
                     color: lightText,
                     align: 'right',
                 });
-                await renderer.drawText(log.notes || '-', 18, yPos + 11, {
+                await renderer.drawText(log.notes || '-', 18, flow.yPos + 11, {
                     maxWidth: pageWidth - 36,
                     fontSize: 9,
                     color: darkColor,
                 });
 
-                yPos += cardHeight + 4;
+                flow.yPos += cardHeight + 4;
             }
         }
 

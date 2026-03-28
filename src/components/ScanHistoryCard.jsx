@@ -42,9 +42,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
 
   const handleDelete = (e) => {
     e.stopPropagation();
-    if (window.confirm(t('history.confirmDeleteSingle'))) {
-      onDelete(scan.id);
-    }
+    onDelete(scan.id);
   };
 
   return (
