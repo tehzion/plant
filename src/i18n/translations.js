@@ -2294,6 +2294,10 @@ export const translations = {
             buyerPlaceholder: '例如: 郑先生',
             tempPlaceholder: '例如: 28', humPlaceholder: '例如: 75',
             autoFill: '自动填选',
+            autoEnhance: '自动增强',
+            magicEnhance: '智能增强',
+            aiEnhanceFailed: 'AI 增强失败，请检查连接。',
+            enhanceSuccess: '日志已增强 — 请检查下方字段。',
         },
 
         settings: {
