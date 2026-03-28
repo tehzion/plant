@@ -310,7 +310,15 @@ app.post('/api/products/search', async (req, res, next) => {
         ]);
         
         if (availableTags.length === 0 && availableCategories.length === 0) {
-            return res.json({ diseaseControl: [], nutrition: [] });
+            return res.json({
+                diseaseControl: [],
+                fertilizers: [],
+                supplements: [],
+                otherPopular: [],
+                reasoning: '',
+                fallbackMeta: null,
+                storeUrl: getStoreUrl()
+            });
         }
         
         // 2. Ask GPT to pick the best tags & categories
@@ -343,14 +351,15 @@ app.post('/api/products/search', async (req, res, next) => {
         const finalFertilizers = finalizeList(fertilizerProducts);
         const finalSupplements = finalizeList(supplementProducts);
         
-        // 5. Fill to 5 products total using "Other Popular"
-        const otherPopular = [];
+        // 5. Only use clearly labeled fallback products when there are no direct matches
+        let otherPopular = [];
         const totalCount = finalTreatment.length + finalFertilizers.length + finalSupplements.length;
+        let fallbackMeta = null;
         
-        if (totalCount < 5 && allStoreProducts.length > 0) {
-            console.log(`ℹ️ Result has ${totalCount} products. Adding fillers to Other Popular...`);
+        if (totalCount === 0 && allStoreProducts.length > 0) {
+            console.log('ℹ️ No direct diagnosis-matched products found. Adding fallback store suggestions...');
             for (const product of allStoreProducts) {
-                if (finalTreatment.length + finalFertilizers.length + finalSupplements.length + otherPopular.length >= 5) break;
+                if (otherPopular.length >= 5) break;
                 if (!includedIds.has(product.id)) {
                     otherPopular.push(product);
                     includedIds.add(product.id);
@@ -359,12 +368,23 @@ app.post('/api/products/search', async (req, res, next) => {
         }
 
         console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular`);
+        if (totalCount === 0 && otherPopular.length > 0) {
+            fallbackMeta = {
+                used: true,
+                reason: 'No direct diagnosis-matched WooCommerce products were found. These are general store suggestions shown as a fallback.',
+            };
+        } else {
+            otherPopular = [];
+            fallbackMeta = null;
+        }
+
         res.json({
             diseaseControl: finalTreatment,
             fertilizers: finalFertilizers,
             supplements: finalSupplements,
             otherPopular: otherPopular,
             reasoning: recommendation.reasoning,
+            fallbackMeta,
             storeUrl: getStoreUrl()
         });
     } catch (error) {

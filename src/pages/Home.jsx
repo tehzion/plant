@@ -302,9 +302,11 @@ const Home = () => {
 
           <DailyTips />
 
-          <ServicesGrid onNavigate={(path, isStub) => {
+          <ServicesGrid onNavigate={(path, isStub, external) => {
             if (isStub) {
               handleFeatureStub();
+            } else if (external) {
+              window.open(path, '_blank', 'noopener,noreferrer');
             } else {
               navigate(path);
             }

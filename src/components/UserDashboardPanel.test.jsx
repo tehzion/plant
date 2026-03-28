@@ -10,6 +10,10 @@ const translationMap = {
     'profile.tabReports': 'Reports',
     'profile.tabPlots': 'Plots',
     'profile.tabNotes': 'Daily Log',
+    'profile.tabProducts': 'Products',
+    'profile.productsCatalogSubtitle': 'Browse the live MojoSense catalog without leaving your dashboard.',
+    'profile.openFullCatalog': 'Open Full Catalog',
+    'nav.shop': 'Shop',
     'home.onlineStatus': 'Online',
     'common.signOut': 'Sign out',
     'profile.verifiedFarmer': 'Verified Farmer',
@@ -129,6 +133,10 @@ vi.mock('./dashboard/NotesTab', () => ({
     ),
 }));
 
+vi.mock('./dashboard/ProductsTab', () => ({
+    default: () => <div data-testid="products-tab">Products tab</div>,
+}));
+
 vi.mock('./AlertDetailModal', () => ({
     default: () => <div data-testid="alert-modal">Alert modal</div>,
 }));
@@ -162,5 +170,13 @@ describe('UserDashboardPanel', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Prefill treatment' }));
 
         expect(screen.getByTestId('notes-tab')).toHaveTextContent('spray|Copper|[AI Suggested] Risk warning');
+    });
+
+    it('renders the products tab after switching from the dashboard shell', () => {
+        render(<UserDashboardPanel />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Products' }));
+
+        expect(screen.getByTestId('products-tab')).toBeInTheDocument();
     });
 });

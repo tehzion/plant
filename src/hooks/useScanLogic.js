@@ -4,8 +4,6 @@ import { imageToBase64, analyzePlantDisease, analyzeLocalImageQuality } from '..
 import {
     consumeStorageCleanupNotice,
     saveScan,
-    saveDailyNote,
-    saveLogEntry,
 } from '../utils/localStorage';
 import { getStandardizedStatus } from '../utils/statusUtils';
 import { useAuth } from '../context/AuthContext';
@@ -107,6 +105,11 @@ export const useScanLogic = () => {
                     qualityError.code = treeQuality.retakeReason || 'LOW_IMAGE_QUALITY';
                     throw qualityError;
                 }
+                if (leafQuality?.requiresRetake) {
+                    const qualityError = new Error(leafQuality.retakeReason || 'LOW_IMAGE_QUALITY');
+                    qualityError.code = leafQuality.retakeReason || 'LOW_IMAGE_QUALITY';
+                    throw qualityError;
+                }
 
                 const treeImageBase64 = await imageToBase64(currentState.selectedImage);
                 const leafImageBase64 = currentState.selectedLeafImage ? await imageToBase64(currentState.selectedLeafImage) : null;
@@ -151,23 +154,6 @@ export const useScanLogic = () => {
                 }
 
                 // ── Sync: Auto-log a "Scouting" activity for the dashboard ──────
-                if (savedScan) {
-                    await saveDailyNote({
-                        activity_type: 'scout',
-                        note: `${t('profile.scoutFromScan') || 'Autonomous scouting via AI Scan'}: ${result.disease || 'Healthy'} (${standardizedHealthStatus})`,
-                        disease_incidence: standardizedHealthStatus === 'healthy' ? 0 : 5, // Representative value
-                        scout_severity: result.severity || (standardizedHealthStatus === 'healthy' ? 'Low' : 'Moderate'),
-                        disease_name_observed: result.disease || null,
-                        plant_part: result.plantPart || null,
-                        created_at: new Date().toISOString()
-                    }, user?.id ?? null).catch(e => console.error('Auto-log failed:', e));
-
-                    await saveLogEntry({
-                        type: t('profile.actScout') || 'Scout',
-                        notes: `${t('profile.scoutFromScan') || 'Autonomous scouting via AI Scan'}: ${result.disease || 'Healthy'} (${standardizedHealthStatus})`,
-                    }, user?.id ?? null).catch(e => console.error('Logbook sync failed:', e));
-                }
-
                 dispatch({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;
             };

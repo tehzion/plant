@@ -4,14 +4,15 @@ import { useLanguage } from '../../i18n/i18n.jsx';
 
 const ServicesGrid = ({ onNavigate }) => {
     const { t } = useLanguage();
+    const shopUrl = 'https://www.mojosense.app/kanb/products/';
 
     const services = [
         {
-            path: '/shop',
+            path: shopUrl,
             icon: <ShoppingBag size={24} strokeWidth={1.5} />,
             label: t('nav.shop'),
             iconClass: 'shop-icon',
-            isStub: true // Mark this as a stub feature
+            external: true,
         },
         {
             path: '/mygap',
@@ -43,7 +44,7 @@ const ServicesGrid = ({ onNavigate }) => {
                     <div
                         key={service.path}
                         className="service-card"
-                        onClick={() => onNavigate(service.path, service.isStub)}
+                        onClick={() => onNavigate(service.path, service.isStub, service.external)}
                     >
                         <div className={`service-icon ${service.iconClass}`}>
                             {service.icon}

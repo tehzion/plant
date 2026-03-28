@@ -38,7 +38,8 @@ vi.mock('jspdf', () => ({
 vi.mock('../data/productRecommendations.js', () => ({
     getProductRecommendations: () => ({
         diseaseControl: [],
-        nutrition: [],
+        fertilizers: [],
+        supplements: [],
     }),
 }));
 
@@ -119,6 +120,7 @@ describe('pdfGenerator', () => {
                         diseaseControlProducts: 'Disease Control',
                         growthAndMaintenance: 'Growth & Maintenance',
                         fertilizersAndNutrition: 'Fertilizers & Nutrition',
+                        recommendedSupplements: 'Recommended Supplements',
                     },
                     home: {
                         categoryFruits: 'Fruits',

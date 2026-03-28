@@ -22,6 +22,7 @@ import OverviewTab  from './dashboard/OverviewTab';
 import ReportsTab   from './dashboard/ReportsTab';
 import PlotsTab     from './dashboard/PlotsTab';
 import NotesTab     from './dashboard/NotesTab';
+import ProductsTab  from './dashboard/ProductsTab';
 import AlertDetailModal from './AlertDetailModal';
 
 // ─── Helper: friendly relative date ─────────────────────────────────────────
@@ -142,6 +143,7 @@ const UserDashboardPanel = () => {
         { id: 'reports',  label: t('profile.tabReports')  || 'Reports'   },
         { id: 'plots',    label: t('profile.tabPlots')    || 'Plots'     },
         { id: 'notes',    label: t('profile.tabNotes')    || 'Daily Log' },
+        { id: 'products', label: t('profile.tabProducts') || 'Products'  },
     ];
 
     // ── Handlers ──────────────────────────────────────────────────────────────
@@ -469,6 +471,10 @@ const UserDashboardPanel = () => {
                         ACTIVITY_BADGE_COLOR={ACTIVITY_BADGE_COLOR}
                         relDate={relDate}
                     />
+                )}
+
+                {tab === 'products' && (
+                    <ProductsTab />
                 )}
             </div>
 

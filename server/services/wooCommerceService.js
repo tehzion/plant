@@ -10,6 +10,29 @@ const productCache = new NodeCache({ stdTTL: 3600 });
 const tagCache = new NodeCache({ stdTTL: 21600 });
 const categoryCache = new NodeCache({ stdTTL: 21600 });
 
+const sanitizeProductDescription = (value = '') => String(value)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const transformWooProduct = (product) => ({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    regularPrice: product.regular_price,
+    salePrice: product.sale_price,
+    description: sanitizeProductDescription(product.short_description || product.description),
+    image: product.images?.[0]?.src || null,
+    permalink: product.permalink,
+    cartUrl: `${process.env.WOOCOMMERCE_URL}/cart/?add-to-cart=${product.id}`,
+    categories: product.categories?.map((category) => category.name) || [],
+    categoryIds: product.categories?.map((category) => category.id) || [],
+    tags: product.tags?.map((tag) => tag.name) || [],
+    tagIds: product.tags?.map((tag) => tag.id) || [],
+});
+
 /**
  * Get WooCommerce API credentials from environment
  */
@@ -76,17 +99,16 @@ export const getAllTags = async () => {
             const tags = await response.json();
             if (!tags || tags.length === 0) break;
 
-            allTags.push(...tags.map(t => ({
-                id: t.id,
-                name: t.name,
-                count: t.count
+            allTags.push(...tags.map((tag) => ({
+                id: tag.id,
+                name: tag.name,
+                count: tag.count,
             })));
 
-            page++;
+            page += 1;
         }
 
-        // Filter out empty tags (count = 0)
-        const usefulTags = allTags.filter(t => t.count > 0);
+        const usefulTags = allTags.filter((tag) => tag.count > 0);
 
         tagCache.set(cacheKey, usefulTags);
         console.log(`✅ Cached ${usefulTags.length} product tags from WooCommerce`);
@@ -129,17 +151,17 @@ export const getAllCategories = async () => {
             const categories = await response.json();
             if (!categories || categories.length === 0) break;
 
-            allCategories.push(...categories.map(c => ({
-                id: c.id,
-                name: c.name,
-                count: c.count,
-                parent: c.parent
+            allCategories.push(...categories.map((category) => ({
+                id: category.id,
+                name: category.name,
+                count: category.count,
+                parent: category.parent,
             })));
 
-            page++;
+            page += 1;
         }
 
-        const usefulCategories = allCategories.filter(c => c.count > 0);
+        const usefulCategories = allCategories.filter((category) => category.count > 0);
 
         categoryCache.set(cacheKey, usefulCategories);
         console.log(`✅ Cached ${usefulCategories.length} product categories from WooCommerce`);
@@ -151,7 +173,7 @@ export const getAllCategories = async () => {
 };
 
 /**
- * Fetch all products from WooCommerce (cached)
+ * Fetch all products from WooCommerce (cached, paginated)
  * @returns {Promise<Array>} Array of products
  */
 export const getAllProducts = async () => {
@@ -162,39 +184,31 @@ export const getAllProducts = async () => {
         return cached;
     }
 
-    const apiUrl = buildApiUrl('products', { per_page: 100, status: 'publish' });
-    if (!apiUrl) return [];
-
     try {
         console.log('🛒 Fetching products from WooCommerce...');
-        const response = await fetch(apiUrl);
+        let allProducts = [];
+        let page = 1;
 
-        if (!response.ok) {
-            throw new Error(`WooCommerce API error: ${response.status}`);
+        while (true) {
+            const apiUrl = buildApiUrl('products', { per_page: 100, status: 'publish', page });
+            if (!apiUrl) break;
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`WooCommerce API error: ${response.status}`);
+            }
+
+            const products = await response.json();
+            if (!products || products.length === 0) break;
+
+            allProducts.push(...products.map(transformWooProduct));
+            page += 1;
         }
 
-        const products = await response.json();
+        productCache.set(cacheKey, allProducts);
+        console.log(`✅ Cached ${allProducts.length} products from WooCommerce`);
 
-        const transformedProducts = products.map(p => ({
-            id: p.id,
-            name: p.name,
-            price: p.price,
-            regularPrice: p.regular_price,
-            salePrice: p.sale_price,
-            description: p.short_description || p.description,
-            image: p.images?.[0]?.src || null,
-            permalink: p.permalink,
-            cartUrl: `${process.env.WOOCOMMERCE_URL}/cart/?add-to-cart=${p.id}`,
-            categories: p.categories?.map(c => c.name) || [],
-            categoryIds: p.categories?.map(c => c.id) || [],
-            tags: p.tags?.map(t => t.name) || [],
-            tagIds: p.tags?.map(t => t.id) || []
-        }));
-
-        productCache.set(cacheKey, transformedProducts);
-        console.log(`✅ Cached ${transformedProducts.length} products from WooCommerce`);
-
-        return transformedProducts;
+        return allProducts;
     } catch (error) {
         console.error('❌ WooCommerce fetch failed:', error.message);
         return [];
@@ -216,21 +230,21 @@ export const getProductsByTagIds = async (tagIds, categoryIds = []) => {
     const tagIdSet = new Set(tagIds || []);
     const catIdSet = new Set(categoryIds || []);
 
-    const scoredProducts = allProducts.map(product => {
+    const scoredProducts = allProducts.map((product) => {
         let score = 0;
-        product.tagIds.forEach(tid => {
-            if (tagIdSet.has(tid)) score += 2; // Tag match weighted higher
+        product.tagIds.forEach((tagId) => {
+            if (tagIdSet.has(tagId)) score += 2;
         });
-        product.categoryIds.forEach(cid => {
-            if (catIdSet.has(cid)) score += 1; // Category match
+        product.categoryIds.forEach((categoryId) => {
+            if (catIdSet.has(categoryId)) score += 1;
         });
         return { product, score };
     });
 
     return scoredProducts
-        .filter(p => p.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .map(p => p.product)
+        .filter((entry) => entry.score > 0)
+        .sort((left, right) => right.score - left.score)
+        .map((entry) => entry.product)
         .slice(0, 10);
 };
 

@@ -528,7 +528,14 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     }
 
     const products = getProductRecommendations(scanData.plantType, scanData.disease);
-    if (products && (products.diseaseControl?.length > 0 || products.nutrition?.length > 0)) {
+    const fertilizerProducts = products?.fertilizers || products?.nutrition || [];
+    const supplementProducts = products?.supplements || [];
+
+    if (products && (
+        products.diseaseControl?.length > 0
+        || fertilizerProducts.length > 0
+        || supplementProducts.length > 0
+    )) {
         await writeSectionTitle(t('pdf.productRecommendations'), {
             textColor: primaryColor,
             fontSize: 14,
@@ -571,11 +578,12 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
 
         await renderProductList(products.diseaseControl, t('results.diseaseControlProducts'));
         await renderProductList(
-            products.nutrition,
+            fertilizerProducts,
             (!scanData.disease || healthy)
                 ? t('results.growthAndMaintenance')
                 : t('results.fertilizersAndNutrition'),
         );
+        await renderProductList(supplementProducts, t('results.recommendedSupplements'));
     }
 
     const pageCount = doc.internal.getNumberOfPages();

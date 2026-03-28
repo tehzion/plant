@@ -79,6 +79,32 @@ describe('aiService helpers', () => {
         expect(aiService.isGenericProductName(normalized.fertilizerRecommendations[0].fertilizerName)).toBe(false);
     });
 
+    it('normalizes deficient nutrient items into a stable object shape', () => {
+        expect(aiService.normalizeDeficientNutrients([
+            'Potassium',
+            {
+                name: 'Magnesium',
+                severity: 'Moderate',
+                symptoms: 'Interveinal chlorosis',
+                actions: ['Apply kieserite'],
+            },
+            null,
+        ])).toEqual([
+            {
+                nutrient: 'Potassium',
+                severity: '',
+                symptoms: [],
+                recommendations: [],
+            },
+            {
+                nutrient: 'Magnesium',
+                severity: 'Moderate',
+                symptoms: ['Interveinal chlorosis'],
+                recommendations: ['Apply kieserite'],
+            },
+        ]);
+    });
+
     it('builds contextual ask-AI summaries from recent notes and alerts', () => {
         const summary = aiService.buildAskAIContextSummary(
             [
@@ -188,5 +214,31 @@ describe('aiService helpers', () => {
         expect(risk.recommendedTreatment.activity).toBe('inspect');
         expect(risk.recommendedTreatment.chemical).toBeNull();
         expect(risk.recommendedTreatment.prefillAllowed).toBe(true);
+    });
+
+    it('drops invalid WooCommerce tag and category ids from AI product selections', () => {
+        const validated = aiService.validateProductRecommendationSelection(
+            {
+                treatmentTagIds: ['10', '999', '10'],
+                treatmentCategoryIds: [3, 'oops'],
+                fertilizerTagIds: [22],
+                fertilizerCategoryIds: [44],
+                supplementTagIds: ['77', 'abc'],
+                supplementCategoryIds: [88, 9999],
+                reasoning: 'Matched store catalog ids only.',
+            },
+            [{ id: 10 }, { id: 22 }, { id: 77 }],
+            [{ id: 3 }, { id: 44 }, { id: 88 }],
+        );
+
+        expect(validated).toEqual({
+            treatmentTagIds: [10],
+            treatmentCategoryIds: [3],
+            fertilizerTagIds: [22],
+            fertilizerCategoryIds: [44],
+            supplementTagIds: [77],
+            supplementCategoryIds: [88],
+            reasoning: 'Matched store catalog ids only.',
+        });
     });
 });

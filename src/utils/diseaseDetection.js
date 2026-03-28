@@ -180,9 +180,6 @@ export const analyzeLocalImageQuality = (file, maxWidth = 640) => {
  * @param {string} language - Language code ('en', 'ms', or 'zh')
  * @returns {Promise<Object>} Analysis result
  */
-// Import disease database for fallback/mock data
-import { getMockAnalysisResult } from './mockData';
-
 export const analyzePlantDisease = async (
   treeImageBase64,
   category,
@@ -226,14 +223,6 @@ export const analyzePlantDisease = async (
 
   } catch (error) {
     console.warn('Disease detection API failed:', error);
-
-    // Safety: Only fallback to mock data in development or if the API URL is local
-    const isLocal = API_URL.includes('localhost') || API_URL === '';
-    if (import.meta.env.DEV || isLocal) {
-      console.log('Using local fallback (Development/Local mode only)');
-      return await getMockAnalysisResult(treeImageBase64, category, language);
-    }
-
     throw error;
   }
 };

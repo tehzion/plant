@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { getScanById } from '../utils/localStorage';
-import { imageToBase64 } from '../utils/diseaseDetection';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import { generatePDFReport } from '../utils/pdfGenerator';
@@ -18,7 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
-import { isHealthy, getStandardizedStatus } from '../utils/statusUtils';
+import { getStandardizedStatus } from '../utils/statusUtils';
 
 const Results = () => {
   const { id } = useParams();
@@ -79,7 +78,7 @@ const Results = () => {
 
   const result = {
     healthStatus: getStandardizedStatus(scan),
-    status: scan.status || 'confirmed',
+    status: scan.status || null,
     plantType: scan.plantType,
     disease: scan.disease,
     fungusType: scan.fungusType,
@@ -102,6 +101,7 @@ const Results = () => {
     diagnosticEvidence: scan.diagnosticEvidence,
     identification: scan.identification,
     identificationSource: scan.identificationSource,
+    speciesAssessment: scan.speciesAssessment,
     productSearchTags: scan.productSearchTags || []
   };
 
@@ -141,6 +141,22 @@ const Results = () => {
       }
       return [];
     };
+
+    const normalizeDeficientNutrients = (value) => {
+      if (!Array.isArray(value)) return [];
+      return value
+        .map((item) => {
+          if (typeof item === 'string') return item.trim();
+          if (item && typeof item === 'object') {
+            return String(item.nutrient || item.name || item.label || '').trim();
+          }
+          return '';
+        })
+        .filter(Boolean);
+    };
+
+    const nutrientNames = normalizeDeficientNutrients(scan.nutritionalIssues?.deficientNutrients);
+    const nutrientSymptoms = normalizeList(scan.nutritionalIssues?.symptoms);
 
     const report = `
 ${t('pdf.title')}
@@ -191,8 +207,8 @@ ${normalizeList(scan.prevention).map((prev, i) => `${i + 1}. ${prev}`).join('\n'
 
 ${scan.nutritionalIssues?.hasDeficiency ? `
 ${t('results.nutritionalIssues')}:
-${t('results.lackingNutrients')}: ${scan.nutritionalIssues.deficientNutrients?.join(', ')}
-${t('results.symptoms')}: ${scan.nutritionalIssues.symptoms}
+${t('results.lackingNutrients')}: ${nutrientNames.join(', ')}
+${t('results.symptoms')}: ${nutrientSymptoms.join(', ')}
 ${t('results.severity')}: ${scan.nutritionalIssues.severity}
 ` : ''}
 
@@ -215,13 +231,22 @@ ${t('pdf.generatedBy')}
   };
 
   const handleShare = async () => {
+    const shareText = [
+      `${t('pdf.title') || 'Plant Analysis Report'}`,
+      `${t('results.plantType')}: ${scan.plantType || t('common.unknown')}`,
+      `${t('results.disease')}: ${scan.disease || t('results.unknownDisease')}`,
+      `${t('results.status')}: ${t(`results.${standardizedStatus}`)}`,
+      scan.severity ? `${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}` : '',
+      scan.confidence ? `${t('results.confidence')}: ${scan.confidence}%` : '',
+      scan.additionalNotes || '',
+    ].filter(Boolean).join('\n');
+
     // Try Native Share API first (Mobile)
     if (navigator.share) {
       try {
         await navigator.share({
           title: t('pdf.title') || 'Plant Analysis Report',
-          text: `${t('results.disease')}: ${scan.disease} (${t(`results.${standardizedStatus}`)})`,
-          url: window.location.href,
+          text: shareText,
         });
         return;
       } catch (err) {
@@ -231,21 +256,21 @@ ${t('pdf.generatedBy')}
 
     // Fallback to Clipboard
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      showToast(t('results.linkCopied'), 'success');
+      await navigator.clipboard.writeText(shareText);
+      showToast(t('results.shareSummaryCopied') || 'Summary copied for sharing.', 'success');
     } catch (err) {
       console.error('Failed to copy link:', err);
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
-      textArea.value = window.location.href;
+      textArea.value = shareText;
       document.body.appendChild(textArea);
       textArea.select();
       try {
         document.execCommand('copy');
-        showToast(t('results.linkCopied'), 'success');
+        showToast(t('results.shareSummaryCopied') || 'Summary copied for sharing.', 'success');
       } catch (err) {
         console.error('Fallback copy failed', err);
-        showToast(t('results.copyFailed'), 'error');
+        showToast(t('results.shareSummaryCopyFailed') || 'Failed to copy summary.', 'error');
       }
       document.body.removeChild(textArea);
     }

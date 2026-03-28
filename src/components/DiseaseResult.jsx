@@ -64,12 +64,16 @@ const DiseaseResult = ({ result, image, leafImage }) => {
   };
 
   const healthy = isHealthy(result);
-  const resultState = result.status || (healthy ? 'confirmed' : 'likely');
+  const resultState = result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
   const differentials = Array.isArray(result.differentialDiagnoses)
     ? result.differentialDiagnoses.filter(Boolean)
     : [];
   const confidenceBreakdown = result.confidenceBreakdown || null;
   const diagnosticEvidence = result.diagnosticEvidence || null;
+  const showIdentification = Boolean(
+    result.identification
+    && (result.speciesAssessment?.confirmed ?? (Number(result.identification?.confidence) >= 60))
+  );
   const symptomsList = Array.isArray(result.symptoms)
     ? result.symptoms.filter(Boolean)
     : (typeof result.symptoms === 'string'
@@ -198,7 +202,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
                   )}
 
                   {/* Species Identification (PlantNet) */}
-                  {result.identification && (
+                  {showIdentification && (
                     <div className="species-id-info" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
                       <Leaf size={14} color="#059669" />
                       <span>

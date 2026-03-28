@@ -238,6 +238,46 @@ const normalizeArray = (value) => {
     return [];
 };
 
+const normalizeDeficientNutrientItem = (item) => {
+    if (!item) return null;
+
+    if (typeof item === 'string') {
+        const nutrient = item.trim();
+        if (!nutrient) return null;
+        return {
+            nutrient,
+            severity: '',
+            symptoms: [],
+            recommendations: [],
+        };
+    }
+
+    if (typeof item !== 'object') return null;
+
+    const nutrient = String(item.nutrient || item.name || item.label || '').trim();
+    const symptoms = normalizeArray(item.symptoms);
+    const recommendations = normalizeArray(item.recommendations || item.actions || item.treatments);
+    const severity = String(item.severity || '').trim();
+
+    if (!nutrient && symptoms.length === 0 && recommendations.length === 0) {
+        return null;
+    }
+
+    return {
+        nutrient: nutrient || 'Unknown',
+        severity,
+        symptoms,
+        recommendations,
+    };
+};
+
+export const normalizeDeficientNutrients = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items
+        .map((item) => normalizeDeficientNutrientItem(item))
+        .filter(Boolean);
+};
+
 const normalizeDiseaseCategory = (value = '') => {
     const normalized = String(value).trim().toLowerCase();
     if (!normalized) return 'unknown';
@@ -450,6 +490,10 @@ export function normalizeAnalysisResult(result = {}, language = 'en', malaysiaCr
 
     return {
         ...result,
+        nutritionalIssues: {
+            ...(result.nutritionalIssues || {}),
+            deficientNutrients: normalizeDeficientNutrients(result?.nutritionalIssues?.deficientNutrients),
+        },
         fertilizerRecommendations: normalizedRecommendations,
     };
 }
@@ -1747,9 +1791,7 @@ const mergeDiagnosisResult = ({
         hasDeficiency: Boolean(merged.nutritionalIssues?.hasDeficiency),
         severity: merged.nutritionalIssues?.severity || 'Mild',
         symptoms: normalizeArray(merged.nutritionalIssues?.symptoms),
-        deficientNutrients: Array.isArray(merged.nutritionalIssues?.deficientNutrients)
-            ? merged.nutritionalIssues.deficientNutrients
-            : [],
+        deficientNutrients: normalizeDeficientNutrients(merged.nutritionalIssues?.deficientNutrients),
     };
 
     if (merged.requiresRetake && merged.immediateActions.length === 0) {
@@ -2289,10 +2331,47 @@ function ensureCarePlan(result, language) {
  * @param {Array} availableCategories - Array of { id, name } from WooCommerce
  * @returns {Promise<Object>} { treatmentTagIds, treatmentCategoryIds, nutritionTagIds, nutritionCategoryIds, reasoning }
  */
+const normalizeRecommendedCatalogIds = (ids, validIds) => {
+    if (!Array.isArray(ids)) return [];
+
+    const unique = new Set();
+    ids.forEach((value) => {
+        const numeric = Number.parseInt(value, 10);
+        if (Number.isInteger(numeric) && validIds.has(numeric)) {
+            unique.add(numeric);
+        }
+    });
+
+    return [...unique];
+};
+
+export const validateProductRecommendationSelection = (recommendation = {}, availableTags = [], availableCategories = []) => {
+    const validTagIds = new Set((availableTags || []).map((tag) => Number(tag.id)).filter(Number.isInteger));
+    const validCategoryIds = new Set((availableCategories || []).map((category) => Number(category.id)).filter(Number.isInteger));
+
+    return {
+        treatmentTagIds: normalizeRecommendedCatalogIds(recommendation.treatmentTagIds, validTagIds),
+        treatmentCategoryIds: normalizeRecommendedCatalogIds(recommendation.treatmentCategoryIds, validCategoryIds),
+        fertilizerTagIds: normalizeRecommendedCatalogIds(recommendation.fertilizerTagIds, validTagIds),
+        fertilizerCategoryIds: normalizeRecommendedCatalogIds(recommendation.fertilizerCategoryIds, validCategoryIds),
+        supplementTagIds: normalizeRecommendedCatalogIds(recommendation.supplementTagIds, validTagIds),
+        supplementCategoryIds: normalizeRecommendedCatalogIds(recommendation.supplementCategoryIds, validCategoryIds),
+        reasoning: recommendation.reasoning || '',
+    };
+};
+
 export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = []) {
     if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
         console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');
-        return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
+        return {
+            treatmentTagIds: [],
+            treatmentCategoryIds: [],
+            fertilizerTagIds: [],
+            fertilizerCategoryIds: [],
+            supplementTagIds: [],
+            supplementCategoryIds: [],
+            reasoning: '',
+        };
     }
 
     // Cache key based on comprehensive diagnosis signature to prevent cross-crop collisions
@@ -2397,7 +2476,7 @@ Return JSON with three separate recommendation groups:
 
         const result = JSON.parse(jsonMatch[0]);
 
-        const output = {
+        const output = validateProductRecommendationSelection({
             treatmentTagIds: result.treatment?.tagIds || [],
             treatmentCategoryIds: result.treatment?.categoryIds || [],
             fertilizerTagIds: result.fertilizer?.tagIds || [],
@@ -2405,7 +2484,7 @@ Return JSON with three separate recommendation groups:
             supplementTagIds: result.supplement?.tagIds || [],
             supplementCategoryIds: result.supplement?.categoryIds || [],
             reasoning: result.reasoning || ''
-        };
+        }, availableTags, availableCategories);
 
         console.log(`✅ GPT-5 mini recommended Treatment: ${output.treatmentTagIds.length} | Fertilizer: ${output.fertilizerTagIds.length} | Supplement: ${output.supplementTagIds.length}`);
         console.log(`   Reason: ${output.reasoning}`);
@@ -2417,7 +2496,15 @@ Return JSON with three separate recommendation groups:
 
     } catch (error) {
         console.error('❌ GPT-5 mini product recommendation failed:', error.message);
-        return { treatmentTagIds: [], treatmentCategoryIds: [], nutritionTagIds: [], nutritionCategoryIds: [] };
+        return {
+            treatmentTagIds: [],
+            treatmentCategoryIds: [],
+            fertilizerTagIds: [],
+            fertilizerCategoryIds: [],
+            supplementTagIds: [],
+            supplementCategoryIds: [],
+            reasoning: '',
+        };
     }
 }
 

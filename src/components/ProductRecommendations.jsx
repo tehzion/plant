@@ -3,7 +3,25 @@ import { suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
 import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX } from 'lucide-react';
-import { isHealthy } from '../utils/statusUtils';
+import { showToast } from '../utils/toast';
+
+const sanitizeProductDescription = (value) => {
+  if (!value) return '';
+
+  if (typeof window !== 'undefined' && typeof window.DOMParser !== 'undefined') {
+    const parser = new window.DOMParser();
+    const doc = parser.parseFromString(String(value), 'text/html');
+    doc.querySelectorAll('script, style, iframe, object, embed').forEach((node) => node.remove());
+    return (doc.body.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  return String(value)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) => {
   const { t } = useLanguage();
@@ -12,17 +30,23 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
   const [error, setError] = useState(null);
   const [reasoning, setReasoning] = useState('');
-  const [storeUrl, setStoreUrl] = useState('https://www.mojosense.app/kanb');
+  const [fallbackMeta, setFallbackMeta] = useState(null);
+  const [storeUrl, setStoreUrl] = useState('');
 
   useEffect(() => {
     const fetchProducts = async () => {
       if (!plantType && !disease) {
-        setProducts({ diseaseControl: [], nutrition: [] });
+        setProducts({ diseaseControl: [], fertilizers: [], supplements: [], otherPopular: [] });
+        setFallbackMeta(null);
+        setSelectedProductIds(new Set());
+        setReasoning('');
+        setStoreUrl('');
         return;
       }
 
       setLoading(true);
       setError(null);
+      setSelectedProductIds(new Set());
       try {
         const url = `${import.meta.env.VITE_API_URL || ''}/api/products/search`;
         const response = await fetch(url, {
@@ -52,8 +76,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
           supplements: data.supplements || [],
           otherPopular: data.otherPopular || []
         });
-        if (data.reasoning) setReasoning(data.reasoning);
-        if (data.storeUrl) setStoreUrl(data.storeUrl);
+        setFallbackMeta(data.fallbackMeta || null);
+        setReasoning(data.reasoning || '');
+        setStoreUrl(data.storeUrl || '');
       } catch (err) {
         console.error('Failed to load recommended products:', err);
         setError(t('results.productsError') || 'Could not load specialized products at this time.');
@@ -66,6 +91,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
   }, [plantType, disease, scanResult, t]);
 
   const toggleProductSelection = (productId) => {
+    if (!productId) return;
     setSelectedProductIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(productId)) {
@@ -79,6 +105,13 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
 
   const handleCheckout = () => {
     if (selectedProductIds.size === 0) return;
+    if (!storeUrl) {
+      showToast(
+        t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.',
+        'warning',
+      );
+      return;
+    }
     
     // WooCommerce Bulk Add-to-Cart format
     // https://your-store.com/cart/?add-to-cart=ID1,ID2&quantity=1,1
@@ -90,6 +123,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
     
     window.open(checkoutUrl, '_blank');
   };
+
+  const canCheckout = selectedProductIds.size > 0 && Boolean(storeUrl);
 
   if (loading) {
     return (
@@ -179,19 +214,36 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
             <p className="product-price">RM {product.price || '0.00'}</p>
           </div>
 
-          <p className="product-description" dangerouslySetInnerHTML={{ __html: product.description || '' }}></p>
+          <p className="product-description">{sanitizeProductDescription(product.description)}</p>
 
           <div className="product-actions">
-            <a
-              href={product.cartUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="add-to-cart-button"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ShoppingCart size={14} />
-              <span>{t('results.addToCart') || 'Add to Cart'}</span>
-            </a>
+            {product.cartUrl ? (
+              <a
+                href={product.cartUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="add-to-cart-button"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ShoppingCart size={14} />
+                <span>{t('results.addToCart') || 'Add to Cart'}</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                className="add-to-cart-button disabled"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showToast(
+                    t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.',
+                    'warning',
+                  );
+                }}
+              >
+                <ShoppingCart size={14} />
+                <span>{t('results.viewProduct') || 'View Product'}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -205,6 +257,13 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
         <div className="ai-reasoning-banner">
           <Info size={16} />
           <span>{t('results.whyTheseProducts') || 'Why these products?'} {reasoning}</span>
+        </div>
+      )}
+
+      {fallbackMeta?.used && (
+        <div className="ai-reasoning-banner fallback-banner">
+          <PackageX size={16} />
+          <span>{fallbackMeta.reason || (t('results.fallbackProductsDesc') || 'No direct diagnosis-matched products were found. Showing general store suggestions as a fallback.')}</span>
         </div>
       )}
 
@@ -251,6 +310,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
             </div>
           )}
 
+          {scaleInfo.note && (
+            <p className="section-subtitle">{scaleInfo.note}</p>
+          )}
+
           <div className="products-grid">
             {products.fertilizers.map((product, index) => renderProductCard(product, index))}
           </div>
@@ -274,8 +337,18 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
       {products.otherPopular && products.otherPopular.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
-            <h3 className="section-title">{t('results.otherPopular')}</h3>
+            <h3 className="section-title">
+              {fallbackMeta?.used
+                ? (t('results.fallbackProductsTitle') || 'Fallback Store Suggestions')
+                : t('results.otherPopular')}
+            </h3>
           </div>
+
+          {fallbackMeta?.used && (
+            <p className="section-subtitle">
+              {t('results.fallbackProductsLabel') || 'These are general store items shown because no direct diagnosis match was found.'}
+            </p>
+          )}
 
           <div className="products-grid">
             {products.otherPopular.map((product, index) => renderProductCard(product, index))}
@@ -289,8 +362,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
            <div className="checkout-bar">
              <div className="checkout-info">
                <span className="checkout-count">{selectedProductIds.size} {t('results.itemsSelected') || 'Items Selected'}</span>
+               {!storeUrl && (
+                 <span className="checkout-note">{t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.'}</span>
+               )}
              </div>
-             <button onClick={handleCheckout} className="checkout-button">
+             <button onClick={handleCheckout} className="checkout-button" disabled={!canCheckout}>
                <ShoppingCart size={18} />
                <span>{t('results.buySelected') || 'Buy Selected Products'}</span>
              </button>
@@ -383,6 +459,16 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
           font-weight: 500;
         }
 
+        .fallback-banner {
+          background: #fff7ed;
+          border-left-color: #f97316;
+        }
+
+        .fallback-banner svg,
+        .fallback-banner span {
+          color: #9a3412;
+        }
+
         .product-section {
           background: var(--color-primary-lighter, #F1F8F1);
           padding: 20px;
@@ -425,6 +511,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
           color: #6B7280;
           margin-bottom: 20px;
           font-size: 0.9rem;
+          line-height: 1.5;
         }
 
         .scale-badge {
@@ -709,6 +796,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
             transition: all 0.2s;
             cursor: pointer;
         }
+
+        .add-to-cart-button.disabled {
+            opacity: 0.8;
+        }
         
         .add-to-cart-button:hover {
             background: var(--color-primary);
@@ -740,14 +831,22 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
         
         .checkout-info {
             display: flex;
-            align-items: center;
-            gap: 12px;
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 6px;
         }
         
         .checkout-count {
             font-weight: 700;
             color: #1F2937;
             font-size: 0.95rem;
+        }
+
+        .checkout-note {
+            color: #4B5563;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            max-width: 360px;
         }
         
         .checkout-button {
@@ -768,6 +867,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult }) =
         .checkout-button:hover {
             background: var(--color-primary-dark);
             transform: scale(1.02);
+        }
+
+        .checkout-button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .checkout-button:active {

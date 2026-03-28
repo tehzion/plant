@@ -25,7 +25,7 @@ export const suppliers = {
  * Returns products based on plant type and detected disease.
  * @param {string} plantType 
  * @param {string} disease 
- * @returns {object} { diseaseControl: [], nutrition: [] }
+ * @returns {object} { diseaseControl: [], fertilizers: [], supplements: [] }
  */
 export const getProductRecommendations = (plantType, disease) => {
     // Ensure disease is a string to prevent crashes on .toLowerCase()
@@ -75,12 +75,15 @@ export const getProductRecommendations = (plantType, disease) => {
 
     const recommendations = {
         diseaseControl: [],
-        nutrition: [...defaultNutrition]
+        fertilizers: [...defaultNutrition],
+        supplements: [],
     };
 
     if (isHealthy) {
-        // Ensure healthy plants have exactly 5 nutrition products
-        recommendations.nutrition = defaultNutrition.slice(0, 5);
+        // Ensure healthy plants have a complete growth-and-maintenance product mix
+        recommendations.fertilizers = defaultNutrition.slice(0, 3);
+        recommendations.supplements = defaultNutrition.slice(3, 5);
+        recommendations.nutrition = [...recommendations.fertilizers, ...recommendations.supplements];
         return recommendations;
     }
 
@@ -163,12 +166,15 @@ export const getProductRecommendations = (plantType, disease) => {
         });
     }
 
-    // Ensure total is 5 by balancing nutrition and disease control
+    // Ensure total is 5 by balancing fertilizer and supplement recommendations
     const targetTotal = 5;
     const diseaseCount = recommendations.diseaseControl.length;
     const nutritionNeeded = targetTotal - diseaseCount;
-    
-    recommendations.nutrition = defaultNutrition.slice(0, Math.max(0, nutritionNeeded));
+
+    const balancedNutrition = defaultNutrition.slice(0, Math.max(0, nutritionNeeded));
+    recommendations.fertilizers = balancedNutrition.slice(0, Math.min(3, balancedNutrition.length));
+    recommendations.supplements = balancedNutrition.slice(recommendations.fertilizers.length);
+    recommendations.nutrition = balancedNutrition;
 
     return recommendations;
 };
