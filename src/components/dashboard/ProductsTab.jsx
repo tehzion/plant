@@ -4,8 +4,7 @@ import { useLanguage } from '../../i18n/i18n.jsx';
 
 const SHOP_CATALOG_URL = 'https://www.mojosense.app/kanb/products/';
 
-const ProductsTab = () => {
-    const { t } = useLanguage();
+const ProductsTab = ({ label }) => {
     const [isFrameLoaded, setIsFrameLoaded] = useState(false);
     const [showFallbackHint, setShowFallbackHint] = useState(false);
 
@@ -25,10 +24,10 @@ const ProductsTab = () => {
             <div className="udp-tab-actions">
                 <div>
                     <h3 className="udp-section-title">
-                        {t('nav.shop') || 'Shop'}
+                        {label('nav.shop', 'Shop')}
                     </h3>
                     <p className="udp-section-subtitle">
-                        {t('profile.productsCatalogSubtitle') || 'Browse our catalog for products without leaving your dashboard.'}
+                        {label('profile.productsCatalogSubtitle', 'Browse our catalog for products without leaving your dashboard.')}
                     </p>
                 </div>
             </div>
@@ -37,7 +36,7 @@ const ProductsTab = () => {
                 <div className="udp-products-frame-header">
                     <span className="udp-products-frame-pill">
                         <ShoppingBag size={15} />
-                        {t('nav.shop') || 'Shop'}
+                        {label('nav.shop', 'Shop')}
                     </span>
                 </div>
 
@@ -45,12 +44,12 @@ const ProductsTab = () => {
                     {!isFrameLoaded && (
                         <div className="udp-products-frame-loading">
                             <ShoppingBag size={18} />
-                            <span>{t('profile.loadingCatalog') || 'Loading live catalog...'}</span>
+                            <span>{label('profile.loadingCatalog', 'Loading live catalog...')}</span>
                         </div>
                     )}
 
                     <iframe
-                        title={t('nav.shop') || 'Shop'}
+                        title={label('nav.shop', 'Shop')}
                         src={SHOP_CATALOG_URL}
                         className="udp-products-frame"
                         loading="lazy"
@@ -65,7 +64,7 @@ const ProductsTab = () => {
                 {showFallbackHint && !isFrameLoaded && (
                     <div className="udp-products-fallback is-active">
                         <p className="udp-products-fallback-text">
-                            {t('profile.catalogEmbedFallback') || 'If the catalog does not load inside the dashboard, open the full catalog in a new tab.'}
+                            {label('profile.catalogEmbedFallback', 'If the catalog does not load inside the dashboard, open the full catalog in a new tab.')}
                         </p>
                         <a
                             href={SHOP_CATALOG_URL}
@@ -74,7 +73,7 @@ const ProductsTab = () => {
                             className="udp-btn udp-btn-secondary"
                         >
                             <ExternalLink size={16} />
-                            <span>{t('profile.openFullCatalog') || 'Open Full Catalog'}</span>
+                            <span>{label('profile.openFullCatalog', 'Open Full Catalog')}</span>
                         </a>
                     </div>
                 )}

@@ -37,6 +37,7 @@ const ReportsTab = ({
     aiInsights,
     onSelectAlert,
     relDate,
+    label,
 }) => {
     const [selectedPlotId, setSelectedPlotId] = useState('all');
     const locale = t('common.dateLocale') || 'en-MY';
@@ -137,8 +138,8 @@ const ReportsTab = ({
     })).sort((left, right) => right.value - left.value);
 
     const healthData = [
-        { name: t('results.healthy') || 'Healthy', value: stats.healthy, color: '#10b981' },
-        { name: t('profile.diseased') || 'Diseased', value: stats.diseases, color: '#f59e0b' },
+        { name: label('results.healthy', 'Healthy'), value: stats.healthy, color: '#10b981' },
+        { name: label('profile.diseased', 'Diseased'), value: stats.diseases, color: '#f59e0b' },
     ].filter((entry) => entry.value > 0);
 
     const qualityData = Object.keys(qualityCounts).map((name) => ({
@@ -191,24 +192,24 @@ const ReportsTab = ({
             <div className="udp-report-grid">
                 <div className="udp-report-card">
                     <span className="udp-report-num udp-stat-green">{healthRate}%</span>
-                    <span className="udp-report-label">{t('profile.healthRate') || 'Plant Health Rate'}</span>
+                    <span className="udp-report-label">{label('profile.healthRate', 'Plant Health Rate')}</span>
                 </div>
                 <div className="udp-report-card">
                     <span className="udp-report-num udp-stat-warn">{stats.diseases}</span>
-                    <span className="udp-report-label">{t('profile.diseasesFound') || 'Diseases'}</span>
+                    <span className="udp-report-label">{label('profile.diseasesFound', 'Diseases')}</span>
                 </div>
                 <div className="udp-report-card">
                     <span className="udp-report-num">{stats.total}</span>
-                    <span className="udp-report-label">{t('profile.totalScans') || 'Total Scans'}</span>
+                    <span className="udp-report-label">{label('profile.totalScans', 'Total Scans')}</span>
                 </div>
                 <div className="udp-report-card">
                     <span className="udp-report-num udp-stat-green">{checklistPct}%</span>
-                    <span className="udp-report-label">{t('profile.gapCompliance') || 'GAP Compliance'}</span>
+                    <span className="udp-report-label">{label('profile.gapCompliance', 'GAP Compliance')}</span>
                 </div>
             </div>
 
             <div className="udp-section" style={{ marginTop: 0 }}>
-                <SectionHeader icon={<BarChart2 size={15} />} title={t('profile.healthBreakdown') || 'Health Breakdown'} />
+                <SectionHeader icon={<BarChart2 size={15} />} title={label('profile.healthBreakdown', 'Health Breakdown')} />
                 <div style={{ padding: '0 16px 16px' }}>
                     {healthData.length > 0 ? (
                         <div style={{ width: '100%', height: 180, minHeight: 180 }}>
@@ -220,13 +221,13 @@ const ReportsTab = ({
                                     <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
-                                <span style={{ color: '#10b981' }}>● {t('profile.healthy') || 'Healthy'}: {stats.healthy}</span>
-                                <span style={{ color: '#f59e0b' }}>● {t('profile.diseased') || 'Diseased'}: {stats.diseases}</span>
+                             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
+                                <span style={{ color: '#10b981' }}>● {label('profile.healthy', 'Healthy')}: {stats.healthy}</span>
+                                <span style={{ color: '#f59e0b' }}>● {label('profile.diseased', 'Diseased')}: {stats.diseases}</span>
                             </div>
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '0.8rem' }}>{t('profile.noScanData') || 'No scan data available'}</div>
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '0.8rem' }}>{label('profile.noScanData', 'No scan data available')}</div>
                     )}
                 </div>
             </div>
@@ -234,10 +235,10 @@ const ReportsTab = ({
             <div className="udp-section">
                 <SectionHeader
                     icon={<TrendingUp size={15} />}
-                    title={t('profile.harvestSummary') || 'Financial & Yield Summary'}
+                    title={label('profile.harvestSummary', 'Financial & Yield Summary')}
                     action={(
                         <select className="udp-input" style={{ width: 130, padding: 4, height: 26, fontSize: '0.75rem', borderRadius: 6 }} value={selectedPlotId} onChange={(event) => setSelectedPlotId(event.target.value)}>
-                            <option value="all">{t('profile.allPlots') || 'All Plots'}</option>
+                            <option value="all">{label('profile.allPlots', 'All Plots')}</option>
                             {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.name}</option>)}
                         </select>
                     )}
@@ -245,35 +246,35 @@ const ReportsTab = ({
                 <div style={{ padding: '0 16px 16px' }}>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                         <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{t('profile.totalYield') || 'Total Yield'}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{label('profile.totalYield', 'Total Yield')}</div>
                             <div style={{ fontSize: '1.2rem', color: '#0f172a', fontWeight: 800 }}>{totalKg.toFixed(1)}kg</div>
                         </div>
                         <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{t('profile.estRevenue') || 'Est. Revenue'}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>{label('profile.estRevenue', 'Est. Revenue')}</div>
                             <div style={{ fontSize: '1.2rem', color: '#059669', fontWeight: 800 }}>RM{totalRevenue.toFixed(0)}</div>
                         </div>
                         <div style={{ flex: 1, background: '#fff1f2', padding: '12px', borderRadius: '8px', border: '1px solid #ffe4e6', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.65rem', color: '#be123c', fontWeight: 600, textTransform: 'uppercase' }}>{t('profile.expenses') || 'Expenses'}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#be123c', fontWeight: 600, textTransform: 'uppercase' }}>{label('profile.expenses', 'Expenses')}</div>
                             <div style={{ fontSize: '1.2rem', color: '#e11d48', fontWeight: 800 }}>-RM{totalExpenses.toFixed(0)}</div>
                         </div>
                     </div>
 
                     <div style={{ width: '100%', background: netProfit >= 0 ? '#ecfdf5' : '#fef2f2', padding: '16px', borderRadius: '8px', border: `1px solid ${netProfit >= 0 ? '#a7f3d0' : '#fecaca'}`, marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: netProfit >= 0 ? '#065f46' : '#991b1b', textTransform: 'uppercase' }}>{t('profile.netProfit') || 'Net Profit (ROI)'}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: netProfit >= 0 ? '#065f46' : '#991b1b', textTransform: 'uppercase' }}>{label('profile.netProfit', 'Net Profit (ROI)')}</span>
                         <span style={{ fontSize: '1.6rem', fontWeight: 800, color: netProfit >= 0 ? '#059669' : '#e11d48' }}>{netProfit >= 0 ? '+' : '-'}RM{Math.abs(netProfit).toFixed(2)}</span>
                     </div>
 
                     {yieldChartData.data.length >= 2 ? (
                         <div style={{ marginBottom: '16px' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>📈 {t('profile.yieldHistoryForecast') || 'Yield History & Trend Forecast'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>📈 {label('profile.yieldHistoryForecast', 'Yield History & Trend Forecast')}</div>
                             {yieldChartData.forecast !== null && (
                                 <div style={{ background: 'linear-gradient(90deg, #eff6ff, #f0fdf4)', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <span style={{ fontSize: '1.1rem' }}>📊</span>
                                     <div>
-                                        <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700 }}>{t('profile.aiForecastNextMonth') || 'Trend Forecast: Next Month'}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700 }}>{label('profile.aiForecastNextMonth', 'Trend Forecast: Next Month')}</div>
                                         <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>~{yieldChartData.forecast} kg</div>
                                     </div>
-                                    <div style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#6b7280' }}>{t('profile.basedOnHarvestTrends') || 'Based on harvest trends'}</div>
+                                    <div style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#6b7280' }}>{label('profile.basedOnHarvestTrends', 'Based on harvest trends')}</div>
                                 </div>
                             )}
                             <div style={{ width: '100%', height: 180, minHeight: 180 }}>
@@ -282,9 +283,9 @@ const ReportsTab = ({
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                         <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                                         <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip formatter={(value, name) => [value ? `${value} kg` : '-', name === 'kg' ? (t('profile.actual') || 'Actual') : (t('profile.forecast') || 'Forecast')]} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                                        <Line type="monotone" dataKey="kg" name={t('profile.actual') || 'Actual'} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls={false} />
-                                        <Line type="monotone" dataKey="forecast" name={t('profile.forecast') || 'Forecast'} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#3b82f6' }} />
+                                        <RechartsTooltip formatter={(value, name) => [value ? `${value} kg` : '-', name === 'kg' ? label('profile.actual', 'Actual') : label('profile.forecast', 'Forecast')]} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                                        <Line type="monotone" dataKey="kg" name={label('profile.actual', 'Actual')} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls={false} />
+                                        <Line type="monotone" dataKey="forecast" name={label('profile.forecast', 'Forecast')} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#3b82f6' }} />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </div>
@@ -292,17 +293,17 @@ const ReportsTab = ({
                     ) : (
                         <div style={{ marginBottom: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
                             <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                                {t('profile.yieldHistoryForecast') || 'Yield History & Trend Forecast'}
+                                {label('profile.yieldHistoryForecast', 'Yield History & Trend Forecast')}
                             </div>
                             <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.5 }}>
-                                {t('profile.yieldForecastNeedsMoreData') || 'Add harvest records from at least two months to unlock a reliable trend forecast.'}
+                                {label('profile.yieldForecastNeedsMoreData', 'Add harvest records from at least two months to unlock a reliable trend forecast.')}
                             </div>
                         </div>
                     )}
 
                     {expenseData.length > 0 && (
                         <div style={{ marginBottom: '16px' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{t('profile.expenseBreakdown') || 'Expense Breakdown'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{label('profile.expenseBreakdown', 'Expense Breakdown')}</div>
                             <div style={{ width: '100%', height: 160, minHeight: 160 }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -321,7 +322,7 @@ const ReportsTab = ({
 
                     {harvestLogs.length > 0 && qualityData.length > 0 && (
                         <div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{t('profile.qualityBreakdown') || 'Quality Breakdown'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>{label('profile.qualityBreakdown', 'Quality Breakdown')}</div>
                             <div style={{ width: '100%', height: 160, minHeight: 160 }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={qualityData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -340,39 +341,39 @@ const ReportsTab = ({
             <div className="udp-section">
                 <SectionHeader
                     icon={<BrainCircuit size={15} color="#8b5cf6" />}
-                    title={t('profile.aiFarmIntelligence') || 'AI Farm Intelligence'}
+                    title={label('profile.aiFarmIntelligence', 'AI Farm Intelligence')}
                     action={<button className="udp-see-all" style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }} onClick={() => onGenerateInsights({
                         activeAlerts: filteredAlerts,
                         harvestLogs,
                         notesOverride: filteredNotes,
                         plotsOverride: filteredPlots,
                         scopeKey: reportScopeKey,
-                    })} disabled={isGeneratingScopedInsights}>{isGeneratingScopedInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}</button>}
+                    })} disabled={isGeneratingScopedInsights}>{isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.askAI', 'Ask AI')}</>}</button>}
                 />
                 <div style={{ padding: '0 16px 16px' }}>
                     {isGeneratingScopedInsights ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px', color: '#8b5cf6' }}>
                             <BrainCircuit size={28} style={{ animation: 'pulse 1.5s infinite' }} />
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('profile.aiAnalyzingHint') || 'Analyzing logs & alerts...'}</span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{label('profile.aiAnalyzingHint', 'Analyzing logs & alerts...')}</span>
                         </div>
                     ) : scopedAiInsights ? (
                         <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '16px' }}>
-                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}><strong>{t('profile.aiSummary') || 'Summary'}:</strong> {scopedAiInsights.summary}</p>
+                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}><strong>{label('profile.aiSummary', 'Summary')}:</strong> {scopedAiInsights.summary}</p>
                             {scopedAiInsights.yieldAnalysis && <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>{scopedAiInsights.yieldAnalysis}</p>}
-                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>{t('profile.aiRecommendations') || 'Actionable Recommendations'}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>{label('profile.aiRecommendations', 'Actionable Recommendations')}</div>
                             <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.8rem', color: '#4c1d95', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {scopedAiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
                             </ul>
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>{t('profile.aiAskHint') || 'Tap "Ask AI" to get a personalized weekly agronomist report based on your farm activity.'}</div>
+                        <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>{label('profile.aiAskHint', 'Tap "Ask AI" to get a personalized weekly agronomist report based on your farm activity.')}</div>
                     )}
                 </div>
             </div>
 
             {filteredAlerts.length > 0 && (
                 <div className="udp-section">
-                    <SectionHeader icon={<AlertTriangle size={15} />} title={t('profile.activeAlerts') || 'Active Alerts (Last 7 Days)'} />
+                    <SectionHeader icon={<AlertTriangle size={15} />} title={label('profile.activeAlerts', 'Active Alerts (Last 7 Days)')} />
                     {filteredAlerts.map((scan) => (
                         <button key={scan.id} className="udp-alert-row" onClick={() => onSelectAlert(scan)}>
                             <span className="udp-alert-dot" />

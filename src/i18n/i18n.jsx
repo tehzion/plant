@@ -19,7 +19,7 @@ export const LanguageProvider = ({ children }) => {
 
     const isBrokenLocalizedString = (value, activeLanguage) => {
         if (activeLanguage !== 'zh' || typeof value !== 'string') return false;
-        return /\?{2,}|Â|Ã|ðŸ|â|�/.test(value);
+        return /\?{2,}|Â|Ã|ðŸ|â|/.test(value);
     };
 
     const lookupValue = (languageKey, keys) => {
@@ -50,6 +50,10 @@ export const LanguageProvider = ({ children }) => {
         language,
         setLanguage,
         t,
+        label: (key, fallback) => {
+            const val = t(key);
+            return val && val !== key ? val : fallback;
+        },
     };
 
     return (

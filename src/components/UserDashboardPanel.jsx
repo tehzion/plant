@@ -73,7 +73,7 @@ export const EMPTY_FORM = {
 // ─── Main component ──────────────────────────────────────────────────────────
 const UserDashboardPanel = () => {
     const { user, signOut }                 = useAuth();
-    const { t }                             = useLanguage();
+    const { t, label } = useLanguage();
     const navigate                          = useNavigate();
     const { notify, notifyError, notifySuccess, notifyWarning } = useNotifications();
     const { getLocation }                   = useLocation();
@@ -391,6 +391,7 @@ const UserDashboardPanel = () => {
                 {tab === 'overview' && (
                     <OverviewTab
                         t={t}
+                        label={label}
                         stats={stats}
                         alerts={alerts}
                         acknowledgedIds={acknowledgedIds}
@@ -422,6 +423,7 @@ const UserDashboardPanel = () => {
                 {tab === 'reports' && (
                     <ReportsTab
                         t={t}
+                        label={label}
                         stats={stats}
                         checklistPct={checklistPct}
                         alerts={alerts}
@@ -440,6 +442,7 @@ const UserDashboardPanel = () => {
                 {tab === 'plots' && (
                     <PlotsTab
                         t={t}
+                        label={label}
                         addingPlot={addingPlot}
                         setAddingPlot={setAddingPlot}
                         handleAddPlot={handleAddPlot}
@@ -456,6 +459,7 @@ const UserDashboardPanel = () => {
                 {tab === 'notes' && (
                     <NotesTab
                         t={t}
+                        label={label}
                         addingNote={addingNote}
                         setAddingNote={setAddingNote}
                         handleAddNote={handleAddNote}
