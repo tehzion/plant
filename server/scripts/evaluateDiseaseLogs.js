@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 const DATASET_DIR = path.join(__dirname, '../dataset');
 const HOLDOUT_DIR = path.join(DATASET_DIR, 'holdout');
 const VERIFIED_HOLDOUT_FILE = path.join(HOLDOUT_DIR, 'holdout_verified.json');
+const MIN_VERIFIED_HOLDOUT = Number(process.env.MIN_VERIFIED_HOLDOUT || 20);
 
 const readJsonlFiles = (prefix) => {
   if (!fs.existsSync(DATASET_DIR)) return [];
@@ -43,9 +44,7 @@ const readJsonFile = (filePath) => {
   }
 };
 
-const dataLogs = readJsonlFiles('data_log_');
 const feedbackLogs = readJsonlFiles('feedback_log_');
-const feedbackByScanId = new Map(feedbackLogs.map((entry) => [entry.scanId, entry]));
 const verifiedHoldout = readJsonFile(VERIFIED_HOLDOUT_FILE);
 
 let verifiedCount = 0;
@@ -97,50 +96,39 @@ const evaluateEntry = ({ predictedDisease, correctedDisease, differentials, pred
   confusion[actualBucket][predictedBucket] += 1;
 };
 
-if (verifiedHoldout.length > 0) {
-  for (const entry of verifiedHoldout) {
-    evaluateEntry({
-      predictedDisease: normalize(entry.predictedDisease),
-      correctedDisease: normalize(entry.correctDisease),
-      differentials: Array.isArray(entry.differentialDiagnoses) ? entry.differentialDiagnoses : [],
-      predictedHealthy: normalize(entry.predictedHealthStatus) === 'healthy',
-      correctedHealthy: entry.wasCorrect
-        ? normalize(entry.predictedHealthStatus) === 'healthy'
-        : normalize(entry.correctDisease).includes('healthy') || normalize(entry.correctDisease).includes('no issue'),
-      speciesConfidence: Number(entry.confidenceBreakdown?.speciesConfidence || 0),
-      predictedBucket: bucketFor(entry.predictedPathogenType || entry.predictedDisease),
-      actualBucket: bucketFor(entry.correctDisease || entry.issueType),
-      wasCorrect: entry.wasCorrect,
-      issueType: entry.issueType,
-    });
-  }
-} else {
-  for (const log of dataLogs) {
-    const feedback = feedbackByScanId.get(log.id);
-    if (!feedback || typeof feedback.wasCorrect === 'undefined') continue;
+if (verifiedHoldout.length < MIN_VERIFIED_HOLDOUT) {
+  console.log('Disease Evaluation Deferred');
+  console.log('===========================');
+  console.log(`Verified holdout entries: ${verifiedHoldout.length}`);
+  console.log(`Minimum required for reporting: ${MIN_VERIFIED_HOLDOUT}`);
+  console.log(`Structured feedback entries available: ${feedbackLogs.filter((entry) => typeof entry.wasCorrect !== 'undefined').length}`);
+  console.log('Evaluation is waiting for a large enough expert-reviewed holdout before reporting metrics.');
+  process.exit(0);
+}
 
-    evaluateEntry({
-      predictedDisease: normalize(log.prediction?.disease),
-      correctedDisease: normalize(feedback.correctDisease || log.correction?.disease),
-      differentials: Array.isArray(log.prediction?.differentialDiagnoses) ? log.prediction.differentialDiagnoses : [],
-      predictedHealthy: normalize(log.prediction?.healthStatus) === 'healthy',
-      correctedHealthy: feedback.wasCorrect
-        ? normalize(log.prediction?.healthStatus) === 'healthy'
-        : normalize(feedback.correctDisease).includes('healthy') || normalize(feedback.correctDisease).includes('no issue'),
-      speciesConfidence: Number(log.prediction?.confidenceBreakdown?.speciesConfidence || 0),
-      predictedBucket: bucketFor(log.raw_result?.pathogenType || log.raw_result?.diseaseCategory),
-      actualBucket: bucketFor(feedback.correctDisease || feedback.issueType),
-      wasCorrect: feedback.wasCorrect,
-      issueType: feedback.issueType,
-    });
-  }
+for (const entry of verifiedHoldout) {
+  evaluateEntry({
+    predictedDisease: normalize(entry.predictedDisease),
+    correctedDisease: normalize(entry.correctDisease),
+    differentials: Array.isArray(entry.differentialDiagnoses) ? entry.differentialDiagnoses : [],
+    predictedHealthy: normalize(entry.predictedHealthStatus) === 'healthy',
+    correctedHealthy: entry.wasCorrect
+      ? normalize(entry.predictedHealthStatus) === 'healthy'
+      : normalize(entry.correctDisease).includes('healthy') || normalize(entry.correctDisease).includes('no issue'),
+    speciesConfidence: Number(entry.confidenceBreakdown?.speciesConfidence || 0),
+    predictedBucket: bucketFor(entry.predictedPathogenType || entry.predictedDisease),
+    actualBucket: bucketFor(entry.correctDisease || entry.issueType),
+    wasCorrect: entry.wasCorrect,
+    issueType: entry.issueType,
+  });
 }
 
 const ratio = (value) => (verifiedCount > 0 ? `${((value / verifiedCount) * 100).toFixed(1)}%` : 'n/a');
 
 console.log('Disease Evaluation Summary');
 console.log('==========================');
-console.log(`Evaluation source: ${verifiedHoldout.length > 0 ? 'holdout_verified.json' : 'structured feedback logs'}`);
+console.log('Evaluation source: holdout_verified.json');
+console.log(`Minimum verified holdout threshold: ${MIN_VERIFIED_HOLDOUT}`);
 console.log(`Verified scans: ${verifiedCount}`);
 console.log(`Top-1 disease accuracy: ${ratio(top1Correct)}`);
 console.log(`Top-3 differential hit rate: ${ratio(top3Hit)}`);

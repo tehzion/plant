@@ -2,7 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FeedbackWidget from './FeedbackWidget.jsx';
 
-const showToastMock = vi.fn();
+const { showToastMock } = vi.hoisted(() => ({
+  showToastMock: vi.fn(),
+}));
 
 vi.mock('../i18n/i18n.jsx', () => ({
   useLanguage: () => ({

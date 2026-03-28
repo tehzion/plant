@@ -106,6 +106,30 @@ describe('aiService helpers', () => {
         expect(summary).toContain('Leaf Spot');
     });
 
+    it('summarizes farm logs for AI without carrying photo payload noise', () => {
+        const summary = aiService.summarizeFarmLogsForAI([
+            {
+                created_at: '2026-03-27T10:00:00.000Z',
+                activity_type: 'spray',
+                plot_id: 'Plot A',
+                chemical_name: 'Mancozeb',
+                note: 'Sprayed lower canopy before rain',
+                photo_url: 'data:image/jpeg;base64,abc123',
+            },
+        ]);
+
+        expect(summary).toEqual([
+            expect.objectContaining({
+                activity: 'spray',
+                plot: 'Plot A',
+                chemical: 'Mancozeb',
+                note: 'Sprayed lower canopy before rain',
+            }),
+        ]);
+        expect(JSON.stringify(summary)).not.toContain('photo_url');
+        expect(JSON.stringify(summary)).not.toContain('data:image');
+    });
+
     it('always includes healthy, fungal, and nutrient few-shot examples', () => {
         const examples = aiService.buildAnalyzeFewShotExamples('en');
 
@@ -147,5 +171,22 @@ describe('aiService helpers', () => {
 
         expect(filtered.status).not.toBe('confirmed');
         expect(filtered.needsMoreEvidence).toBe(true);
+    });
+
+    it('normalizes predictive-risk output so generic product names do not prefill spray actions', () => {
+        const risk = aiService.normalizePredictiveRiskResult({
+            hasRisk: true,
+            riskLevel: 'high',
+            warningMessage: 'Heavy rain may worsen leaf spot.',
+            suggestedAction: 'Inspect affected blocks before rain.',
+            recommendedTreatment: {
+                activity: 'spray',
+                chemical: 'fungicide',
+            },
+        });
+
+        expect(risk.recommendedTreatment.activity).toBe('inspect');
+        expect(risk.recommendedTreatment.chemical).toBeNull();
+        expect(risk.recommendedTreatment.prefillAllowed).toBe(true);
     });
 });

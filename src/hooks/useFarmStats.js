@@ -12,12 +12,23 @@ import { predictFarmRisk } from '../utils/aiFarmService';
 
 const ACKNOWLEDGED_ALERTS_KEY = 'plant_ack_alerts';
 
+const isWithinLastDays = (value, days) => {
+    if (!value) return false;
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) return false;
+    return timestamp >= Date.now() - (days * 86400000);
+};
+
+const filterRecentEntries = (entries = [], days) =>
+    entries.filter((entry) => isWithinLastDays(entry?.created_at || entry?.timestamp, days));
+
 const createScoutAlert = (note) => ({
     id:           note.id,
     disease:      note.disease_name_observed || 'Field Observation',
     category:     note.pest_notes ? `Scout / ${note.pest_notes.slice(0, 15)}...` : 'Field Scout',
     severity:     note.scout_severity || 'High',
     timestamp:    note.created_at,
+    plot_id:      note.plot_id || null,
     healthStatus: 'disease',
     result_json: {
         treatment: [
@@ -254,9 +265,10 @@ export const useFarmStats = ({ userId, getLocation, notify, t }) => {
 
             try {
                 const location = await getLocation();
+                const recentNotes = filterRecentEntries(notes, 14);
                 const result   = await predictFarmRisk(
                     plots,
-                    notes.slice(0, 30),
+                    recentNotes,
                     activeAlerts,
                     location,
                     language,

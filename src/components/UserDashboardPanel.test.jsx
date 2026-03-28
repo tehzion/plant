@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import UserDashboardPanel from './UserDashboardPanel.jsx';
 
@@ -83,6 +83,7 @@ vi.mock('../hooks/useAIAdvisor', () => ({
     useAIAdvisor: () => ({
         aiInsights: null,
         generatingInsights: false,
+        generatingInsightsScopeKey: null,
         enhancing: false,
         enhanceText: '',
         setEnhanceText: vi.fn(),
@@ -142,8 +143,9 @@ describe('UserDashboardPanel', () => {
         render(<UserDashboardPanel />);
 
         expect(screen.getByTestId('overview-tab')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
-        expect(screen.getByText('1')).toBeInTheDocument();
+        const overviewButton = screen.getByRole('button', { name: /Overview/ });
+        expect(overviewButton).toBeInTheDocument();
+        expect(within(overviewButton).getByText('1')).toBeInTheDocument();
     });
 
     it('switches between extracted tabs from the dashboard shell', () => {

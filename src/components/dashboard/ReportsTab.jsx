@@ -33,12 +33,17 @@ const ReportsTab = ({
     plots,
     onGenerateInsights,
     generatingInsights,
+    generatingInsightsScopeKey,
     aiInsights,
     onSelectAlert,
     relDate,
 }) => {
     const [selectedPlotId, setSelectedPlotId] = useState('all');
     const locale = t('common.dateLocale') || 'en-MY';
+    const selectedPlot = useMemo(
+        () => plots.find((plot) => plot.id === selectedPlotId) || null,
+        [plots, selectedPlotId],
+    );
     const localizeQuality = (quality) => {
         const qualityKey = {
             Excellent: 'profile.qualityExcellent',
@@ -64,14 +69,46 @@ const ReportsTab = ({
         () => alerts.filter((scan) => !acknowledgedIds.includes(scan.id)),
         [acknowledgedIds, alerts],
     );
+    const filteredPlots = useMemo(
+        () => (selectedPlotId === 'all' ? plots : plots.filter((plot) => plot.id === selectedPlotId)),
+        [plots, selectedPlotId],
+    );
     const filteredNotes = useMemo(
         () => (selectedPlotId === 'all' ? notes : notes.filter((note) => note.plot_id === selectedPlotId)),
         [notes, selectedPlotId],
     );
+    const filteredAlerts = useMemo(() => {
+        if (selectedPlotId === 'all') return activeAlerts;
+
+        const cropNeedle = selectedPlot?.cropType?.trim().toLowerCase();
+        return activeAlerts.filter((scan) => {
+            if (scan.plot_id) {
+                return scan.plot_id === selectedPlotId;
+            }
+
+            if (!cropNeedle) return false;
+
+            const haystack = [
+                scan.cropType,
+                scan.plantType,
+                scan.category,
+                scan.name,
+                scan.disease,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+
+            return haystack.includes(cropNeedle);
+        });
+    }, [activeAlerts, selectedPlot, selectedPlotId]);
     const harvestLogs = useMemo(
         () => filteredNotes.filter((note) => note.activity_type === 'harvest'),
         [filteredNotes],
     );
+    const reportScopeKey = `reports:${selectedPlotId}`;
+    const scopedAiInsights = aiInsights?.scopeKey === reportScopeKey ? aiInsights : null;
+    const isGeneratingScopedInsights = generatingInsights && generatingInsightsScopeKey === reportScopeKey;
 
     const totalKg = harvestLogs.reduce((sum, note) => sum + (Number(note.kg_harvested) || 0), 0);
     const totalRevenue = harvestLogs.reduce((sum, note) => sum + ((Number(note.kg_harvested) || 0) * (Number(note.price_per_kg) || 0)), 0);
@@ -226,14 +263,14 @@ const ReportsTab = ({
                         <span style={{ fontSize: '1.6rem', fontWeight: 800, color: netProfit >= 0 ? '#059669' : '#e11d48' }}>{netProfit >= 0 ? '+' : '-'}RM{Math.abs(netProfit).toFixed(2)}</span>
                     </div>
 
-                    {yieldChartData.data.length >= 2 && (
+                    {yieldChartData.data.length >= 2 ? (
                         <div style={{ marginBottom: '16px' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>📈 {t('profile.yieldHistoryForecast') || 'Yield History & AI Forecast'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>📈 {t('profile.yieldHistoryForecast') || 'Yield History & Trend Forecast'}</div>
                             {yieldChartData.forecast !== null && (
                                 <div style={{ background: 'linear-gradient(90deg, #eff6ff, #f0fdf4)', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <span style={{ fontSize: '1.1rem' }}>📊</span>
                                     <div>
-                                        <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700 }}>{t('profile.aiForecastNextMonth') || 'AI Forecast: Next Month'}</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#1d4ed8', fontWeight: 700 }}>{t('profile.aiForecastNextMonth') || 'Trend Forecast: Next Month'}</div>
                                         <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>~{yieldChartData.forecast} kg</div>
                                     </div>
                                     <div style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#6b7280' }}>{t('profile.basedOnHarvestTrends') || 'Based on harvest trends'}</div>
@@ -250,6 +287,15 @@ const ReportsTab = ({
                                         <Line type="monotone" dataKey="forecast" name={t('profile.forecast') || 'Forecast'} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" dot={{ r: 5, fill: '#3b82f6' }} />
                                     </LineChart>
                                 </ResponsiveContainer>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ marginBottom: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                                {t('profile.yieldHistoryForecast') || 'Yield History & Trend Forecast'}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.5 }}>
+                                {t('profile.yieldForecastNeedsMoreData') || 'Add harvest records from at least two months to unlock a reliable trend forecast.'}
                             </div>
                         </div>
                     )}
@@ -295,21 +341,27 @@ const ReportsTab = ({
                 <SectionHeader
                     icon={<BrainCircuit size={15} color="#8b5cf6" />}
                     title={t('profile.aiFarmIntelligence') || 'AI Farm Intelligence'}
-                    action={<button className="udp-see-all" style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }} onClick={() => onGenerateInsights(activeAlerts, harvestLogs)} disabled={generatingInsights}>{generatingInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}</button>}
+                    action={<button className="udp-see-all" style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }} onClick={() => onGenerateInsights({
+                        activeAlerts: filteredAlerts,
+                        harvestLogs,
+                        notesOverride: filteredNotes,
+                        plotsOverride: filteredPlots,
+                        scopeKey: reportScopeKey,
+                    })} disabled={isGeneratingScopedInsights}>{isGeneratingScopedInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}</button>}
                 />
                 <div style={{ padding: '0 16px 16px' }}>
-                    {generatingInsights ? (
+                    {isGeneratingScopedInsights ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px', color: '#8b5cf6' }}>
                             <BrainCircuit size={28} style={{ animation: 'pulse 1.5s infinite' }} />
                             <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('profile.aiAnalyzingHint') || 'Analyzing logs & alerts...'}</span>
                         </div>
-                    ) : aiInsights ? (
+                    ) : scopedAiInsights ? (
                         <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '16px' }}>
-                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}><strong>{t('profile.aiSummary') || 'Summary'}:</strong> {aiInsights.summary}</p>
-                            {aiInsights.yieldAnalysis && <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>{aiInsights.yieldAnalysis}</p>}
+                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}><strong>{t('profile.aiSummary') || 'Summary'}:</strong> {scopedAiInsights.summary}</p>
+                            {scopedAiInsights.yieldAnalysis && <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>{scopedAiInsights.yieldAnalysis}</p>}
                             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>{t('profile.aiRecommendations') || 'Actionable Recommendations'}</div>
                             <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.8rem', color: '#4c1d95', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                {aiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
+                                {scopedAiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
                             </ul>
                         </div>
                     ) : (
@@ -318,10 +370,10 @@ const ReportsTab = ({
                 </div>
             </div>
 
-            {activeAlerts.length > 0 && (
+            {filteredAlerts.length > 0 && (
                 <div className="udp-section">
                     <SectionHeader icon={<AlertTriangle size={15} />} title={t('profile.activeAlerts') || 'Active Alerts (Last 7 Days)'} />
-                    {activeAlerts.map((scan) => (
+                    {filteredAlerts.map((scan) => (
                         <button key={scan.id} className="udp-alert-row" onClick={() => onSelectAlert(scan)}>
                             <span className="udp-alert-dot" />
                             <div className="udp-scan-info">

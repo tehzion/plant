@@ -30,7 +30,9 @@ const createDocMock = () => ({
 let docMock;
 
 vi.mock('jspdf', () => ({
-    default: vi.fn(() => docMock),
+    default: vi.fn(function MockJsPDF() {
+        return docMock;
+    }),
 }));
 
 vi.mock('../data/productRecommendations.js', () => ({

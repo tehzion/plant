@@ -54,7 +54,7 @@ const OverviewTab = ({
     );
     const recentHistory = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
 
-    const aiCardData = aiInsights || (
+    const aiCardData = (aiInsights?.scopeKey === 'overview' ? aiInsights : null) || (
         predictiveRisk
             ? {
                 summary: predictiveRisk.warningMessage,
@@ -165,7 +165,7 @@ const OverviewTab = ({
                                 <div style={{ background: 'white', padding: '8px 12px', borderRadius: '6px', border: '1px solid #fecaca', fontSize: '0.75rem', color: '#991b1b', fontWeight: 700, display: 'inline-block' }}>
                                     💡 {predictiveRisk.suggestedAction}
                                 </div>
-                                {predictiveRisk.recommendedTreatment && (
+                                {predictiveRisk.recommendedTreatment?.prefillAllowed !== false && predictiveRisk.recommendedTreatment && (
                                     <button
                                         style={{ marginTop: '10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', padding: '8px 14px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 0.2s', boxShadow: '0 2px 4px rgba(220, 38, 38, 0.2)' }}
                                         onClick={() => onPrefillRecommendedTreatment(predictiveRisk.warningMessage, predictiveRisk.recommendedTreatment)}
@@ -187,7 +187,11 @@ const OverviewTab = ({
                         <button
                             className="udp-see-all"
                             style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }}
-                            onClick={() => onGenerateInsights(activeAlerts, harvestLogs)}
+                            onClick={() => onGenerateInsights({
+                                activeAlerts,
+                                harvestLogs,
+                                scopeKey: 'overview',
+                            })}
                             disabled={generatingInsights}
                         >
                             {generatingInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}

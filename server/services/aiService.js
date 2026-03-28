@@ -921,6 +921,131 @@ export function buildAskAIContextSummary(recentNotes = [], recentAlerts = [], la
     ].join('\n');
 }
 
+const clipText = (value, maxLength = 140) => {
+    const text = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+    if (!text) return '';
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+};
+
+const formatDateForAI = (value) => {
+    const timestamp = new Date(value || 0);
+    if (!Number.isFinite(timestamp.getTime())) return 'Unknown date';
+    return timestamp.toISOString().slice(0, 10);
+};
+
+export function summarizeFarmLogsForAI(logs = []) {
+    return (Array.isArray(logs) ? logs : [])
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0))
+        .slice(0, 12)
+        .map((log) => ({
+            date: formatDateForAI(log.created_at || log.timestamp),
+            activity: log.activity_type || log.type || 'note',
+            plot: log.plot_id || null,
+            chemical: log.chemical_name || null,
+            quantity: log.chemical_qty || null,
+            diseaseObserved: log.disease_name_observed || null,
+            severity: log.scout_severity || null,
+            harvestKg: Number.isFinite(Number(log.kg_harvested)) ? Number(log.kg_harvested) : null,
+            pricePerKg: Number.isFinite(Number(log.price_per_kg)) ? Number(log.price_per_kg) : null,
+            expenseAmount: Number.isFinite(Number(log.expense_amount)) ? Number(log.expense_amount) : null,
+            note: clipText(log.note || log.notes || ''),
+        }));
+}
+
+export function summarizeFarmAlertsForAI(alerts = []) {
+    return (Array.isArray(alerts) ? alerts : [])
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0))
+        .slice(0, 6)
+        .map((alert) => ({
+            date: formatDateForAI(alert.created_at || alert.timestamp),
+            disease: alert.disease || alert.title || 'Unknown alert',
+            crop: alert.category || null,
+            severity: alert.severity || null,
+            status: alert.healthStatus || null,
+        }));
+}
+
+export function summarizeHarvestDataForAI(harvestData = []) {
+    return (Array.isArray(harvestData) ? harvestData : [])
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0))
+        .slice(0, 8)
+        .map((entry) => ({
+            date: formatDateForAI(entry.created_at || entry.timestamp),
+            plot: entry.plot_id || null,
+            crop: entry.cropType || entry.crop_type || null,
+            harvestKg: Number.isFinite(Number(entry.kg_harvested)) ? Number(entry.kg_harvested) : null,
+            quality: entry.quality_grade || null,
+            pricePerKg: Number.isFinite(Number(entry.price_per_kg)) ? Number(entry.price_per_kg) : null,
+            buyer: clipText(entry.buyer_name || '', 60) || null,
+        }));
+}
+
+export function summarizePlotsForAI(plots = []) {
+    return (Array.isArray(plots) ? plots : [])
+        .filter(Boolean)
+        .slice(0, 8)
+        .map((plot) => ({
+            name: plot.name || 'Unnamed plot',
+            cropType: plot.cropType || plot.crop_type || null,
+            area: Number.isFinite(Number(plot.area)) ? Number(plot.area) : null,
+            unit: plot.unit || null,
+            soilPh: Number.isFinite(Number(plot.soil_ph)) ? Number(plot.soil_ph) : null,
+            npk: {
+                n: Number.isFinite(Number(plot.npk_n)) ? Number(plot.npk_n) : null,
+                p: Number.isFinite(Number(plot.npk_p)) ? Number(plot.npk_p) : null,
+                k: Number.isFinite(Number(plot.npk_k)) ? Number(plot.npk_k) : null,
+            },
+        }));
+}
+
+const VALID_RISK_ACTIVITIES = new Set(['spray', 'fertilize', 'prune', 'inspect']);
+
+export function normalizePredictiveRiskResult(result = {}) {
+    if (!result || result.hasRisk === false) {
+        return {
+            hasRisk: false,
+            riskLevel: 'none',
+        };
+    }
+
+    const normalized = {
+        hasRisk: Boolean(result.hasRisk),
+        riskLevel: ['high', 'moderate', 'none'].includes(result.riskLevel) ? result.riskLevel : 'moderate',
+        warningMessage: clipText(result.warningMessage || '', 220),
+        suggestedAction: clipText(result.suggestedAction || '', 180),
+    };
+
+    const treatment = result.recommendedTreatment && typeof result.recommendedTreatment === 'object'
+        ? result.recommendedTreatment
+        : null;
+
+    if (!treatment) {
+        return normalized;
+    }
+
+    let activity = VALID_RISK_ACTIVITIES.has(treatment.activity) ? treatment.activity : 'inspect';
+    let chemical = typeof treatment.chemical === 'string' ? treatment.chemical.trim() : '';
+
+    if (isGenericProductName(chemical)) {
+        chemical = '';
+    }
+
+    if ((activity === 'spray' || activity === 'fertilize') && !chemical) {
+        activity = 'inspect';
+    }
+
+    normalized.recommendedTreatment = {
+        activity,
+        chemical: chemical || null,
+        prefillAllowed: activity === 'inspect' || Boolean(chemical),
+    };
+
+    return normalized;
+}
+
 const normalizeDifferentialDiagnoses = (differentials = []) => {
     if (!Array.isArray(differentials)) return [];
     return differentials
@@ -2309,18 +2434,23 @@ Return JSON with three separate recommendation groups:
 export async function generateAgronomistInsights(logs, alerts, harvestData, plots = [], checklistPct = 0, language = 'en') {
     try {
         console.log('🤖 Generating AI Agronomist Insights...');
+        const summarizedPlots = summarizePlotsForAI(plots);
+        const summarizedLogs = summarizeFarmLogsForAI(logs);
+        const summarizedAlerts = summarizeFarmAlertsForAI(alerts);
+        const summarizedHarvests = summarizeHarvestDataForAI(harvestData);
         const response = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             response_format: { type: "json_object" },
             messages: [
                 {
                     role: 'system',
-                    content: `You are a virtual agronomist operating in Malaysia. Analyze the farmer's raw data and generate a brief, actionable intelligence report. 
+                    content: `You are a virtual agronomist operating in Malaysia. Analyze the farmer's dashboard summary and generate a brief, actionable intelligence report.
 Language requirement: ${language === 'ms' ? 'MUST BE IN BAHASA MALAYSIA.' : language === 'zh' ? 'MUST BE IN SIMPLIFIED CHINESE (简体中文).' : 'MUST BE IN ENGLISH.'}
 Context rules:
-- Farm Plots Context: ${JSON.stringify(plots)}. If applicable, use the farm size to estimate pesticide/fertilizer spray volume requirements.
+- Farm Plots Context: ${JSON.stringify(summarizedPlots)}. If applicable, use the farm size to estimate pesticide/fertilizer spray volume requirements.
 - GAP Compliance Score: ${checklistPct}%. If below 80%, recommend farm hygiene, field training, or record-keeping improvements before advanced solutions.
 - Formatting: Always use authentic Malaysian agricultural terminology (e.g., 'Baja Kopi', 'Racun Serangga', 'Musang King', 'SOP GAP').
+- Data quality: The dashboard may have sparse logs. Do not invent missing treatments, harvests, or dates.
 Output MUST be in the specified language (${language}) and follow this JSON structure: 
 - "summary" (A 2-3 sentence overview of farm health and activity summary)
 - "recommendations" (Array of 2-3 specific action items based on the data, e.g., "Pruning quality seems low on Plot A, consider structural pruning training")
@@ -2328,10 +2458,10 @@ Output MUST be in the specified language (${language}) and follow this JSON stru
                 },
                 {
                     role: 'user',
-                    content: `Here is the data for the last 7 days:
-Logs: ${JSON.stringify(logs)}
-Active Alerts: ${JSON.stringify(alerts)}
-Recent Harvests: ${JSON.stringify(harvestData)}
+                    content: `Here is the compact dashboard summary. Logs were pre-filtered from the latest farm activity window before this request.
+Logs: ${JSON.stringify(summarizedLogs)}
+Active Alerts: ${JSON.stringify(summarizedAlerts)}
+Recent Harvests: ${JSON.stringify(summarizedHarvests)}
 
 Generate the insights report in JSON format.`
                 }
@@ -2460,6 +2590,9 @@ Extract these exact fields (Return JSON):
 export async function generatePredictiveRisk(plots, logs, alerts, location, language = 'en') {
     try {
         let weatherContext = "No live weather data provided.";
+        const summarizedPlots = summarizePlotsForAI(plots);
+        const summarizedLogs = summarizeFarmLogsForAI(logs);
+        const summarizedAlerts = summarizeFarmAlertsForAI(alerts);
         
         if (location && location.lat && location.lng) {
             try {
@@ -2492,6 +2625,10 @@ Language: ${language === 'ms' ? 'BAHASA MALAYSIA' : language === 'zh' ? 'SIMPLIF
 Task: Analyze logs, alerts, farm plots, and incoming live WEATHER FORECAST.
 Identify if there is an urgent, imminent risk. Diseases spread faster in high humidity/rain. If heavy rain is forecasted and the farm has recent untreated fungal alerts, escalate the risk severity.
 If a high risk exists, generate a short, urgent warning. If the farm is well-managed and currently treated, return {"hasRisk": false}.
+Safety rules:
+- Prefer inspection or pruning when the evidence is weak.
+- Only use a specific chemical or fertilizer name if it is clearly justified by the risk context and crop. Otherwise set "chemical" to null.
+- Never use generic product words such as "chemical", "fungicide", "pesticide", "fertilizer", "baja", or "racun" as the chemical name.
 Output MUST be a JSON object:
 {
   "hasRisk": boolean,
@@ -2507,9 +2644,9 @@ Output MUST be a JSON object:
                 {
                     role: 'user',
                     content: `Data:
-Plots: ${JSON.stringify(plots)}
-Last 14 Days Logs: ${JSON.stringify(logs)}
-Active Unacknowledged Alerts: ${JSON.stringify(alerts)}
+Plots: ${JSON.stringify(summarizedPlots)}
+Last 14 Days Logs: ${JSON.stringify(summarizedLogs)}
+Active Unacknowledged Alerts: ${JSON.stringify(summarizedAlerts)}
 ${weatherContext}
 
 Determine if an urgent prediction banner should be shown.`
@@ -2520,7 +2657,7 @@ Determine if an urgent prediction banner should be shown.`
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
-        return JSON.parse(content);
+        return normalizePredictiveRiskResult(JSON.parse(content));
     } catch (error) {
         console.error('❌ Predictive Risk Assessment failed:', error.message);
         return { hasRisk: false };

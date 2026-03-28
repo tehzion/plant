@@ -112,9 +112,10 @@ const UserDashboardPanel = () => {
     // ── AI advisor hook ───────────────────────────────────────────────────────
     const {
         aiInsights, generatingInsights,
+        generatingInsightsScopeKey,
         enhancing, enhanceText, setEnhanceText,
         handleGenerateInsights, handleAutoEnhance,
-    } = useAIAdvisor({ t, notes, plots, checklistPct, noteForm, setNoteForm, notifyError });
+    } = useAIAdvisor({ t, notes, plots, checklistPct, noteForm, setNoteForm, notifyError, notifySuccess });
 
     // ── Fetch weather once on mount (for OverviewTab forecast strip) ─────────
     useEffect(() => {
@@ -158,6 +159,8 @@ const UserDashboardPanel = () => {
      * Switches to the Notes tab and pre-fills the form with the AI recommendation.
      */
     const handlePrefillRecommendedTreatment = useCallback((warningMessage, recommendedTreatment) => {
+        if (recommendedTreatment?.prefillAllowed === false) return;
+
         const validTypes = ['note', 'scout', 'spray', 'fertilize', 'prune', 'inspect', 'harvest', 'other'];
         const actType = validTypes.includes(recommendedTreatment?.activity)
             ? recommendedTreatment.activity
@@ -407,7 +410,7 @@ const UserDashboardPanel = () => {
                         relDate={relDate}
                         onSelectAlert={setSelectedAlert}
                         onGenerateInsights={handleGenerateInsights}
-                        generatingInsights={generatingInsights}
+                        generatingInsights={generatingInsights && generatingInsightsScopeKey === 'overview'}
                         aiInsights={aiInsights}
                         onPrefillRecommendedTreatment={handlePrefillRecommendedTreatment}
                     />
@@ -424,6 +427,7 @@ const UserDashboardPanel = () => {
                         plots={plots}
                         onGenerateInsights={handleGenerateInsights}
                         generatingInsights={generatingInsights}
+                        generatingInsightsScopeKey={generatingInsightsScopeKey}
                         aiInsights={aiInsights}
                         onSelectAlert={setSelectedAlert}
                         relDate={relDate}

@@ -49,7 +49,17 @@ describe('localStorage utilities', () => {
 
     it('cleans up the oldest eligible collections in priority order when quota is exceeded', () => {
         const store = new Map();
-        const limit = 3500;
+        const scanItems = makeItems(25, 'scan');
+        const logItems = makeItems(25, 'log');
+        const currentNotes = makeItems(20, 'note');
+        const nextNotes = makeItems(20, 'latest-note');
+        const scanPayload = JSON.stringify(scanItems);
+        const logPayload = JSON.stringify(logItems);
+        const nextNotesPayload = JSON.stringify(nextNotes);
+        const trimmedScanPayload = JSON.stringify(scanItems.slice(0, -10));
+        const nextTotalSize = scanPayload.length + logPayload.length + nextNotesPayload.length;
+        const trimmedTotalSize = trimmedScanPayload.length + logPayload.length + nextNotesPayload.length;
+        const limit = Math.floor((nextTotalSize + trimmedTotalSize) / 2);
 
         vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key) => (
             store.has(key) ? store.get(key) : null
@@ -72,13 +82,13 @@ describe('localStorage utilities', () => {
 
         const { STORAGE_KEY, LOGBOOK_KEY, NOTES_KEY } = localStorageUtils.STORAGE_COLLECTION_KEYS;
 
-        store.set(STORAGE_KEY, JSON.stringify(makeItems(25, 'scan')));
-        store.set(LOGBOOK_KEY, JSON.stringify(makeItems(25, 'log')));
-        store.set(NOTES_KEY, JSON.stringify(makeItems(20, 'note')));
+        store.set(STORAGE_KEY, scanPayload);
+        store.set(LOGBOOK_KEY, logPayload);
+        store.set(NOTES_KEY, JSON.stringify(currentNotes));
 
         const result = localStorageUtils.writeStorageCollection(
             NOTES_KEY,
-            makeItems(20, 'latest-note'),
+            nextNotes,
         );
 
         const cleanupNotice = localStorageUtils.consumeStorageCleanupNotice();

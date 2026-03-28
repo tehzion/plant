@@ -53,6 +53,16 @@ const DEFAULT_WELCOME_RECOMMENDATIONS = [
     'Perform weekly scans to detect issues early.',
 ];
 
+const isWithinLastDays = (value, days) => {
+    if (!value) return false;
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) return false;
+    return timestamp >= Date.now() - (days * 86400000);
+};
+
+const filterRecentEntries = (entries = [], days) =>
+    entries.filter((entry) => isWithinLastDays(entry?.created_at || entry?.timestamp, days));
+
 export const useAIAdvisor = ({
     t,
     notes,
@@ -65,25 +75,37 @@ export const useAIAdvisor = ({
 }) => {
     const [aiInsights, setAiInsights] = useState(null);
     const [generatingInsights, setGeneratingInsights] = useState(false);
+    const [generatingInsightsScopeKey, setGeneratingInsightsScopeKey] = useState(null);
     const [enhancing, setEnhancing] = useState(false);
     const [enhanceText, setEnhanceText] = useState('');
 
-    const handleGenerateInsights = async (activeAlerts, harvestLogs) => {
+    const handleGenerateInsights = async ({
+        activeAlerts = [],
+        harvestLogs = [],
+        notesOverride,
+        plotsOverride,
+        scopeKey = 'overview',
+    } = {}) => {
         if (generatingInsights) return;
         setGeneratingInsights(true);
+        setGeneratingInsightsScopeKey(scopeKey);
 
         try {
             const language = localStorage.getItem('appLanguage') || 'en';
-            const recentLogs = notes.slice(0, 15);
+            const effectiveNotes = Array.isArray(notesOverride) ? notesOverride : notes;
+            const effectivePlots = Array.isArray(plotsOverride) ? plotsOverride : plots;
+            const recentLogs = filterRecentEntries(effectiveNotes, 7);
+            const recentHarvests = filterRecentEntries(harvestLogs, 30);
 
             if (
                 recentLogs.length === 0 &&
                 activeAlerts.length === 0 &&
-                harvestLogs.length === 0 &&
-                plots.length === 0
+                recentHarvests.length === 0 &&
+                effectivePlots.length === 0
             ) {
                 const welcomeRecommendations = t?.('profile.aiWelcomeRecommendations');
                 setAiInsights({
+                    scopeKey,
                     summary: t?.('profile.aiWelcomeSummary')
                         || 'Welcome to your AI Agronomist. Add a plot or activity log to start receiving tailored recommendations.',
                     yieldAnalysis: null,
@@ -97,12 +119,15 @@ export const useAIAdvisor = ({
             const data = await generateInsights(
                 recentLogs,
                 activeAlerts,
-                harvestLogs,
-                plots,
+                recentHarvests,
+                effectivePlots,
                 checklistPct,
                 language,
             );
-            setAiInsights(data);
+            setAiInsights({
+                ...data,
+                scopeKey,
+            });
         } catch (error) {
             console.error('Failed to generate insights:', error);
             notifyError?.(
@@ -111,6 +136,7 @@ export const useAIAdvisor = ({
             );
         } finally {
             setGeneratingInsights(false);
+            setGeneratingInsightsScopeKey(null);
         }
     };
 
@@ -181,6 +207,7 @@ export const useAIAdvisor = ({
     return {
         aiInsights,
         generatingInsights,
+        generatingInsightsScopeKey,
         enhancing,
         enhanceText,
         setEnhanceText,
