@@ -961,12 +961,14 @@ export const translations = {
             contactContent: 'For any inquiries regarding these Terms, please contact us at support@smartplant.my.',
         },
 
-        // Feedback
         feedback: {
             title: 'Review this result',
             description: 'Tell us if the diagnosis looks right, or share a correction.',
             correct: 'Looks correct',
             needsCorrection: 'Needs correction',
+            helpful: 'Was this helpful?',
+            yes: 'Yes',
+            no: 'No',
             issueLabel: 'What seems off?',
             issuePlaceholder: 'Select an issue',
             correctCropLabel: 'Correct crop (optional)',
@@ -2005,12 +2007,14 @@ export const translations = {
             contactContent: 'Jika anda mempunyai sebarang soalan mengenai Dasar Privasi ini, sila hubungi pasukan sokongan kami di support@smartplant.my.',
         },
 
-        // Feedback
         feedback: {
             title: 'Semak keputusan ini',
             description: 'Beritahu kami jika diagnosis ini tepat atau kongsikan pembetulan.',
             correct: 'Nampak betul',
             needsCorrection: 'Perlu pembetulan',
+            helpful: 'Adakah ini membantu?',
+            yes: 'Ya',
+            no: 'Tidak',
             issueLabel: 'Apa yang kurang tepat?',
             issuePlaceholder: 'Pilih isu',
             correctCropLabel: 'Tanaman sebenar (pilihan)',
@@ -2973,13 +2977,6 @@ export const translations = {
             contactContent: '如有关于这些条款的任何疑问，请通过 support@smartplant.my 联系我们。',
         },
 
-        // 反馈
-        feedback: {
-            helpful: '这有帮助吗？',
-            yes: '有',
-            no: '没有',
-            thankYou: '感谢您的反馈！',
-        },
 
         // 隐私政策
         privacy: {
@@ -3031,6 +3028,9 @@ export const translations = {
             description: '如果诊断有误或需要修正，请告诉我们。',
             correct: '看起来正确',
             needsCorrection: '需要修正',
+            helpful: '这有帮助吗？',
+            yes: '有',
+            no: '没有',
             issueLabel: '哪里不对？',
             issuePlaceholder: '选择一个问题',
             correctCropLabel: '正确的作物（可选）',
