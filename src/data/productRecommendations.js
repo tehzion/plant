@@ -32,7 +32,7 @@ export const getProductRecommendations = (plantType, disease) => {
     const diseaseSafe = typeof disease === 'string' ? disease : '';
     const isHealthy = !diseaseSafe || diseaseSafe.toLowerCase().includes('healthy') || diseaseSafe.toLowerCase().includes('normal');
 
-    // Default recommendations for all plants
+    // Default recommendations for all plants (Expanded to ensure variety)
     const defaultNutrition = [
         {
             name: "results.prodNPKName",
@@ -48,6 +48,28 @@ export const getProductRecommendations = (plantType, disease) => {
             description: "results.prodHumaxDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
+        },
+        {
+            name: "results.prodSeaweedName", // Added for more variety
+            count: "1L",
+            description: "results.prodSeaweedDesc",
+            supplier: "tanAgro",
+            tanAgroUrl: "https://www.tanagro.com.my/category/"
+        },
+        {
+            name: "results.prodOrganicName", // Added for more variety
+            count: "25kg",
+            description: "results.prodOrganicDesc",
+            supplier: "both",
+            guanChongUrl: "https://www.guanchongagro.com/category/",
+            tanAgroUrl: "https://www.tanagro.com.my/category/"
+        },
+        {
+            name: "results.prodTraceName", // Added for more variety
+            count: "500g",
+            description: "results.prodTraceDesc",
+            supplier: "guanChong",
+            guanChongUrl: "https://www.guanchongagro.com/category/"
         }
     ];
 
@@ -57,6 +79,8 @@ export const getProductRecommendations = (plantType, disease) => {
     };
 
     if (isHealthy) {
+        // Ensure healthy plants have exactly 5 nutrition products
+        recommendations.nutrition = defaultNutrition.slice(0, 5);
         return recommendations;
     }
 
@@ -138,6 +162,13 @@ export const getProductRecommendations = (plantType, disease) => {
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         });
     }
+
+    // Ensure total is 5 by balancing nutrition and disease control
+    const targetTotal = 5;
+    const diseaseCount = recommendations.diseaseControl.length;
+    const nutritionNeeded = targetTotal - diseaseCount;
+    
+    recommendations.nutrition = defaultNutrition.slice(0, Math.max(0, nutritionNeeded));
 
     return recommendations;
 };

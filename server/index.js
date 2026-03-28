@@ -8,7 +8,7 @@ import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk } from './services/aiService.js';
-import { getAllTags, getAllCategories, getProductsByTagIds } from './services/wooCommerceService.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds } from './services/wooCommerceService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -279,16 +279,33 @@ app.post('/api/products/search', async (req, res, next) => {
         const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories);
         
         // 3. Fetch products for each category in parallel
-        const [treatmentProducts, nutritionProducts] = await Promise.all([
+        const [treatmentProducts, nutritionProducts, allStoreProducts] = await Promise.all([
             getProductsByTagIds(recommendation.treatmentTagIds, recommendation.treatmentCategoryIds),
-            getProductsByTagIds(recommendation.nutritionTagIds, recommendation.nutritionCategoryIds)
+            getProductsByTagIds(recommendation.nutritionTagIds, recommendation.nutritionCategoryIds),
+            getAllProducts()
         ]);
         
         // Deduplicate (a product might appear in both lists)
         const treatmentIds = new Set(treatmentProducts.map(p => p.id));
-        const dedupedNutrition = nutritionProducts.filter(p => !treatmentIds.has(p.id));
+        let dedupedNutrition = nutritionProducts.filter(p => !treatmentIds.has(p.id));
         
-        console.log(`✅ Returning ${treatmentProducts.length} treatment + ${dedupedNutrition.length} nutrition products`);
+        // 4. Fill to 5 products if needed
+        const totalProducts = treatmentProducts.length + dedupedNutrition.length;
+        if (totalProducts < 5 && allStoreProducts.length > 0) {
+            console.log(`ℹ️ Result has ${totalProducts} products. Filling up to 5...`);
+            const existingIds = new Set([...treatmentIds, ...dedupedNutrition.map(p => p.id)]);
+            
+            // Add from allStoreProducts (excluding already included ones)
+            for (const product of allStoreProducts) {
+                if (dedupedNutrition.length + treatmentProducts.length >= 5) break;
+                if (!existingIds.has(product.id)) {
+                    dedupedNutrition.push(product);
+                    existingIds.add(product.id);
+                }
+            }
+        }
+
+        console.log(`✅ Returning ${treatmentProducts.length} treatment + ${dedupedNutrition.length} nutrition/filler products`);
         res.json({
             diseaseControl: treatmentProducts,
             nutrition: dedupedNutrition,

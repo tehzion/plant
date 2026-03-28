@@ -9,6 +9,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 
 import { ScanProvider } from './context/ScanContext';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationProvider.jsx';
 
 const Home = lazy(() => import('./pages/Home'));
 const Results = lazy(() => import('./pages/Results'));
@@ -27,25 +28,27 @@ function App() {
             <AuthProvider>
                 <LanguageProvider>
                     <BrowserRouter>
-                        <ScanProvider>
-                            <Layout>
-                                <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
-                                    <Routes>
-                                        <Route path="/" element={<Home />} />
-                                        <Route path="/results/:id" element={<Results />} />
-                                        <Route path="/history" element={<History />} />
-                                        <Route path="/encyclopedia" element={<Encyclopedia />} />
-                                        <Route path="/profile" element={<Login />} />
-                                        <Route path="/mygap" element={<MyGap />} />
-                                        <Route path="/onboarding" element={<Onboarding />} />
-                                        <Route path="/guide" element={<UserGuide />} />
-                                        <Route path="/terms" element={<TermsOfUse />} />
-                                        <Route path="/privacy" element={<PrivacyPolicy />} />
-                                        <Route path="*" element={<NotFound />} />
-                                    </Routes>
-                                </Suspense>
-                            </Layout>
-                        </ScanProvider>
+                        <NotificationProvider>
+                            <ScanProvider>
+                                <Layout>
+                                    <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
+                                        <Routes>
+                                            <Route path="/" element={<Home />} />
+                                            <Route path="/results/:id" element={<Results />} />
+                                            <Route path="/history" element={<History />} />
+                                            <Route path="/encyclopedia" element={<Encyclopedia />} />
+                                            <Route path="/profile" element={<Login />} />
+                                            <Route path="/mygap" element={<MyGap />} />
+                                            <Route path="/onboarding" element={<Onboarding />} />
+                                            <Route path="/guide" element={<UserGuide />} />
+                                            <Route path="/terms" element={<TermsOfUse />} />
+                                            <Route path="/privacy" element={<PrivacyPolicy />} />
+                                            <Route path="*" element={<NotFound />} />
+                                        </Routes>
+                                    </Suspense>
+                                </Layout>
+                            </ScanProvider>
+                        </NotificationProvider>
                     </BrowserRouter>
                 </LanguageProvider>
             </AuthProvider>

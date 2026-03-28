@@ -1,52 +1,64 @@
-import React, { useEffect } from 'react';
-import { X, CheckCircle, Info, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { X, CheckCircle, Info, AlertTriangle, ArrowRight } from 'lucide-react';
 
+// ─── Theme maps ───────────────────────────────────────────────────────────────
+const THEME = {
+    success: {
+        bg:     '#F0FDF4',
+        border: '#22C55E',
+        icon:   <CheckCircle size={22} color="#16A34A" />,
+    },
+    error: {
+        bg:     '#FEF2F2',
+        border: '#EF4444',
+        icon:   <AlertTriangle size={22} color="#EF4444" />,
+    },
+    warning: {
+        bg:     '#FFFBEB',
+        border: '#F59E0B',
+        icon:   <AlertTriangle size={22} color="#D97706" />,
+    },
+    info: {
+        bg:     '#EFF6FF',
+        border: '#3B82F6',
+        icon:   <Info size={22} color="#2563EB" />,
+    },
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+// Note: auto-dismiss timing is now handled entirely by NotificationProvider.
+// This component is purely presentational.
 const NotificationToast = ({ notification, onClose, onAction }) => {
-    useEffect(() => {
-        if (notification && notification.duration) {
-            const timer = setTimeout(onClose, notification.duration);
-            return () => clearTimeout(timer);
-        }
-    }, [notification, onClose]);
-
     if (!notification) return null;
 
     const { type = 'info', message, actionLabel } = notification;
-
-    const bgColors = {
-        success: '#F0FDF4', // Very light green
-        error: '#FEF2F2',
-        info: '#F0FDF4' // Ensure info matches the green theme too (Analysis Running)
-    };
-
-    const borderColors = {
-        success: '#22C55E', // Green-500
-        error: '#EF4444',
-        info: '#22C55E' // consistent green border
-    };
-
-    const icons = {
-        success: <CheckCircle size={24} color="#16A34A" />, // Green-600
-        error: <Info size={24} color="#EF4444" />,
-        info: <Info size={24} color="#16A34A" /> // Green info icon
-    };
+    const theme = THEME[type] ?? THEME.info;
 
     return (
-        <div className={`notification-toast slide-up type-${type}`}>
+        <div className={`notification-toast type-${type}`} role="alert" aria-live="assertive">
             <div className="notification-content">
-                <div className="notification-icon">
-                    {icons[type]}
+                <div className="notification-icon" aria-hidden="true">
+                    {theme.icon}
                 </div>
-                <div className="notification-message">
-                    {message}
-                </div>
+
+                <p className="notification-message">{message}</p>
+
                 {actionLabel && (
-                    <button className="notification-action" onClick={onAction}>
-                        {actionLabel} <ArrowRight size={16} />
+                    <button
+                        className="notification-action"
+                        onClick={onAction}
+                        style={{ borderColor: theme.border }}
+                    >
+                        {actionLabel} <ArrowRight size={14} />
                     </button>
                 )}
-                <button className="notification-close" onClick={onClose}>
-                    <X size={18} />
+
+                <button
+                    className="notification-close"
+                    onClick={onClose}
+                    aria-label="Dismiss notification"
+                >
+                    <X size={16} />
                 </button>
             </div>
 
@@ -57,55 +69,62 @@ const NotificationToast = ({ notification, onClose, onAction }) => {
                     left: 50%;
                     transform: translateX(-50%);
                     z-index: 2000;
-                    width: 90%;
-                    max-width: 420px;
-                    background: white;
-                    border: 1px solid ${borderColors[type]};
+                    width: 92%;
+                    max-width: 440px;
                     border-radius: 16px;
-                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-                    background-color: ${bgColors[type]};
-                    padding: 12px 16px;
-                    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                    padding: 13px 16px;
+                    border: 1.5px solid ${theme.border};
+                    background-color: ${theme.bg};
+                    box-shadow:
+                        0 10px 25px -5px rgba(0,0,0,0.10),
+                        0 4px 10px -3px rgba(0,0,0,0.06);
+                    animation: toastSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
 
                 .notification-content {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 10px;
+                }
+
+                .notification-icon {
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
                 }
 
                 .notification-message {
                     flex: 1;
-                    font-size: 0.95rem;
-                    color: var(--color-text-primary);
+                    font-size: 0.88rem;
+                    color: #0f172a;
                     font-weight: 600;
-                    line-height: 1.4;
+                    line-height: 1.45;
+                    margin: 0;
                 }
 
                 .notification-action {
+                    flex-shrink: 0;
                     background: white;
-                    border: 1px solid ${borderColors[type]};
-                    color: ${type === 'success' ? '#16A34A' : 'var(--color-text-primary)'};
-                    padding: 6px 12px;
-                    border-radius: 9999px; /* Pill shape */
-                    font-size: 0.85rem;
+                    border: 1.5px solid;
+                    padding: 5px 12px;
+                    border-radius: 999px;
+                    font-size: 0.78rem;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
-                    gap: 6px;
+                    gap: 4px;
                     font-weight: 700;
-                    transition: all 0.2s;
+                    color: #0f172a;
+                    transition: all 0.15s;
                     white-space: nowrap;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                 }
-                
                 .notification-action:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-                    background: ${type === 'success' ? '#DCFCE7' : '#F3F4F6'};
+                    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
                 }
 
                 .notification-close {
+                    flex-shrink: 0;
                     background: none;
                     border: none;
                     color: #6B7280;
@@ -115,18 +134,16 @@ const NotificationToast = ({ notification, onClose, onAction }) => {
                     align-items: center;
                     justify-content: center;
                     border-radius: 50%;
-                    transition: background 0.2s;
-                    margin-left: 4px;
+                    transition: background 0.15s, color 0.15s;
                 }
-
                 .notification-close:hover {
-                    background: rgba(0,0,0,0.05);
-                    color: #374151;
+                    background: rgba(0,0,0,0.06);
+                    color: #1f2937;
                 }
 
-                @keyframes slideDown {
-                    from { transform: translate(-50%, -100%); opacity: 0; }
-                    to { transform: translate(-50%, 0); opacity: 1; }
+                @keyframes toastSlideDown {
+                    from { transform: translate(-50%, -110%); opacity: 0; }
+                    to   { transform: translate(-50%, 0);     opacity: 1; }
                 }
             `}</style>
         </div>

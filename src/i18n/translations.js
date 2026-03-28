@@ -480,6 +480,12 @@ export const translations = {
             prodImidacDesc: 'Controls aphids and whiteflies (vectors) that transmit viral diseases.',
             prodChloroName: 'Chlorothalonil 500SC',
             prodChloroDesc: 'Broad-spectrum preventive fungicide for common fungal diseases.',
+            prodSeaweedName: 'Seaweed Extract Bio-Fertilizer',
+            prodSeaweedDesc: 'Natural seaweed extract to improve plant stress resistance and leaf color.',
+            prodOrganicName: 'Premium Organic Compost',
+            prodOrganicDesc: 'Rich organic matter to improve soil structure and long-term fertility.',
+            prodTraceName: 'Chelated Trace Elements Mix',
+            prodTraceDesc: 'Essential micronutrients (Fe, Zn, B, Mn) to prevent yellowing and stunted growth.',
 
             // Treatment
             noTreatmentNeeded: 'No Treatment Needed',
@@ -1268,6 +1274,12 @@ export const translations = {
             prodImidacDesc: 'Mengawal kutu daun dan lalat putih (vektor) yang menyebarkan penyakit virus.',
             prodChloroName: 'Chlorothalonil 500SC',
             prodChloroDesc: 'Racun kulat pencegah spektrum luas untuk penyakit kulat biasa.',
+            prodSeaweedName: 'Baja Bio Ekstrak Rumpai Laut',
+            prodSeaweedDesc: 'Ekstrak rumpai laut semula jadi untuk meningkatkan daya tahan tekanan dan warna daun.',
+            prodOrganicName: 'Kompos Organik Premium',
+            prodOrganicDesc: 'Bahan organik kaya untuk memperbaiki struktur tanah dan kesuburan jangka panjang.',
+            prodTraceName: 'Campuran Unsur Surih Terchelat',
+            prodTraceDesc: 'Mikronutrien penting (Fe, Zn, B, Mn) untuk mencegah kekuningan dan pertumbuhan terbantut.',
 
             // Treatment
             noTreatmentNeeded: 'Tiada Rawatan Diperlukan',
@@ -2111,6 +2123,12 @@ export const translations = {
             prodImidacDesc: '防治蚜虫和白粉虱（病毒传播媒介）。',
             prodChloroName: '百菌清500SC',
             prodChloroDesc: '广谱预防性杀菌剂，用于防治常见真菌病害。',
+            prodSeaweedName: '海藻精华生物肥料',
+            prodSeaweedDesc: '天然海藻提取物，增强植物抗逆性，改善叶片颜色。',
+            prodOrganicName: '特级有机堆肥',
+            prodOrganicDesc: '富含有机质，改善土壤结构，提升长期肥力。',
+            prodTraceName: '螯合态微量元素合剂',
+            prodTraceDesc: '提供必需的微量元素（铁、锌、硼、锰），防止叶片发黄和生长迟缓。',
 
             // 治疗
             noTreatmentNeeded: '无需治疗',
