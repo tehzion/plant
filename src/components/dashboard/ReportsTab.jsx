@@ -294,8 +294,8 @@ const ReportsTab = ({
             <div className="udp-section">
                 <SectionHeader
                     icon={<BrainCircuit size={15} color="#8b5cf6" />}
-                    title="AI Farm Intelligence"
-                    action={<button className="udp-see-all" style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }} onClick={() => onGenerateInsights(activeAlerts, harvestLogs)} disabled={generatingInsights}>{generatingInsights ? 'Analyzing...' : <><Sparkles size={13} /> Ask AI</>}</button>}
+                    title={t('profile.aiFarmIntelligence') || 'AI Farm Intelligence'}
+                    action={<button className="udp-see-all" style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }} onClick={() => onGenerateInsights(activeAlerts, harvestLogs)} disabled={generatingInsights}>{generatingInsights ? (t('common.analyzing') || 'Analyzing...') : <><Sparkles size={13} /> {t('profile.askAI') || 'Ask AI'}</>}</button>}
                 />
                 <div style={{ padding: '0 16px 16px' }}>
                     {generatingInsights ? (

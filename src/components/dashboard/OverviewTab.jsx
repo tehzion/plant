@@ -258,7 +258,7 @@ const OverviewTab = ({
             <div className="udp-explore-grid">
                 <div className="udp-explore-card" style={{ background: 'linear-gradient(135deg, #fff, #f0fdf4)' }} onClick={() => navigate('/mygap')}>
                     <div className="udp-explore-icon" style={{ color: '#16a34a' }}><ShieldCheck size={24} /></div>
-                    <span className="udp-explore-label">MyGAP</span>
+                    <span className="udp-explore-label">{t('home.mygapTitle') || 'myGAP Guide'}</span>
                     <div style={{ width: '100%', height: 4, background: '#e2e8f0', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${checklistPct}%`, height: '100%', background: '#22c55e' }} />
                     </div>
@@ -272,7 +272,7 @@ const OverviewTab = ({
             </div>
 
             <div className="udp-section">
-                <SectionHeader icon={<Calendar size={15} />} title={t('profile.recentScans') || 'Recent Activity'} action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'History'}</button>} />
+                <SectionHeader icon={<Calendar size={15} />} title={t('profile.recentScans') || 'Recent Activity'} action={<button className="udp-see-all" onClick={() => setTab('reports')}>{t('common.seeAll') || 'See all'}</button>} />
                 {recentHistory.length === 0 ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem' }}>{t('profile.noRecentHistory') || 'No recent scans.'}</div>
                 ) : (

@@ -120,9 +120,9 @@ const ActivityForm = ({
                         <div style={{ flex: 1 }}>
                             <label className="udp-form-label">{t('profile.scoutSeverity') || 'Severity'}</label>
                             <select className="udp-input" value={noteForm.scout_severity} onChange={(event) => updateForm({ scout_severity: event.target.value })}>
-                                <option value="Low">Low</option>
-                                <option value="Moderate">Moderate</option>
-                                <option value="High">High</option>
+                                <option value="Low">{t('profile.severityLow') || 'Low'}</option>
+                                <option value="Moderate">{t('profile.severityModerate') || 'Moderate'}</option>
+                                <option value="High">{t('profile.severityHigh') || 'High'}</option>
                             </select>
                         </div>
                     </div>
@@ -276,7 +276,7 @@ const ActivityForm = ({
                     </label>
                     {noteForm.photo_base64 && (
                         <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <img src={noteForm.photo_base64} alt="preview" style={{ width: 70, height: 70, borderRadius: 12, objectFit: 'cover', border: '2px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
+                            <img src={noteForm.photo_base64} alt={t('profile.photoAttachment') || 'Photo Attachment'} style={{ width: 70, height: 70, borderRadius: 12, objectFit: 'cover', border: '2px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
                             <button type="button" onClick={() => updateForm({ photo_base64: '' })} style={{ position: 'absolute', top: -8, right: -8, background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                                 x
                             </button>
@@ -286,7 +286,7 @@ const ActivityForm = ({
             </div>
 
             <button type="submit" className="udp-submit-btn" disabled={savingNote}>
-                {savingNote ? '...' : (t('common.save') || 'Save Entry')}
+                {savingNote ? '...' : (t('common.save') || 'Save')}
             </button>
         </form>
     );
