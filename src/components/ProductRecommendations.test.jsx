@@ -63,6 +63,7 @@ describe('ProductRecommendations', () => {
     beforeEach(() => {
         fetchMock.mockReset();
         global.fetch = fetchMock;
+        window.localStorage.clear();
 
         fetchMock.mockResolvedValue({
             ok: true,
@@ -128,5 +129,41 @@ describe('ProductRecommendations', () => {
             expect(fetchMock).toHaveBeenCalledTimes(1);
         });
         expect(screen.getByText(/1 Items Selected/i)).toBeInTheDocument();
+    });
+
+    it('uses recent cached recommendations when the live catalog is unavailable', async () => {
+        const scanResult = {
+            healthStatus: 'unhealthy',
+            pathogenType: 'fungal',
+            symptoms: ['Leaf spots'],
+            treatments: ['Apply fungicide'],
+            productSearchTags: ['fungicide'],
+        };
+
+        const { unmount } = render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={scanResult}
+            />,
+        );
+
+        await screen.findByText('Copper Guard');
+        unmount();
+
+        fetchMock.mockRejectedValueOnce(new Error('Catalog offline'));
+
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={scanResult}
+            />,
+        );
+
+        expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
+        expect(await screen.findByText(/Showing recent saved product matches/i)).toBeInTheDocument();
     });
 });

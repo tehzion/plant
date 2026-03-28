@@ -1,5 +1,7 @@
 // Farm Intelligence AI - Backend API Integration
 
+import { fetchJsonWithTimeout } from './networkRequest.js';
+
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 /**
@@ -14,20 +16,22 @@ const API_URL = import.meta.env.VITE_API_URL || '';
  */
 export const generateInsights = async (logs, alerts, harvestData, plots, checklistPct, language = 'en') => {
   try {
-    const response = await fetch(`${API_URL}/api/farm/insights`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/farm/insights`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ logs, alerts, harvestData, plots, checklistPct, language })
       },
-      body: JSON.stringify({ logs, alerts, harvestData, plots, checklistPct, language })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+      {
+        timeoutMs: 20000,
+        timeoutMessage: 'AI insights are taking too long. Please try again in a moment.',
+        networkMessage: 'Could not reach the AI insights service. Please check your connection.',
+        unavailableMessage: 'AI insights are temporarily unavailable. Please try again shortly.',
+      },
+    );
   } catch (error) {
     console.error('AI Insights API failed:', error);
     throw error;
@@ -44,20 +48,22 @@ export const generateInsights = async (logs, alerts, harvestData, plots, checkli
  */
 export const generateSOP = async (crop, disease, severity, language = 'en') => {
   try {
-    const response = await fetch(`${API_URL}/api/farm/sop`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/farm/sop`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ crop, disease, severity, language })
       },
-      body: JSON.stringify({ crop, disease, severity, language })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+      {
+        timeoutMs: 20000,
+        timeoutMessage: 'SOP generation is taking too long. Please try again shortly.',
+        networkMessage: 'Could not reach the SOP service. Please check your connection.',
+        unavailableMessage: 'SOP generation is temporarily unavailable. Please try again shortly.',
+      },
+    );
   } catch (error) {
     console.error('AI SOP API failed:', error);
     throw error;
@@ -72,20 +78,22 @@ export const generateSOP = async (crop, disease, severity, language = 'en') => {
  */
 export const parseNaturalLog = async (text, language = 'en') => {
   try {
-    const response = await fetch(`${API_URL}/api/farm/parse-log`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/farm/parse-log`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text, language })
       },
-      body: JSON.stringify({ text, language })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+      {
+        timeoutMs: 15000,
+        timeoutMessage: 'Log enhancement is taking too long. Please try again shortly.',
+        networkMessage: 'Could not reach the log enhancement service. Please check your connection.',
+        unavailableMessage: 'Log enhancement is temporarily unavailable. Please try again shortly.',
+      },
+    );
   } catch (error) {
     console.error('AI Parse Log API failed:', error);
     throw error;
@@ -102,20 +110,22 @@ export const parseNaturalLog = async (text, language = 'en') => {
  */
 export const predictFarmRisk = async (plots, logs, alerts, location, language = 'en') => {
   try {
-    const response = await fetch(`${API_URL}/api/farm/predict`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/farm/predict`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ plots, logs, alerts, location, language })
       },
-      body: JSON.stringify({ plots, logs, alerts, location, language })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+      {
+        timeoutMs: 18000,
+        timeoutMessage: 'Risk prediction is taking too long. Please try again shortly.',
+        networkMessage: 'Could not reach the farm risk service. Please check your connection.',
+        unavailableMessage: 'Farm risk prediction is temporarily unavailable. Please try again shortly.',
+      },
+    );
   } catch (error) {
     console.error('AI Predict Risk API failed:', error);
     return { hasRisk: false }; // Failsafe
@@ -137,25 +147,27 @@ export const askFarmQuestion = async (
   recentAlerts = [],
 ) => {
   try {
-    const response = await fetch(`${API_URL}/api/ask`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/ask`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question,
+          language,
+          recentNotes,
+          recentAlerts,
+        }),
       },
-      body: JSON.stringify({
-        question,
-        language,
-        recentNotes,
-        recentAlerts,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+      {
+        timeoutMs: 18000,
+        timeoutMessage: 'AI advice is taking too long. Please try again in a moment.',
+        networkMessage: 'Could not reach the AI advisor service. Please check your connection.',
+        unavailableMessage: 'The AI advisor is temporarily unavailable. Please try again shortly.',
+      },
+    );
   } catch (error) {
     console.error('AI Ask API failed:', error);
     throw error;

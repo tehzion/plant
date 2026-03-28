@@ -21,7 +21,8 @@ const formTranslations = {
             "autoFill": "Auto-fill",
             "autoEnhance": "Auto-enhance",
             "magicEnhance": "Magic Enhance",
-            "aiEnhanceFailed": "AI Enhancement failed. Please check connection."
+            "aiEnhanceFailed": "AI Enhancement failed. Please check connection.",
+            "enhanceSuccess": "Log enhanced — please review the fields below."
         }
     },
     "ms": {
@@ -46,7 +47,8 @@ const formTranslations = {
             "autoFill": "Isi-auto",
             "autoEnhance": "Auto-tingkat",
             "magicEnhance": "Tingkat Pintar",
-            "aiEnhanceFailed": "Peningkatkan AI gagal. Sila semak sambungan."
+            "aiEnhanceFailed": "Peningkatkan AI gagal. Sila semak sambungan.",
+            "enhanceSuccess": "Log telah dipertingkatkan — sila semak medan di bawah."
         }
     },
     "zh": {

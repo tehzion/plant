@@ -346,6 +346,8 @@ const homeTranslations = {
             "keyInfo": "关键信息",
             "scanPlant": "扫描植物",
             "scanDesc": "立即检测病害",
+            "mygapTitle": "myGAP ??",
+            "mygapDesc": "??????",
             "confirmExit": "取消当前扫描？",
             "confirmExitMessage": "您将失去当前的扫描进度。",
             "minimizeScan": "继续浏览",

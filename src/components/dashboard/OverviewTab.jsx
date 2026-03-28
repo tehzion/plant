@@ -37,6 +37,7 @@ const OverviewTab = ({
     assessingRisk,
     predictiveRisk,
     forecast,
+    weatherError,
     checklistPct,
     plots,
     relDate,
@@ -240,33 +241,52 @@ const OverviewTab = ({
                 <div className="udp-forecast-panel">
                     {(forecast || []).length === 0 ? (
                         <div className="udp-empty-forecast">
-                            {label('profile.weatherForecastUnavailable', 'Forecast will appear here after weather data is loaded.')}
+                            {weatherError || label('profile.weatherForecastUnavailable', 'Forecast will appear here after weather data is loaded.')}
                         </div>
                     ) : (
-                        <div className="udp-forecast-strip">
-                        {(forecast || []).slice(0, 4).map((day, index) => {
-                            const noticeData = deriveFarmingNotice(day);
-                            const notice = {
-                                label: label(noticeData.key, 'Good'),
-                                color: noticeData.status === 'warning' ? '#ef4444' : noticeData.status === 'caution' ? '#f59e0b' : '#16a34a',
-                                bg: noticeData.status === 'warning' ? '#fef2f2' : noticeData.status === 'caution' ? '#fffbeb' : '#f0fdf4',
-                                border: noticeData.status === 'warning' ? '#fecaca' : noticeData.status === 'caution' ? '#fef3c7' : '#dcfce7',
-                                icon: noticeData.status === 'warning' ? <AlertTriangle size={16} /> : noticeData.status === 'caution' ? <Cloud size={16} /> : <Sun size={16} />,
-                            };
-                            return (
-                                <div key={day.date || index} className="udp-forecast-card" style={{ background: notice.bg, borderColor: notice.border }}>
-                                    <span className="udp-forecast-day">
-                                        {index === 0
-                                            ? (t('common.today') || t('profile.today') || 'Today')
-                                            : new Date(day.date).toLocaleDateString(t('common.dateLocale') || undefined, { weekday: 'short' })}
-                                    </span>
-                                    <div className="udp-forecast-icon" style={{ color: notice.color }}>{notice.icon}</div>
-                                    <span className="udp-forecast-temp">{Math.round(day.tempMax)}&deg;C</span>
-                                    <span className="udp-forecast-note" style={{ color: notice.color }}>{notice.label}</span>
+                        <>
+                            {weatherError && (
+                                <div
+                                    style={{
+                                        margin: '0 0 12px',
+                                        padding: '10px 12px',
+                                        borderRadius: '10px',
+                                        background: '#fffbeb',
+                                        border: '1px solid #fde68a',
+                                        color: '#92400e',
+                                        fontSize: '0.78rem',
+                                        lineHeight: 1.45,
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {weatherError}
                                 </div>
-                            );
-                        })}
-                        </div>
+                            )}
+                            <div className="udp-forecast-strip">
+                            {(forecast || []).slice(0, 4).map((day, index) => {
+                                const noticeData = deriveFarmingNotice(day);
+                                const notice = {
+                                    label: label(noticeData.key, 'Good'),
+                                    color: noticeData.status === 'warning' ? '#ef4444' : noticeData.status === 'caution' ? '#f59e0b' : '#16a34a',
+                                    bg: noticeData.status === 'warning' ? '#fef2f2' : noticeData.status === 'caution' ? '#fffbeb' : '#f0fdf4',
+                                    border: noticeData.status === 'warning' ? '#fecaca' : noticeData.status === 'caution' ? '#fef3c7' : '#dcfce7',
+                                    icon: noticeData.status === 'warning' ? <AlertTriangle size={16} /> : noticeData.status === 'caution' ? <Cloud size={16} /> : <Sun size={16} />,
+                                };
+                                return (
+                                    <div key={day.date || index} className="udp-forecast-card" style={{ background: notice.bg, borderColor: notice.border }}>
+                                        <span className="udp-forecast-day">
+                                            {index === 0
+                                                ? (t('common.today') || t('profile.today') || 'Today')
+                                                : new Date(day.date).toLocaleDateString(t('common.dateLocale') || undefined, { weekday: 'short' })}
+                                        </span>
+                                        <div className="udp-forecast-icon" style={{ color: notice.color }}>{notice.icon}</div>
+                                        <span className="udp-forecast-temp">{Math.round(day.tempMax)}&deg;C</span>
+                                        <span className="udp-forecast-note" style={{ color: notice.color }}>{notice.label}</span>
+                                    </div>
+                                );
+                            })}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

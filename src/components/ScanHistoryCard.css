@@ -1,0 +1,128 @@
+.scan-history-card {
+  cursor: pointer;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: white;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.scan-history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.scan-history-card:active {
+  transform: scale(0.98);
+}
+
+.card-content {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.scan-thumbnail {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background-color: #f5f5f5;
+}
+
+.scan-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.scan-disease {
+  font-size: 1.1rem;
+  color: var(--color-primary-dark);
+  margin: 0 0 6px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.scan-meta-group {
+  margin-bottom: 8px;
+}
+
+.scan-meta-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin: 0 0 6px 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-separator {
+  color: #d1d5db;
+}
+
+.meta-date {
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.scan-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scan-location {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 4px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.location-icon {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.delete-btn {
+  background: #f3f4f6;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.delete-btn:hover {
+  background: #ffebee;
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+@media (max-width: 480px) {
+  .scan-thumbnail {
+    width: 70px;
+    height: 70px;
+  }
+
+  .scan-disease {
+    font-size: 1rem;
+  }
+}

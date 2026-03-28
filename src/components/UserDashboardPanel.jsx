@@ -77,7 +77,7 @@ const UserDashboardPanel = () => {
     const navigate                          = useNavigate();
     const { notify, notifyError, notifySuccess, notifyWarning } = useNotifications();
     const { getLocation }                   = useLocation();
-    const { forecast, fetchWeather }        = useWeather();
+    const { forecast, error: weatherError, fetchWeather } = useWeather();
 
     // ── Activity types with i18n labels ──────────────────────────────────────
     const ACTIVITY_TYPES = useMemo(
@@ -407,6 +407,7 @@ const UserDashboardPanel = () => {
                         assessingRisk={assessingRisk}
                         predictiveRisk={predictiveRisk}
                         forecast={forecast}
+                        weatherError={weatherError}
                         checklistPct={checklistPct}
                         plots={plots}
                         relDate={relDate}

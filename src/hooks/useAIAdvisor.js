@@ -131,7 +131,8 @@ export const useAIAdvisor = ({
         } catch (error) {
             console.error('Failed to generate insights:', error);
             notifyError?.(
-                t?.('error.aiGenerationFailed')
+                error?.message
+                || t?.('error.aiGenerationFailed')
                 || 'Failed to generate AI insights. Please check your connection.',
             );
         } finally {
@@ -196,6 +197,8 @@ export const useAIAdvisor = ({
         } catch (error) {
             console.error('Auto-Enhance failed:', error);
             notifyError?.(
+                error?.message
+                ||
                 t?.('error.aiEnhanceFailed')
                 || 'AI enhancement failed. Please check your backend connection.',
             );

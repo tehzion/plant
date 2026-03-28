@@ -2,6 +2,7 @@
 
 // In production (Render/Vercel), we want relative paths (e.g. /api/analyze) 
 // so the frontend talks to the backend on the same domain.
+import { fetchJsonWithTimeout, fetchWithTimeout } from './networkRequest.js';
 // In local dev, we might need localhost:3002 if not using a proxy.
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -189,37 +190,29 @@ export const analyzePlantDisease = async (
   imageQuality = null
 ) => {
   try {
-    const response = await fetch(`${API_URL}/api/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/analyze`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          treeImage: treeImageBase64,
+          category,
+          leafImage: leafImageBase64,
+          language,
+          location,
+          imageQuality
+        })
       },
-      body: JSON.stringify({
-        treeImage: treeImageBase64,
-        category,
-        leafImage: leafImageBase64,
-        language,
-        location,
-        imageQuality
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-
-      if (response.status === 429) {
-        throw new Error(errorData.message || errorData.error || 'Too many requests. Please try again later.');
-      }
-
-      if (response.status === 500) {
-        throw new Error(errorData.message || errorData.error || 'Server error. Please try again.');
-      }
-
-      throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result;
+      {
+        timeoutMs: 45000,
+        timeoutMessage: 'Plant analysis is taking too long. Please try again in a moment.',
+        networkMessage: 'Could not reach the plant analysis service. Please check your connection and try again.',
+        unavailableMessage: 'Plant analysis is temporarily unavailable. Please try again shortly.',
+      },
+    );
 
   } catch (error) {
     console.warn('Disease detection API failed:', error);
@@ -233,7 +226,15 @@ export const analyzePlantDisease = async (
  */
 export const checkServerHealth = async () => {
   try {
-    const response = await fetch(`${API_URL}/api/health`);
+    const response = await fetchWithTimeout(
+      `${API_URL}/api/health`,
+      {},
+      {
+        timeoutMs: 8000,
+        timeoutMessage: 'Backend health check timed out.',
+        networkMessage: 'Backend server is not reachable',
+      },
+    );
     if (!response.ok) throw new Error('Network response was not ok');
 
     const data = await response.json();

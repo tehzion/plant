@@ -116,7 +116,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       } catch (err) {
         if (isCancelled) return;
         console.error('Failed to load recommended products:', err);
-        setError(t('results.productsError') || 'Could not load specialized products at this time.');
+        setError(err?.message || t('results.productsError') || 'Could not load specialized products at this time.');
         onRecommendationsLoaded?.(null);
       } finally {
         if (!isCancelled) {
