@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext';
@@ -15,15 +15,17 @@ import {
 } from '../utils/localStorage';
 import { LogOut, ShieldCheck, ScanLine } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import LoadingSpinner from './LoadingSpinner';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import './UserDashboardPanel.css';
 
 // ── Standalone dashboard tab components ──────────────────────────────────────
 import OverviewTab  from './dashboard/OverviewTab';
-import ReportsTab   from './dashboard/ReportsTab';
-import PlotsTab     from './dashboard/PlotsTab';
-import NotesTab     from './dashboard/NotesTab';
-import ProductsTab  from './dashboard/ProductsTab';
-import AlertDetailModal from './AlertDetailModal';
+const ReportsTab = lazyWithRetry(() => import('./dashboard/ReportsTab'), 'dashboard-reports');
+const PlotsTab = lazyWithRetry(() => import('./dashboard/PlotsTab'), 'dashboard-plots');
+const NotesTab = lazyWithRetry(() => import('./dashboard/NotesTab'), 'dashboard-notes');
+const ProductsTab = lazyWithRetry(() => import('./dashboard/ProductsTab'), 'dashboard-products');
+const AlertDetailModal = lazyWithRetry(() => import('./AlertDetailModal'), 'dashboard-alert-detail');
 
 // ─── Helper: friendly relative date ─────────────────────────────────────────
 export const relDate = (ts, t) => {
@@ -69,6 +71,12 @@ export const EMPTY_FORM = {
     expense_amount: '', expense_category: 'Other',
     photo_base64: '',
 };
+
+const TAB_FALLBACK = (
+    <div className="page-loading" style={{ minHeight: '24vh' }}>
+        <LoadingSpinner />
+    </div>
+);
 
 // ─── Main component ──────────────────────────────────────────────────────────
 const UserDashboardPanel = () => {
@@ -427,75 +435,85 @@ const UserDashboardPanel = () => {
                 )}
 
                 {tab === 'reports' && (
-                    <ReportsTab
-                        t={t}
-                        label={label}
-                        stats={stats}
-                        checklistPct={checklistPct}
-                        alerts={alerts}
-                        acknowledgedIds={acknowledgedIds}
-                        notes={notes}
-                        plots={plots}
-                        onGenerateInsights={handleGenerateInsights}
-                        generatingInsights={generatingInsights}
-                        generatingInsightsScopeKey={generatingInsightsScopeKey}
-                        aiInsights={aiInsights}
-                        onSelectAlert={setSelectedAlert}
-                        relDate={relDate}
-                    />
+                    <Suspense fallback={TAB_FALLBACK}>
+                        <ReportsTab
+                            t={t}
+                            label={label}
+                            stats={stats}
+                            checklistPct={checklistPct}
+                            alerts={alerts}
+                            acknowledgedIds={acknowledgedIds}
+                            notes={notes}
+                            plots={plots}
+                            onGenerateInsights={handleGenerateInsights}
+                            generatingInsights={generatingInsights}
+                            generatingInsightsScopeKey={generatingInsightsScopeKey}
+                            aiInsights={aiInsights}
+                            onSelectAlert={setSelectedAlert}
+                            relDate={relDate}
+                        />
+                    </Suspense>
                 )}
 
                 {tab === 'plots' && (
-                    <PlotsTab
-                        t={t}
-                        label={label}
-                        addingPlot={addingPlot}
-                        setAddingPlot={setAddingPlot}
-                        handleAddPlot={handleAddPlot}
-                        plotForm={plotForm}
-                        setPlotForm={setPlotForm}
-                        showSoilFields={showSoilFields}
-                        setShowSoilFields={setShowSoilFields}
-                        savingPlot={savingPlot}
-                        plots={plots}
-                        handleDeletePlot={handleDeletePlot}
-                    />
+                    <Suspense fallback={TAB_FALLBACK}>
+                        <PlotsTab
+                            t={t}
+                            label={label}
+                            addingPlot={addingPlot}
+                            setAddingPlot={setAddingPlot}
+                            handleAddPlot={handleAddPlot}
+                            plotForm={plotForm}
+                            setPlotForm={setPlotForm}
+                            showSoilFields={showSoilFields}
+                            setShowSoilFields={setShowSoilFields}
+                            savingPlot={savingPlot}
+                            plots={plots}
+                            handleDeletePlot={handleDeletePlot}
+                        />
+                    </Suspense>
                 )}
 
                 {tab === 'notes' && (
-                    <NotesTab
-                        t={t}
-                        label={label}
-                        addingNote={addingNote}
-                        setAddingNote={setAddingNote}
-                        handleAddNote={handleAddNote}
-                        noteForm={noteForm}
-                        setNoteForm={setNoteForm}
-                        activityTypes={ACTIVITY_TYPES}
-                        plots={plots}
-                        onAutoEnhance={handleAutoEnhance}
-                        enhancing={enhancing}
-                        enhanceText={enhanceText}
-                        setEnhanceText={setEnhanceText}
-                        savingNote={savingNote}
-                        notes={notes}
-                        ACTIVITY_BADGE_COLOR={ACTIVITY_BADGE_COLOR}
-                        relDate={relDate}
-                    />
+                    <Suspense fallback={TAB_FALLBACK}>
+                        <NotesTab
+                            t={t}
+                            label={label}
+                            addingNote={addingNote}
+                            setAddingNote={setAddingNote}
+                            handleAddNote={handleAddNote}
+                            noteForm={noteForm}
+                            setNoteForm={setNoteForm}
+                            activityTypes={ACTIVITY_TYPES}
+                            plots={plots}
+                            onAutoEnhance={handleAutoEnhance}
+                            enhancing={enhancing}
+                            enhanceText={enhanceText}
+                            setEnhanceText={setEnhanceText}
+                            savingNote={savingNote}
+                            notes={notes}
+                            ACTIVITY_BADGE_COLOR={ACTIVITY_BADGE_COLOR}
+                            relDate={relDate}
+                        />
+                    </Suspense>
                 )}
 
                 {tab === 'products' && (
-                    <ProductsTab label={label} />
+                    <Suspense fallback={TAB_FALLBACK}>
+                        <ProductsTab label={label} />
+                    </Suspense>
                 )}
             </div>
 
             {/* ── Alert detail modal ────────────────────────────────────────── */}
             {selectedAlert && (
-                <AlertDetailModal
-                    scan={selectedAlert}
-                    onClose={() => setSelectedAlert(null)}
-                    onAcknowledge={handleAcknowledge}
-                />
+                <Suspense fallback={null}>
+                    <AlertDetailModal
+                        scan={selectedAlert}
+                        onClose={() => setSelectedAlert(null)}
+                        onAcknowledge={handleAcknowledge}
+                    />
+                </Suspense>
             )}
 
             {/* ── Global styles ─────────────────────────────────────────────── */}

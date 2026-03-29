@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { execSync } from 'child_process'
 import fs from 'fs'
 import { createHash } from 'crypto'
@@ -39,13 +40,16 @@ const createPlantAlias = (seed = 'asset') => {
 const createAssetPattern = (seed, extensionPattern) => `assets/${createPlantAlias(seed)}-[hash]${extensionPattern}`;
 
 // https://vite.dev/config/
-export default defineConfig({
-  define: {
-    __APP_VERSION__: JSON.stringify(`v${pkg.version}-${gitHash}`)
-  },
-  plugins: [
-    react(),
-    VitePWA({
+export default defineConfig(({ mode }) => {
+  const shouldAnalyze = mode === 'analyze';
+
+  return {
+    define: {
+      __APP_VERSION__: JSON.stringify(`v${pkg.version}-${gitHash}`)
+    },
+    plugins: [
+      react(),
+      VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['leaf-icon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
@@ -92,35 +96,109 @@ export default defineConfig({
           }
         ]
       }
-    })
-  ],
-  optimizeDeps: {
-    include: ['lucide-react'],
-  },
-  build: {
-    sourcemap: false, // Disable Source Maps as requested
-    cssCodeSplit: false,
-    rollupOptions: {
-      output: {
-        inlineDynamicImports: true,
-        // Obfuscate emitted filenames so route/page names are not exposed in browser asset URLs.
-        entryFileNames: (chunkInfo) => createAssetPattern(
-          chunkInfo.facadeModuleId || chunkInfo.name || 'entry',
-          '.js',
-        ),
-        chunkFileNames: (chunkInfo) => createAssetPattern(
-          chunkInfo.facadeModuleId || chunkInfo.name || 'chunk',
-          '.js',
-        ),
-        assetFileNames: (assetInfo) => createAssetPattern(
-          assetInfo.originalFileName || assetInfo.name || 'asset',
-          '[extname]',
-        ),
+      }),
+      ...(shouldAnalyze
+        ? [
+            visualizer({
+              filename: 'dist/bundle-analysis.html',
+              template: 'treemap',
+              gzipSize: true,
+              brotliSize: true,
+              emitFile: false,
+            }),
+            visualizer({
+              filename: 'dist/bundle-analysis.json',
+              template: 'raw-data',
+              gzipSize: true,
+              brotliSize: true,
+              emitFile: false,
+            }),
+          ]
+        : []),
+    ],
+    optimizeDeps: {
+      include: ['lucide-react'],
+    },
+    build: {
+      sourcemap: false, // Disable Source Maps as requested
+      cssCodeSplit: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (
+                id.includes('/react/') ||
+                id.includes('\\react\\') ||
+                id.includes('/react-dom/') ||
+                id.includes('\\react-dom\\') ||
+                id.includes('/scheduler/') ||
+                id.includes('\\scheduler\\')
+              ) {
+                return 'vendor-react';
+              }
+              if (
+                id.includes('react-router-dom') ||
+                id.includes('@remix-run/router') ||
+                id.includes('/react-router/') ||
+                id.includes('\\react-router\\')
+              ) {
+                return 'vendor-router';
+              }
+              if (
+                id.includes('recharts') ||
+                id.includes('/d3-') ||
+                id.includes('\\d3-') ||
+                id.includes('/victory-vendor/') ||
+                id.includes('\\victory-vendor\\') ||
+                id.includes('/clsx/') ||
+                id.includes('\\clsx\\')
+              ) {
+                return 'vendor-charts';
+              }
+              if (
+                id.includes('jspdf') ||
+                id.includes('/fflate/') ||
+                id.includes('\\fflate\\')
+              ) {
+                return 'vendor-pdf';
+              }
+              if (
+                id.includes('html2canvas') ||
+                id.includes('canvg') ||
+                id.includes('rgbcolor') ||
+                id.includes('stackblur-canvas') ||
+                id.includes('svg-pathdata') ||
+                id.includes('/raf/') ||
+                id.includes('\\raf\\') ||
+                id.includes('performance-now') ||
+                id.includes('/core-js/') ||
+                id.includes('\\core-js\\')
+              ) {
+                return 'vendor-canvas';
+              }
+              if (id.includes('qrcode')) return 'vendor-qrcode';
+              if (id.includes('@supabase') || id.includes('openai')) return 'vendor-services';
+            }
+          },
+          // Obfuscate emitted filenames so route/page names are not exposed in browser asset URLs.
+          entryFileNames: (chunkInfo) => createAssetPattern(
+            chunkInfo.facadeModuleId || chunkInfo.name || 'entry',
+            '.js',
+          ),
+          chunkFileNames: (chunkInfo) => createAssetPattern(
+            chunkInfo.facadeModuleId || chunkInfo.name || 'chunk',
+            '.js',
+          ),
+          assetFileNames: (assetInfo) => createAssetPattern(
+            assetInfo.originalFileName || assetInfo.name || 'asset',
+            '[extname]',
+          ),
+        }
       }
+    },
+    server: {
+      port: 3000,
+      open: true
     }
-  },
-  server: {
-    port: 3000,
-    open: true
-  }
+  };
 })

@@ -11,8 +11,22 @@ const t = (key) => ({
     'profile.yieldForecastNeedsMoreData': 'Need more harvest data',
 }[key] || key);
 
+vi.mock('./ReportsCharts.jsx', () => ({
+    default: ({ label, plots, selectedPlotId, onSelectPlot, yieldChartData }) => (
+        <div data-testid="reports-charts">
+            <select value={selectedPlotId} onChange={(event) => onSelectPlot(event.target.value)}>
+                <option value="all">{label('profile.allPlots', 'All Plots')}</option>
+                {plots.map((plot) => <option key={plot.id} value={plot.id}>{plot.name}</option>)}
+            </select>
+            {yieldChartData.data.length < 2 && (
+                <div>{label('profile.yieldForecastNeedsMoreData', 'Need more harvest data')}</div>
+            )}
+        </div>
+    ),
+}));
+
 describe('ReportsTab', () => {
-    it('scopes AI insight requests to the selected plot context', () => {
+    it('scopes AI insight requests to the selected plot context', async () => {
         const onGenerateInsights = vi.fn();
 
         render(
@@ -43,7 +57,7 @@ describe('ReportsTab', () => {
             />,
         );
 
-        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'plot-a' } });
+        fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'plot-a' } });
         fireEvent.click(screen.getByRole('button', { name: /ask ai/i }));
 
         expect(onGenerateInsights).toHaveBeenCalledWith(
@@ -60,7 +74,7 @@ describe('ReportsTab', () => {
         );
     });
 
-    it('shows a localized fallback when trend data is insufficient', () => {
+    it('shows a localized fallback when trend data is insufficient', async () => {
         render(
             <ReportsTab
                 t={t}
@@ -83,6 +97,6 @@ describe('ReportsTab', () => {
             />,
         );
 
-        expect(screen.getByText('Need more harvest data')).toBeInTheDocument();
+        expect(await screen.findByText('Need more harvest data')).toBeInTheDocument();
     });
 });

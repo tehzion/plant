@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import UserDashboardPanel from '../components/UserDashboardPanel';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+
+const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboardPanel'), 'dashboard-panel');
 
 const Login = () => {
     const { t } = useLanguage();
@@ -23,7 +26,9 @@ const Login = () => {
         return (
             <div className="login-page" style={{ alignItems: 'flex-start', paddingTop: '16px' }}>
                 <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto' }}>
-                    <UserDashboardPanel />
+                    <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
+                        <UserDashboardPanel />
+                    </Suspense>
                 </div>
             </div>
         );
@@ -349,6 +354,12 @@ const Login = () => {
                 @media (max-width: 480px) {
                     .login-card { padding: 24px 20px; border-radius: 20px; }
                     .login-title { font-size: 1.4rem; }
+                }
+                .page-loading {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 40vh;
                 }
             `}</style>
         </div>

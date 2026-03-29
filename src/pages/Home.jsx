@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
@@ -64,7 +64,7 @@ const Home = () => {
 
   const {
     selectedImage, selectedLeafImage, selectedCategory, selectedScale, scaleQuantity,
-    currentStep, loading, error, analyzingStep
+    currentStep, loading, error, errorCode, analyzingStep, scanStartTime
   } = scanState;
 
   // View State: 'dashboard' | 'scan'
@@ -87,6 +87,7 @@ const Home = () => {
     type: 'alert',
     onConfirm: null
   });
+  const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
 
   const steps = [
     { label: t('home.step1') },
@@ -171,6 +172,43 @@ const Home = () => {
       return () => clearInterval(interval);
     }
   }, [loading, currentStep, language]);
+
+  useEffect(() => {
+    if (!(loading && currentStep === 3 && scanStartTime)) {
+      setAnalysisElapsedMs(0);
+      return undefined;
+    }
+
+    const updateElapsed = () => setAnalysisElapsedMs(Date.now() - scanStartTime);
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [loading, currentStep, scanStartTime]);
+
+  const analysisStatusHint = useMemo(() => {
+    if (!(loading && currentStep === 3)) return '';
+    if (analysisElapsedMs > 30000) {
+      return t('home.analysisSlowHint') || 'This is taking longer than usual. A weak connection can slow down image analysis.';
+    }
+    if (analysisElapsedMs > 15000) {
+      return t('home.analysisNetworkHint') || 'Uploading large photos may take longer on mobile data. Please keep this screen open.';
+    }
+    return '';
+  }, [analysisElapsedMs, currentStep, loading, t]);
+
+  const errorSupportHint = useMemo(() => {
+    if (!errorCode) return '';
+    if (errorCode === 'ANALYSIS_NETWORK') {
+      return t('home.analysisNetworkSupport') || 'Reconnect to Wi-Fi or mobile data, then try the scan again.';
+    }
+    if (errorCode === 'ANALYSIS_TIMEOUT') {
+      return t('home.analysisTimeoutSupport') || 'Try again with a stronger connection or a smaller image.';
+    }
+    if (errorCode === 'ANALYSIS_UNAVAILABLE') {
+      return t('home.analysisUnavailableSupport') || 'The service is busy right now. Please wait a little and retry.';
+    }
+    return '';
+  }, [errorCode, t]);
 
   // Handlers
   const handleStartScan = () => {
@@ -378,6 +416,32 @@ const Home = () => {
           background: #FEF2F2;
           transform: translateY(-1px);
         }
+        .analysis-hint-banner {
+          margin-top: 16px;
+          width: 100%;
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.92);
+          color: #475569;
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          border-radius: 14px;
+          padding: 10px 14px;
+          font-size: 0.85rem;
+          line-height: 1.45;
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+        }
+        .error-banner-copy {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+        .error-banner-copy small {
+          color: #7f1d1d;
+          font-size: 0.75rem;
+          line-height: 1.4;
+        }
       `}</style>
 
       <div className="container">
@@ -404,6 +468,13 @@ const Home = () => {
                 <div className={`dot ${analyzingStep >= 2 ? 'active' : ''}`}></div>
               </div>
 
+              {analysisStatusHint && (
+                <div className="analysis-hint-banner">
+                  <AlertCircle size={16} />
+                  <span>{analysisStatusHint}</span>
+                </div>
+              )}
+
               <div className="overlay-actions">
                 <button onClick={handleMinimize} className="minimize-analysis-button">
                   <ChevronDown size={18} /> {t('home.minimizeScan') || 'Continue Browsing'}
@@ -425,7 +496,10 @@ const Home = () => {
             {error && (
               <div className="error-banner bounce-in">
                 <AlertCircle size={20} />
-                <span>{error}</span>
+                <div className="error-banner-copy">
+                  <span>{error}</span>
+                  {errorSupportHint && <small>{errorSupportHint}</small>}
+                </div>
                 <button onClick={() => scanActions.setError('')} className="close-error">×</button>
               </div>
             )}

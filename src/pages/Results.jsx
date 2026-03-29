@@ -1,17 +1,12 @@
 ﻿import { useNavigate, useParams } from 'react-router-dom';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
-import { generatePDFReport } from '../utils/pdfGenerator';
 import QuickActions from '../components/QuickActions';
 import TabbedResults from '../components/TabbedResults';
 import DiseaseResult from '../components/DiseaseResult';
-import TreatmentRecommendations from '../components/TreatmentRecommendations';
-import NutritionalAnalysis from '../components/NutritionalAnalysis';
-import ProductRecommendations from '../components/ProductRecommendations';
-import HealthyCarePlan from '../components/HealthyCarePlan';
-import FeedbackWidget from '../components/FeedbackWidget';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 
 import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
@@ -23,6 +18,34 @@ import {
   createEmptyProductRecommendations,
   fetchLiveProductRecommendations,
 } from '../utils/liveProductRecommendations.js';
+import { lazyWithRetry } from '../utils/lazyWithRetry.js';
+
+const TreatmentRecommendations = lazyWithRetry(
+  () => import('../components/TreatmentRecommendations'),
+  'results-treatment-recommendations',
+);
+const NutritionalAnalysis = lazyWithRetry(
+  () => import('../components/NutritionalAnalysis'),
+  'results-nutritional-analysis',
+);
+const ProductRecommendations = lazyWithRetry(
+  () => import('../components/ProductRecommendations'),
+  'results-product-recommendations',
+);
+const HealthyCarePlan = lazyWithRetry(
+  () => import('../components/HealthyCarePlan'),
+  'results-healthy-care-plan',
+);
+const FeedbackWidget = lazyWithRetry(
+  () => import('../components/FeedbackWidget'),
+  'results-feedback-widget',
+);
+
+const RESULTS_SECTION_FALLBACK = (
+  <div className="results-section-loading">
+    <LoadingSpinner />
+  </div>
+);
 
 const Results = () => {
   const { id } = useParams();
@@ -156,6 +179,7 @@ const Results = () => {
         }
       }
 
+      const { generatePDFReport } = await import('../utils/pdfGenerator');
       await generatePDFReport(scanForExport, language, translations, { productRecommendations });
       showToast(t('results.pdfDownloaded'), 'success');
     } catch (error) {
@@ -340,13 +364,15 @@ ${t('pdf.generatedBy')}
       icon: <Pill size={20} />,
       title: healthy ? t('results.care') || 'Care' : t('results.treatment'),
       content: (
-        <div>
-          {!healthy ? (
-            <TreatmentRecommendations result={result} />
-          ) : (
-            <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
-          )}
-        </div>
+        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
+          <div>
+            {!healthy ? (
+              <TreatmentRecommendations result={result} />
+            ) : (
+              <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
+            )}
+          </div>
+        </Suspense>
       )
     },
     {
@@ -354,25 +380,29 @@ ${t('pdf.generatedBy')}
       title: t('results.nutrition'),
       badge: normalizedNutrition.status === 'confirmed' ? '!' : (normalizedNutrition.status === 'possible' ? '?' : null),
       content: (
-        <NutritionalAnalysis
-          nutritionalIssues={normalizedNutrition}
-          fertilizerRecommendations={scan.fertilizerRecommendations}
-        />
+        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
+          <NutritionalAnalysis
+            nutritionalIssues={normalizedNutrition}
+            fertilizerRecommendations={scan.fertilizerRecommendations}
+          />
+        </Suspense>
       )
     },
     {
       icon: <ShoppingBag size={20} />,
       title: t('results.products'),
       content: (
-        <div>
-          <ProductRecommendations
-            plantType={scan.plantType}
-            disease={scan.disease}
-            farmScale={scan.farmScale}
-            scanResult={result}
-            onRecommendationsLoaded={handleRecommendationsLoaded}
-          />
-        </div>
+        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
+          <div>
+            <ProductRecommendations
+              plantType={scan.plantType}
+              disease={scan.disease}
+              farmScale={scan.farmScale}
+              scanResult={result}
+              onRecommendationsLoaded={handleRecommendationsLoaded}
+            />
+          </div>
+        </Suspense>
       )
     }
   ];
@@ -509,7 +539,9 @@ ${t('pdf.generatedBy')}
         <TabbedResults tabs={tabs} />
 
         {/* Feedback Widget */}
-        <FeedbackWidget scanId={id} scan={scan} />
+        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
+          <FeedbackWidget scanId={id} scan={scan} />
+        </Suspense>
 
 
 
@@ -521,6 +553,10 @@ ${t('pdf.generatedBy')}
           background: var(--color-bg-secondary);
           padding-top: var(--space-sm); /* Much smaller top padding on mobile */
           padding-bottom: 24px;
+        }
+
+        .results-section-loading {
+          min-height: 220px;
         }
 
         .container {

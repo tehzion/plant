@@ -1,6 +1,7 @@
 import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease, analyzeLocalImageQuality } from '../utils/diseaseDetection';
+import { isNetworkUnavailableError, isTimeoutError } from '../utils/networkRequest.js';
 import {
     consumeStorageCleanupNotice,
     saveScan,
@@ -13,29 +14,35 @@ import { showToast } from '../utils/toast.js';
 const scanReducer = (state, action) => {
     switch (action.type) {
         case 'SET_IMAGE':
-            return { ...state, selectedImage: action.payload, error: '' };
+            return { ...state, selectedImage: action.payload, error: '', errorCode: '' };
         case 'SET_LEAF_IMAGE':
-            return { ...state, selectedLeafImage: action.payload, error: '' };
+            return { ...state, selectedLeafImage: action.payload, error: '', errorCode: '' };
         case 'SET_CATEGORY':
-            return { ...state, selectedCategory: action.payload, error: '' };
+            return { ...state, selectedCategory: action.payload, error: '', errorCode: '' };
         case 'SET_SCALE':
             return { ...state, selectedScale: action.payload };
         case 'SET_QUANTITY':
             return { ...state, scaleQuantity: action.payload };
         case 'NEXT_STEP':
-            return { ...state, currentStep: state.currentStep + 1, error: '' };
+            return { ...state, currentStep: state.currentStep + 1, error: '', errorCode: '' };
         case 'PREV_STEP':
-            return { ...state, currentStep: state.currentStep - 1, error: '' };
+            return { ...state, currentStep: state.currentStep - 1, error: '', errorCode: '' };
         case 'SET_STEP':
-            return { ...state, currentStep: action.payload, error: '' };
+            return { ...state, currentStep: action.payload, error: '', errorCode: '' };
         case 'START_ANALYSIS':
-            return { ...state, loading: true, error: '', analyzingStep: 0, scanStartTime: Date.now() };
+            return { ...state, loading: true, error: '', errorCode: '', analyzingStep: 0, scanStartTime: Date.now() };
         case 'UPDATE_ANALYZING_STEP':
             return { ...state, analyzingStep: action.payload };
         case 'COMPLETE_ANALYSIS':
-            return { ...state, loading: false, analyzingStep: 0, scanStartTime: 0 };
+            return { ...state, loading: false, analyzingStep: 0, scanStartTime: 0, errorCode: '' };
         case 'SET_ERROR':
-            return { ...state, error: action.payload, loading: false, scanStartTime: 0 };
+            return {
+                ...state,
+                error: typeof action.payload === 'string' ? action.payload : action.payload?.message || '',
+                errorCode: typeof action.payload === 'string' ? '' : action.payload?.code || '',
+                loading: false,
+                scanStartTime: 0
+            };
         case 'RESET_SCAN':
             return { ...initialScanState };
         default:
@@ -52,6 +59,7 @@ const initialScanState = {
     currentStep: 1,
     loading: false,
     error: '',
+    errorCode: '',
     analyzingStep: 0,
     scanStartTime: 0
 };
@@ -77,7 +85,7 @@ export const useScanLogic = () => {
         const prevStep = () => dispatchAction('PREV_STEP');
         const setStep = (step) => dispatchAction('SET_STEP', step);
         const resetScan = () => dispatchAction('RESET_SCAN');
-        const setError = (msg) => dispatchAction('SET_ERROR', msg);
+        const setError = (payload) => dispatchAction('SET_ERROR', payload);
 
         const performAnalyze = async (location, locationName) => {
             const currentState = stateRef.current;
@@ -168,11 +176,29 @@ export const useScanLogic = () => {
                     IMAGE_TOO_LITTLE_LEAF: t('home.errorImageTooLittleLeaf') || 'The leaf is too small in the frame. Please move closer.',
                     IMAGE_NOT_PLANT: t('home.errorImageNotPlantLike') || 'The image does not look like a clear plant photo. Please try again.',
                 };
-                const errorCode = err.code || err.message;
+                const errorCode = err.code || err.message || '';
                 const errorMessage = err.message === 'NOT_A_PLANT'
                     ? t('home.errorNotPlant')
-                    : (qualityErrors[errorCode] || err.message || t('home.errorAnalysis'));
-                dispatch({ type: 'SET_ERROR', payload: errorMessage });
+                    : isTimeoutError(err)
+                        ? (t('home.errorAnalysisTimeout') || 'Analysis is taking too long on the current connection. Please try again in a moment.')
+                        : isNetworkUnavailableError(err)
+                            ? (t('home.errorAnalysisNetwork') || 'We could not reach the analysis service. Please check your connection and try again.')
+                            : err.status >= 500
+                                ? (t('home.errorAnalysisUnavailable') || 'The analysis service is temporarily unavailable. Please try again shortly.')
+                                : (qualityErrors[errorCode] || err.message || t('home.errorAnalysis'));
+                dispatch({
+                    type: 'SET_ERROR',
+                    payload: {
+                        message: errorMessage,
+                        code: isTimeoutError(err)
+                            ? 'ANALYSIS_TIMEOUT'
+                            : isNetworkUnavailableError(err)
+                                ? 'ANALYSIS_NETWORK'
+                                : err.status >= 500
+                                    ? 'ANALYSIS_UNAVAILABLE'
+                                    : errorCode,
+                    }
+                });
                 dispatch({ type: 'SET_STEP', payload: 2 });
                 throw err;
             }

@@ -35,9 +35,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   const [loading, setLoading] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
   const [error, setError] = useState(null);
+  const [errorCode, setErrorCode] = useState('');
   const [reasoning, setReasoning] = useState('');
   const [fallbackMeta, setFallbackMeta] = useState(null);
   const [storeUrl, setStoreUrl] = useState('');
+  const [requestAttempt, setRequestAttempt] = useState(0);
 
   const diagnosis = useMemo(
     () => buildProductDiagnosisPayload({ plantType, disease, scanResult }),
@@ -61,12 +63,14 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         setReasoning('');
         setStoreUrl('');
         setError(null);
+        setErrorCode('');
         onRecommendationsLoaded?.(emptyProducts);
         return;
       }
 
       setLoading(true);
       setError(null);
+      setErrorCode('');
       setSelectedProductIds(new Set());
       try {
         const productData = await fetchLiveProductRecommendations({
@@ -117,6 +121,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         if (isCancelled) return;
         console.error('Failed to load recommended products:', err);
         setError(err?.message || t('results.productsError') || 'Could not load specialized products at this time.');
+        setErrorCode(err?.code || '');
         onRecommendationsLoaded?.(null);
       } finally {
         if (!isCancelled) {
@@ -129,7 +134,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     return () => {
       isCancelled = true;
     };
-  }, [onRecommendationsLoaded, recommendationKey]);
+  }, [onRecommendationsLoaded, recommendationKey, requestAttempt]);
 
   const toggleProductSelection = (productId) => {
     if (!productId) return;
@@ -166,6 +171,17 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   };
 
   const canCheckout = selectedProductIds.size > 0 && Boolean(storeUrl);
+  const usingCachedProducts = fallbackMeta?.used && fallbackMeta?.source === 'cache';
+
+  const retryProducts = () => {
+    setRequestAttempt((value) => value + 1);
+  };
+
+  const productRecoveryHint = errorCode === 'NETWORK_UNAVAILABLE'
+    ? (t('results.productsNetworkHint') || 'Reconnect to the internet to load the live catalog.')
+    : errorCode === 'REQUEST_TIMEOUT'
+      ? (t('results.productsTimeoutHint') || 'The catalog is responding slowly. Please try again in a moment.')
+      : (t('results.productsUnavailableHint') || 'The live catalog is temporarily unavailable right now.');
 
   if (loading) {
     return (
@@ -180,7 +196,21 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     return (
       <div className="product-recommendations-container">
         <div className="product-section" style={{ textAlign: 'center', color: '#EF4444' }}>
-          <p>{error}</p>
+          <p style={{ marginBottom: '8px' }}>{error}</p>
+          <p style={{ color: '#6B7280', marginBottom: '16px' }}>{productRecoveryHint}</p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button type="button" className="add-to-cart-button" onClick={retryProducts}>
+              <span>{t('common.retry') || 'Try Again'}</span>
+            </button>
+            <a
+              href="https://www.mojosense.app/kanb/products/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="add-to-cart-button"
+            >
+              <span>{t('results.openCatalog') || 'Open Catalog'}</span>
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -305,6 +335,15 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         <div className="ai-reasoning-banner fallback-banner">
           <PackageX size={16} />
           <span>{fallbackMeta.reason || (t('results.fallbackProductsDesc') || 'No direct diagnosis-matched products were found. Showing general store suggestions as a fallback.')}</span>
+          {usingCachedProducts && (
+            <button
+              type="button"
+              className="fallback-refresh-button"
+              onClick={retryProducts}
+            >
+              {t('results.tryLiveCatalogAgain') || 'Try live catalog again'}
+            </button>
+          )}
         </div>
       )}
 
@@ -508,6 +547,24 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         .fallback-banner svg,
         .fallback-banner span {
           color: #9a3412;
+        }
+
+        .fallback-refresh-button {
+          margin-left: auto;
+          background: white;
+          color: #9a3412;
+          border: 1px solid #fdba74;
+          border-radius: 999px;
+          padding: 6px 12px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .fallback-refresh-button:hover {
+          background: #ffedd5;
         }
 
         .product-section {

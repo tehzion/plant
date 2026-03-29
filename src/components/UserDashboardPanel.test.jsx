@@ -156,27 +156,27 @@ describe('UserDashboardPanel', () => {
         expect(within(overviewButton).getByText('1')).toBeInTheDocument();
     });
 
-    it('switches between extracted tabs from the dashboard shell', () => {
+    it('switches between extracted tabs from the dashboard shell', async () => {
         render(<UserDashboardPanel />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
 
-        expect(screen.getByTestId('reports-tab')).toBeInTheDocument();
+        expect(await screen.findByTestId('reports-tab')).toBeInTheDocument();
     });
 
-    it('prefills a recommended treatment and switches into the notes tab', () => {
+    it('prefills a recommended treatment and switches into the notes tab', async () => {
         render(<UserDashboardPanel />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Prefill treatment' }));
 
-        expect(screen.getByTestId('notes-tab')).toHaveTextContent('spray|Copper|[AI Suggested] Risk warning');
+        expect(await screen.findByTestId('notes-tab')).toHaveTextContent('spray|Copper|[AI Suggested] Risk warning');
     });
 
-    it('renders the products tab after switching from the dashboard shell', () => {
+    it('renders the products tab after switching from the dashboard shell', async () => {
         render(<UserDashboardPanel />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Products' }));
 
-        expect(screen.getByTestId('products-tab')).toBeInTheDocument();
+        expect(await screen.findByTestId('products-tab')).toBeInTheDocument();
     });
 });
