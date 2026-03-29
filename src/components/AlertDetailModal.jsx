@@ -19,6 +19,13 @@ const SEV = (t) => ({
 });
 const getSev = (s = '', t) => SEV(t)[s.toLowerCase()] ?? SEV(t).severe;
 
+const getConfidencePercent = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return null;
+    return Math.round(numeric > 1 ? numeric : numeric * 100);
+};
+
 // ── Extract treatment steps from scan result ──────────────────────────────────
 const extractSteps = (scan) => {
     // result_json may contain treatment as string or array
@@ -44,6 +51,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
 
     const sevCfg = getSev(scan.severity, t);
     const steps  = extractSteps(scan);
+    const confidencePercent = getConfidencePercent(scan.confidence);
 
     const handleGenerateSOP = async () => {
         setGeneratingSOP(true);
@@ -52,12 +60,12 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
             const crop = scan.category || scan.plantType || 'Crop';
             const result = await generateSOP(crop, scan.disease, scan.severity || 'Moderate', lang);
             
-            let sopText = `${t('profile.aiSopTitle') || "✅ AI-Generated SOP:"}\n`;
+            let sopText = `${t('profile.aiSopTitle') || "Suggested SOP:"}\n`;
             result.treatmentPlan?.forEach((step, i) => {
                 sopText += `${i + 1}. ${step}\n`;
             });
             if (result.recommendedChemicals?.length > 0) {
-                sopText += `\n${t('profile.aiRecommended') || "🧪 Recommended:"} ${result.recommendedChemicals.join(', ')}`;
+                sopText += `\n${t('profile.aiRecommended') || "Recommended products:"} ${result.recommendedChemicals.join(', ')}`;
             }
             
             setResolution(prev => prev ? `${prev}\n\n${sopText}` : sopText);
@@ -132,8 +140,8 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                     <div className="adm-info-row">
                         <Clock size={13} />
                         <span>{t('profile.detected') || 'Detected'}: {new Date(scan.timestamp ?? scan.created_at).toLocaleDateString()}</span>
-                        {scan.confidence && (
-                            <><ShieldCheck size={13} /><span>{Math.round(scan.confidence * 100)}{t('profile.aiConfidence') || '%'}</span></>
+                        {confidencePercent && (
+                            <><ShieldCheck size={13} /><span>{confidencePercent}{t('profile.aiConfidence') || '%'}</span></>
                         )}
                     </div>
 
@@ -171,7 +179,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                                     disabled={generatingSOP || submitting}
                                     style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f5f3ff', color: '#8b5cf6', border: '1px solid #ddd6fe', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s' }}
                                 >
-                                    {generatingSOP ? (t('profile.aiGenerating') || 'Generating...') : <><Sparkles size={12} /> {t('profile.aiSopHeader') || 'AI SOP'}</>}
+                                    {generatingSOP ? (t('profile.aiGenerating') || 'Preparing...') : <><Sparkles size={12} /> {t('profile.aiSopHeader') || 'Suggested SOP'}</>}
                                 </button>
                             </div>
 

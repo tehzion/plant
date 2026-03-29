@@ -13,7 +13,16 @@ import {
     savePlot,
     deletePlot,
 } from '../utils/localStorage';
-import { LogOut, ShieldCheck, ScanLine } from 'lucide-react';
+import {
+    BarChart3,
+    LayoutDashboard,
+    LogOut,
+    MapPinned,
+    NotebookPen,
+    ShieldCheck,
+    ShoppingBag,
+    ScanLine,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from './LoadingSpinner';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -151,14 +160,24 @@ const UserDashboardPanel = () => {
     const displayName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const initials    = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
     const activeAlertCount = alerts.filter(s => !acknowledgedIds.includes(s.id)).length;
+    const profileHeadline = activeAlertCount > 0
+        ? `${activeAlertCount} ${label('profile.urgentAlerts', 'urgent alerts')}`
+        : hasLoggedToday
+            ? label('profile.dashboardReady', 'Farm updated for today')
+            : label('profile.logDailyTask', 'Log a daily farm task');
+    const profileSubline = activeAlertCount > 0
+        ? label('profile.actionRequired', 'Action required to protect your plots')
+        : hasLoggedToday
+            ? label('profile.noUrgentIssues', 'No urgent disease issue detected right now')
+            : label('profile.logDailyHint', 'Add scouting, spray, or harvest activity to keep your records complete.');
 
     // ── Tab definitions ───────────────────────────────────────────────────────
     const TABS = [
-        { id: 'overview', label: label('profile.tabOverview', 'Overview')  },
-        { id: 'reports',  label: label('profile.tabReports', 'Reports')   },
-        { id: 'plots',    label: label('profile.tabPlots', 'Plots')     },
-        { id: 'notes',    label: label('profile.tabNotes', 'Daily Log') },
-        { id: 'products', label: label('profile.tabProducts', 'Products')  },
+        { id: 'overview', label: label('profile.tabOverview', 'Overview'), icon: LayoutDashboard, badge: activeAlertCount > 0 ? activeAlertCount : null },
+        { id: 'reports',  label: label('profile.tabReports', 'Reports'), icon: BarChart3 },
+        { id: 'plots',    label: label('profile.tabPlots', 'Plots'), icon: MapPinned },
+        { id: 'notes',    label: label('profile.tabNotes', 'Daily Log'), icon: NotebookPen, badge: hasLoggedToday ? null : '!' },
+        { id: 'products', label: label('profile.tabProducts', 'Products'), icon: ShoppingBag },
     ];
 
     // ── Handlers ──────────────────────────────────────────────────────────────
@@ -191,7 +210,7 @@ const UserDashboardPanel = () => {
             ...EMPTY_FORM,
             activity_type: actType,
             chemical_name: chemical,
-            note: `${label('profile.aiAutoPopulated', '[AI Suggested]')} ${warningMessage}`,
+            note: warningMessage,
         });
         setAddingNote(true);
         setTab('notes');
@@ -322,10 +341,17 @@ const UserDashboardPanel = () => {
                 <div className="udp-profile-blob udp-profile-blob-2" />
 
                 <div className="udp-profile-top-row">
-                    <div className="udp-avatar-wrapper">
-                        <div className="udp-avatar-ring" />
-                        <div className="udp-avatar">{initials}</div>
-                        <span className="udp-avatar-status" title={label('home.onlineStatus', 'Online')} />
+                    <div className="udp-profile-main">
+                        <div className="udp-avatar-wrapper">
+                            <div className="udp-avatar-ring" />
+                            <div className="udp-avatar">{initials}</div>
+                            <span className="udp-avatar-status" title={label('home.onlineStatus', 'Online')} />
+                        </div>
+                        <div className="udp-profile-identity">
+                            <p className="udp-profile-eyebrow">{label('profile.farmDashboard', 'Farm Dashboard')}</p>
+                            <h2 className="udp-display-name">{displayName}</h2>
+                            <p className="udp-email"><span className="udp-email-dot" />{email}</p>
+                        </div>
                     </div>
                     <button
                         className="udp-signout-mini"
@@ -335,11 +361,6 @@ const UserDashboardPanel = () => {
                     >
                         <LogOut size={15} />
                     </button>
-                </div>
-
-                <div className="udp-profile-identity">
-                    <h2 className="udp-display-name">{displayName}</h2>
-                    <p className="udp-email"><span className="udp-email-dot" />{email}</p>
                 </div>
 
                 <div className="udp-profile-badges">
@@ -353,33 +374,44 @@ const UserDashboardPanel = () => {
                             {stats.total} {label('profile.totalScans', 'Scans')}
                         </span>
                     )}
-                    {checklistPct >= 50 && (
-                        <span className="udp-badge udp-badge-gap">
-                            <ShieldCheck size={11} />
-                            GAP {checklistPct}%
-                        </span>
-                    )}
+                    <span className={`udp-badge ${activeAlertCount > 0 ? 'udp-badge-alert' : 'udp-badge-ok'}`}>
+                        {activeAlertCount > 0 ? activeAlertCount : '✓'} {activeAlertCount > 0
+                            ? label('profile.urgentAlerts', 'Alerts')
+                            : label('profile.allClear', 'All Clear')}
+                    </span>
                 </div>
 
-                <div className="udp-profile-strip">
-                    <div className="udp-strip-item">
-                        <span className="udp-strip-num">{stats.healthy}</span>
-                        <span className="udp-strip-label">{label('profile.healthy', 'Healthy')}</span>
+                <div className={`udp-profile-highlight ${activeAlertCount > 0 ? 'is-alert' : ''}`}>
+                    <div className="udp-profile-highlight-copy">
+                        <span className="udp-profile-highlight-kicker">
+                            {activeAlertCount > 0
+                                ? label('profile.topPriority', 'Top Priority')
+                                : label('profile.todayFocus', 'Today Focus')}
+                        </span>
+                        <h3 className="udp-profile-highlight-title">{profileHeadline}</h3>
+                        <p className="udp-profile-highlight-sub">{profileSubline}</p>
                     </div>
-                    <div className="udp-strip-divider" />
-                    <div className="udp-strip-item">
-                        <span className="udp-strip-num udp-strip-warn">{stats.diseases}</span>
-                        <span className="udp-strip-label">{label('profile.diseased', 'Issues')}</span>
+                    <div className="udp-profile-highlight-side">
+                        <span className="udp-highlight-pill">GAP {checklistPct}%</span>
                     </div>
-                    <div className="udp-strip-divider" />
-                    <div className="udp-strip-item">
-                        <span className="udp-strip-num">{plots.length}</span>
-                        <span className="udp-strip-label">{label('profile.plots', 'Plots')}</span>
+                </div>
+
+                <div className="udp-profile-grid">
+                    <div className="udp-profile-stat">
+                        <span className="udp-profile-stat-value">{stats.healthy}</span>
+                        <span className="udp-profile-stat-label">{label('profile.healthy', 'Healthy')}</span>
                     </div>
-                    <div className="udp-strip-divider" />
-                    <div className="udp-strip-item">
-                        <span className="udp-strip-num udp-strip-purple">{notes.length}</span>
-                        <span className="udp-strip-label">{label('profile.tabNotes', 'Logs')}</span>
+                    <div className="udp-profile-stat">
+                        <span className="udp-profile-stat-value udp-profile-stat-value--warn">{stats.diseases}</span>
+                        <span className="udp-profile-stat-label">{label('profile.diseased', 'Issues')}</span>
+                    </div>
+                    <div className="udp-profile-stat">
+                        <span className="udp-profile-stat-value">{plots.length}</span>
+                        <span className="udp-profile-stat-label">{label('profile.plots', 'Plots')}</span>
+                    </div>
+                    <div className="udp-profile-stat">
+                        <span className="udp-profile-stat-value udp-profile-stat-value--accent">{notes.length}</span>
+                        <span className="udp-profile-stat-label">{label('profile.tabNotes', 'Logs')}</span>
                     </div>
                 </div>
             </div>
@@ -392,10 +424,13 @@ const UserDashboardPanel = () => {
                         className={`udp-tab ${tab === t2.id ? 'active' : ''}`}
                         onClick={() => setTab(t2.id)}
                     >
-                        {t2.label}
-                        {t2.id === 'overview' && activeAlertCount > 0 && (
-                            <span className="udp-tab-badge">{activeAlertCount}</span>
-                        )}
+                        <span className="udp-tab-icon-wrap">
+                            <t2.icon size={15} strokeWidth={2} />
+                            {t2.badge && (
+                                <span className="udp-tab-badge">{t2.badge}</span>
+                            )}
+                        </span>
+                        <span className="udp-tab-label">{t2.label}</span>
                     </button>
                 ))}
             </div>

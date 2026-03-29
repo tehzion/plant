@@ -130,7 +130,7 @@ const MyGapPage = () => {
         doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
         doc.fill();
 
-        await renderer.drawText('Smart Plant Advisor', 42, 14, {
+        await renderer.drawText('KANB Agropreneur Nasional', 42, 14, {
             maxWidth: 90,
             fontSize: 18,
             fontStyle: 'bold',
@@ -298,7 +298,7 @@ const MyGapPage = () => {
             doc.setDrawColor(226, 232, 240);
             doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
 
-            await renderer.drawText(`Smart Plant Advisor - ${rt('mygap.reportTitle')}`, 14, pageHeight - 12, {
+            await renderer.drawText(`KANB Agropreneur Nasional - ${rt('mygap.reportTitle')}`, 14, pageHeight - 12, {
                 maxWidth: 110,
                 fontSize: 8,
                 color: lightText,

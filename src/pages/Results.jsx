@@ -691,8 +691,8 @@ ${t('pdf.generatedBy')}
         }
 
         .metadata-icon.scale-icon {
-          background: #F3E8FF;
-          color: #9333EA;
+          background: #ecfdf3;
+          color: #15803d;
         }
 
         .metadata-icon.quantity-icon,
@@ -736,6 +736,7 @@ ${t('pdf.generatedBy')}
           display: flex;
           flex-direction: column;
           gap: 2px;
+          font-family: var(--font-heading);
         }
 
         .metadata-value.primary {
@@ -743,6 +744,11 @@ ${t('pdf.generatedBy')}
           font-size: 1.75rem;
           font-weight: 700;
           letter-spacing: -0.5px;
+          font-family: var(--font-heading);
+        }
+
+        .metadata-label {
+          font-family: var(--font-heading);
         }
 
         .metadata-time {

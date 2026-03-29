@@ -1,0 +1,109 @@
+.not-found-page {
+    min-height: calc(100vh - 70px);
+    background:
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 28%),
+        linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+}
+
+.center-content {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.error-card {
+    background: white;
+    border-radius: 24px;
+    padding: 48px 32px;
+    text-align: center;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(0, 177, 79, 0.1);
+}
+
+.error-kicker {
+    display: inline-flex;
+    margin-bottom: 20px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #ecfdf3;
+    color: #15803d;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.icon-wrapper {
+    width: 100px;
+    height: 100px;
+    background: var(--color-primary-light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 32px;
+    color: var(--color-primary);
+}
+
+.error-code {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--color-primary);
+    margin: 0 0 -20px;
+    line-height: 1;
+    opacity: 0.2;
+    position: relative;
+    z-index: 0;
+    font-family: var(--font-heading);
+}
+
+.error-title {
+    font-size: 1.75rem;
+    color: #1f2937;
+    font-weight: 700;
+    margin: 16px 0 12px;
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-heading);
+}
+
+.error-message {
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    font-size: 1.05rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.action-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+}
+
+@media (max-width: 480px) {
+    .error-card {
+        padding: 32px 24px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

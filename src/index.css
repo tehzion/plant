@@ -21,6 +21,11 @@
   --color-primary-light: #E8F5E9;
   --color-primary-lighter: #F1F8F1;
   --color-primary-accent: #33C172;
+  --color-brand-ink: #0f172a;
+  --color-brand-emerald: #15803d;
+  --color-brand-soft: #ecfdf5;
+  --color-brand-mist: #f0fdf4;
+  --color-brand-border: #bbf7d0;
 
   /* Natural Earth Tones - Subdued */
   --color-earth-dark: #3E2723;

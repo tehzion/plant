@@ -107,7 +107,7 @@ export const useAIAdvisor = ({
                 setAiInsights({
                     scopeKey,
                     summary: t?.('profile.aiWelcomeSummary')
-                        || 'Welcome to your AI Agronomist. Add a plot or activity log to start receiving tailored recommendations.',
+                        || 'Welcome to your farm summary. Add a plot or activity log to start receiving tailored recommendations.',
                     yieldAnalysis: null,
                     recommendations: Array.isArray(welcomeRecommendations)
                         ? welcomeRecommendations
@@ -133,7 +133,7 @@ export const useAIAdvisor = ({
             notifyError?.(
                 error?.message
                 || t?.('error.aiGenerationFailed')
-                || 'Failed to generate AI insights. Please check your connection.',
+                || 'Failed to generate your farm summary. Please check your connection.',
             );
         } finally {
             setGeneratingInsights(false);
@@ -192,7 +192,7 @@ export const useAIAdvisor = ({
 
             setEnhanceText('');
             notifySuccess?.(
-                t?.('form.enhanceSuccess') || 'Log enhanced — please review the fields below.',
+                t?.('form.enhanceSuccess') || 'Log updated - please review the fields below.',
             );
         } catch (error) {
             console.error('Auto-Enhance failed:', error);
@@ -200,7 +200,7 @@ export const useAIAdvisor = ({
                 error?.message
                 ||
                 t?.('error.aiEnhanceFailed')
-                || 'AI enhancement failed. Please check your backend connection.',
+                || 'Could not prepare the log details. Please check your connection.',
             );
         } finally {
             setEnhancing(false);

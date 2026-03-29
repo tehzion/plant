@@ -7,9 +7,9 @@ const notifyErrorMock = vi.fn();
 vi.mock('../i18n/i18n.jsx', () => ({
     useLanguage: () => ({
         t: (key) => ({
-            'profile.aiSopHeader': 'AI SOP',
-            'profile.aiGenerating': 'Generating...',
-            'profile.aiSopFailed': 'Failed to generate SOP. Please check connection.',
+            'profile.aiSopHeader': 'Suggested SOP',
+            'profile.aiGenerating': 'Preparing...',
+            'profile.aiSopFailed': 'Failed to prepare SOP. Please check connection.',
             'profile.logTreatment': 'Log Treatment Action',
             'profile.inProgress': 'In Progress',
             'profile.resolved': 'Resolved',
@@ -65,10 +65,10 @@ describe('AlertDetailModal', () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole('button', { name: /ai sop/i }));
+        fireEvent.click(screen.getByRole('button', { name: /suggested sop/i }));
 
         await waitFor(() => {
-            expect(notifyErrorMock).toHaveBeenCalledWith('Failed to generate SOP. Please check connection.');
+            expect(notifyErrorMock).toHaveBeenCalledWith('Failed to prepare SOP. Please check connection.');
         });
 
         expect(screen.getByText('Log Treatment Action')).toBeInTheDocument();

@@ -204,7 +204,7 @@ const ActivityForm = ({
             <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <label className="udp-form-label" style={{ marginBottom: 0 }}>{label('profile.notes', 'Notes / Remarks')}</label>
-                    <button type="button" onClick={() => onAutoEnhance()} disabled={enhancing || !noteForm.note.trim()} style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', transition: 'background 0.2s' }} className="udp-enhance-btn">
+                    <button type="button" onClick={() => onAutoEnhance()} disabled={enhancing || !noteForm.note.trim()} style={{ background: 'none', border: 'none', color: '#15803d', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', transition: 'background 0.2s' }} className="udp-enhance-btn">
                         <Sparkles size={12} />
                         {enhancing ? '...' : label('form.magicEnhance', 'Magic Enhance')}
                     </button>

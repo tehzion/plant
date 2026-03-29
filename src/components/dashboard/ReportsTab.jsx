@@ -1,5 +1,14 @@
 import { Suspense, useMemo, useState } from 'react';
-import { AlertTriangle, BrainCircuit, ChevronRight, Sparkles } from 'lucide-react';
+import {
+    AlertTriangle,
+    BarChart3,
+    BrainCircuit,
+    ChevronRight,
+    DollarSign,
+    ShieldCheck,
+    Sparkles,
+    Sprout,
+} from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 import SectionHeader from './SectionHeader';
 import { lazyWithRetry } from '../../utils/lazyWithRetry.js';
@@ -94,10 +103,7 @@ const ReportsTab = ({
 
         const cropNeedle = selectedPlot?.cropType?.trim().toLowerCase();
         return activeAlerts.filter((scan) => {
-            if (scan.plot_id) {
-                return scan.plot_id === selectedPlotId;
-            }
-
+            if (scan.plot_id) return scan.plot_id === selectedPlotId;
             if (!cropNeedle) return false;
 
             const haystack = [
@@ -128,6 +134,13 @@ const ReportsTab = ({
     const totalRevenue = harvestLogs.reduce((sum, note) => sum + ((Number(note.kg_harvested) || 0) * (Number(note.price_per_kg) || 0)), 0);
     const totalExpenses = filteredNotes.reduce((sum, note) => sum + (Number(note.expense_amount) || 0), 0);
     const netProfit = totalRevenue - totalExpenses;
+    const netProfitSign = netProfit > 0 ? '+' : netProfit < 0 ? '-' : '';
+
+    const reportPrompt = filteredAlerts.length > 0
+        ? label('profile.reportPriorityAlerts', 'Review active field issues and decide the next treatment or inspection step.')
+        : harvestLogs.length > 0
+            ? label('profile.reportPriorityYield', 'Track yield, costs, and trend changes for the selected farm scope.')
+            : label('profile.reportPriorityStart', 'Add harvest and expense records to unlock clearer field performance trends.');
 
     const qualityCounts = { Excellent: 0, Good: 0, Fair: 0, Poor: 0 };
     harvestLogs.forEach((note) => {
@@ -155,7 +168,7 @@ const ReportsTab = ({
                     : name === 'Labor'
                         ? '#3b82f6'
                         : name === 'Equipment'
-                            ? '#8b5cf6'
+                            ? '#14b8a6'
                             : '#64748b',
         }))
         .sort((left, right) => right.value - left.value);
@@ -215,23 +228,41 @@ const ReportsTab = ({
     }, [filteredNotes, locale]);
 
     return (
-        <div className="udp-reports">
-            <div className="udp-report-grid">
-                <div className="udp-report-card">
-                    <span className="udp-report-num udp-stat-green">{healthRate}%</span>
-                    <span className="udp-report-label">{label('profile.healthRate', 'Plant Health Rate')}</span>
+        <div className="udp-reports rep-shell">
+            <div className="rep-hero">
+                <div className="rep-hero-copy">
+                    <span className="rep-hero-kicker">{label('profile.tabReports', 'Reports')}</span>
+                    <h3 className="rep-hero-title">{label('profile.financialSummary', 'Financial & Yield Summary')}</h3>
+                    <p className="rep-hero-subtitle">{reportPrompt}</p>
                 </div>
-                <div className="udp-report-card">
-                    <span className="udp-report-num udp-stat-warn">{stats.diseases}</span>
-                    <span className="udp-report-label">{label('profile.diseasesFound', 'Diseases')}</span>
+                <div className="rep-hero-pill">
+                    <BarChart3 size={14} />
+                    <span>{selectedPlot ? selectedPlot.name : label('profile.allPlots', 'All Plots')}</span>
                 </div>
-                <div className="udp-report-card">
-                    <span className="udp-report-num">{stats.total}</span>
-                    <span className="udp-report-label">{label('profile.totalScans', 'Total Scans')}</span>
+            </div>
+
+            <div className="rep-summary-grid">
+                <div className="rep-summary-card rep-summary-card--healthy">
+                    <span className="rep-summary-icon"><ShieldCheck size={18} /></span>
+                    <span className="rep-summary-value udp-stat-green">{healthRate}%</span>
+                    <span className="rep-summary-label">{label('profile.healthRate', 'Plant Health Rate')}</span>
                 </div>
-                <div className="udp-report-card">
-                    <span className="udp-report-num udp-stat-green">{checklistPct}%</span>
-                    <span className="udp-report-label">{label('profile.gapCompliance', 'GAP Compliance')}</span>
+                <div className="rep-summary-card rep-summary-card--warning">
+                    <span className="rep-summary-icon"><AlertTriangle size={18} /></span>
+                    <span className="rep-summary-value udp-stat-warn">{stats.diseases}</span>
+                    <span className="rep-summary-label">{label('profile.diseasesFound', 'Diseases')}</span>
+                </div>
+                <div className="rep-summary-card rep-summary-card--neutral">
+                    <span className="rep-summary-icon"><Sprout size={18} /></span>
+                    <span className="rep-summary-value">{stats.total}</span>
+                    <span className="rep-summary-label">{label('profile.totalScans', 'Total Scans')}</span>
+                </div>
+                <div className="rep-summary-card rep-summary-card--accent">
+                    <span className="rep-summary-icon"><DollarSign size={18} /></span>
+                    <span className={`rep-summary-value ${netProfit >= 0 ? 'udp-stat-green' : 'udp-stat-warn'}`}>
+                        {netProfitSign}RM{Math.abs(netProfit).toFixed(0)}
+                    </span>
+                    <span className="rep-summary-label">{label('profile.netProfit', 'Net Profit (ROI)')}</span>
                 </div>
             </div>
 
@@ -255,14 +286,14 @@ const ReportsTab = ({
                 />
             </Suspense>
 
-            <div className="udp-section">
+            <div className="udp-section rep-feed-card rep-feed-card--insight">
                 <SectionHeader
-                    icon={<BrainCircuit size={15} color="#8b5cf6" />}
-                    title={label('profile.aiFarmIntelligence', 'AI Farm Intelligence')}
+                    icon={<BrainCircuit size={15} color="#15803d" />}
+                    title={label('profile.farmInsights', 'Farm Insights')}
                     action={(
                         <button
                             className="udp-see-all"
-                            style={{ color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '12px' }}
+                            style={{ color: '#15803d', background: '#ecfdf5', padding: '4px 10px', borderRadius: '12px' }}
                             onClick={() => onGenerateInsights({
                                 activeAlerts: filteredAlerts,
                                 harvestLogs,
@@ -272,39 +303,37 @@ const ReportsTab = ({
                             })}
                             disabled={isGeneratingScopedInsights}
                         >
-                            {isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.askAI', 'Ask AI')}</>}
+                            {isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.viewSummary', 'View summary')}</>}
                         </button>
                     )}
                 />
                 <div style={{ padding: '0 16px 16px' }}>
                     {isGeneratingScopedInsights ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px', color: '#8b5cf6' }}>
+                        <div className="rep-insight-state rep-insight-state--loading">
                             <BrainCircuit size={28} style={{ animation: 'pulse 1.5s infinite' }} />
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{label('profile.aiAnalyzingHint', 'Analyzing logs & alerts...')}</span>
+                            <span>{label('profile.reviewingFarmData', 'Reviewing logs and alerts')}</span>
                         </div>
                     ) : scopedAiInsights ? (
-                        <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '8px', padding: '16px' }}>
-                            <p style={{ fontSize: '0.85rem', color: '#4c1d95', margin: '0 0 12px', lineHeight: 1.5 }}>
+                        <div className="rep-insight-card">
+                            <p className="rep-insight-summary">
                                 <strong>{label('profile.aiSummary', 'Summary')}:</strong> {scopedAiInsights.summary}
                             </p>
                             {scopedAiInsights.yieldAnalysis && (
-                                <p style={{ fontSize: '0.8rem', color: '#5b21b6', margin: '0 0 12px', borderLeft: '3px solid #8b5cf6', paddingLeft: '8px' }}>
-                                    {scopedAiInsights.yieldAnalysis}
-                                </p>
+                                <p className="rep-insight-yield">{scopedAiInsights.yieldAnalysis}</p>
                             )}
-                            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6d28d9', marginBottom: '8px', textTransform: 'uppercase' }}>{label('profile.aiRecommendations', 'Actionable Recommendations')}</div>
-                            <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.8rem', color: '#4c1d95', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div className="rep-insight-heading">{label('profile.aiRecommendations', 'Actionable Recommendations')}</div>
+                            <ul className="rep-insight-list">
                                 {scopedAiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
                             </ul>
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '16px', color: '#64748b', fontSize: '0.85rem' }}>{label('profile.aiAskHint', 'Tap "Ask AI" to get a personalized weekly agronomist report based on your farm activity.')}</div>
-                    )}
+                            <div className="rep-insight-state">{label('profile.farmSummaryHint', 'Get a quick farm summary from recent logs, alerts, and harvest activity.')}</div>
+                        )}
                 </div>
             </div>
 
             {filteredAlerts.length > 0 && (
-                <div className="udp-section">
+                <div className="udp-section rep-feed-card rep-feed-card--alerts">
                     <SectionHeader icon={<AlertTriangle size={15} />} title={label('profile.activeAlerts', 'Active Alerts (Last 7 Days)')} />
                     {filteredAlerts.map((scan) => (
                         <button key={scan.id} className="udp-alert-row" onClick={() => onSelectAlert(scan)}>

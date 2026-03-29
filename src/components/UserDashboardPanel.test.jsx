@@ -24,6 +24,22 @@ const translationMap = {
     'common.save': 'Save',
 };
 
+vi.mock('lucide-react', async () => {
+    const React = await import('react');
+    const Icon = ({ children, ...props }) => React.createElement('svg', props, children);
+    return {
+        LogOut: Icon,
+        MapPinned: Icon,
+        NotebookPen: Icon,
+        ShieldCheck: Icon,
+        ShoppingBag: Icon,
+        ScanLine: Icon,
+        BarChart3: Icon,
+        LayoutDashboard: Icon,
+        Leaf: Icon,
+    };
+});
+
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
 }));
@@ -169,7 +185,7 @@ describe('UserDashboardPanel', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Prefill treatment' }));
 
-        expect(await screen.findByTestId('notes-tab')).toHaveTextContent('spray|Copper|[AI Suggested] Risk warning');
+        expect(await screen.findByTestId('notes-tab')).toHaveTextContent('spray|Copper|Risk warning');
     });
 
     it('renders the products tab after switching from the dashboard shell', async () => {

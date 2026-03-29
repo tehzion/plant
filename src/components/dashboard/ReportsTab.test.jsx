@@ -5,11 +5,27 @@ import ReportsTab from './ReportsTab.jsx';
 const t = (key) => ({
     'common.dateLocale': 'en-MY',
     'profile.allPlots': 'All Plots',
-    'profile.askAI': 'Ask AI',
-    'profile.aiAskHint': 'Ask AI hint',
+    'profile.viewSummary': 'View summary',
+    'profile.farmSummaryHint': 'Farm summary hint',
     'profile.yieldHistoryForecast': 'Yield History & Trend Forecast',
     'profile.yieldForecastNeedsMoreData': 'Need more harvest data',
 }[key] || key);
+
+vi.mock('lucide-react', async () => {
+    const React = await import('react');
+    const Icon = ({ children, ...props }) => React.createElement('svg', props, children);
+    return {
+        AlertTriangle: Icon,
+        BarChart3: Icon,
+        BrainCircuit: Icon,
+        ChevronRight: Icon,
+        DollarSign: Icon,
+        Leaf: Icon,
+        ShieldCheck: Icon,
+        Sparkles: Icon,
+        Sprout: Icon,
+    };
+});
 
 vi.mock('./ReportsCharts.jsx', () => ({
     default: ({ label, plots, selectedPlotId, onSelectPlot, yieldChartData }) => (
@@ -58,7 +74,7 @@ describe('ReportsTab', () => {
         );
 
         fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'plot-a' } });
-        fireEvent.click(screen.getByRole('button', { name: /ask ai/i }));
+        fireEvent.click(screen.getByRole('button', { name: /view summary/i }));
 
         expect(onGenerateInsights).toHaveBeenCalledWith(
             expect.objectContaining({
