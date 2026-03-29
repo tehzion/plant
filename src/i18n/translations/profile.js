@@ -145,7 +145,7 @@ const profileTranslations = {
             "riskWatch": "Risk Watch",
             "tapToRespond": "Tap to respond",
             "aiSummary": "Summary",
-            "aiRecommendations": "Actionable Recommendations",
+            "aiRecommendations": "Recommended Actions",
             "aiAskHint": "Tap \"View summary\" to get a weekly field summary based on your farm activity.",
             "aiWelcomeSummary": "Welcome to your farm summary. Add a plot or activity log to start receiving tailored recommendations.",
             "aiWelcomeRecommendations": [
@@ -160,7 +160,7 @@ const profileTranslations = {
             "reviewFarmSummary": "Review farm summary",
             "farmSummaryHint": "Get a quick farm summary from recent logs, alerts, and harvest activity.",
             "viewSummary": "View summary",
-            "farmInsights": "Farm Insights",
+            "farmInsights": "Farm Summary",
             "refreshSummary": "Refresh summary",
 
             "aiAutoPopulated": "Suggested note:",
@@ -416,7 +416,7 @@ const profileTranslations = {
             "reviewFarmSummary": "Semak ringkasan ladang",
             "farmSummaryHint": "Dapatkan ringkasan ladang yang cepat daripada log, amaran, dan aktiviti tuaian terkini.",
             "viewSummary": "Lihat ringkasan",
-            "farmInsights": "Sorotan Ladang",
+            "farmInsights": "Ringkasan Ladang",
             "refreshSummary": "Muat semula ringkasan",
             "aiAutoPopulated": "Catatan dicadangkan:",
             "logSuggestedTreatment": "Log Tindakan Susulan Yang Dicadangkan",

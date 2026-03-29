@@ -264,7 +264,7 @@ const OverviewTab = ({
                 tone: 'alert',
                 kicker: label('profile.topPriority', 'Top Priority'),
                 title: label('profile.reviewUrgentAlert', 'Review urgent alert'),
-                description: `${topAlert?.disease || topAlert?.name || label('results.disease', 'Disease')} · ${label('profile.actionRequired', 'Action required now')}`,
+                description: `${topAlert?.disease || topAlert?.name || label('results.disease', 'Disease')} - ${label('profile.actionRequired', 'Action required now')}`,
                 actionLabel: label('profile.reviewNow', 'Review now'),
                 action: () => onSelectAlert(topAlert),
             };
@@ -304,7 +304,7 @@ const OverviewTab = ({
                 kicker: label('profile.riskWatch', 'Risk Watch'),
                 title: label('profile.riskActionRequired', 'Action required: imminent risk detected'),
                 description: predictiveRisk.warningMessage,
-                actionLabel: label('profile.logSuggestedTreatment', 'Log suggested treatment'),
+                actionLabel: label('profile.logSuggestedTreatment', 'Log recommended follow-up'),
                 action: () => {
                     if (predictiveRisk.recommendedTreatment?.prefillAllowed !== false && predictiveRisk.recommendedTreatment) {
                         onPrefillRecommendedTreatment(predictiveRisk.warningMessage, predictiveRisk.recommendedTreatment);
@@ -429,7 +429,7 @@ const OverviewTab = ({
                 >
                     <div className="ov-focus-head">
                         <span className="ov-focus-icon"><BrainCircuit size={18} /></span>
-                        <span className="ov-focus-label">{label('profile.farmInsights', 'Farm Insights')}</span>
+                        <span className="ov-focus-label">{label('profile.farmInsights', 'Farm Summary')}</span>
                     </div>
                     <div className="ov-focus-value">
                         {generatingInsights
@@ -494,7 +494,7 @@ const OverviewTab = ({
                                             )}
                                         >
                                             <Sparkles size={14} />
-                                            {label('profile.logSuggestedTreatment', 'Log Suggested Treatment')}
+                                            {label('profile.logSuggestedTreatment', 'Log recommended follow-up')}
                                         </button>
                                     )}
                                 </div>
@@ -604,7 +604,7 @@ const OverviewTab = ({
                 <div className="ov-feed-card ov-feed-card--ai">
                     <SectionHeader
                         icon={<Sparkles size={15} color="#15803d" />}
-                        title={label('profile.farmInsights', 'Farm Insights')}
+                        title={label('profile.farmInsights', 'Farm Summary')}
                         action={(
                             <button
                                 className="udp-see-all ov-ai-refresh"

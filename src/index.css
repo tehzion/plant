@@ -1,4 +1,4 @@
-/* ===================================
+﻿/* ===================================
    Smart Plant Diseases & Advisor
    Premium Design System & Global Styles
    =================================== */
@@ -492,50 +492,6 @@ p {
   transition: width var(--transition-slow);
 }
 
-/* === Bottom Navigation === */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid var(--color-border);
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
-  z-index: 1000;
-  padding: var(--space-xs) 0;
-}
-
-.bottom-nav-content {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: var(--space-xs) var(--space-md);
-  min-width: var(--touch-target-min);
-  color: var(--color-text-light);
-  text-decoration: none;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  transition: color var(--transition-fast);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.nav-item.active {
-  color: var(--color-primary);
-}
-
-.nav-item-icon {
-  font-size: 1.5rem;
-}
-
 /* === Loading Spinner === */
 .spinner {
   display: inline-block;
@@ -704,35 +660,35 @@ p {
   :root {
     /* Optimized font sizes for mobile (5-11% reduction) */
     --font-size-4xl: 1.6rem;
-    /* ↓ from 1.75rem */
+    /* â†“ from 1.75rem */
     --font-size-3xl: 1.35rem;
-    /* ↓ from 1.5rem */
+    /* â†“ from 1.5rem */
     --font-size-2xl: 1.2rem;
-    /* ↓ from 1.35rem */
+    /* â†“ from 1.35rem */
     --font-size-xl: 1.05rem;
-    /* ↓ from 1.15rem */
+    /* â†“ from 1.15rem */
     --font-size-lg: 0.95rem;
-    /* ↓ from 1.05rem */
+    /* â†“ from 1.05rem */
     --font-size-base: 0.9rem;
-    /* ↓ from 0.95rem */
+    /* â†“ from 0.95rem */
     --font-size-sm: 0.8rem;
-    /* ↓ from 0.85rem */
+    /* â†“ from 0.85rem */
     --font-size-xs: 0.7rem;
-    /* ↓ from 0.75rem */
+    /* â†“ from 0.75rem */
 
     /* Optimized spacing for mobile (15-25% reduction) */
     --space-md: 1.25rem;
-    /* 20px ↓ from 24px */
+    /* 20px â†“ from 24px */
     --space-lg: 1.75rem;
-    /* 28px ↓ from 32px */
+    /* 28px â†“ from 32px */
     --space-xl: 2.5rem;
-    /* 40px ↓ from 48px */
+    /* 40px â†“ from 48px */
     --space-2xl: 3rem;
-    /* 48px ↓ from 64px */
+    /* 48px â†“ from 64px */
 
     /* Optimized touch targets */
     --touch-target-min: 40px;
-    /* ↓ from 44px */
+    /* â†“ from 44px */
   }
 
   .container {
@@ -2094,136 +2050,6 @@ p {
     display: none;
     /* Hide old scrollable footer */
   }
-
-  .bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom, 12px) !important;
-  }
-}
-
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid var(--color-border);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-  /* More premium shadow */
-  z-index: 1000;
-  display: block;
-  /* Ensure it's always displayed on mobile */
-}
-
-.bottom-nav-content {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  max-width: 600px;
-  margin: 0 auto;
-  padding-top: 8px;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  text-decoration: none;
-  color: #6B7280;
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border-radius: 12px;
-  min-width: 60px;
-}
-
-.nav-item:hover {
-  background: #F9FAFB;
-}
-
-.nav-item.active {
-  color: var(--color-primary);
-}
-
-.nav-item.active .nav-item-icon {
-  color: var(--color-primary);
-}
-
-.nav-item-icon {
-  color: #9CA3AF;
-  transition: color 0.2s ease;
-}
-
-.nav-item.active .nav-item-icon {
-  color: var(--color-primary);
-}
-
-
-.main-content {
-  flex: 1;
-  padding-bottom: 80px;
-  /* Space for bottom nav on mobile */
-}
-
-@media (min-width: 769px) {
-  .main-content {
-    padding-bottom: 0;
-    /* Remove on desktop */
-  }
-}
-
-@media (min-width: 769px) {
-  .bottom-nav {
-    display: none !important;
-  }
-}
-
-.persistent-footer {
-  text-align: center;
-  padding: 4px 0 6px 0;
-  background: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.02);
-  color: #94A3B8;
-  font-size: 0.65rem;
-  width: 100%;
-}
-
-.persistent-footer p {
-  margin: 0;
-  opacity: 0.8;
-}
-
-.mobile-legal-links {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.mobile-legal-links a {
-  color: #94A3B8;
-  text-decoration: none;
-  font-size: 0.65rem;
-  font-weight: 500;
-}
-
-.mobile-legal-links .separator {
-  color: #CBD5E1;
-  font-size: 0.6rem;
-}
-
-.my-badge {
-  opacity: 0.5;
-  font-size: 0.8em;
-}
-
-
-@media (max-width: 768px) {
-  .bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom, 12px) !important;
-  }
 }
 
 /* Global Utility Classes */
@@ -2936,3 +2762,4 @@ p {
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
+

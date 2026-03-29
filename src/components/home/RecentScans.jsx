@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { getStandardizedStatus } from '../../utils/statusUtils';
 
@@ -21,7 +21,8 @@ const resolveLocationLabel = (scan, t) => {
 };
 
 const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
-    const { t } = useLanguage();
+    const { t, label: labelFn } = useLanguage();
+    const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
 
     return (
         <div className="section mt-md slide-up">
@@ -46,7 +47,11 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                 <div className="scan-details">
                                     <h4 className="scan-disease" title={scan.disease}>{scan.disease}</h4>
                                     <p className="scan-meta">
-                                        {resolveCategoryLabel(scan, t)} • {new Date(scanTimestamp).toLocaleDateString(t('common.dateLocale') || 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        {resolveCategoryLabel(scan, t)} • {new Date(scanTimestamp).toLocaleDateString(label('common.dateLocale', 'en-MY'), {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                        })}
                                     </p>
                                     {locationLabel && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
                                         <p className="scan-location">

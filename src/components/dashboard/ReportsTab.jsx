@@ -289,7 +289,7 @@ const ReportsTab = ({
             <div className="udp-section rep-feed-card rep-feed-card--insight">
                 <SectionHeader
                     icon={<BrainCircuit size={15} color="#15803d" />}
-                    title={label('profile.farmInsights', 'Farm Insights')}
+                    title={label('profile.farmInsights', 'Farm Summary')}
                     action={(
                         <button
                             className="udp-see-all"
@@ -321,7 +321,7 @@ const ReportsTab = ({
                             {scopedAiInsights.yieldAnalysis && (
                                 <p className="rep-insight-yield">{scopedAiInsights.yieldAnalysis}</p>
                             )}
-                            <div className="rep-insight-heading">{label('profile.aiRecommendations', 'Actionable Recommendations')}</div>
+                            <div className="rep-insight-heading">{label('profile.aiRecommendations', 'Recommended Actions')}</div>
                             <ul className="rep-insight-list">
                                 {scopedAiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
                             </ul>

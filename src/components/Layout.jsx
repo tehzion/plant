@@ -8,6 +8,7 @@ function Layout({ children }) {
     const location = useLocation();
     const isHome = location.pathname === '/';
     const isLegalPage = ['/terms', '/privacy'].some(path => location.pathname.startsWith(path));
+    const isScanFlow = location.pathname === '/' && location.search.includes('scan=true');
 
     return (
         <div className="app">
@@ -15,8 +16,8 @@ function Layout({ children }) {
             <div className="main-content">
                 {children}
             </div>
-            {!isLegalPage && <Footer />}
-            {!isLegalPage && <BottomNav />}
+            {!isLegalPage && !isScanFlow && <Footer />}
+            {!isLegalPage && !isScanFlow && <BottomNav />}
         </div>
     );
 }

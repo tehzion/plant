@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Camera, ScanEye, Sprout, ArrowLeft, Check, ArrowRight, X } from 'lucide-react';
-
+import './Onboarding.css';
 
 const Onboarding = () => {
     const { t } = useLanguage();
@@ -16,20 +15,20 @@ const Onboarding = () => {
             title: 'onboarding.step1Title',
             desc: 'onboarding.step1Desc',
             icon: <Camera size={64} color="#4CAF50" />,
-            color: '#4CAF50'
+            color: '#4CAF50',
         },
         {
             title: 'onboarding.step2Title',
             desc: 'onboarding.step2Desc',
             icon: <ScanEye size={64} color="#2196F3" />,
-            color: '#2196F3'
+            color: '#2196F3',
         },
         {
             title: 'onboarding.step3Title',
             desc: 'onboarding.step3Desc',
             icon: <Sprout size={64} color="#FF9800" />,
-            color: '#FF9800'
-        }
+            color: '#FF9800',
+        },
     ];
 
     const handleNext = () => {
@@ -49,7 +48,9 @@ const Onboarding = () => {
     return (
         <div className="onboarding-container page">
             <div className="onboarding-card fade-in">
-                <button className="close-btn" onClick={() => navigate('/')}>✕</button>
+                <button className="close-btn" onClick={() => navigate('/')} aria-label={t('common.close') || 'Close'}>
+                    <X size={18} />
+                </button>
 
                 <div className="icon-container" style={{ background: `${steps[currentStep].color}20` }}>
                     <span className="step-icon" style={{ textShadow: `0 4px 20px ${steps[currentStep].color}60` }}>
@@ -89,169 +90,6 @@ const Onboarding = () => {
                     </button>
                 </div>
             </div>
-
-            <style>{`
-                .onboarding-container {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 80vh;
-                    padding: var(--space-lg);
-                    padding-bottom: 150px; /* Extra padding for mobile nav */
-                    background: var(--color-bg-secondary);
-                }
-
-                .onboarding-card {
-                    background: white;
-                    padding: 40px var(--space-xl);
-                    border-radius: var(--radius-2xl);
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-                    text-align: center;
-                    max-width: 400px;
-                    width: 100%;
-                    position: relative;
-                }
-
-                .close-btn {
-                    position: absolute;
-                    top: 16px;
-                    right: 16px;
-                    background: none;
-                    border: none;
-                    font-size: 1.2rem;
-                    cursor: pointer;
-                    color: var(--color-text-secondary);
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: background 0.2s;
-                }
-
-                .close-btn:hover {
-                    background: #f5f5f5;
-                }
-
-                .icon-container {
-                    width: 120px;
-                    height: 120px;
-                    border-radius: 50%;
-                    margin: 0 auto var(--space-xl);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-
-                .step-icon {
-                    font-size: 4rem;
-                }
-
-                .step-title {
-                    font-size: var(--font-size-2xl);
-                    font-weight: 700;
-                    margin-bottom: var(--space-md);
-                    color: var(--color-text-primary);
-                }
-
-                .step-desc {
-                    color: var(--color-text-secondary);
-                    line-height: 1.6;
-                    margin-bottom: var(--space-xl);
-                    min-height: 80px;
-                }
-
-                .dots-indicator {
-                    display: flex;
-                    justify-content: center;
-                    gap: 8px;
-                    margin-bottom: var(--space-xl);
-                }
-
-                .dot {
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 50%;
-                    transition: all 0.3s ease;
-                }
-                
-                .dot.active {
-                    width: 24px;
-                    border-radius: 12px;
-                }
-
-                .button-group {
-                    display: flex;
-                    gap: var(--space-md);
-                    justify-content: center;
-                }
-
-                .nav-btn {
-                    padding: 12px 24px;
-                    border-radius: var(--radius-lg);
-                    font-weight: 600;
-                    border: none;
-                    cursor: pointer;
-                    transition: transform 0.2s;
-                    flex: 1;
-                }
-
-                .nav-btn:active {
-                    transform: scale(0.96);
-                }
-
-                .nav-btn.primary {
-                    color: white;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                }
-
-                .nav-btn.secondary {
-                    background: #f5f5f5;
-                    color: var(--color-text-primary);
-                }
-
-                .fade-in {
-                    animation: fadeIn 0.4s ease-out;
-                }
-                
-                /* Mobile optimizations */
-                @media (max-width: 768px) {
-                    .onboarding-card {
-                        padding: 32px 24px;   /* Reduced from 40px */
-                    }
-                    
-                    .icon-container {
-                        width: 100px;         /* Reduced from 120px */
-                        height: 100px;
-                        margin-bottom: 24px;  /* Reduced from 32px */
-                    }
-                    
-                    .step-icon {
-                        font-size: 3.5rem;    /* Reduced from 4rem */
-                    }
-                    
-                    .step-title {
-                        font-size: 1.35rem;   /* Reduced from var(--font-size-2xl) */
-                        margin-bottom: 16px;  /* Reduced from 24px */
-                    }
-                    
-                    .step-desc {
-                        min-height: 60px;     /* Reduced from 80px */
-                        margin-bottom: 24px;  /* Reduced from 32px */
-                        font-size: 0.9rem;    /* Slightly smaller */
-                    }
-                    
-                    .dots-indicator {
-                        margin-bottom: 24px;  /* Reduced from 32px */
-                    }
-                    
-                    .nav-btn {
-                        padding: 12px 20px;   /* Reduced from 12px 24px */
-                        font-size: 0.9rem;    /* Slightly smaller */
-                    }
-                }
-            `}</style>
         </div>
     );
 };

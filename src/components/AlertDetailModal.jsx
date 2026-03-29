@@ -141,7 +141,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                         <Clock size={13} />
                         <span>{t('profile.detected') || 'Detected'}: {new Date(scan.timestamp ?? scan.created_at).toLocaleDateString()}</span>
                         {confidencePercent && (
-                            <><ShieldCheck size={13} /><span>{confidencePercent}{t('profile.aiConfidence') || '%'}</span></>
+                            <><ShieldCheck size={13} /><span>{confidencePercent}%</span></>
                         )}
                     </div>
 
@@ -201,7 +201,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
 
                             <textarea
                                 className="adm-textarea"
-                                placeholder={t('profile.resolutionPlaceholder') || 'Describe what was done (pesticide used, quantity, date applied)…'}
+                                placeholder={t('profile.resolutionPlaceholder') || 'Describe what was done (pesticide used, quantity, date applied)...'}
                                 value={resolution}
                                 onChange={e => setResolution(e.target.value)}
                                 rows={3}
@@ -216,7 +216,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                                     onClick={handleLog}
                                     disabled={submitting}
                                 >
-                                    {submitting ? '…' : (t('profile.saveToLog') || 'Save to Activity Log')}
+                                    {submitting ? '...' : (t('profile.saveToLog') || 'Save to Activity Log')}
                                 </button>
                             </div>
                         </div>

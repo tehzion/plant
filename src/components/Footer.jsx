@@ -1,4 +1,4 @@
-import { useLocation, Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 
 const Footer = () => {
@@ -77,16 +77,7 @@ const Footer = () => {
 
                 @media (max-width: 768px) {
                     .app-footer {
-                        padding: 12px 0 10px 0;
-                    }
-
-                    .footer-links {
-                        gap: 8px;
-                        margin-bottom: 4px;
-                    }
-
-                    .footer-links a {
-                        font-size: 0.75rem;
+                        display: none;
                     }
                 }
             `}</style>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
@@ -28,6 +28,7 @@ import RecentScans from '../components/home/RecentScans';
 import DailyTips from '../components/home/DailyTips';
 import ServicesGrid from '../components/home/ServicesGrid';
 import FarmingNotices from '../components/home/FarmingNotices';
+import './Home.css';
 
 const Home = () => {
   const { t, language } = useLanguage();
@@ -119,7 +120,7 @@ const Home = () => {
     if (viewMode === 'dashboard' && !locationName) {
       const initData = async () => {
         // Optimistic Update: Show KL weather immediately while locating
-        // This prevents the "--°C" flash or hang if GPS is slow
+        // This prevents the "--Â°C" flash or hang if GPS is slow
         if (!weatherTemp) {
           fetchWeather(3.1412, 101.6865);
           setLocationName('Malaysia');
@@ -333,7 +334,7 @@ const Home = () => {
             onScanClick={(id) => navigate(`/results/${id}`)}
           />
 
-          {/* Farming Notices — logged-in users only */}
+          {/* Farming Notices â€” logged-in users only */}
           {user && forecast.length > 0 && (
             <FarmingNotices forecast={forecast} />
           )}
@@ -370,79 +371,6 @@ const Home = () => {
         confirmText={modalConfig.confirmText}
         cancelText={modalConfig.cancelText}
       />
-
-      <style>{`
-        .overlay-actions {
-          margin-top: 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          width: 100%;
-        }
-        .minimize-analysis-button {
-          background: white;
-          border: 1px solid #22C55E;
-          color: #16A34A;
-          border-radius: 9999px;
-          padding: 10px 24px;
-          font-size: 0.95rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2);
-        }
-        .minimize-analysis-button:hover {
-          background: #F0FDF4;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 12px -2px rgba(34, 197, 94, 0.3);
-        }
-        .cancel-analysis-button {
-          background: none;
-          border: none;
-          padding: 8px 24px;
-          color: #EF4444;
-          font-size: 0.85rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-          border-radius: 9999px;
-        }
-        .cancel-analysis-button:hover {
-          color: #B91C1C;
-          background: #FEF2F2;
-          transform: translateY(-1px);
-        }
-        .analysis-hint-banner {
-          margin-top: 16px;
-          width: 100%;
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          background: rgba(255, 255, 255, 0.92);
-          color: #475569;
-          border: 1px solid rgba(148, 163, 184, 0.35);
-          border-radius: 14px;
-          padding: 10px 14px;
-          font-size: 0.85rem;
-          line-height: 1.45;
-          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-        }
-        .error-banner-copy {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          min-width: 0;
-        }
-        .error-banner-copy small {
-          color: #7f1d1d;
-          font-size: 0.75rem;
-          line-height: 1.4;
-        }
-      `}</style>
 
       <div className="container">
         {(loading || currentStep === 3) ? (
@@ -500,7 +428,7 @@ const Home = () => {
                   <span>{error}</span>
                   {errorSupportHint && <small>{errorSupportHint}</small>}
                 </div>
-                <button onClick={() => scanActions.setError('')} className="close-error">×</button>
+                <button onClick={() => scanActions.setError('')} className="close-error" aria-label={t('common.close') || 'Close'}>×</button>
               </div>
             )}
 
@@ -588,3 +516,4 @@ const Home = () => {
 };
 
 export default Home;
+
