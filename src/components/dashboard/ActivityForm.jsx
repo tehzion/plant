@@ -1,4 +1,5 @@
 import { Plus, Sparkles } from 'lucide-react';
+import { EXPENSE_CATEGORIES_CFG } from '../../data/config';
 
 const ActivityForm = ({
     t,
@@ -23,9 +24,14 @@ const ActivityForm = ({
 
     const handleActivityTypeChange = (activityType) => {
         let expenseCategory = 'Other';
-        if (activityType === 'fertilize') expenseCategory = 'Fertilizer';
-        else if (activityType === 'spray') expenseCategory = 'Pesticide';
-        else if (['prune', 'inspect', 'scout'].includes(activityType)) expenseCategory = 'Labor';
+        const fertilizerId = 'Fertilizer';
+        const pesticideId   = 'Pesticide';
+        const laborId      = 'Labor';
+
+        if (activityType === 'fertilize') expenseCategory = fertilizerId;
+        else if (activityType === 'spray') expenseCategory = pesticideId;
+        else if (['prune', 'inspect', 'scout'].includes(activityType)) expenseCategory = laborId;
+        
         updateForm({ activity_type: activityType, expense_category: expenseCategory });
     };
 
@@ -217,11 +223,9 @@ const ActivityForm = ({
                     <div>
                         <label className="udp-form-label">{label('profile.expenseCategory', 'Expense Category')}</label>
                         <select className="udp-input" value={noteForm.expense_category} onChange={(event) => updateForm({ expense_category: event.target.value })}>
-                            <option value="Fertilizer">{label('profile.catFertilizer', 'Fertilizer')}</option>
-                            <option value="Pesticide">{label('profile.catPesticide', 'Pesticide')}</option>
-                            <option value="Labor">{label('profile.catLabor', 'Labor')}</option>
-                            <option value="Equipment">{label('profile.catEquipment', 'Equipment')}</option>
-                            <option value="Other">{label('profile.catOther', 'Other')}</option>
+                            {EXPENSE_CATEGORIES_CFG.map(c => (
+                                <option key={c.value} value={c.value}>{label(c.key, c.value)}</option>
+                            ))}
                         </select>
                     </div>
                     <div>

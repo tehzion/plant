@@ -184,6 +184,39 @@
     .app-header__logo-image {
         height: 48px;
     }
+
+    .app-header__refresh-btn {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 320px) {
+    .app-header {
+        padding: 10px 8px 6px;
+    }
+
+    .app-header__shell {
+        padding: 8px 10px;
+        border-radius: 20px;
+    }
+
+    .app-header__logo-image {
+        height: 42px;
+    }
+
+    .app-header__actions {
+        gap: 6px;
+    }
+
+    .app-header__refresh-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .app-header__language-wrap {
+        zoom: 0.9;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

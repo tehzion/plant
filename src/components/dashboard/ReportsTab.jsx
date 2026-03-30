@@ -12,13 +12,15 @@ import {
 import LoadingSpinner from '../LoadingSpinner';
 import SectionHeader from './SectionHeader';
 import { lazyWithRetry } from '../../utils/lazyWithRetry.js';
+import {
+    QUALITY_COLORS,
+    EXPENSE_COLORS,
+    HEALTH_COLORS,
+    QUALITY_GRADES_CFG,
+    EXPENSE_CATEGORIES_CFG,
+} from '../../data/config';
 
-const QUALITY_COLORS = {
-    Excellent: '#10b981',
-    Good: '#3b82f6',
-    Fair: '#f59e0b',
-    Poor: '#ef4444',
-};
+
 
 const ReportsCharts = lazyWithRetry(
     () => import('./ReportsCharts.jsx'),
@@ -61,24 +63,13 @@ const ReportsTab = ({
     );
 
     const localizeQuality = (quality) => {
-        const qualityKey = {
-            Excellent: 'profile.qualityExcellent',
-            Good: 'profile.qualityGood',
-            Fair: 'profile.qualityFair',
-            Poor: 'profile.qualityPoor',
-        }[quality];
-        return qualityKey ? label(qualityKey, quality) : quality;
+        const item = QUALITY_GRADES_CFG.find(q => q.value === quality);
+        return item ? label(item.key, quality) : quality;
     };
 
     const localizeExpenseCategory = (category) => {
-        const categoryKey = {
-            Fertilizer: 'profile.catFertilizer',
-            Pesticide: 'profile.catPesticide',
-            Labor: 'profile.catLabor',
-            Equipment: 'profile.catEquipment',
-            Other: 'profile.catOther',
-        }[category];
-        return categoryKey ? label(categoryKey, category) : category;
+        const item = EXPENSE_CATEGORIES_CFG.find(c => c.value === category);
+        return item ? label(item.key, category) : category;
     };
 
     const healthRate = stats.total > 0 ? Math.round((stats.healthy / stats.total) * 100) : 0;
@@ -161,21 +152,13 @@ const ReportsTab = ({
             name,
             label: localizeExpenseCategory(name),
             value: expenseCounts[name],
-            fill: name === 'Fertilizer'
-                ? '#10b981'
-                : name === 'Pesticide'
-                    ? '#f59e0b'
-                    : name === 'Labor'
-                        ? '#3b82f6'
-                        : name === 'Equipment'
-                            ? '#14b8a6'
-                            : '#64748b',
+            fill: EXPENSE_COLORS[name] || EXPENSE_COLORS.Other,
         }))
         .sort((left, right) => right.value - left.value);
 
     const healthData = [
-        { name: label('results.healthy', 'Healthy'), value: stats.healthy, color: '#10b981' },
-        { name: label('profile.diseased', 'Diseased'), value: stats.diseases, color: '#f59e0b' },
+        { name: label('results.healthy', 'Healthy'), value: stats.healthy, color: HEALTH_COLORS.healthy },
+        { name: label('profile.diseased', 'Diseased'), value: stats.diseases, color: HEALTH_COLORS.diseased },
     ].filter((entry) => entry.value > 0);
 
     const qualityData = Object.keys(qualityCounts)

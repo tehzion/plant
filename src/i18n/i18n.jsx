@@ -1,7 +1,27 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import translations from './translations';
 
 const LanguageContext = createContext();
+
+/**
+ * isBrokenLocalizedString - Sanitizes strings that may be malformed or have encoding errors.
+ */
+const isBrokenLocalizedString = (value, activeLanguage) => {
+    if (activeLanguage !== 'zh' || typeof value !== 'string') return false;
+    return /\?{2,}|Ã‚|Ãƒ|Ã°Å¸|Ã¢|ï¿½/.test(value);
+};
+
+/**
+ * lookupValue - Deep-traverses a translation dictionary using a dotted-key path.
+ */
+const lookupValue = (languageKey, keys) => {
+    let value = translations[languageKey];
+    for (const keyPart of keys) {
+        value = value?.[keyPart];
+        if (value === undefined) return undefined;
+    }
+    return value;
+};
 
 export const LanguageProvider = ({ children }) => {
     const [language, setLanguage] = useState(() => {
@@ -13,25 +33,12 @@ export const LanguageProvider = ({ children }) => {
         localStorage.setItem('appLanguage', language);
     }, [language]);
 
-    const isBrokenLocalizedString = (value, activeLanguage) => {
-        if (activeLanguage !== 'zh' || typeof value !== 'string') return false;
-        return /\?{2,}|Ã‚|Ãƒ|Ã°Å¸|Ã¢|ï¿½/.test(value);
-    };
-
-    const lookupValue = (languageKey, keys) => {
-        let value = translations[languageKey];
-        for (const keyPart of keys) {
-            value = value?.[keyPart];
-            if (value === undefined) return undefined;
-        }
-        return value;
-    };
-
-    const resolveTranslation = (key) => {
+    const resolveTranslation = useCallback((key) => {
         const keys = key.split('.');
 
         let value = lookupValue(language, keys);
         if (value === undefined || isBrokenLocalizedString(value, language)) {
+            // Fallback to English
             value = lookupValue('en', keys);
             if (value === undefined) {
                 console.warn(`Translation missing for key: ${key}`);
@@ -40,14 +47,21 @@ export const LanguageProvider = ({ children }) => {
         }
 
         return value || key;
-    };
+    }, [language]);
 
-    const t = (key) => resolveTranslation(key);
+    /**
+     * t - Standard translation helper
+     */
+    const t = useCallback((key) => resolveTranslation(key), [resolveTranslation]);
 
-    const label = (key, fallback) => {
+    /**
+     * label - Safe translation label with explicit fallback
+     * Optimized for global use via useLanguage()
+     */
+    const label = useCallback((key, fallback) => {
         const value = resolveTranslation(key);
         return value && value !== key ? value : fallback;
-    };
+    }, [resolveTranslation]);
 
     const value = {
         language,
@@ -72,3 +86,4 @@ export const useLanguage = () => {
 };
 
 export default LanguageContext;
+

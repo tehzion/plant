@@ -15,14 +15,14 @@
 .bottom-nav-meta {
     width: fit-content;
     max-width: calc(100% - 40px);
-    margin: 0 auto 8px;
-    padding: 7px 14px;
+    margin: 0 auto 4px;
+    padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(21, 128, 61, 0.14);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-    font-size: 0.66rem;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(21, 128, 61, 0.1);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    font-size: 0.62rem;
     font-weight: 700;
     color: #166534;
     opacity: 0;

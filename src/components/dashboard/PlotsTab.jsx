@@ -1,4 +1,5 @@
 import { X, Plus, MapPin, Leaf, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { PLOT_UNITS_CFG } from '../../data/config';
 
 const PlotsTab = ({
     t,
@@ -20,8 +21,8 @@ const PlotsTab = ({
         return value && value !== key ? value : fallback;
     };
     const getUnitLabel = (unit) => {
-        const unitKey = { acres: 'acres', sqft: 'sqft', hectares: 'hectares' }[unit];
-        return unitKey ? label(`profile.${unitKey}`, unit) : unit;
+        const item = PLOT_UNITS_CFG.find(u => u.value === unit);
+        return item ? label(item.key, unit) : unit;
     };
     const soilPhLabel = label('profile.soilPh', 'Soil pH');
 
@@ -51,9 +52,9 @@ const PlotsTab = ({
                             <div style={{ display: 'flex' }}>
                                 <input className="udp-input" type="number" step="0.1" style={{ width: 60, borderRadius: '8px 0 0 8px' }} value={plotForm.area} onChange={(event) => setPlotForm((form) => ({ ...form, area: event.target.value }))} />
                                 <select className="udp-input" style={{ width: 70, borderRadius: '0 8px 8px 0', borderLeft: 'none' }} value={plotForm.unit} onChange={(event) => setPlotForm((form) => ({ ...form, unit: event.target.value }))}>
-                                    <option value="acres">{label('profile.acres', 'Acres')}</option>
-                                    <option value="sqft">{label('profile.sqft', 'Sqft')}</option>
-                                    <option value="hectares">{label('profile.hectares', 'Ha')}</option>
+                                    {PLOT_UNITS_CFG.map(u => (
+                                        <option key={u.value} value={u.value}>{label(u.key, u.label)}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>

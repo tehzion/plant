@@ -26,6 +26,11 @@ import {
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from './LoadingSpinner';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { 
+    ACTIVITY_TYPES_CFG, 
+    ACTIVITY_BADGE_COLOR, 
+    EMPTY_FORM 
+} from '../data/config';
 import './UserDashboardPanel.css';
 
 // ── Standalone dashboard tab components ──────────────────────────────────────
@@ -45,42 +50,6 @@ export const relDate = (ts, t) => {
     return `${diff}${t?.('profile.relDaysAgo') || 'd ago'}`;
 };
 
-// ─── Activity type definitions ───────────────────────────────────────────────
-const ACTIVITY_TYPES_CFG = [
-    { value: 'note',      label: 'Note',      key: 'actNote',      chemical: false },
-    { value: 'scout',     label: 'Scout',     key: 'actScout',     chemical: false },
-    { value: 'spray',     label: 'Spray',     key: 'actSpray',     chemical: true  },
-    { value: 'fertilize', label: 'Fertilize', key: 'actFertilize', chemical: true  },
-    { value: 'prune',     label: 'Prune',     key: 'actPrune',     chemical: false },
-    { value: 'inspect',   label: 'Inspect',   key: 'actInspect',   chemical: false },
-    { value: 'harvest',   label: 'Harvest',   key: 'actHarvest',   chemical: false },
-    { value: 'other',     label: 'Other',     key: 'actOther',     chemical: false },
-];
-
-export const ACTIVITY_BADGE_COLOR = {
-    note:      { bg: '#f3f4f6', color: '#6b7280' },
-    scout:     { bg: '#fee2e2', color: '#b91c1c' },
-    spray:     { bg: '#fef9c3', color: '#b45309' },
-    fertilize: { bg: '#d1fae5', color: '#065f46' },
-    prune:     { bg: '#ede9fe', color: '#6d28d9' },
-    inspect:   { bg: '#dbeafe', color: '#1d4ed8' },
-    harvest:   { bg: '#f0fdf4', color: '#166534' },
-    other:     { bg: '#f3f4f6', color: '#6b7280' },
-};
-
-export const EMPTY_FORM = {
-    activity_type: 'note', plot_id: '', note: '',
-    chemical_name: '', chemical_qty: '', application_timing: 'AM',
-    temperature_am: '', humidity: '',
-    growth_stage: 'Vegetative', pest_notes: '', disease_incidence: '',
-    disease_name_observed: '', scout_severity: 'Low',
-    kg_harvested: '', quality_grade: 'Good', price_per_kg: '', buyer_name: '',
-    pruned_count: '', pruning_type: 'Thinning',
-    inspection_type: 'Pest/Disease', inspection_status: 'Good',
-    expense_amount: '', expense_category: 'Other',
-    photo_base64: '',
-};
-
 const TAB_FALLBACK = (
     <div className="page-loading" style={{ minHeight: '24vh' }}>
         <LoadingSpinner />
@@ -90,18 +59,12 @@ const TAB_FALLBACK = (
 // ─── Main component ──────────────────────────────────────────────────────────
 const UserDashboardPanel = () => {
     const { user, signOut }                 = useAuth();
-    const { t, label: i18nLabel } = useLanguage();
+    const { t, label }                      = useLanguage();
     const navigate                          = useNavigate();
     const { notify, notifyError, notifySuccess, notifyWarning } = useNotifications();
     const { getLocation }                   = useLocation();
     const { forecast, error: weatherError, fetchWeather } = useWeather();
-    const label = useCallback((key, fallback) => {
-        if (typeof i18nLabel === 'function') {
-            return i18nLabel(key, fallback);
-        }
-        const value = t(key);
-        return value && value !== key ? value : fallback;
-    }, [i18nLabel, t]);
+
 
     // ── Activity types with i18n labels ──────────────────────────────────────
     const ACTIVITY_TYPES = useMemo(
@@ -369,16 +332,19 @@ const UserDashboardPanel = () => {
                         {label('profile.verifiedFarmer', 'Verified Farmer')}
                     </span>
                     {stats.total > 0 && (
-                        <span className="udp-badge udp-badge-scans">
+                        <button className="udp-badge udp-badge-scans is-interactive" onClick={() => navigate('/history')}>
                             <ScanLine size={11} />
                             {stats.total} {label('profile.totalScans', 'Scans')}
-                        </span>
+                        </button>
                     )}
-                    <span className={`udp-badge ${activeAlertCount > 0 ? 'udp-badge-alert' : 'udp-badge-ok'}`}>
+                    <button 
+                        className={`udp-badge is-interactive ${activeAlertCount > 0 ? 'udp-badge-alert' : 'udp-badge-ok'}`}
+                        onClick={() => navigate('/history')}
+                    >
                         {activeAlertCount > 0 ? activeAlertCount : '✓'} {activeAlertCount > 0
                             ? label('profile.urgentAlerts', 'Alerts')
                             : label('profile.allClear', 'All Clear')}
-                    </span>
+                    </button>
                 </div>
 
                 <div className={`udp-profile-highlight ${activeAlertCount > 0 ? 'is-alert' : ''}`}>
@@ -397,22 +363,22 @@ const UserDashboardPanel = () => {
                 </div>
 
                 <div className="udp-profile-grid">
-                    <div className="udp-profile-stat">
+                    <button className="udp-profile-stat is-interactive" onClick={() => navigate('/history')}>
                         <span className="udp-profile-stat-value">{stats.healthy}</span>
                         <span className="udp-profile-stat-label">{label('profile.healthy', 'Healthy')}</span>
-                    </div>
-                    <div className="udp-profile-stat">
+                    </button>
+                    <button className="udp-profile-stat is-interactive" onClick={() => navigate('/history')}>
                         <span className="udp-profile-stat-value udp-profile-stat-value--warn">{stats.diseases}</span>
                         <span className="udp-profile-stat-label">{label('profile.diseased', 'Issues')}</span>
-                    </div>
-                    <div className="udp-profile-stat">
+                    </button>
+                    <button className="udp-profile-stat is-interactive" onClick={() => setTab('plots')}>
                         <span className="udp-profile-stat-value">{plots.length}</span>
                         <span className="udp-profile-stat-label">{label('profile.plots', 'Plots')}</span>
-                    </div>
-                    <div className="udp-profile-stat">
+                    </button>
+                    <button className="udp-profile-stat is-interactive" onClick={() => setTab('notes')}>
                         <span className="udp-profile-stat-value udp-profile-stat-value--accent">{notes.length}</span>
                         <span className="udp-profile-stat-label">{label('profile.tabNotes', 'Logs')}</span>
-                    </div>
+                    </button>
                 </div>
             </div>
 
