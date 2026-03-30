@@ -22,6 +22,9 @@ import {
     ShieldCheck,
     ShoppingBag,
     ScanLine,
+    User,
+    Edit3,
+    X,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import LoadingSpinner from './LoadingSpinner';
@@ -104,6 +107,34 @@ const UserDashboardPanel = () => {
         enhancing, enhanceText, setEnhanceText,
         handleGenerateInsights, handleAutoEnhance,
     } = useAIAdvisor({ t, notes, plots, checklistPct, noteForm, setNoteForm, notifyError, notifySuccess });
+
+    // ── Profile / Verification State ──────────────────────────────────────────
+    const [profileInfo, setProfileInfo] = useState(() => {
+        const saved = localStorage.getItem(`profile_info_${user?.id}`);
+        return saved ? JSON.parse(saved) : { 
+            name: '', 
+            contact: '', 
+            crops: '', 
+            memberSince: new Date().toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })
+        };
+    });
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const isVerified = !!(profileInfo.name && profileInfo.contact);
+
+    useEffect(() => {
+        if (user?.id) {
+            localStorage.setItem(`profile_info_${user.id}`, JSON.stringify(profileInfo));
+        }
+    }, [profileInfo, user?.id]);
+
+    const [tempProfile, setTempProfile] = useState(profileInfo);
+    const handleProfileSave = (e) => {
+        e.preventDefault();
+        setProfileInfo(prev => ({ ...prev, ...tempProfile }));
+        setIsEditingProfile(false);
+        if (!isVerified) notifySuccess(label('profile.loggedSuccess', 'Profile updated!'));
+    };
 
     // ── Fetch weather once on mount (for OverviewTab forecast strip) ─────────
     useEffect(() => {
@@ -327,10 +358,18 @@ const UserDashboardPanel = () => {
                 </div>
 
                 <div className="udp-profile-badges">
-                    <span className="udp-badge udp-badge-verified">
+                    <button 
+                        className={`udp-badge is-interactive ${isVerified ? 'udp-badge-verified' : 'udp-badge-unverified'}`}
+                        onClick={() => {
+                            setIsEditingProfile(!isVerified);
+                            setShowProfileModal(true);
+                        }}
+                    >
                         <ShieldCheck size={11} />
-                        {label('profile.verifiedFarmer', 'Verified Farmer')}
-                    </span>
+                        {isVerified 
+                            ? label('profile.verifiedFarmer', 'Verified Farmer') 
+                            : label('profile.completeToVerify', 'Complete profile to verify')}
+                    </button>
                     {stats.total > 0 && (
                         <button className="udp-badge udp-badge-scans is-interactive" onClick={() => navigate('/history')}>
                             <ScanLine size={11} />
@@ -518,6 +557,98 @@ const UserDashboardPanel = () => {
             )}
 
             {/* ── Global styles ─────────────────────────────────────────────── */}
+            {/* ── Farmer Profile / Verification Modal ─────────────────────── */}
+            {showProfileModal && (
+                <div className="udp-modal-overlay" onClick={() => setShowProfileModal(false)}>
+                    <div className="udp-profile-modal" onClick={e => e.stopPropagation()}>
+                        <div className="udp-profile-modal-header">
+                            <button className="udp-profile-modal-close" onClick={() => setShowProfileModal(false)}>
+                                <X size={20} />
+                            </button>
+                            <div className="udp-profile-modal-avatar">
+                                {isVerified ? initials : <User size={40} />}
+                            </div>
+                            <h3 style={{ marginBottom: '4px' }}>{isVerified ? profileInfo.name : label('profile.completeToVerify', 'Complete Profile')}</h3>
+                            <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>{email}</p>
+                        </div>
+                        
+                        <div className="udp-profile-modal-body">
+                            {isEditingProfile ? (
+                                <form onSubmit={handleProfileSave}>
+                                    <div className="udp-form-group">
+                                        <label className="udp-form-label">{label('profile.plotName', 'Full Name')}</label>
+                                        <input 
+                                            type="text" 
+                                            className="udp-form-input" 
+                                            value={tempProfile.name}
+                                            onChange={e => setTempProfile({...tempProfile, name: e.target.value})}
+                                            placeholder={label('profile.agropreneurPlaceholder', 'e.g. Ahmad Farmer')}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="udp-form-group">
+                                        <label className="udp-form-label">{label('profile.contactInfo', 'Contact Number')}</label>
+                                        <input 
+                                            type="text" 
+                                            className="udp-form-input" 
+                                            value={tempProfile.contact}
+                                            onChange={e => setTempProfile({...tempProfile, contact: e.target.value})}
+                                            placeholder={label('profile.contactPlaceholder', 'e.g. +60 12-345 6789')}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="udp-form-group">
+                                        <label className="udp-form-label">{label('profile.specializedCrops', 'Specialized Crops')}</label>
+                                        <input 
+                                            type="text" 
+                                            className="udp-form-input" 
+                                            value={tempProfile.crops}
+                                            onChange={e => setTempProfile({...tempProfile, crops: e.target.value})}
+                                            placeholder={label('profile.cropsPlaceholder', 'e.g. Durian, Rubber')}
+                                        />
+                                    </div>
+                                    <div className="udp-modal-footer">
+                                        <button type="button" className="udp-btn-ghost" onClick={() => setIsEditingProfile(false)}>
+                                            {t?.('common.cancel') || 'Cancel'}
+                                        </button>
+                                        <button type="submit" className="udp-btn-primary">
+                                            {label('profile.saveProfile', 'Save & Verify')}
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="udp-profile-info-grid">
+                                    <div className="udp-profile-info-item">
+                                        <span className="udp-profile-info-label">{label('profile.plotName', 'Name')}</span>
+                                        <span className="udp-profile-info-value">{profileInfo.name}</span>
+                                    </div>
+                                    <div className="udp-profile-info-item">
+                                        <span className="udp-profile-info-label">{label('profile.contactInfo', 'Contact')}</span>
+                                        <span className="udp-profile-info-value">{profileInfo.contact}</span>
+                                    </div>
+                                    <div className="udp-profile-info-item">
+                                        <span className="udp-profile-info-label">{label('profile.specializedCrops', 'Crops')}</span>
+                                        <span className="udp-profile-info-value">{profileInfo.crops || '-'}</span>
+                                    </div>
+                                    <div className="udp-profile-info-item">
+                                        <span className="udp-profile-info-label">{label('profile.memberSince', 'Member Since')}</span>
+                                        <span className="udp-profile-info-value">{profileInfo.memberSince}</span>
+                                    </div>
+                                    <div className="udp-modal-footer">
+                                        <button className="udp-btn-primary" onClick={() => {
+                                            setTempProfile(profileInfo);
+                                            setIsEditingProfile(true);
+                                        }}>
+                                            <Edit3 size={16} style={{ marginRight: '8px' }} />
+                                            {label('profile.editProfile', 'Edit Profile')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
