@@ -26,7 +26,7 @@ const ReportsCharts = lazyWithRetry(
 );
 
 const REPORTS_CHARTS_FALLBACK = (
-    <div style={{ minHeight: 320 }}>
+    <div className="rep-charts-fallback">
         <LoadingSpinner />
     </div>
 );
@@ -289,11 +289,10 @@ const ReportsTab = ({
             <div className="udp-section rep-feed-card rep-feed-card--insight">
                 <SectionHeader
                     icon={<BrainCircuit size={15} color="#15803d" />}
-                    title={label('profile.farmInsights', 'Farm Summary')}
+                    title={label('profile.recommendedActionsTitle', 'Recommended Actions')}
                     action={(
                         <button
-                            className="udp-see-all"
-                            style={{ color: '#15803d', background: '#ecfdf5', padding: '4px 10px', borderRadius: '12px' }}
+                            className="udp-see-all rep-inline-action"
                             onClick={() => onGenerateInsights({
                                 activeAlerts: filteredAlerts,
                                 harvestLogs,
@@ -303,14 +302,14 @@ const ReportsTab = ({
                             })}
                             disabled={isGeneratingScopedInsights}
                         >
-                            {isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.viewSummary', 'View summary')}</>}
+                            {isGeneratingScopedInsights ? label('common.analyzing', 'Analyzing...') : <><Sparkles size={13} /> {label('profile.openBrief', 'Open brief')}</>}
                         </button>
                     )}
                 />
-                <div style={{ padding: '0 16px 16px' }}>
+                <div className="rep-feed-body">
                     {isGeneratingScopedInsights ? (
                         <div className="rep-insight-state rep-insight-state--loading">
-                            <BrainCircuit size={28} style={{ animation: 'pulse 1.5s infinite' }} />
+                            <BrainCircuit size={28} className="rep-inline-pulse" />
                             <span>{label('profile.reviewingFarmData', 'Reviewing logs and alerts')}</span>
                         </div>
                     ) : scopedAiInsights ? (
@@ -321,13 +320,13 @@ const ReportsTab = ({
                             {scopedAiInsights.yieldAnalysis && (
                                 <p className="rep-insight-yield">{scopedAiInsights.yieldAnalysis}</p>
                             )}
-                            <div className="rep-insight-heading">{label('profile.aiRecommendations', 'Recommended Actions')}</div>
+                            <div className="rep-insight-heading">{label('profile.recommendedActionsTitle', 'Recommended Actions')}</div>
                             <ul className="rep-insight-list">
                                 {scopedAiInsights.recommendations?.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
                             </ul>
                         </div>
                     ) : (
-                            <div className="rep-insight-state">{label('profile.farmSummaryHint', 'Get a quick farm summary from recent logs, alerts, and harvest activity.')}</div>
+                            <div className="rep-insight-state">{label('profile.farmBriefHint', 'See the latest field outlook from your recent logs, alerts, and harvest activity.')}</div>
                         )}
                 </div>
             </div>

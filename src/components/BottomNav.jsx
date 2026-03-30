@@ -6,7 +6,6 @@ import {
     ClipboardList,
     Home as HomeIcon,
     ScanLine,
-    Sprout,
     User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -51,68 +50,53 @@ const BottomNav = () => {
 
     return (
         <nav className="bottom-nav" aria-label={label('nav.primary', 'Primary navigation')}>
+            <div className={`bottom-nav-meta ${showLegal ? 'visible' : ''}`}>
+                <Link to="/terms">{t('nav.terms')}</Link>
+                <span className="separator">•</span>
+                <Link to="/privacy">{t('nav.privacy')}</Link>
+            </div>
+
             <div className="bottom-nav-shell">
-                <div className="bottom-nav-brandbar">
-                    <span className="bottom-nav-brandpill">
-                        <span className="bottom-nav-brandicon" aria-hidden="true">
-                            <Sprout size={12} strokeWidth={2.1} />
-                        </span>
-                        KANB
+                <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`} aria-current={isActive('/') ? 'page' : undefined}>
+                    <span className="nav-item-icon">
+                        <HomeIcon size={20} strokeWidth={1.85} />
                     </span>
-                </div>
+                    <span className="nav-item-label">{label('nav.home', 'Home')}</span>
+                </Link>
 
-                <div className="bottom-nav-content">
-                    <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`}>
-                        <span className="nav-item-icon">
-                            <HomeIcon size={20} strokeWidth={1.7} />
-                        </span>
-                        <span className="nav-item-label">{label('nav.home', 'Home')}</span>
-                    </Link>
+                <Link to="/history" className={`nav-item ${isActive('/history') ? 'active' : ''}`} aria-current={isActive('/history') ? 'page' : undefined}>
+                    <span className="nav-item-icon">
+                        <ClipboardList size={20} strokeWidth={1.85} />
+                    </span>
+                    <span className="nav-item-label">{label('nav.history', 'History')}</span>
+                </Link>
 
-                    <Link to="/history" className={`nav-item ${isActive('/history') ? 'active' : ''}`}>
-                        <span className="nav-item-icon">
-                            <ClipboardList size={20} strokeWidth={1.7} />
-                        </span>
-                        <span className="nav-item-label">{label('nav.history', 'History')}</span>
-                    </Link>
+                <Link to="/?scan=true" className={`nav-item nav-item--scan ${scanActive ? 'active' : ''}`} aria-current={scanActive ? 'page' : undefined}>
+                    <span className="nav-item-scan-ring" aria-hidden="true" />
+                    <span className="nav-item-icon">
+                        <ScanLine size={24} strokeWidth={2.05} />
+                    </span>
+                    <span className="nav-item-label">{label('nav.scan', 'Scan')}</span>
+                </Link>
 
-                    <Link to="/?scan=true" className={`nav-item nav-item--primary ${scanActive ? 'active' : ''}`}>
-                        <span className="nav-item-icon">
-                            <ScanLine size={24} strokeWidth={1.9} />
-                        </span>
-                        <span className="nav-item-label">{label('nav.scan', 'Scan')}</span>
-                    </Link>
+                <Link to="/encyclopedia" className={`nav-item ${isActive('/encyclopedia') ? 'active' : ''}`} aria-current={isActive('/encyclopedia') ? 'page' : undefined}>
+                    <span className="nav-item-icon">
+                        <BookOpen size={20} strokeWidth={1.85} />
+                    </span>
+                    <span className="nav-item-label">{label('nav.encyclopedia', 'Encyclopedia')}</span>
+                </Link>
 
-                    <Link to="/encyclopedia" className={`nav-item ${isActive('/encyclopedia') ? 'active' : ''}`}>
-                        <span className="nav-item-icon">
-                            <BookOpen size={20} strokeWidth={1.7} />
-                        </span>
-                        <span className="nav-item-label">{label('nav.encyclopedia', 'Guide')}</span>
-                    </Link>
-
-                    <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`}>
-                        <span className="nav-item-icon nav-item-icon--profile">
-                            {initials ? (
-                                <span className="bottom-nav-avatar">{initials}</span>
-                            ) : (
-                                <User size={20} strokeWidth={1.7} />
-                            )}
-                            {initials && <span className="bottom-nav-auth-dot" />}
-                        </span>
-                        <span className="nav-item-label">{label('nav.profile', 'Profile')}</span>
-                    </Link>
-                </div>
-
-                <div className="persistent-footer">
-                    <div className={`mobile-legal-links ${showLegal ? 'visible' : ''}`}>
-                        <Link to="/terms">{t('nav.terms')}</Link>
-                        <span className="separator">•</span>
-                        <Link to="/privacy">{t('nav.privacy')}</Link>
-                    </div>
-                    <p className="copyright-text">
-                        &copy; {new Date().getFullYear()} {t('common.madeInMY')} <span className="my-badge">MY</span>
-                    </p>
-                </div>
+                <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`} aria-current={isActive('/profile') ? 'page' : undefined}>
+                    <span className="nav-item-icon nav-item-icon--profile">
+                        {initials ? (
+                            <span className="bottom-nav-avatar">{initials}</span>
+                        ) : (
+                            <User size={20} strokeWidth={1.85} />
+                        )}
+                        {initials && <span className="bottom-nav-auth-dot" />}
+                    </span>
+                    <span className="nav-item-label">{label('nav.profile', 'Profile')}</span>
+                </Link>
             </div>
         </nav>
     );

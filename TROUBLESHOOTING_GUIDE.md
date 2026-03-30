@@ -1,47 +1,57 @@
-# Troubleshooting Guide: resolving 500 Errors and Loading Issues
+# Troubleshooting Guide
 
-## 🚨 Issue 1: "Internal Server Error (500)"
+## Render exits with status 1
 
-**Symptom:** The app says "Disease detection API failed, using local fallback".
-**Cause:** The backend server on Render is missing the API keys we just sanitized from the code.
+### Likely cause
 
-### ✅ Solution: Add Keys to Render
+Render is using the old backend-only setup instead of the current root deployment model.
 
-1. Go to your [Render Dashboard](https://dashboard.render.com/).
-2. Click on your web service (`plant-2-uvev`).
-3. Click on the **"Environment"** tab in the sidebar.
-4. Click **"Add Environment Variable"**.
-5. Add these two exact keys:
+### Fix
 
-   - **Key:** `OPENAI_API_KEY`
-   - **Value:** `sk-proj...` (The long key starting with sk-proj)
+Set the service to:
 
-   - **Key:** `PLANTNET_API_KEY`
-   - **Value:** `2b10...` (The key starting with 2b10)
+- Root Directory: `.`
+- Build Command: `npm install && npm run build`
+- Start Command: `npm start`
+- Health Check Path: `/api/health`
 
-   *(Note: You can find these values in your local `server/.env` file if you need to copy them again, or ask me to provide them securely one time).*
+Do not use `cd server && npm install` as the Render build command for this repo anymore.
 
-6. Click **"Save Changes"**. Render will automatically redeploy.
+## API returns 500
 
----
+### Likely cause
 
-## ⚠️ Issue 2: "Failed to load module script... MIME type of 'text/html'"
+One or more required server environment variables are missing.
 
-**Symptom:** You see red errors in the console and the screen might be white or broken.
-**Cause:** This happens when your browser tries to load "old" code that was just replaced by a "new" deployment. The old files don't exist anymore, so the server sends an error page (HTML) instead of the Javascript code.
+### Fix
 
-### ✅ Solution: Hard Refresh
+Set these in Render:
 
-1. **Wait** for the deployment (triggered by the steps above) to finish.
-2. **Hard Refresh** your browser:
-   - **Windows:** Press `Ctrl` + `F5` (or `Ctrl` + `Shift` + `R`).
-   - **Mac:** Press `Cmd` + `Shift` + `R`.
-   - **Mobile:** Close the tab completely and open it again, or clear browsing data for the site.
+```env
+NODE_ENV=production
+OPENAI_API_KEY=your_openai_api_key_here
+PLANTNET_API_KEY=your_plantnet_api_key_here
+FRONTEND_URL=https://your-public-domain
+```
 
----
+## Browser shows old chunks or MIME type errors
 
-## 📝 Verify Formatting of Results
+### Likely cause
 
-Once the 500 error is fixed, your new Scan Results will show a new feature:
+The browser is still using files from an older deployment.
 
-- **Source Check:** Look at the result card. It will now explicitly say **"PlantNet: [Species Name] (Confidence%)"** in a small green badge. This confirms the new dual-api code is working correctly.
+### Fix
+
+- Hard refresh the page
+- Close and reopen the tab on mobile
+- Reopen the PWA if installed
+
+## Verify recovery
+
+After fixing deployment:
+
+1. Open `/api/health`
+2. Load the homepage
+3. Run a scan
+4. Open a result
+5. Export a PDF

@@ -12,10 +12,11 @@ function Layout({ children }) {
 
     return (
         <div className="app">
+            <a href="#main-content" className="skip-link">Skip to content</a>
             {!isLegalPage && <AppHeader isHome={isHome} />}
-            <div className="main-content">
+            <main className="main-content" id="main-content">
                 {children}
-            </div>
+            </main>
             {!isLegalPage && !isScanFlow && <Footer />}
             {!isLegalPage && !isScanFlow && <BottomNav />}
         </div>

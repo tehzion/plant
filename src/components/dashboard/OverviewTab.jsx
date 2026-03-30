@@ -192,15 +192,7 @@ const OverviewTab = ({
             meta: `${streak} ${label('profile.streak', 'day streak')}`,
             tone: hasLoggedToday ? 'healthy' : 'warning',
         },
-        {
-            id: 'health',
-            icon: BarChart2,
-            title: label('profile.healthScore', 'Health Score'),
-            value: `${stats?.accuracy ?? 0}%`,
-            meta: `${stats?.scannedThisMonth ?? 0} ${label('profile.scansMonth', 'scans this month')}`,
-            tone: 'neutral',
-        },
-    ]), [activeAlerts.length, hasLoggedToday, label, plots.length, stats?.accuracy, streak]);
+    ]), [activeAlerts.length, hasLoggedToday, label, streak]);
 
     const primaryWeather = useMemo(() => {
         const firstDay = (forecast || [])[0];
@@ -222,38 +214,26 @@ const OverviewTab = ({
             : null
     );
 
-    const prioritizedQuickActions = useMemo(() => {
-        const priority = {
-            scan: 50,
-            'daily-log': 40,
-            scout: 35,
-            spray: 30,
-            harvest: 20,
-            plots: 20,
-            reports: 15,
-            shop: 10,
-        };
+    const recommendedActionIds = useMemo(() => {
+        const recommended = [];
 
         if (activeAlerts.length > 0) {
-            priority.scout += 50;
-            priority.spray += 45;
-            priority.reports += 40;
+            recommended.push('scout', 'spray');
+        } else if (!hasLoggedToday) {
+            recommended.push('daily-log');
+        } else if (plots.length === 0) {
+            recommended.push('plots');
+        } else if (predictiveRisk?.hasRisk) {
+            recommended.push('scout');
+        } else {
+            recommended.push('scan');
         }
 
-        if (!hasLoggedToday) {
-            priority['daily-log'] += 60;
+        if (predictiveRisk?.hasRisk && !recommended.includes('reports')) {
+            recommended.push('reports');
         }
 
-        if (plots.length === 0) {
-            priority.plots += 55;
-        }
-
-        if (predictiveRisk?.hasRisk) {
-            priority.scout += 25;
-            priority.spray += 20;
-        }
-
-        return [...QUICK_ACTIONS].sort((a, b) => (priority[b.id] || 0) - (priority[a.id] || 0));
+        return new Set(recommended.slice(0, 2));
     }, [activeAlerts.length, hasLoggedToday, plots.length, predictiveRisk?.hasRisk]);
 
     const priorityCard = useMemo(() => {
@@ -318,10 +298,10 @@ const OverviewTab = ({
         return {
             icon: BrainCircuit,
             tone: 'healthy',
-            kicker: label('profile.summaryPrompt', 'Summary Prompt'),
-            title: label('profile.reviewFarmSummary', 'Review farm summary'),
-            description: label('profile.farmSummaryHint', 'Get a quick farm summary from recent logs, alerts, and harvest activity.'),
-            actionLabel: label('profile.viewSummary', 'View summary'),
+            kicker: label('profile.farmBrief', 'Farm Brief'),
+            title: label('profile.reviewFarmBrief', 'Review farm outlook'),
+            description: label('profile.farmBriefHint', 'See the latest field outlook from your recent logs, alerts, and harvest activity.'),
+            actionLabel: label('profile.openBrief', 'Open brief'),
             action: () => onGenerateInsights({ activeAlerts, harvestLogs, scopeKey: 'overview' }),
         };
     }, [
@@ -392,16 +372,24 @@ const OverviewTab = ({
                 )}
 
                 <div className="ov-action-grid">
-                    {prioritizedQuickActions.map((qa) => {
+                    {QUICK_ACTIONS.map((qa) => {
                         const Icon = qa.icon;
+                        const isRecommended = recommendedActionIds.has(qa.id);
                         return (
-                            <button key={qa.id} className="ov-action-card" onClick={() => fireAction(qa)}>
+                            <button
+                                key={qa.id}
+                                className={`ov-action-card ${isRecommended ? 'is-recommended' : ''}`}
+                                onClick={() => fireAction(qa)}
+                            >
                                 <div
                                     className="ov-action-icon"
                                     style={{ background: qa.tone.bg, color: qa.tone.icon }}
                                 >
                                     <Icon size={22} strokeWidth={1.9} />
                                 </div>
+                                {isRecommended && (
+                                    <span className="ov-action-badge">{label('profile.recommendedBadge', 'Recommended')}</span>
+                                )}
                                 <span className="ov-action-title">{label(qa.labelKey, qa.fallback)}</span>
                                 <span className="ov-action-meta">{label(qa.hintKey, qa.hintFallback)}</span>
                             </button>
@@ -429,17 +417,17 @@ const OverviewTab = ({
                 >
                     <div className="ov-focus-head">
                         <span className="ov-focus-icon"><BrainCircuit size={18} /></span>
-                        <span className="ov-focus-label">{label('profile.farmInsights', 'Farm Summary')}</span>
+                        <span className="ov-focus-label">{label('profile.latestOutlook', 'Latest Outlook')}</span>
                     </div>
                     <div className="ov-focus-value">
                         {generatingInsights
                             ? label('common.analyzing', 'Analyzing...')
-                            : (aiCardData?.summary || label('profile.viewSummary', 'View summary'))}
+                            : (aiCardData?.summary || label('profile.openBrief', 'Open brief'))}
                     </div>
                     <div className="ov-focus-sub">
                         {generatingInsights
                             ? label('profile.reviewingFarmData', 'Reviewing logs and alerts')
-                            : label('profile.farmSummaryHint', 'Get a quick farm summary from your recent activity')}
+                            : label('profile.latestOutlookHint', 'See the latest field outlook and recommended follow-up for your farm.')}
                     </div>
                 </button>
             </div>
@@ -604,13 +592,13 @@ const OverviewTab = ({
                 <div className="ov-feed-card ov-feed-card--ai">
                     <SectionHeader
                         icon={<Sparkles size={15} color="#15803d" />}
-                        title={label('profile.farmInsights', 'Farm Summary')}
+                        title={label('profile.recommendedActionsTitle', 'Recommended Actions')}
                         action={(
                             <button
                                 className="udp-see-all ov-ai-refresh"
                                 onClick={() => onGenerateInsights({ activeAlerts, harvestLogs, scopeKey: 'overview' })}
                             >
-                                {label('profile.refreshSummary', 'Refresh summary')}
+                                {label('profile.refreshInsights', 'Refresh insights')}
                             </button>
                         )}
                     />

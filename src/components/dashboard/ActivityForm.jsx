@@ -182,9 +182,9 @@ const ActivityForm = ({
                         </div>
                     </div>
                     {(noteForm.kg_harvested && noteForm.price_per_kg) && (
-                        <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '10px', border: '1px solid #dcfce7', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>{label('profile.estRevenue', 'Estimated Revenue')}</span>
-                            <span style={{ fontSize: '1rem', color: '#15803d', fontWeight: 800 }}>RM {(Number(noteForm.kg_harvested) * Number(noteForm.price_per_kg)).toFixed(2)}</span>
+                        <div className="udp-revenue-summary">
+                            <span className="udp-revenue-label">{label('profile.estRevenue', 'Estimated Revenue')}</span>
+                            <span className="udp-revenue-value">RM {(Number(noteForm.kg_harvested) * Number(noteForm.price_per_kg)).toFixed(2)}</span>
                         </div>
                     )}
                 </>
@@ -202,14 +202,14 @@ const ActivityForm = ({
             </div>
 
             <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label className="udp-form-label" style={{ marginBottom: 0 }}>{label('profile.notes', 'Notes / Remarks')}</label>
-                    <button type="button" onClick={() => onAutoEnhance()} disabled={enhancing || !noteForm.note.trim()} style={{ background: 'none', border: 'none', color: '#15803d', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', transition: 'background 0.2s' }} className="udp-enhance-btn">
+                <div className="udp-notes-header">
+                    <label className="udp-form-label udp-form-label--compact">{label('profile.notes', 'Notes / Remarks')}</label>
+                    <button type="button" onClick={() => onAutoEnhance()} disabled={enhancing || !noteForm.note.trim()} className="udp-enhance-btn">
                         <Sparkles size={12} />
                         {enhancing ? '...' : label('form.magicEnhance', 'Magic Enhance')}
                     </button>
                 </div>
-                <textarea className="udp-input" rows={3} placeholder={label('profile.notePlaceholder', 'Additional observations for today...')} value={noteForm.note} onChange={(event) => updateForm({ note: event.target.value })} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+                <textarea className="udp-input udp-textarea" rows={3} placeholder={label('profile.notePlaceholder', 'Additional observations for today...')} value={noteForm.note} onChange={(event) => updateForm({ note: event.target.value })} />
             </div>
 
             {noteForm.activity_type !== 'harvest' && (
@@ -232,9 +232,9 @@ const ActivityForm = ({
             )}
 
             <div>
-                <label className="udp-form-label">{label('profile.photoAttachment', 'Photo Attachment')} <span style={{ fontWeight: 400, opacity: 0.6 }}>{label('profile.photoOptional', '(Optional)')}</span></label>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#f8fafc', border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '16px', cursor: 'pointer', fontSize: '0.85rem', color: '#475569', fontWeight: 600, transition: 'all 0.2s' }} className="udp-photo-upload-label">
+                <label className="udp-form-label">{label('profile.photoAttachment', 'Photo Attachment')} <span className="udp-form-optional">{label('profile.photoOptional', '(Optional)')}</span></label>
+                <div className="udp-photo-row">
+                    <label className="udp-photo-upload-label">
                         <Plus size={18} />
                         {noteForm.photo_base64 ? label('profile.changePhoto', 'Change Photo') : label('profile.takeUploadPhoto', 'Take / Upload Photo')}
                         <input
@@ -252,9 +252,9 @@ const ActivityForm = ({
                         />
                     </label>
                     {noteForm.photo_base64 && (
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                            <img src={noteForm.photo_base64} alt={label('profile.photoAttachment', 'Photo Attachment')} style={{ width: 70, height: 70, borderRadius: 12, objectFit: 'cover', border: '2px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                            <button type="button" onClick={() => updateForm({ photo_base64: '' })} style={{ position: 'absolute', top: -8, right: -8, background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                        <div className="udp-photo-preview">
+                            <img src={noteForm.photo_base64} alt={label('profile.photoAttachment', 'Photo Attachment')} className="udp-photo-thumb" />
+                            <button type="button" onClick={() => updateForm({ photo_base64: '' })} className="udp-photo-remove-btn">
                                 x
                             </button>
                         </div>

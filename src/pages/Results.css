@@ -5,8 +5,22 @@
   padding-bottom: 24px;
 }
 
+.results-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
 .results-section-loading {
   min-height: 220px;
+}
+
+.results-loading-shell {
+  min-height: 260px;
+}
+
+.results-loading-shell p {
+  margin: 0;
 }
 
 .container {
@@ -16,12 +30,7 @@
 }
 
 .results-error {
-  text-align: center;
-  padding: var(--space-3xl);
-  background: white;
-  margin: var(--space-xl);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  margin: var(--space-xl) 0;
 }
 
 .health-banner {
@@ -88,16 +97,13 @@
 .scan-metadata-card {
   margin-bottom: var(--space-lg);
   margin-top: 0;
-  background: transparent;
-  padding: 0;
-  box-shadow: none;
-  border: none;
+  padding: 18px;
 }
 
 .metadata-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 14px;
 }
 
 .metadata-item {
@@ -105,10 +111,10 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border-radius: 12px;
-  background: white;
-  border: 1px solid #E5E7EB;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
   transition: all 0.2s ease;
   position: relative;
   height: 100%;
@@ -117,7 +123,7 @@
 .metadata-item.highlight {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   border: 2px solid #86efac;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 10px 22px rgba(34, 197, 94, 0.16);
 }
 
 .metadata-item.location-item {
@@ -125,16 +131,16 @@
 }
 
 .metadata-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: white;
+  background: rgba(255, 255, 255, 0.92);
   color: var(--color-text-secondary);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
 }
 
 .metadata-icon.category-icon {
@@ -172,7 +178,7 @@
 }
 
 .metadata-label {
-  font-size: 10px;
+  font-size: 0.66rem;
   font-weight: 700;
   color: var(--color-text-secondary);
   text-transform: uppercase;
@@ -194,7 +200,7 @@
 
 .metadata-value.primary {
   color: #166534;
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   font-weight: 700;
   letter-spacing: -0.5px;
   font-family: var(--font-heading);
@@ -285,6 +291,10 @@
   .container {
     max-width: 800px;
     padding: 0 var(--space-lg);
+  }
+
+  .scan-metadata-card {
+    padding: 20px;
   }
 }
 

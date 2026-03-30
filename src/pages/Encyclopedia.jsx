@@ -35,8 +35,8 @@ const Encyclopedia = () => {
   const filteredDiseases = getFilteredDiseases();
 
   return (
-    <div className="page" style={{ background: '#F9FAFB' }}>
-      <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px' }}>
+    <div className="page encyclopedia-page">
+      <div className="container encyclopedia-layout">
         <div className="encyclopedia-header">
           <h2 className="page-title">{t('encyclopedia.title')}</h2>
           <p className="page-subtitle">
@@ -44,7 +44,7 @@ const Encyclopedia = () => {
           </p>
         </div>
 
-        <div className="controls-card">
+        <div className="controls-card app-surface app-surface--soft">
           <div className="search-section">
             <div className="search-icon-wrapper">
               <Search size={20} className="search-icon" />
@@ -77,7 +77,9 @@ const Encyclopedia = () => {
         </div>
 
         <div className="results-info">
-          <p>{filteredDiseases.length} {filteredDiseases.length === 1 ? t('encyclopedia.disease') : t('encyclopedia.diseases')} {t('encyclopedia.found')}</p>
+          <p className="app-pill">
+            {filteredDiseases.length} {filteredDiseases.length === 1 ? t('encyclopedia.disease') : t('encyclopedia.diseases')} {t('encyclopedia.found')}
+          </p>
         </div>
 
         <div className="diseases-grid">
@@ -86,8 +88,8 @@ const Encyclopedia = () => {
               <DiseaseCard key={disease.id} disease={disease} />
             ))
           ) : (
-            <div className="no-results">
-              <div className="no-results-icon">
+            <div className="no-results app-surface app-empty-state">
+              <div className="no-results-icon app-icon-badge">
                 <Search size={48} strokeWidth={1.5} />
               </div>
               <h3>{t('encyclopedia.noResults')}</h3>

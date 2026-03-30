@@ -1,3 +1,13 @@
+.encyclopedia-page {
+  background: #f9fafb;
+}
+
+.encyclopedia-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
 .encyclopedia-header {
   text-align: center;
   margin-bottom: 24px;
@@ -23,12 +33,8 @@
 }
 
 .controls-card {
-  background: white;
-  border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
   margin-bottom: 32px;
-  border: 1px solid rgba(0,0,0,0.02);
   position: relative;
   z-index: 10;
 }
@@ -125,10 +131,8 @@
 
 .results-info {
   margin-bottom: 16px;
-  color: #6B7280;
-  font-size: 0.9rem;
-  padding-left: 8px;
-  font-weight: 500;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .results-info p {
@@ -144,12 +148,8 @@
 }
 
 .no-results {
-  text-align: center;
   padding: 64px 24px;
   color: #6B7280;
-  background: white;
-  border-radius: 24px;
-  border: 1px dashed #E5E7EB;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -157,10 +157,7 @@
 
 .no-results-icon {
   margin-bottom: 16px;
-  color: #D1D5DB;
-  background: #F3F4F6;
-  padding: 20px;
-  border-radius: 50%;
+  color: #15803d;
 }
 
 .no-results h3 {

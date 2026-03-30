@@ -6,7 +6,13 @@ import './ScanHistoryCard.css';
 
 const ScanHistoryCard = ({ scan, onDelete }) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, label } = useLanguage();
+  const safeLabel = typeof label === 'function'
+    ? label
+    : (key, fallback) => {
+      const value = t(key);
+      return value && value !== key ? value : fallback;
+    };
 
   const standardizedStatus = getStandardizedStatus(scan);
   const healthy = standardizedStatus === 'healthy';
@@ -29,13 +35,19 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString(t('common.dateLocale') || 'en-US', {
+    return date.toLocaleDateString(safeLabel('common.dateLocale', 'en-US'), {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
+
+  const locationLabel = scan.locationName
+    ? scan.locationName.startsWith('common.')
+      ? safeLabel(scan.locationName, scan.locationName.replace(/^common\./, ''))
+      : safeLabel(`common.${scan.locationName}`, scan.locationName)
+    : '';
 
   const handleClick = () => {
     navigate(`/results/${scan.id}`);
@@ -47,7 +59,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
   };
 
   return (
-    <div className="scan-history-card card" onClick={handleClick}>
+    <div className="scan-history-card card app-surface app-surface--soft" onClick={handleClick}>
       <div className="card-content">
         <img
           src={scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url}
@@ -83,12 +95,10 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
               )}
             </div>
           </div>
-          {scan.locationName && (
+          {locationLabel && (
             <p className="scan-location">
               <MapPin size={14} className="location-icon" />
-              {scan.locationName.startsWith('common.') 
-                ? t(scan.locationName) 
-                : t(`common.${scan.locationName}`, scan.locationName)}
+              {locationLabel}
             </p>
           )}
         </div>

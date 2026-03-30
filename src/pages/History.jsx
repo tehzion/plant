@@ -68,11 +68,16 @@ const History = () => {
                 {/* Header */}
                 <div className="history-header">
                     <div className="header-title-row">
-                        <HistoryIcon size={28} className="header-icon" />
-                        <h2 className="page-title">{t('history.scanHistory')}</h2>
+                        <span className="history-icon app-icon-badge">
+                            <HistoryIcon size={22} className="header-icon" />
+                        </span>
+                        <div className="history-title-copy">
+                            <h2 className="page-title">{t('history.scanHistory')}</h2>
+                            <p className="history-subtitle">{t('history.noHistoryMessage')}</p>
+                        </div>
                     </div>
                     {hasScans && (
-                        <button onClick={handleClearAll} className="clear-btn">
+                        <button onClick={handleClearAll} className="clear-btn app-pill">
                             <Trash2 size={16} />
                             {t('history.clearAll')}
                         </button>
@@ -81,7 +86,7 @@ const History = () => {
 
                 {/* Empty State */}
                 {!hasScans ? (
-                    <div className="empty-state">
+                    <div className="empty-state app-surface app-empty-state">
                         <div className="empty-icon-wrapper">
                             <ClipboardList size={64} className="empty-icon" />
                         </div>
@@ -100,7 +105,10 @@ const History = () => {
                         {/* Today */}
                         {groupedScans.today && groupedScans.today.length > 0 && (
                             <div className="history-group">
-                                <h3 className="group-title">{t('history.today')}</h3>
+                                <div className="group-title-row">
+                                    <h3 className="group-title">{t('history.today')}</h3>
+                                    <span className="app-pill">{groupedScans.today.length}</span>
+                                </div>
                                 {groupedScans.today.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
@@ -114,7 +122,10 @@ const History = () => {
                         {/* Yesterday */}
                         {groupedScans.yesterday && groupedScans.yesterday.length > 0 && (
                             <div className="history-group">
-                                <h3 className="group-title">{t('history.yesterday')}</h3>
+                                <div className="group-title-row">
+                                    <h3 className="group-title">{t('history.yesterday')}</h3>
+                                    <span className="app-pill">{groupedScans.yesterday.length}</span>
+                                </div>
                                 {groupedScans.yesterday.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
@@ -128,7 +139,10 @@ const History = () => {
                         {/* This Week */}
                         {groupedScans.thisWeek && groupedScans.thisWeek.length > 0 && (
                             <div className="history-group">
-                                <h3 className="group-title">{t('history.thisWeek')}</h3>
+                                <div className="group-title-row">
+                                    <h3 className="group-title">{t('history.thisWeek')}</h3>
+                                    <span className="app-pill">{groupedScans.thisWeek.length}</span>
+                                </div>
                                 {groupedScans.thisWeek.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
@@ -142,7 +156,10 @@ const History = () => {
                         {/* Last Week */}
                         {groupedScans.lastWeek && groupedScans.lastWeek.length > 0 && (
                             <div className="history-group">
-                                <h3 className="group-title">{t('history.lastWeek')}</h3>
+                                <div className="group-title-row">
+                                    <h3 className="group-title">{t('history.lastWeek')}</h3>
+                                    <span className="app-pill">{groupedScans.lastWeek.length}</span>
+                                </div>
                                 {groupedScans.lastWeek.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
@@ -156,7 +173,10 @@ const History = () => {
                         {/* Older */}
                         {groupedScans.older && groupedScans.older.length > 0 && (
                             <div className="history-group">
-                                <h3 className="group-title">{t('history.older')}</h3>
+                                <div className="group-title-row">
+                                    <h3 className="group-title">{t('history.older')}</h3>
+                                    <span className="app-pill">{groupedScans.older.length}</span>
+                                </div>
                                 {groupedScans.older.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}

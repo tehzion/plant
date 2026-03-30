@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import './TabbedResults.css';
 
 const TabbedResults = ({ tabs }) => {
   const [activeTab, setActiveTab] = useState(0);
@@ -7,47 +8,40 @@ const TabbedResults = ({ tabs }) => {
   const tabsRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Check scroll position
   const checkScroll = () => {
-    if (tabsRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
-      setCanScrollLeft(scrollLeft > 10);
-      setHasScrolled(scrollLeft > 50);
-    }
+    if (!tabsRef.current) return;
+    const { scrollLeft } = tabsRef.current;
+    setCanScrollLeft(scrollLeft > 10);
+    setHasScrolled(scrollLeft > 50);
   };
 
-  // Auto-scroll active tab into view
   useEffect(() => {
-    if (tabsRef.current) {
-      const activeElement = tabsRef.current.children[activeTab];
-      if (activeElement) {
-        activeElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center' // Center the active tab
-        });
-      }
+    if (!tabsRef.current) return;
+    const activeElement = tabsRef.current.children[activeTab];
+    if (activeElement) {
+      activeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
     }
   }, [activeTab]);
 
-  // Listen to scroll events
   useEffect(() => {
     const tabsElement = tabsRef.current;
-    if (tabsElement) {
-      tabsElement.addEventListener('scroll', checkScroll);
-      checkScroll(); // Initial check
-      return () => tabsElement.removeEventListener('scroll', checkScroll);
-    }
+    if (!tabsElement) return undefined;
+
+    tabsElement.addEventListener('scroll', checkScroll);
+    checkScroll();
+
+    return () => tabsElement.removeEventListener('scroll', checkScroll);
   }, []);
 
   return (
     <div className="tabbed-results">
-      {/* Tab Headers - Sticky & Scrollable */}
       <div
         ref={containerRef}
-        className={`tab-headers-container ${canScrollLeft ? 'can-scroll-left' : ''
-          } ${hasScrolled ? 'scrolled' : ''
-          }`}
+        className={`tab-headers-container app-surface ${canScrollLeft ? 'can-scroll-left' : ''} ${hasScrolled ? 'scrolled' : ''}`}
       >
         <div className="tab-headers" ref={tabsRef}>
           {tabs.map((tab, index) => (
@@ -61,239 +55,15 @@ const TabbedResults = ({ tabs }) => {
                 <span className="tab-title">{tab.title}</span>
                 {tab.badge && <span className="tab-badge">{tab.badge}</span>}
               </span>
-              {/* Active Indicator (Underline) */}
               {activeTab === index && <div className="active-indicator" />}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tab Content */}
       <div className="tab-content">
         {tabs[activeTab]?.content}
       </div>
-
-      <style>{`
-        .tabbed-results {
-          background: transparent; /* Seamless with page */
-          width: 100%;
-          border-radius: 0;
-          overflow: visible;
-        }
-
-        .tab-headers-container {
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(0,0,0,0.05);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-          margin-bottom: var(--space-sm);
-          /* Negative margins to span full width of container if inside filtered View */
-          margin-left: calc(-1 * var(--space-sm));
-          margin-right: calc(-1 * var(--space-sm));
-          padding-left: var(--space-sm);
-          padding-right: var(--space-sm);
-          overflow: hidden; /* Ensure mask stays within bounds */
-        }
-        
-        /* Gradient Masks for Scroll Hints - Both Sides */
-        .tab-headers-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            width: 24px;
-            background: linear-gradient(to left, rgba(255,255,255,0), rgba(255,255,255,0.95));
-            pointer-events: none;
-            z-index: 101;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .tab-headers-container.can-scroll-left::before {
-            opacity: 1;
-        }
-
-        .tab-headers-container::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 60px;
-            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.95));
-            pointer-events: none;
-            z-index: 101;
-        }
-        
-        /* Animated scroll hint chevron */
-        .tab-headers-container::after {
-            content: '›';
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--color-primary);
-            animation: pulse-chevron 2s ease-in-out infinite;
-        }
-        
-        .tab-headers-container.scrolled::after {
-            opacity: 0.3;
-            animation: none;
-        }
-        
-        @keyframes pulse-chevron {
-            0%, 100% { 
-                opacity: 0.4;
-                transform: translateX(0);
-            }
-            50% { 
-                opacity: 1;
-                transform: translateX(4px);
-            }
-        }
-
-        .tab-headers {
-          display: flex;
-          overflow-x: auto;
-          scrollbar-width: none; /* Hide scrollbar Firefox */
-          -ms-overflow-style: none; /* Hide scrollbar IE/Edge */
-          gap: var(--space-md);
-          padding: 0 80px 0 var(--space-xs); /* Increased right padding to show peek */
-          scroll-padding: 0 80px 0 0; /* Ensure proper scroll snap */
-        }
-
-        .tab-headers::-webkit-scrollbar {
-          display: none; /* Hide scrollbar Chrome/Safari */
-        }
-
-        .tab-header {
-          flex: 0 0 auto;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 12px 16px;
-          background: transparent;
-          border: none;
-          color: #94A3B8; /* Slate-400 for inactive */
-          font-family: var(--font-family);
-          font-size: 0.9rem;
-          font-weight: 500;
-          cursor: pointer;
-          position: relative;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tab-content-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
-            position: relative;
-            z-index: 1;
-        }
-
-        .tab-header:hover {
-          color: var(--color-primary);
-        }
-
-        .tab-header.active {
-          color: var(--color-primary);
-          font-weight: 600;
-        }
-
-        .active-indicator {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%; /* Shorter underline */
-            height: 3px;
-            background: var(--color-primary);
-            border-radius: 3px 3px 0 0;
-            animation: expand 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes expand {
-            from { transform: translateX(-50%) scaleX(0); }
-            to { transform: translateX(-50%) scaleX(1); }
-        }
-
-        .tab-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: transform 0.3s ease;
-        }
-
-        .tab-header.active .tab-icon {
-          transform: scale(1.1);
-        }
-
-        .tab-badge {
-          position: relative;
-          top: -8px;
-          margin-left: -4px;
-          background: var(--color-severe);
-          color: white;
-          font-size: 10px;
-          font-weight: bold;
-          height: 16px;
-          min-width: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 99px;
-          border: 2px solid white;
-          padding: 0 4px;
-        }
-
-        .tab-content {
-          padding: var(--space-xs) 0; /* Reduced padding */
-          animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes fadeSlideUp {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @media (min-width: 768px) {
-           .tab-headers-container {
-               border-radius: var(--radius-xl);
-               margin: 0 0 var(--space-xl) 0;
-               padding: 0;
-               /* Undo negative margins */
-               margin-left: 0;
-               margin-right: 0;
-           }
-
-           .tab-headers {
-               justify-content: center;
-           }
-
-           .tab-header {
-               padding: var(--space-md) var(--space-xl);
-               min-width: auto;
-           }
-        }
-
-        @media (max-width: 480px) {
-            .tab-title {
-                font-size: 0.85rem;
-            }
-        }
-      `}</style>
     </div>
   );
 };

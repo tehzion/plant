@@ -113,8 +113,11 @@ const Results = () => {
   if (scanLoading) {
     return (
       <div className="results">
-        <div className="container" style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-          <div className="loading-spinner-circle" />
+        <div className="container results-layout">
+          <div className="results-loading-shell app-surface app-surface--soft app-empty-state">
+            <div className="loading-spinner-circle" />
+            <p>{t('common.loading') || 'Loading'}</p>
+          </div>
         </div>
       </div>
     );
@@ -123,8 +126,8 @@ const Results = () => {
   if (!scan) {
     return (
       <div className="results">
-        <div className="container">
-          <div className="error-message">
+        <div className="container results-layout">
+          <div className="results-error app-surface app-empty-state">
             <h2>{t('history.noHistory')}</h2>
             <p>{t('history.noHistoryMessage')}</p>
             <button onClick={() => navigate('/')} className="btn btn-primary">
@@ -410,7 +413,7 @@ ${t('pdf.generatedBy')}
 
   return (
     <div className="results page">
-      <div className="container">
+      <div className="container results-layout">
         {/* Quick Actions Bar */}
         <QuickActions
           onScanAgain={handleScanAgain}
@@ -420,7 +423,7 @@ ${t('pdf.generatedBy')}
         />
 
         {/* Scan Metadata Card - Modern Design */}
-        <div className="scan-metadata-card">
+        <div className="scan-metadata-card app-surface app-surface--soft">
           <div className="metadata-grid">
             {/* Category */}
             <div className="metadata-item">

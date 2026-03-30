@@ -6,6 +6,7 @@ const t = (key) => ({
     'common.dateLocale': 'en-MY',
     'profile.allPlots': 'All Plots',
     'profile.viewSummary': 'View summary',
+    'profile.openBrief': 'Open brief',
     'profile.farmSummaryHint': 'Farm summary hint',
     'profile.yieldHistoryForecast': 'Yield History & Trend Forecast',
     'profile.yieldForecastNeedsMoreData': 'Need more harvest data',
@@ -74,7 +75,7 @@ describe('ReportsTab', () => {
         );
 
         fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'plot-a' } });
-        fireEvent.click(screen.getByRole('button', { name: /view summary/i }));
+        fireEvent.click(screen.getByRole('button', { name: /open brief/i }));
 
         expect(onGenerateInsights).toHaveBeenCalledWith(
             expect.objectContaining({

@@ -1,142 +1,83 @@
-# SEA Plant Disease Detector 🌿
+# KANB Plant Health Platform
 
-AI-powered plant disease detection for Southeast Asian crops including rice, vegetables, fruits, palm, rubber, and durian. Now with comprehensive **myGAP certification support**.
+KANB is a plant health, scan history, farm logging, reporting, and myGAP support platform for Southeast Asian crops including rice, vegetables, fruits, palm, rubber, and durian.
 
 ## Features
 
-- 📷 **Camera & Upload**: Take photos or upload images of plants
-- 🤖 **AI Detection**: OpenAI Vision API analyzes plant diseases
-- 📊 **Detailed Results**: Disease identification with confidence levels
-- 💊 **Treatment Recommendations**: Immediate actions and prevention tips
-- 📋 **Scan History**: Local storage of past scans
-- 📚 **Disease Encyclopedia**: Comprehensive database of SEA plant diseases
-- 📱 **PWA Ready**: Install on mobile devices for easy access with auto-updates
-- ✅ **myGAP Support**: Digital checklist, logbook, and PHI calculator
-- 📄 **Professional Reports**: Generate PDF reports for disease analysis and compliance
+- Camera and upload plant scans
+- Disease analysis through the backend API
+- Treatment, prevention, nutrition, and product guidance
+- Scan history and PDF export
+- Farm dashboard, daily log, reports, and myGAP support
+- PWA support for mobile install and updates
 
-## Setup Instructions
+## Local setup
 
-### 1. Install Dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Configure OpenAI API Key
+### 2. Configure environment
 
-Create a `.env` file in the root directory and add your OpenAI API key:
+Root `.env`:
 
+```env
+VITE_API_URL=http://localhost:3002
 ```
-VITE_OPENAI_API_KEY=your_openai_api_key_here
+
+Backend `server/.env`:
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+PLANTNET_API_KEY=your_plantnet_api_key_here
+PORT=3002
 ```
 
-Get your API key from: https://platform.openai.com/api-keys
-
-### 3. Run Development Server
+### 3. Run frontend
 
 ```bash
 npm run dev
 ```
 
-The app will open at `http://localhost:3000`
-
-### 4. Build for Production
+### 4. Run backend
 
 ```bash
+npm run dev:server
+```
+
+Frontend runs on `http://localhost:5173` and the backend on `http://localhost:3002`.
+
+### 5. Test and build
+
+```bash
+npm test
 npm run build
 ```
 
-## Usage
+## Production on Render
 
-1. **Select Plant Category**: Choose the type of plant (Rice, Vegetables, Fruits, etc.)
-2. **Capture/Upload Image**: Take a photo or upload an existing image
-3. **Analyze**: Click "Analyze Plant" to detect diseases
-4. **View Results**: See disease identification, severity, and treatment recommendations
-5. **Access History**: View past scans in the History tab
-6. **Browse Encyclopedia**: Learn about common SEA plant diseases
-7. **Manage Compliance**: Use the myGAP tools to track farm activities and generate compliance reports
+This repo expects a single root Render web service.
 
-## Technology Stack
+- Root Directory: `.`
+- Build Command: `npm install && npm run build`
+- Start Command: `npm start`
+- Health Check Path: `/api/health`
 
-- **Frontend**: React 18 + Vite
-- **Routing**: React Router v6
-- **AI**: OpenAI Vision API (GPT-4 Vision)
-- **Styling**: Vanilla CSS with custom design system
-- **Storage**: Browser LocalStorage
-- **PWA**: Service Worker for offline support with auto-update
-- **Reporting**: jsPDF for professional report generation
+Required Render environment variables:
 
-## Project Structure
-
-```
-Plant/
-├── public/
-│   ├── manifest.json
-│   └── service-worker.js
-├── src/
-│   ├── components/
-│   │   ├── CameraUpload.jsx
-│   │   ├── PlantCategorySelector.jsx
-│   │   ├── DiseaseResult.jsx
-│   │   ├── TreatmentRecommendations.jsx
-│   │   ├── ScanHistoryCard.jsx
-│   │   └── DiseaseCard.jsx
-│   ├── pages/
-│   │   ├── Home.jsx
-│   │   ├── Results.jsx
-│   │   ├── History.jsx
-│   │   ├── Encyclopedia.jsx
-│   │   └── MyGap.jsx
-│   ├── utils/
-│   │   ├── diseaseDetection.js
-│   │   ├── pdfGenerator.js
-│   │   └── localStorage.js
-│   ├── data/
-│   │   └── diseaseDatabase.js
-│   ├── i18n/
-│   │   └── translations.js
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── .env
-├── package.json
-└── vite.config.js
+```env
+NODE_ENV=production
+OPENAI_API_KEY=your_openai_api_key_here
+PLANTNET_API_KEY=your_plantnet_api_key_here
+FRONTEND_URL=https://your-public-domain
 ```
 
-## Important Notes
+Use the included [render.yaml](/C:/Users/yl/OneDrive/Desktop/Plant/render.yaml) as the deployment source of truth.
 
-### API Costs
-Each image analysis consumes OpenAI API credits. Monitor your usage at https://platform.openai.com/usage
+## Notes
 
-### Browser Compatibility
-- Camera API requires HTTPS (or localhost for development)
-- PWA features work best on modern browsers (Chrome, Safari, Edge)
-
-### Data Privacy
-- All scan history is stored locally in your browser
-- No data is sent to external servers except OpenAI for analysis
-- Clear browser data will delete scan history
-
-## Disease Database
-
-The app includes information on common SEA plant diseases:
-
-- **Rice**: Blast, Brown Spot, Bacterial Leaf Blight, Sheath Blight
-- **Vegetables**: Leaf Curl Virus, Powdery Mildew, Bacterial Wilt
-- **Fruits**: Anthracnose, Fruit Fly Damage, Black Spot
-- **Palm/Rubber**: Ganoderma, Leaf Blight, Tapping Panel Dryness
-- **Durian**: Phytophthora, Stem Canker, Root Rot
-
-## Future Enhancements
-
-- Offline AI model for areas with limited internet
-- Weather integration for disease risk prediction
-- Community features for sharing treatments
-
-## License
-
-MIT License - Feel free to use and modify for your needs.
-
-## Support
-
-For issues or questions, please check the OpenAI API documentation or create an issue in the repository.
+- Do not put OpenAI keys in `VITE_*` frontend variables.
+- The app no longer uses simulated diagnosis fallback when the backend fails.
+- The production server serves the built frontend from `dist/`.

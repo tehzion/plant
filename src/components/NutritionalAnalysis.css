@@ -1,0 +1,270 @@
+.nutritional-analysis {
+  width: 100%;
+}
+
+.na-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.na-title {
+  margin: 0;
+  font-size: 1.24rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.na-healthy-card,
+.na-alert,
+.na-nutrients-section {
+  margin-bottom: 18px;
+}
+
+.na-healthy-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.na-healthy-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.na-healthy-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.na-healthy-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #166534;
+}
+
+.na-healthy-subtitle {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+.na-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border: 1.5px solid transparent;
+}
+
+.na-alert.severity-mild {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.na-alert.severity-moderate {
+  background: #fff7ed;
+  border-color: #fb923c;
+}
+
+.na-alert.severity-severe {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.na-alert.possible-alert {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.na-alert-icon-wrapper {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.severity-mild .na-alert-icon-wrapper {
+  color: #d97706;
+}
+
+.severity-moderate .na-alert-icon-wrapper {
+  color: #ea580c;
+}
+
+.severity-severe .na-alert-icon-wrapper {
+  color: #dc2626;
+}
+
+.possible-alert .na-alert-icon-wrapper {
+  color: #2563eb;
+}
+
+.na-alert-content {
+  flex: 1;
+}
+
+.na-alert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.na-alert-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.severity-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.severity-badge.mild {
+  background: #fcd34d;
+  color: #92400e;
+}
+
+.severity-badge.moderate {
+  background: #fb923c;
+  color: #9a3412;
+}
+
+.severity-badge.severe {
+  background: #f87171;
+  color: #991b1b;
+}
+
+.severity-badge.possible {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.na-alert-description {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.na-symptoms-list {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.na-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.na-subsection-icon {
+  color: #11853a;
+}
+
+.na-subsection-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.na-nutrients-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.na-nutrient-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 0.875rem;
+}
+
+.na-nutrient-name {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.chip-severity {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.chip-severity.mild {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.chip-severity.moderate {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.chip-severity.severe {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.na-possible-nutrients-section {
+  border-color: #bfdbfe;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.na-possible-chip {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.na-possible-nutrients-note {
+  margin: 14px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #475569;
+}
+
+@media (max-width: 768px) {
+  .na-title {
+    font-size: 1.14rem;
+  }
+
+  .na-healthy-card,
+  .na-alert,
+  .na-nutrients-section {
+    margin-bottom: 16px;
+  }
+}

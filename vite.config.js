@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { visualizer } from 'rollup-plugin-visualizer'
 import { execSync } from 'child_process'
 import fs from 'fs'
 import { createHash } from 'crypto'
@@ -40,8 +39,29 @@ const createPlantAlias = (seed = 'asset') => {
 const createAssetPattern = (seed, extensionPattern) => `assets/${createPlantAlias(seed)}-[hash]${extensionPattern}`;
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
   const shouldAnalyze = mode === 'analyze';
+  let visualizerPlugins = [];
+
+  if (shouldAnalyze) {
+    const { visualizer } = await import('rollup-plugin-visualizer');
+    visualizerPlugins = [
+      visualizer({
+        filename: 'dist/bundle-analysis.html',
+        template: 'treemap',
+        gzipSize: true,
+        brotliSize: true,
+        emitFile: false,
+      }),
+      visualizer({
+        filename: 'dist/bundle-analysis.json',
+        template: 'raw-data',
+        gzipSize: true,
+        brotliSize: true,
+        emitFile: false,
+      }),
+    ];
+  }
 
   return {
     define: {
@@ -97,24 +117,7 @@ export default defineConfig(({ mode }) => {
         ]
       }
       }),
-      ...(shouldAnalyze
-        ? [
-            visualizer({
-              filename: 'dist/bundle-analysis.html',
-              template: 'treemap',
-              gzipSize: true,
-              brotliSize: true,
-              emitFile: false,
-            }),
-            visualizer({
-              filename: 'dist/bundle-analysis.json',
-              template: 'raw-data',
-              gzipSize: true,
-              brotliSize: true,
-              emitFile: false,
-            }),
-          ]
-        : []),
+      ...visualizerPlugins,
     ],
     optimizeDeps: {
       include: ['lucide-react'],
