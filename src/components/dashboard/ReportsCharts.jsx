@@ -34,8 +34,8 @@ const ReportsCharts = ({
       <SectionHeader icon={<BarChart2 size={15} />} title={label('profile.healthBreakdown', 'Health Breakdown')} />
       <div className="rep-chart-body">
         {healthData.length > 0 ? (
-          <div className="rep-chart-figure" style={{ height: 180, minHeight: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="rep-chart-figure" style={{ height: 220, minHeight: 220 }}>
+            <ResponsiveContainer width="100%" height={160}>
               <PieChart>
                 <Pie data={healthData} innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
                   {healthData.map((entry, index) => <Cell key={`health-${index}`} fill={entry.color} />)}
@@ -43,7 +43,7 @@ const ReportsCharts = ({
                 <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="rep-chart-legend">
+            <div className="rep-chart-legend" style={{ marginTop: '0.5rem' }}>
               <span className="rep-chart-legend-item" style={{ color: '#10b981' }}>
                 <span className="rep-chart-legend-dot" style={{ background: '#10b981' }} />
                 {label('profile.healthy', 'Healthy')}: {stats.healthy}
@@ -138,8 +138,8 @@ const ReportsCharts = ({
         {expenseData.length > 0 && (
           <div className="rep-chart-block">
             <div className="rep-chart-title">{label('profile.expenseBreakdown', 'Expense Breakdown')}</div>
-            <div className="rep-chart-figure" style={{ height: 160, minHeight: 160 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="rep-chart-figure" style={{ height: 220, minHeight: 220 }}>
+              <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
                   <Pie data={expenseData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
                     {expenseData.map((entry, index) => <Cell key={`expense-${index}`} fill={entry.fill} />)}
@@ -148,7 +148,7 @@ const ReportsCharts = ({
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="rep-chart-legend">
+            <div className="rep-chart-legend" style={{ marginTop: '0.25rem' }}>
               {expenseData.map((entry) => (
                 <span key={entry.name} className="rep-chart-legend-item" style={{ color: entry.fill }}>
                   <span className="rep-chart-legend-dot" style={{ background: entry.fill }} />
@@ -162,13 +162,17 @@ const ReportsCharts = ({
         {harvestLogs.length > 0 && qualityData.length > 0 && (
           <div className="rep-chart-block">
             <div className="rep-chart-title">{label('profile.qualityBreakdown', 'Quality Breakdown')}</div>
-            <div className="rep-chart-figure" style={{ height: 160, minHeight: 160 }}>
+            <div className="rep-chart-figure" style={{ height: 200, minHeight: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={qualityData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <BarChart data={qualityData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} interval={0} />
                   <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32} />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32}>
+                    {qualityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.name === 'Grade A' ? '#10b981' : entry.name === 'Grade B' ? '#3b82f6' : '#f59e0b'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
