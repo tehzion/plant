@@ -1,40 +1,47 @@
 .encyclopedia-page {
-  background: #f9fafb;
+  background: #f8fafc; /* Slate-50 background */
+  min-height: 100vh;
 }
 
 .encyclopedia-layout {
-  max-width: 1200px;
+  max-width: var(--width-superapp, 680px);
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 18px 18px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .encyclopedia-header {
-  text-align: center;
-  margin-bottom: 24px;
-  padding-top: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: left;
+  margin-bottom: 8px;
+  padding: 8px 4px;
 }
 
 .page-title {
-  font-size: 1.75rem;
-  color: #1F2937;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: 850;
+  color: var(--color-primary-dark);
   margin-bottom: 8px;
-  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .page-subtitle {
-  font-size: 1rem;
-  color: #6B7280;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
   margin: 0;
   max-width: 600px;
 }
 
 .controls-card {
-  padding: 24px;
-  margin-bottom: 32px;
+  padding: 22px;
+  margin-bottom: 4px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 28px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
   position: relative;
   z-index: 10;
 }
@@ -57,20 +64,22 @@
 
 .search-input {
   width: 100%;
-  padding: 16px 20px 16px 56px;
-  border: 1px solid #E5E7EB;
-  border-radius: 16px;
+  padding: 16px 20px 16px 52px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
   font-size: 1rem;
-  background: #F9FAFB;
-  color: #1F2937;
-  transition: all 0.2s ease;
+  background: #f8fafc;
+  color: #1e293b;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
+  font-weight: 500;
 }
 
 .search-input:focus {
   background: white;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(74, 124, 44, 0.1);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.08);
+  transform: translateY(-1px);
 }
 
 .category-wrapper {
@@ -144,7 +153,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
   gap: 20px;
-  align-items: start;
 }
 
 .no-results {

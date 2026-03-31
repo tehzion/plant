@@ -329,119 +329,73 @@ const UserDashboardPanel = () => {
     return (
         <div className="udp-container">
 
-            {/* ── Profile Card ─────────────────────────────────────────────── */}
-            <div className="udp-profile-card">
-                <div className="udp-profile-blob udp-profile-blob-1" />
-                <div className="udp-profile-blob udp-profile-blob-2" />
-
+            {/* ── Compact Profile Header (User Section on Top) ── */}
+            <div className="udp-profile-card fade-slide-up" style={{ padding: '16px', borderRadius: '24px', gap: '12px', marginBottom: '24px' }}>
                 <div className="udp-profile-top-row">
                     <div className="udp-profile-main">
                         <div className="udp-avatar-wrapper">
-                            <div className="udp-avatar-ring" />
-                            <div className="udp-avatar">{initials}</div>
-                            <span className="udp-avatar-status" title={label('home.onlineStatus', 'Online')} />
+                            <div className="udp-avatar" style={{ width: '48px', height: '48px', fontSize: '1.2rem', background: 'var(--udp-brand-gradient)', color: '#fff', border: 'none' }}>{initials}</div>
+                            <span className="udp-avatar-status" style={{ width: '10px', height: '10px' }} />
                         </div>
                         <div className="udp-profile-identity">
-                            <p className="udp-profile-eyebrow">{label('profile.farmDashboard', 'Farm Dashboard')}</p>
-                            <h2 className="udp-display-name">{displayName}</h2>
-                            <p className="udp-email"><span className="udp-email-dot" />{email}</p>
+                            <h2 className="udp-display-name" style={{ fontSize: '1.15rem' }}>{displayName}</h2>
+                            <p className="udp-email" style={{ fontSize: '0.75rem' }}><span className="udp-email-dot" />{email}</p>
                         </div>
                     </div>
-                    <button
-                        className="udp-signout-mini"
-                        onClick={handleSignOut}
-                        disabled={signingOut}
-                        title={label('common.signOut', 'Sign out')}
-                    >
-                        <LogOut size={15} />
-                    </button>
-                </div>
-
-                <div className="udp-profile-badges">
-                    <button 
-                        className={`udp-badge is-interactive ${isVerified ? 'udp-badge-verified' : 'udp-badge-unverified'}`}
-                        onClick={() => {
-                            setIsEditingProfile(!isVerified);
-                            setShowProfileModal(true);
-                        }}
-                    >
-                        <ShieldCheck size={11} />
-                        {isVerified 
-                            ? label('profile.verifiedFarmer', 'Verified Farmer') 
-                            : label('profile.completeToVerify', 'Complete profile to verify')}
-                    </button>
-                    {stats.total > 0 && (
-                        <button className="udp-badge udp-badge-scans is-interactive" onClick={() => navigate('/history')}>
-                            <ScanLine size={11} />
-                            {stats.total} {label('profile.totalScans', 'Scans')}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                            className="udp-signout-mini" 
+                            style={{ background: '#f8fafc', borderColor: '#e2e8f0', color: '#64748b' }}
+                            onClick={() => setShowProfileModal(true)}
+                        >
+                            <User size={14} />
                         </button>
-                    )}
-                    <button 
-                        className={`udp-badge is-interactive ${activeAlertCount > 0 ? 'udp-badge-alert' : 'udp-badge-ok'}`}
-                        onClick={() => navigate('/history')}
-                    >
-                        {activeAlertCount > 0 ? activeAlertCount : '✓'} {activeAlertCount > 0
-                            ? label('profile.urgentAlerts', 'Alerts')
-                            : label('profile.allClear', 'All Clear')}
-                    </button>
-                </div>
-
-                <div className={`udp-profile-highlight ${activeAlertCount > 0 ? 'is-alert' : ''}`}>
-                    <div className="udp-profile-highlight-copy">
-                        <span className="udp-profile-highlight-kicker">
-                            {activeAlertCount > 0
-                                ? label('profile.topPriority', 'Top Priority')
-                                : label('profile.todayFocus', 'Today Focus')}
-                        </span>
-                        <h3 className="udp-profile-highlight-title">{profileHeadline}</h3>
-                        <p className="udp-profile-highlight-sub">{profileSubline}</p>
-                    </div>
-                    <div className="udp-profile-highlight-side">
-                        <span className="udp-highlight-pill">GAP {checklistPct}%</span>
+                        <button className="udp-signout-mini" onClick={handleSignOut} disabled={signingOut}>
+                            <LogOut size={14} />
+                        </button>
                     </div>
                 </div>
 
-                <div className="udp-profile-grid">
-                    <button className="udp-profile-stat is-interactive" onClick={() => navigate('/history')}>
-                        <span className="udp-profile-stat-value">{stats.healthy}</span>
-                        <span className="udp-profile-stat-label">{label('profile.healthy', 'Healthy')}</span>
+                <div className="udp-profile-badges" style={{ gap: '6px' }}>
+                    <button className={`udp-badge is-interactive ${isVerified ? 'udp-badge-verified' : 'udp-badge-unverified'}`} onClick={() => { setIsEditingProfile(!isVerified); setShowProfileModal(true); }} style={{ padding: '4px 10px', fontSize: '0.68rem' }}>
+                        <ShieldCheck size={10} />
+                        {isVerified ? label('profile.verifiedFarmer', 'Verified Farmer') : label('profile.verifyNow', 'Verify Profile')}
                     </button>
-                    <button className="udp-profile-stat is-interactive" onClick={() => navigate('/history')}>
-                        <span className="udp-profile-stat-value udp-profile-stat-value--warn">{stats.diseases}</span>
-                        <span className="udp-profile-stat-label">{label('profile.diseased', 'Issues')}</span>
-                    </button>
-                    <button className="udp-profile-stat is-interactive" onClick={() => setTab('plots')}>
-                        <span className="udp-profile-stat-value">{plots.length}</span>
-                        <span className="udp-profile-stat-label">{label('profile.plots', 'Plots')}</span>
-                    </button>
-                    <button className="udp-profile-stat is-interactive" onClick={() => setTab('notes')}>
-                        <span className="udp-profile-stat-value udp-profile-stat-value--accent">{notes.length}</span>
-                        <span className="udp-profile-stat-label">{label('profile.tabNotes', 'Logs')}</span>
+                    <button className={`udp-badge is-interactive ${activeAlertCount > 0 ? 'udp-badge-alert' : 'udp-badge-ok'}`} onClick={() => navigate('/history')} style={{ padding: '4px 10px', fontSize: '0.68rem' }}>
+                        {activeAlertCount > 0 ? `${activeAlertCount} ${label('profile.urgentAlerts', 'Alerts')}` : label('profile.allClear', 'All Clear')}
                     </button>
                 </div>
             </div>
 
-            {/* ── Tab bar ──────────────────────────────────────────────────── */}
-            <div className="udp-tabs">
+            {/* ── Feature Browser (Explore Features) ── */}
+            <div className="udp-category-header" style={{ marginBottom: '12px' }}>
+                <span className="udp-category-title">{label('profile.browseFeatures', 'Explore Features')}</span>
+            </div>
+            <div className="udp-shelf-container" style={{ paddingBottom: '16px', marginBottom: '8px' }}>
                 {TABS.map(t2 => (
                     <button
                         key={t2.id}
-                        className={`udp-tab ${tab === t2.id ? 'active' : ''}`}
+                        className={`udp-utility-card ${tab === t2.id ? 'active' : ''}`}
                         onClick={() => setTab(t2.id)}
                     >
-                        <span className="udp-tab-icon-wrap">
-                            <t2.icon size={15} strokeWidth={2} />
+                        <div className={`udp-utility-icon-box ${tab === t2.id ? 'active' : ''}`}>
+                            <t2.icon 
+                                size={24} 
+                                strokeWidth={tab === t2.id ? 2.5 : 2} 
+                            />
                             {t2.badge && (
-                                <span className="udp-tab-badge">{t2.badge}</span>
+                                <span className="udp-tab-badge" style={{ top: '-2px', right: '-2px' }}>{t2.badge}</span>
                             )}
+                        </div>
+                        <span className={`udp-utility-label ${tab === t2.id ? 'active' : ''}`}>
+                            {t2.label}
                         </span>
-                        <span className="udp-tab-label">{t2.label}</span>
                     </button>
                 ))}
             </div>
 
             {/* ── Tab content ──────────────────────────────────────────────── */}
-            <div className="udp-tab-content">
+            <div className="udp-tab-content fade-slide-up" style={{ animationDelay: '0.15s' }}>
                 {tab === 'overview' && (
                     <OverviewTab
                         t={t}

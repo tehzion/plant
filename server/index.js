@@ -351,15 +351,16 @@ app.post('/api/products/search', async (req, res, next) => {
         const finalFertilizers = finalizeList(fertilizerProducts);
         const finalSupplements = finalizeList(supplementProducts);
         
-        // 5. Only use clearly labeled fallback products when there are no direct matches
+        // 5. Always include some basic products if the main categories are empty
         let otherPopular = [];
         const totalCount = finalTreatment.length + finalFertilizers.length + finalSupplements.length;
         let fallbackMeta = null;
         
+        // If we have nothing specific, pull "Other Popular" from the whole store
         if (totalCount === 0 && allStoreProducts.length > 0) {
             console.log('ℹ️ No direct diagnosis-matched products found. Adding fallback store suggestions...');
             for (const product of allStoreProducts) {
-                if (otherPopular.length >= 5) break;
+                if (otherPopular.length >= 8) break; // Increased to 8 for better exploration
                 if (!includedIds.has(product.id)) {
                     otherPopular.push(product);
                     includedIds.add(product.id);
@@ -368,13 +369,15 @@ app.post('/api/products/search', async (req, res, next) => {
         }
 
         console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular`);
-        if (totalCount === 0 && otherPopular.length > 0) {
+        
+        if (totalCount === 0) {
             fallbackMeta = {
                 used: true,
-                reason: 'No direct diagnosis-matched WooCommerce products were found. These are general store suggestions shown as a fallback.',
+                isExploration: true,
+                reason: 'We currently don\'t have a specific medicine for this diagnosis in our inventory. Below are general agriculture supplies that other farmers often explore.',
             };
         } else {
-            otherPopular = [];
+            otherPopular = []; // Keep it clean if we HAVE specific products
             fallbackMeta = null;
         }
 

@@ -1,4 +1,4 @@
-﻿import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { MapPin, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { getStandardizedStatus } from '../utils/statusUtils';
@@ -59,7 +59,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
   };
 
   return (
-    <div className="scan-history-card card app-surface app-surface--soft" onClick={handleClick}>
+    <div className="scan-history-card" onClick={handleClick}>
       <div className="card-content">
         <img
           src={scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url}

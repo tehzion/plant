@@ -16,28 +16,9 @@ const BottomNav = () => {
     const { t, label: labelFn } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
     const { user } = useAuth();
-    const [showLegal, setShowLegal] = useState(false);
-
     const initials = user?.email
         ? user.email.split('@')[0].slice(0, 2).toUpperCase()
         : null;
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setShowLegal(window.scrollY > 50);
-        };
-
-        if (location.pathname === '/') {
-            window.addEventListener('scroll', handleScroll, { passive: true });
-            handleScroll();
-        } else {
-            setShowLegal(true);
-        }
-
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
-    }, [location.pathname]);
 
     const isActive = (path) => {
         if (path === '/') {
@@ -50,11 +31,7 @@ const BottomNav = () => {
 
     return (
         <nav className="bottom-nav" aria-label={label('nav.primary', 'Primary navigation')}>
-            <div className={`bottom-nav-meta ${showLegal ? 'visible' : ''}`}>
-                <Link to="/terms">{t('nav.terms')}</Link>
-                <span className="separator">•</span>
-                <Link to="/privacy">{t('nav.privacy')}</Link>
-            </div>
+
 
             <div className="bottom-nav-shell">
                 <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`} aria-current={isActive('/') ? 'page' : undefined}>

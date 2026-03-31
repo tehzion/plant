@@ -34,24 +34,25 @@
     border-radius: 999px;
     background: #ecfdf3;
     color: #15803d;
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
+    font-size: 0.7rem;
+    font-weight: 850;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
 }
 
 .login-title {
-    font-size: 1.75rem;
-    color: #1f2937;
-    font-weight: 700;
+    font-family: var(--font-heading);
+    font-size: var(--font-size-3xl);
+    font-weight: 850;
+    color: var(--color-primary-dark);
     margin-bottom: 8px;
     letter-spacing: -0.02em;
-    font-family: var(--font-heading);
 }
 
 .login-subtitle {
-    color: #4b5563;
-    font-size: 1rem;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
     line-height: 1.6;
 }
 

@@ -107,7 +107,8 @@
 }
 
 .bottom-nav .nav-item:active {
-    transform: translateY(1px) scale(0.97);
+    transform: translateY(1px) scale(0.95);
+    transition: transform 0.1s ease-out;
 }
 
 .bottom-nav .nav-item.active {
@@ -129,6 +130,13 @@
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
     color: #15803d;
     box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.16);
+    animation: icon-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes icon-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
 }
 
 .bottom-nav .nav-item:hover .nav-item-icon {
@@ -156,7 +164,19 @@
     border-radius: 50%;
     background: linear-gradient(180deg, #22c55e 0%, #16a34a 52%, #166534 100%);
     color: #fff;
-    box-shadow: 0 16px 28px rgba(21, 128, 61, 0.24), 0 0 0 4px rgba(255, 255, 255, 0.94), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    box-shadow: 0 12px 24px rgba(22, 197, 94, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.94);
+    position: relative;
+    overflow: hidden;
+}
+
+.bottom-nav .nav-item--scan .nav-item-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    background-size: 200% 100%;
+    animation: shine 3s infinite linear;
+    pointer-events: none;
 }
 
 .bottom-nav .nav-item--scan .nav-item-label {
@@ -172,7 +192,8 @@
 }
 
 .bottom-nav .nav-item--scan:active .nav-item-icon {
-    transform: scale(0.97);
+    transform: scale(0.92);
+    transition: transform 0.1s ease-out;
 }
 
 .nav-item-scan-ring {

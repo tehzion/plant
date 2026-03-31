@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { suppliers } from '../data/productRecommendations.js';
+import { suppliers, getProductRecommendations } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
-import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX } from 'lucide-react';
+import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search } from 'lucide-react';
 import { showToast } from '../utils/toast';
 import {
   buildProductDiagnosisPayload,
@@ -86,37 +86,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         setStoreUrl(productData.storeUrl || '');
         onRecommendationsLoaded?.(productData);
 
-        /* const url = `${import.meta.env.VITE_API_URL || ''}/api/products/search`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            diagnosis: {
-              plantType: plantType || '',
-              disease: disease || 'None',
-              healthStatus: scanResult?.healthStatus || 'unknown',
-              pathogenType: scanResult?.pathogenType || 'None',
-              symptoms: scanResult?.symptoms || [],
-              treatments: scanResult?.treatments || [],
-              productSearchTags: scanResult?.productSearchTags || []
-            }
-          })
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch products');
-        
-        const data = await response.json();
-        
-        // Server returns pre-categorized data — use it directly
-        setProducts({
-          diseaseControl: data.diseaseControl || [],
-          fertilizers: data.fertilizers || [],
-          supplements: data.supplements || [],
-          otherPopular: data.otherPopular || []
-        });
-        setFallbackMeta(data.fallbackMeta || null);
-        setReasoning(data.reasoning || '');
-        setStoreUrl(data.storeUrl || ''); */
       } catch (err) {
         if (isCancelled) return;
         console.error('Failed to load recommended products:', err);
@@ -183,6 +152,31 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       ? (t('results.productsTimeoutHint') || 'The catalog is responding slowly. Please try again in a moment.')
       : (t('results.productsUnavailableHint') || 'The live catalog is temporarily unavailable right now.');
 
+  // Use local fallback data if no products are returned from the server OR it's an exploration
+  const processedProducts = useMemo(() => {
+    if (!products) return null;
+    
+    // Check if the server returned any products at all
+    const hasAnyLive = (products.diseaseControl?.length || 0) + 
+                       (products.fertilizers?.length || 0) + 
+                       (products.supplements?.length || 0) + 
+                       (products.otherPopular?.length || 0) > 0;
+    
+    if (!hasAnyLive) {
+      // Fetch from local hardcoded database as absolute last resort
+      const localData = getProductRecommendations(plantType, disease);
+      return {
+        diseaseControl: [],
+        fertilizers: localData.fertilizers || [],
+        supplements: localData.supplements || [],
+        otherPopular: localData.nutrition || [],
+        isLocalFallback: true
+      };
+    }
+    
+    return products;
+  }, [products, plantType, disease]);
+
   if (loading) {
     return (
       <div className="product-recommendations-container" style={{ textAlign: 'center', padding: '40px' }}>
@@ -216,12 +210,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     );
   }
 
-  if (!products) return null;
+  if (!processedProducts) return null;
 
-  const hasNoProducts = !products.diseaseControl?.length && 
-                       !products.fertilizers?.length && 
-                       !products.supplements?.length && 
-                       !products.otherPopular?.length;
+  const hasNoProducts = !processedProducts.diseaseControl?.length && 
+                       !processedProducts.fertilizers?.length && 
+                       !processedProducts.supplements?.length && 
+                       !processedProducts.otherPopular?.length;
 
   // Get scale-specific recommendations
   const getScaleRecommendation = () => {
@@ -332,9 +326,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       )}
 
       {fallbackMeta?.used && (
-        <div className="ai-reasoning-banner fallback-banner">
-          <PackageX size={16} />
-          <span>{fallbackMeta.reason || (t('results.fallbackProductsDesc') || 'No direct diagnosis-matched products were found. Showing general store suggestions as a fallback.')}</span>
+        <div className={`ai-reasoning-banner ${fallbackMeta.isExploration ? 'exploration-banner' : 'fallback-banner'}`}>
+          {fallbackMeta.isExploration ? <Search size={16} /> : <PackageX size={16} />}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <strong style={{ fontSize: '0.9rem' }}>{fallbackMeta.isExploration ? (t('results.explorationTitle') || 'General Store Selection') : (t('results.fallbackTitle') || 'Notice')}</strong>
+            <span>{fallbackMeta.reason || (t('results.fallbackProductsDesc') || 'No direct diagnosis-matched products were found. Showing general store suggestions as a fallback.')}</span>
+          </div>
           {usingCachedProducts && (
             <button
               type="button"
@@ -344,6 +341,16 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
               {t('results.tryLiveCatalogAgain') || 'Try live catalog again'}
             </button>
           )}
+        </div>
+      )}
+
+      {processedProducts?.isLocalFallback && (
+        <div className="ai-reasoning-banner exploration-banner">
+          <Info size={16} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <strong style={{ fontSize: '0.9rem' }}>{t('results.discoveryCatalog') || 'Discovery Catalog'}</strong>
+            <span>{t('results.noDirectMatchDisclaimer') || 'We couldn\'t find a direct match for this specific diagnosis in our store, but here are some popular items other farmers are using.'}</span>
+          </div>
         </div>
       )}
 
@@ -365,20 +372,20 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       )}
 
       {/* Disease Control Products */}
-      {products.diseaseControl && products.diseaseControl.length > 0 && (
+      {processedProducts.diseaseControl && processedProducts.diseaseControl.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.diseaseControl')}</h3>
           </div>
 
           <div className="products-grid">
-            {products.diseaseControl.map((product, index) => renderProductCard(product, index))}
+            {processedProducts.diseaseControl.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}
 
       {/* Recommended Fertilizers */}
-      {products.fertilizers && products.fertilizers.length > 0 && (
+      {processedProducts.fertilizers && processedProducts.fertilizers.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.recommendedFertilizers')}</h3>
@@ -395,26 +402,26 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           )}
 
           <div className="products-grid">
-            {products.fertilizers.map((product, index) => renderProductCard(product, index))}
+            {processedProducts.fertilizers.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}
 
       {/* Recommended Supplements */}
-      {products.supplements && products.supplements.length > 0 && (
+      {processedProducts.supplements && processedProducts.supplements.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.recommendedSupplements')}</h3>
           </div>
 
           <div className="products-grid">
-            {products.supplements.map((product, index) => renderProductCard(product, index))}
+            {processedProducts.supplements.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}
 
       {/* Other Popular Products */}
-      {products.otherPopular && products.otherPopular.length > 0 && (
+      {processedProducts.otherPopular && processedProducts.otherPopular.length > 0 && (
         <div className="product-section">
           <div className="section-header-centered">
             <h3 className="section-title">
@@ -431,7 +438,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           )}
 
           <div className="products-grid">
-            {products.otherPopular.map((product, index) => renderProductCard(product, index))}
+            {processedProducts.otherPopular.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}
@@ -518,7 +525,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         .ai-reasoning-banner {
           display: flex;
           align-items: flex-start;
-          gap: 10px;
+          gap: 12px;
           padding: 12px 16px;
           background: var(--color-primary-light, #E8F5E9);
           border-radius: 12px;
@@ -537,6 +544,17 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           color: var(--color-primary-dark, #008C3E);
           line-height: 1.5;
           font-weight: 500;
+        }
+
+        .exploration-banner {
+          background: #f0f9ff;
+          border-left-color: #0ea5e9;
+        }
+
+        .exploration-banner svg,
+        .exploration-banner span,
+        .exploration-banner strong {
+          color: #0369a1;
         }
 
         .fallback-banner {
@@ -677,9 +695,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
             flex: 1;
         }
         
-       .product-info-top {
-           margin-bottom: 6px;
-       }
+        .product-info-top {
+            margin-bottom: 6px;
+        }
 
         .product-name {
           font-size: 0.9rem;
@@ -801,190 +819,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-        
-        /* New Styles for Dynamic Checkout */
-        
-        .spinner {
-           animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-        
-        .product-image-container {
-            position: relative;
-            height: 150px;
-            width: 100%;
-            background: #F9FAFB;
-        }
-        
-        .product-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .product-card-wrapper {
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-        
-        .product-card-wrapper.selected {
-            border-color: var(--color-primary);
-            box-shadow: 0 4px 12px rgba(0, 177, 79, 0.15);
-            background-color: var(--color-primary-light);
-        }
-        
-        .checkbox-container {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            z-index: 10;
-        }
-        
-        .custom-checkbox {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: white;
-            border: 2px solid #D1D5DB;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        
-        .custom-checkbox.checked {
-            background: var(--color-primary);
-            border-color: var(--color-primary);
-            color: white;
-        }
-        
-        .custom-checkbox svg {
-            width: 14px;
-            height: 14px;
-        }
-        
-        .product-description * {
-            margin: 0;
-            font-size: 0.75rem;
-        }
-        
-        .product-actions {
-            margin-top: auto;
-            padding-top: 8px;
-        }
-        
-        .add-to-cart-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            width: 100%;
-            padding: 8px 0;
-            background: white;
-            color: var(--color-primary);
-            border: 1.5px solid var(--color-primary);
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .add-to-cart-button.disabled {
-            opacity: 0.8;
-        }
-        
-        .add-to-cart-button:hover {
-            background: var(--color-primary);
-            color: white;
-            box-shadow: 0 2px 8px rgba(0, 177, 79, 0.2);
-        }
-        
-        .checkout-bar-container {
-            position: sticky;
-            bottom: 20px;
-            z-index: 50;
-            margin: 24px 0;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .checkout-bar {
-            background: white;
-            border-radius: 100px;
-            padding: 8px 8px 8px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 24px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-            max-width: 400px;
-            width: 100%;
-        }
-        
-        .checkout-info {
-            display: flex;
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 6px;
-        }
-        
-        .checkout-count {
-            font-weight: 700;
-            color: #1F2937;
-            font-size: 0.95rem;
-        }
-
-        .checkout-note {
-            color: #4B5563;
-            font-size: 0.8rem;
-            line-height: 1.4;
-            max-width: 360px;
-        }
-        
-        .checkout-button {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--color-primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 100px;
-            font-weight: 700;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .checkout-button:hover {
-            background: var(--color-primary-dark);
-            transform: scale(1.02);
-        }
-
-        .checkout-button:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .checkout-button:active {
-            transform: scale(0.98);
-        }
-
-        @media (min-width: 768px) {
-          .products-grid {
-             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-             gap: 24px;
-          }
-           .product-recommendations-container {
-             margin-top: 32px;
-           }
         }
       `}</style>
     </div>

@@ -53,9 +53,11 @@ const DiseaseCard = ({ disease }) => {
   const pathogen = getLocalized(disease.pathogen);
 
   return (
-    <div className={`disease-card card ${showModal ? 'is-expanded' : ''}`}>
-      <div className="card-header">
-        <h3 className="disease-name">{name}</h3>
+    <div className={`disease-card ${showModal ? 'is-expanded' : ''}`}>
+      <div className="card-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '12px' }}>
+          <h3 className="disease-name">{name}</h3>
+        </div>
         <span className="disease-category">{translatedCategory}</span>
       </div>
 

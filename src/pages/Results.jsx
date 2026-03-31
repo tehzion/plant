@@ -412,8 +412,8 @@ ${t('pdf.generatedBy')}
   ];
 
   return (
-    <div className="results page">
-      <div className="container results-layout">
+    <div className="results page fade-in">
+      <div className="container results-layout fade-slide-up">
         {/* Quick Actions Bar */}
         <QuickActions
           onScanAgain={handleScanAgain}
@@ -540,7 +540,9 @@ ${t('pdf.generatedBy')}
         </div>
 
         {/* Tabbed Results */}
-        <TabbedResults tabs={tabs} />
+        <div className="fade-slide-up" style={{ animationDelay: '0.1s' }}>
+          <TabbedResults tabs={tabs} />
+        </div>
 
         {/* Feedback Widget */}
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>

@@ -31,93 +31,83 @@ const HeroSection = ({
     const renderWeatherIcon = () => {
         switch (weatherIcon) {
             case 'sun':
-                return <Sun size={24} color="#FDB813" strokeWidth={1.5} />;
+                return (
+                    <div className="anim-weather-sun">
+                        <Sun size={24} color="#FDB813" strokeWidth={1.5} />
+                    </div>
+                );
             case 'cloud-sun':
-                return <CloudSun size={24} color="#FDB813" strokeWidth={1.5} />;
+                return (
+                    <div className="anim-weather-cloud">
+                        <CloudSun size={24} color="#FDB813" strokeWidth={1.5} />
+                    </div>
+                );
             case 'cloud-rain':
-                return <CloudRain size={24} color="#4A90E2" strokeWidth={1.5} />;
+                return (
+                    <div className="anim-weather-rain">
+                        <CloudRain size={24} color="#4A90E2" strokeWidth={1.5} />
+                    </div>
+                );
             case 'snowflake':
-                return <Snowflake size={24} color="#A0C4FF" strokeWidth={1.5} />;
+                return (
+                    <div className="anim-weather-snow">
+                        <Snowflake size={24} color="#A0C4FF" strokeWidth={1.5} />
+                    </div>
+                );
             case 'cloud-lightning':
-                return <CloudLightning size={24} color="#7C4DFF" strokeWidth={1.5} />;
+                return (
+                    <div className="anim-weather-storm">
+                        <CloudLightning size={24} color="#7C4DFF" strokeWidth={1.5} />
+                    </div>
+                );
             default:
                 return <CloudSun size={24} color="#FDB813" strokeWidth={1.5} />;
         }
     };
 
     return (
-        <div className="dashboard-header">
-            <div className="hero-content-wrapper">
+        <div className="dashboard-header" style={{ paddingBottom: '24px' }}>
+            <div className="hero-content" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div className="greeting-container">
-                    <h1 className="greeting" style={{ fontSize: '2.5rem', fontWeight: '700' }}>
+                    <h1 className="greeting" style={{ margin: '0 0 16px 0', fontSize: '2.4rem', fontWeight: '850', color: 'var(--color-primary-dark)' }}>
                         {greeting}, {t('common.farmer')}!
                     </h1>
-                    <p className="date-display">
-                        <span
-                            style={{
-                                color: 'var(--color-primary)',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                            }}
-                            onClick={onLocationClick}
-                        >
-                            <MapPin size={16} strokeWidth={1.5} />
-                            {resolvedLocation}
-                            <Clock size={16} strokeWidth={1.5} />
+                </div>
+
+                <div className="superapp-shelf-container" style={{ margin: '0', padding: '4px 0 12px 0' }}>
+                    {/* Location Pill */}
+                    <div className="superapp-stat-pill" onClick={onLocationClick} style={{ cursor: 'pointer', flex: '1' }}>
+                        <span className="superapp-stat-pill-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <MapPin size={12} strokeWidth={2.5} />
+                            {t('common.location') || 'Location'}
                         </span>
-                        <br />
-                        {new Date().toLocaleDateString(t('common.dateLocale') || 'en-US', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                        })}
-                    </p>
-                </div>
-                <div className="header-controls">
-                    <div className="weather-widget">
-                        <span className="weather-icon">{renderWeatherIcon()}</span>
-                        <span className="weather-temp">{hasWeatherTemp ? `${weatherTemp}°C` : '--°C'}</span>
+                        <span className="superapp-stat-pill-value" style={{ fontSize: '1.1rem' }}>
+                            {resolvedLocation}
+                        </span>
                     </div>
-                    {resolvedWeatherNote && (
-                        <div className="hero-weather-note">
-                            {resolvedWeatherNote}
+
+                    {/* Weather Pill */}
+                    <div className="superapp-stat-pill" style={{ flex: '0 0 125px' }}>
+                        <span className="superapp-stat-pill-label">
+                            {t('profile.weatherForecast') || 'Weather'}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {renderWeatherIcon()}
+                            <span className="superapp-stat-pill-value" style={{ fontSize: '1.25rem' }}>
+                                {hasWeatherTemp ? `${Math.round(weatherTemp)}°C` : '--'}
+                            </span>
                         </div>
-                    )}
+                    </div>
                 </div>
+
+                {weatherError && resolvedWeatherNote && (
+                    <div className="weather-error-note" style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', padding: '0 4px' }}>
+                        {resolvedWeatherNote}
+                    </div>
+                )}
             </div>
 
             <style>{`
-                .hero-content-wrapper {
-                    display: flex;
-                    justify-content: space-between;
-                    flex: 1;
-                    align-items: flex-end;
-                }
-
-                .header-controls {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 12px;
-                    align-items: flex-end;
-                }
-
-                .hero-weather-note {
-                    max-width: 180px;
-                    font-size: 0.72rem;
-                    line-height: 1.35;
-                    color: #92400e;
-                    background: #fffbeb;
-                    border: 1px solid #fde68a;
-                    border-radius: 10px;
-                    padding: 6px 10px;
-                    text-align: right;
-                    font-weight: 600;
-                }
-
                 @media (max-width: 768px) {
                     .dashboard-header {
                         flex-direction: column;

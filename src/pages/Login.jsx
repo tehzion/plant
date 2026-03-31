@@ -26,7 +26,7 @@ const Login = () => {
     if (user) {
         return (
             <div className="login-page" style={{ alignItems: 'flex-start', paddingTop: '16px' }}>
-                <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto' }}>
+                <div style={{ width: '100%', maxWidth: 'var(--width-superapp, 680px)', margin: '0 auto' }}>
                     <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
                         <UserDashboardPanel />
                     </Suspense>

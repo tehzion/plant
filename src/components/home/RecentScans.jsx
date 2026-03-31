@@ -26,11 +26,25 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
 
     return (
         <div className="section mt-md slide-up">
-            <div className="section-header">
-                <h3 className="section-title">{t('home.recentScans')}</h3>
-                <button onClick={onSeeAll} className="see-all-btn">{t('home.seeAll')}</button>
+            <div className="section-header-row mb-sm" style={{ padding: '0 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className="section-title" style={{ fontSize: '1.35rem', fontWeight: '850', margin: '0' }}>
+                    {t('profile.recentActivity') || 'Recent Scans'}
+                </h3>
+                <button
+                    onClick={onSeeAll}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-primary)',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                    }}
+                >
+                    {t('home.seeAll')}
+                </button>
             </div>
-            <div className="recent-scans-list">
+            <div className="superapp-shelf-container">
                 {scans.length > 0 ? (
                     scans.map((scan) => {
                         const standardizedStatus = getStandardizedStatus(scan);
@@ -40,56 +54,65 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                         const locationLabel = resolveLocationLabel(scan, t);
 
                         return (
-                            <div key={scan.id} className="scan-card" onClick={() => onScanClick(scan.id)}>
-                                <div className="scan-thumbnail">
-                                    <img src={imageSrc} alt={scan.disease} />
+                            <div
+                                key={scan.id}
+                                className="superapp-activity-card"
+                                onClick={() => onScanClick(scan.id)}
+                            >
+                                <div className="superapp-activity-img-wrapper" style={{ backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                    {imageSrc ? (
+                                        <img 
+                                            src={imageSrc} 
+                                            alt={scan.disease} 
+                                            className="superapp-activity-img"
+                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/120x80?text=Scan'; }}
+                                        />
+                                    ) : (
+                                        <div style={{ color: '#94a3b8' }}>
+                                            <MapPin size={24} opacity={0.3} />
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="scan-details">
-                                    <h4 className="scan-disease" title={scan.disease}>{scan.disease}</h4>
-                                    <p className="scan-meta">
+                                <div className="superapp-activity-info">
+                                    <h4 className="scan-disease" style={{
+                                        fontSize: '0.95rem',
+                                        fontWeight: '850',
+                                        fontFamily: 'var(--font-heading)',
+                                        margin: '0',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {scan.disease}
+                                    </h4>
+                                    <p className="scan-meta" style={{
+                                        fontSize: '0.72rem',
+                                        fontWeight: '700',
+                                        color: 'var(--color-text-secondary)',
+                                        textTransform: 'uppercase',
+                                        margin: '0'
+                                    }}>
                                         {resolveCategoryLabel(scan, t)} • {new Date(scanTimestamp).toLocaleDateString(label('common.dateLocale', 'en-MY'), {
                                             day: 'numeric',
-                                            month: 'short',
-                                            year: 'numeric',
+                                            month: 'short'
                                         })}
                                     </p>
-                                    {locationLabel && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
-                                        <p className="scan-location">
-                                            <MapPin size={12} strokeWidth={1.5} /> {locationLabel}
-                                        </p>
-                                    )}
-                                    <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                        <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
+                                    <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px' }}>
+                                        <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`} style={{ fontSize: '0.65rem' }}>
                                             <span className="status-icon" style={{ display: 'flex' }}>
                                                 {healthy
-                                                    ? <CheckCircle size={10} strokeWidth={3} />
-                                                    : <AlertTriangle size={10} strokeWidth={3} />}
+                                                    ? <CheckCircle size={8} strokeWidth={3} />
+                                                    : <AlertTriangle size={8} strokeWidth={3} />}
                                             </span>
                                             <span className="status-text">{t(`results.${standardizedStatus}`)}</span>
                                         </div>
-
-                                        {scan.severity && (
-                                            <div className={`badge-severity ${(() => {
-                                                switch (scan.severity?.toLowerCase()) {
-                                                    case 'mild':
-                                                    case 'rendah': return 'badge-mild';
-                                                    case 'moderate':
-                                                    case 'sederhana': return 'badge-moderate';
-                                                    case 'severe':
-                                                    case 'tinggi': return 'badge-severe';
-                                                    default: return '';
-                                                }
-                                            })()}`}>
-                                                {t(`results.${(scan.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.severity}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
                         );
                     })
                 ) : (
-                    <div className="empty-state-card">
+                    <div className="app-empty-state" style={{ minWidth: '100%' }}>
                         <span>{t('home.noRecentScans')}</span>
                     </div>
                 )}

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
@@ -26,7 +26,6 @@ import ServerStatus from '../components/home/ServerStatus';
 import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
 import DailyTips from '../components/home/DailyTips';
-import ServicesGrid from '../components/home/ServicesGrid';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
 
@@ -313,7 +312,7 @@ const Home = () => {
           confirmText={modalConfig.confirmText}
           cancelText={modalConfig.cancelText}
         />
-        <div className="container">
+        <div className="container-superapp">
           <HeroSection
             greeting={getGreeting()}
             locationName={locationName}
@@ -334,22 +333,12 @@ const Home = () => {
             onScanClick={(id) => navigate(`/results/${id}`)}
           />
 
-          {/* Farming Notices â€” logged-in users only */}
+          {/* Farming Notices — logged-in users only */}
           {user && forecast.length > 0 && (
             <FarmingNotices forecast={forecast} />
           )}
 
           <DailyTips />
-
-          <ServicesGrid onNavigate={(path, isStub, external) => {
-            if (isStub) {
-              handleFeatureStub();
-            } else if (external) {
-              window.open(path, '_blank', 'noopener,noreferrer');
-            } else {
-              navigate(path);
-            }
-          }} />
         </div>
       </div>
     );

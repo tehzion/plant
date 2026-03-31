@@ -35,19 +35,19 @@ const Encyclopedia = () => {
   const filteredDiseases = getFilteredDiseases();
 
   return (
-    <div className="page encyclopedia-page">
-      <div className="container encyclopedia-layout">
-        <div className="encyclopedia-header">
-          <h2 className="page-title">{t('encyclopedia.title')}</h2>
+    <div className="page encyclopedia-page slide-up">
+      <div className="encyclopedia-layout">
+        <header className="encyclopedia-header">
+          <h1 className="page-title">{t('encyclopedia.title')}</h1>
           <p className="page-subtitle">
             {t('encyclopedia.subtitle')}
           </p>
-        </div>
+        </header>
 
-        <div className="controls-card app-surface app-surface--soft">
+        <section className="controls-card">
           <div className="search-section">
             <div className="search-icon-wrapper">
-              <Search size={20} className="search-icon" />
+              <Search size={22} className="search-icon" strokeWidth={2} />
             </div>
             <input
               type="text"
@@ -59,27 +59,44 @@ const Encyclopedia = () => {
           </div>
 
           <div className="category-wrapper">
-            <div className="category-filter">
-              {categories.map(category => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`filter-btn ${selectedCategory === category ? 'active' : ''}`}
-                >
-                  {category === 'all'
-                    ? t('encyclopedia.all')
-                    : (t(`encyclopedia.${category.toLowerCase().replace(/ /g, '')}`)?.includes('encyclopedia.') ? category : t(`encyclopedia.${category.toLowerCase().replace(/ /g, '')}`))
-                  }
-                </button>
-              ))}
+            <div className="superapp-shelf-container" style={{ padding: '4px 0 8px 0', gap: '8px' }}>
+              {categories.map(category => {
+                const isActive = selectedCategory === category;
+                const labelText = category === 'all'
+                  ? t('encyclopedia.all')
+                  : (t(`encyclopedia.${category.toLowerCase().replace(/ /g, '')}`)?.includes('encyclopedia.') ? category : t(`encyclopedia.${category.toLowerCase().replace(/ /g, '')}`));
+                
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`filter-btn ${isActive ? 'active' : ''}`}
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: '14px',
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s ease',
+                      border: '1.5px solid',
+                      borderColor: isActive ? 'var(--color-primary)' : '#e2e8f0',
+                      background: isActive ? 'var(--color-brand-mist)' : '#f8fafc',
+                      color: isActive ? 'var(--color-primary)' : '#64748b',
+                      fontFamily: 'var(--font-heading)'
+                    }}
+                  >
+                    {labelText}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
+        </section>
 
         <div className="results-info">
-          <p className="app-pill">
+          <span className="superapp-stat-pill" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
             {filteredDiseases.length} {filteredDiseases.length === 1 ? t('encyclopedia.disease') : t('encyclopedia.diseases')} {t('encyclopedia.found')}
-          </p>
+          </span>
         </div>
 
         <div className="diseases-grid">

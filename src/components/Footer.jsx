@@ -10,13 +10,6 @@ const Footer = () => {
     return (
         <footer className="app-footer">
             <div className="app-footer__shell container">
-                {isHome && (
-                    <div className="app-footer__links">
-                        <Link to="/terms">{t('nav.terms')}</Link>
-                        <span className="separator">•</span>
-                        <Link to="/privacy">{t('nav.privacy')}</Link>
-                    </div>
-                )}
                 <p className="app-footer__copy">
                     <span>&copy; {new Date().getFullYear()} {t('common.madeInMY')}</span>
                     <span className="my-badge">MY</span>
@@ -24,6 +17,11 @@ const Footer = () => {
                         <span className="version-tag">{__APP_VERSION__}</span>
                     )}
                 </p>
+                <div className="app-footer__links">
+                    <Link to="/terms">{t('nav.terms')}</Link>
+                    <span className="separator">•</span>
+                    <Link to="/privacy">{t('nav.privacy')}</Link>
+                </div>
             </div>
         </footer>
     );
