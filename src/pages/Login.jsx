@@ -45,7 +45,7 @@ const Login = () => {
         try {
             if (isLogin) {
                 await signIn(email, password);
-                navigate('/');
+                navigate('/profile');
             } else {
                 await signUp(email, password);
                 setSuccessMsg(t('login.checkEmail') || 'Account created! Check your email to confirm, then sign in.');
