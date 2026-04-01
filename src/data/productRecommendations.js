@@ -32,41 +32,51 @@ export const getProductRecommendations = (plantType, disease) => {
     const diseaseSafe = typeof disease === 'string' ? disease : '';
     const isHealthy = !diseaseSafe || diseaseSafe.toLowerCase().includes('healthy') || diseaseSafe.toLowerCase().includes('normal');
 
-    // Default recommendations for all plants (Expanded to ensure variety)
+    // Default recommendations for all plants (Expanded with prices and IDs)
     const defaultNutrition = [
         {
+            id: 'local-npk-15',
             name: "results.prodNPKName",
             count: "50kg",
+            price: "168.00",
             description: "results.prodNPKDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         },
         {
+            id: 'local-humax-1l',
             name: "results.prodHumaxName",
             count: "1L",
+            price: "45.00",
             description: "results.prodHumaxDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
         },
         {
-            name: "results.prodSeaweedName", // Added for more variety
+            id: 'local-seaweed-1l',
+            name: "results.prodSeaweedName",
             count: "1L",
+            price: "38.50",
             description: "results.prodSeaweedDesc",
             supplier: "tanAgro",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         },
         {
-            name: "results.prodOrganicName", // Added for more variety
+            id: 'local-organic-25kg',
+            name: "results.prodOrganicName",
             count: "25kg",
+            price: "24.00",
             description: "results.prodOrganicDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         },
         {
-            name: "results.prodTraceName", // Added for more variety
+            id: 'local-trace-500g',
+            name: "results.prodTraceName",
             count: "500g",
+            price: "19.50",
             description: "results.prodTraceDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
@@ -105,24 +115,30 @@ export const getProductRecommendations = (plantType, disease) => {
 
     if (diseaseLower.includes('blast') || diseaseLower.includes('mold') || diseaseLower.includes('mildew')) {
         recommendations.diseaseControl.push({
+            id: 'local-azoxy-250',
             name: "results.prodAzoxyName",
             count: "250ml",
+            price: "58.00",
             description: "results.prodAzoxyDesc",
             supplier: "tanAgro",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         });
     } else if (diseaseLower.includes('bacteria') || diseaseLower.includes('wilt') || diseaseLower.includes('canker') || diseaseLower.includes('rot')) {
         recommendations.diseaseControl.push({
+            id: 'local-copper-500',
             name: "results.prodCopperName",
             count: "500g",
+            price: "24.50",
             description: "results.prodCopperDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
         });
     } else if (diseaseLower.includes('rust') || diseaseLower.includes('spot') || diseaseLower.includes('anthracnose')) {
         recommendations.diseaseControl.push({
+            id: 'local-manco-1kg',
             name: "results.prodMancozebName",
             count: "1kg",
+            price: "32.00",
             description: "results.prodMancozebDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
@@ -130,23 +146,29 @@ export const getProductRecommendations = (plantType, disease) => {
         });
     } else if (diseaseLower.includes('insect') || diseaseLower.includes('bug') || diseaseLower.includes('mite') || diseaseLower.includes('thrip') || diseaseLower.includes('worm') || diseaseLower.includes('larva') || diseaseLower.includes('fly') || diseaseLower.includes('beetle')) {
         recommendations.diseaseControl.push({
+            id: 'local-aba-500',
             name: "results.prodAbamectinName",
             count: "500ml",
+            price: "46.00",
             description: "results.prodAbamectinDesc",
             supplier: "guanChong",
             guanChongUrl: "https://www.guanchongagro.com/category/"
         });
         recommendations.diseaseControl.push({
+            id: 'local-cyper-1l',
             name: "results.prodCyperName",
             count: "1L",
+            price: "28.00",
             description: "results.prodCyperDesc",
             supplier: "tanAgro",
             tanAgroUrl: "https://www.tanagro.com.my/category/"
         });
     } else if (diseaseLower.includes('virus') || diseaseLower.includes('mosaic')) {
         recommendations.diseaseControl.push({
+            id: 'local-imi-250',
             name: "results.prodImidacName",
             count: "250ml",
+            price: "35.00",
             description: "results.prodImidacDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",
@@ -157,8 +179,10 @@ export const getProductRecommendations = (plantType, disease) => {
     // Add generic disease control if still empty for a diseased plant (ONLY if not abiotic)
     if (recommendations.diseaseControl.length === 0 && !isAbiotic) {
         recommendations.diseaseControl.push({
+            id: 'local-chloro-1l',
             name: "results.prodChloroName",
             count: "1L",
+            price: "42.00",
             description: "results.prodChloroDesc",
             supplier: "both",
             guanChongUrl: "https://www.guanchongagro.com/category/",

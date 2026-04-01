@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
+import { useAuth } from '../../context/AuthContext';
+import OrderHistory from '../OrderHistory';
 
 const SHOP_CATALOG_URL = 'https://www.mojosense.app/kanb/products/';
 
 const ProductsTab = ({ label: labelProp }) => {
     const { t, label: i18nLabel } = useLanguage();
+    const { user, guestId } = useAuth();
     const label = (key, fallback) => {
         if (typeof labelProp === 'function') return labelProp(key, fallback);
         if (typeof i18nLabel === 'function') return i18nLabel(key, fallback);
@@ -84,6 +87,11 @@ const ProductsTab = ({ label: labelProp }) => {
                         </a>
                     </div>
                 )}
+            </div>
+
+            {/* --- Order History for Guests --- */}
+            <div className="udp-order-history-section" style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--udp-divider)' }}>
+                <OrderHistory guestId={guestId} />
             </div>
         </section>
     );

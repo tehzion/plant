@@ -18,7 +18,9 @@
 
 .treatment-section {
   margin-bottom: 16px;
+  padding: 20px;
 }
+
 
 .tr-toggle {
   width: 100%;
@@ -91,6 +93,7 @@
 
 .tr-notes {
   margin-top: 18px;
+  padding: 18px 20px;
 }
 
 .tr-notes-text {

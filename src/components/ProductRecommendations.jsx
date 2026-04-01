@@ -258,11 +258,20 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     const isFertilizer = product.name?.toLowerCase().includes('baja') || product.name?.toLowerCase().includes('fertilizer') || product.categories?.some(c => c.toLowerCase().includes('fertilizer'));
     const iconBg = isFertilizer ? '#ECFDF5' : '#FEF2F2';
 
+    // Helper to translate if it looks like a key
+    const translateIfNeeded = (val) => {
+      if (!val) return '';
+      return val.startsWith('results.') ? t(val) : val;
+    };
+
+    const productName = translateIfNeeded(product.name);
+    const productDesc = sanitizeProductDescription(translateIfNeeded(product.description));
+
     return (
       <div key={product.id || index} className={`product-card-wrapper ${isSelected ? 'selected' : ''}`} onClick={() => toggleProductSelection(product.id)}>
         <div className="product-image-container">
            {product.image ? (
-              <img src={product.image} alt={product.name} className="product-image" />
+              <img src={product.image} alt={productName} className="product-image" />
            ) : (
               <div className="product-image-placeholder" style={{ backgroundColor: iconBg }}></div>
            )}
@@ -275,11 +284,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
         <div className="product-content">
           <div className="product-info-top">
-            <h4 className="product-name" title={product.name}>{product.name}</h4>
+            <h4 className="product-name" title={productName}>{productName}</h4>
             <p className="product-price">RM {product.price || '0.00'}</p>
           </div>
 
-          <p className="product-description">{sanitizeProductDescription(product.description)}</p>
+          <p className="product-description">{productDesc}</p>
 
           <div className="product-actions">
             {product.cartUrl || product.permalink ? (

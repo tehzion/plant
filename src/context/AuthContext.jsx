@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { getGuestId } from '../utils/localStorage';
 
 // NOTE: migrateLocalStorageToSupabase is intentionally NOT imported while
 // Supabase is disabled — importing it would trigger Supabase calls at module
@@ -9,8 +9,11 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(undefined); // undefined = loading, null = guest
+    const [guestId, setGuestId] = useState(null);
 
     useEffect(() => {
+        // Initialize persistent guest identity
+        setGuestId(getGuestId());
         // ── Demo / test account bypass ────────────────────────────────────────
         if (localStorage.getItem('plant_demo_session') === 'true') {
             setUser({ id: 'demo-user-123', email: 'test@test.com' });
@@ -117,7 +120,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, signIn, signUp, signOut, signInWithGoogle }}>
+        <AuthContext.Provider value={{ user, guestId, signIn, signUp, signOut, signInWithGoogle }}>
             {children}
         </AuthContext.Provider>
     );

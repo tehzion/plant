@@ -8,7 +8,7 @@ import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk } from './services/aiService.js';
-import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl } from './services/wooCommerceService.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds } from './services/wooCommerceService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -393,6 +393,59 @@ app.post('/api/products/search', async (req, res, next) => {
     } catch (error) {
         console.error('❌ Product search failed:', error);
         res.status(500).json({ error: 'Failed to search products' });
+    }
+});
+
+// ----------------------------------------------------------------------------------
+// WOOCOMMERCE GUEST ORDER ENDPOINTS
+// ----------------------------------------------------------------------------------
+
+// Create guest order
+app.post('/api/orders', async (req, res, next) => {
+    try {
+        const { items, billing, shipping, guestId } = req.body;
+
+        if (!items || !items.length || !guestId) {
+            return res.status(400).json({ error: 'Items and guestId are required' });
+        }
+
+        const order = await createOrder({ items, billing, shipping, guestId });
+        res.status(201).json(order);
+    } catch (error) {
+        console.error('❌ Order creation endpoint failed:', error.message);
+        res.status(500).json({ error: 'Failed to create order', message: error.message });
+    }
+});
+
+// Get orders by App ID (localStorage session)
+app.get('/api/orders/user/:appId', async (req, res, next) => {
+    try {
+        const { appId } = req.params;
+        const { ids } = req.query; // Optional comma-separated IDs from frontend
+
+        if (ids) {
+            const idArray = ids.split(',').filter(id => id.trim());
+            const orders = await getOrdersByIds(idArray);
+            return res.json(orders);
+        }
+
+        const orders = await getOrdersByAppId(appId);
+        res.json(orders);
+    } catch (error) {
+        console.error('❌ Orders fetch endpoint failed:', error.message);
+        res.status(500).json({ error: 'Failed to fetch orders' });
+    }
+});
+
+// Get single order status
+app.get('/api/orders/:orderId', async (req, res, next) => {
+    try {
+        const { orderId } = req.params;
+        const order = await getOrderStatus(orderId);
+        if (!order) return res.status(404).json({ error: 'Order not found' });
+        res.json(order);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch order details' });
     }
 });
 

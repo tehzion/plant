@@ -418,6 +418,19 @@ const buildRetakePrevention = (language) => ([
     }),
 ]);
 
+const buildRetakeTreatmentItems = (language) => ([
+    translateText(language, {
+        en: 'No treatment recommended until diagnosis is confirmed',
+        ms: 'Tiada rawatan disyorkan sehingga diagnosis disahkan',
+        zh: '在诊断确认前，暂不建议施用任何处理方案',
+    }),
+    translateText(language, {
+        en: 'Upload a clearer photo to receive personalized treatment advice',
+        ms: 'Muat naik foto yang lebih jelas untuk mendapatkan nasihat rawatan yang tepat',
+        zh: '请上传更清晰的照片以获得个性化处理建议',
+    }),
+]);
+
 export function assessSpeciesIdentification(plantNetResult, category = '') {
     if (!plantNetResult) {
         return {
@@ -1538,7 +1551,7 @@ const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) => {
 
     return {
         immediateActions: healthy ? [] : buildRetakeActionItems(language),
-        treatments: healthy ? [] : buildRetakeActionItems(language),
+        treatments: healthy ? [] : buildRetakeTreatmentItems(language),
         prevention: buildRetakePrevention(language),
         healthyCarePlan: DEFAULT_CARE_PLANS[language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en'],
         nutritionalIssues: {
@@ -1889,7 +1902,7 @@ const mergeDiagnosisResult = ({
 
     if (merged.requiresRetake && merged.immediateActions.length === 0) {
         merged.immediateActions = buildRetakeActionItems(language);
-        merged.treatments = buildRetakeActionItems(language);
+        merged.treatments = buildRetakeTreatmentItems(language);
         merged.prevention = buildRetakePrevention(language);
     }
 

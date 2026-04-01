@@ -140,6 +140,9 @@ const profileTranslations = {
             "qualityGood": "Good",
             "qualityFair": "Fair",
             "qualityPoor": "Poor",
+            "recentOrders": "Recent Orders",
+            "noOrdersYet": "No orders yet",
+            "ordersWillShowHere": "Your recent purchases will appear here.",
             "contactInfo": "Contact Information",
             "contactPlaceholder": "e.g. +60 12-345 6789",
             "memberSince": "Member Since",
@@ -180,7 +183,6 @@ const profileTranslations = {
             "recommendedActionsTitle": "Recommended Actions",
             "refreshInsights": "Refresh insights",
             "recommendedBadge": "Recommended",
-
             "aiAutoPopulated": "Suggested note:",
             "logSuggestedTreatment": "Log Recommended Follow-Up",
             "analytics": "Analytics",
@@ -414,6 +416,9 @@ const profileTranslations = {
             "qualityGood": "Baik",
             "qualityFair": "Sederhana",
             "qualityPoor": "Lemah",
+            "recentOrders": "Pesanan Terkini",
+            "noOrdersYet": "Tiada pesanan lagi",
+            "ordersWillShowHere": "Pembelian terkini anda akan dipaparkan di sini.",
             "contactInfo": "Maklumat Hubungan",
             "contactPlaceholder": "cth. +60 12-345 6789",
             "memberSince": "Ahli Sejak",
@@ -525,6 +530,9 @@ const profileTranslations = {
             "logDailyTask": "Log Harian Belum Lengkap",
             "logDailyHint": "Catat aktiviti hari ini untuk mengekalkan rentak anda.",
             "aiSopFailed": "Gagal menyediakan SOP. Sila semak sambungan anda.",
+            "recentOrders": "Pesanan Terkini",
+            "noOrdersYet": "Tiada pesanan lagi",
+            "ordersWillShowHere": "Pembelian terkini anda akan dipaparkan di sini.",
             "weather": {
                 "descClearSky": "Langit cerah",
                 "descPartlyCloudy": "Separa berawan",
@@ -687,6 +695,9 @@ const profileTranslations = {
             "qualityGood": "良好",
             "qualityFair": "一般",
             "qualityPoor": "较差",
+            "recentOrders": "最近订单",
+            "noOrdersYet": "暂无订单",
+            "ordersWillShowHere": "您的最近购买记录将显示在这里。",
             "contactInfo": "联系信息",
             "contactPlaceholder": "例如：+60 12-345 6789",
             "memberSince": "注册时间",
@@ -798,6 +809,9 @@ const profileTranslations = {
             "logDailyTask": "每日日志待处理",
             "logDailyHint": "记录今天的活动以保持您的连续记录。",
             "aiSopFailed": "准备 SOP 失败，请检查网络连接。",
+            "recentOrders": "最近订单",
+            "noOrdersYet": "暂无订单",
+            "ordersWillShowHere": "您的最近购买记录将显示在这里。",
             "weather": {
                 "descClearSky": "晴朗",
                 "descPartlyCloudy": "多云",
@@ -814,7 +828,7 @@ const profileTranslations = {
                 "noticeModerateRain": "中雨天气，建议延后叶面施用",
                 "noticeHighUV": "紫外线偏高，建议在上午 9 点前或下午 5 点后喷药",
                 "noticeHeatStress": "有热胁迫风险，请灌溉并留意土壤水分",
-                "noticeLowHumidity": "湿度偏低，请注意红蜘蛛活动",
+                "noticeLowHumidity": "湿度偏低，请注意红蜘蛛 activity",
                 "noticeGood": "喷药窗口良好，天气干燥且风力较小"
             }
         }

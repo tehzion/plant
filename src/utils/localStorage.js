@@ -6,6 +6,8 @@ const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
 const CHECKLIST_KEY = 'sea_plant_mygap_checklist';
 const NOTES_KEY = 'sea_plant_daily_notes';
 const PLOTS_KEY = 'sea_plant_plots';
+const GUEST_ID_KEY = 'sea_plant_guest_id';
+const ORDERS_KEY = 'sea_plant_orders';
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
 const MAX_SCANS = 50;
@@ -19,6 +21,8 @@ export const STORAGE_COLLECTION_KEYS = {
     CHECKLIST_KEY,
     NOTES_KEY,
     PLOTS_KEY,
+    GUEST_ID_KEY,
+    ORDERS_KEY,
 };
 
 const QUOTA_CLEANUP_ORDER = [
@@ -638,6 +642,37 @@ export const getPlots = (userId = null) => {
     }
     return safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
 };
+
+// ─── Guest Identity & Orders ──────────────────────────────────────────────────
+
+/**
+ * Get or create a persistent Guest ID for this browser session
+ */
+export const getGuestId = () => {
+    let guestId = localStorage.getItem(GUEST_ID_KEY);
+    if (!guestId) {
+        guestId = `guest_${crypto.randomUUID()}`;
+        localStorage.setItem(GUEST_ID_KEY, guestId);
+    }
+    return guestId;
+};
+
+/**
+ * Save an order ID to local history
+ */
+export const saveLocalOrder = (orderId) => {
+    if (!orderId) return;
+    const orders = safeRead(ORDERS_KEY, []);
+    if (!orders.includes(orderId)) {
+        orders.unshift(orderId);
+        safeWrite(ORDERS_KEY, orders.slice(0, 100));
+    }
+};
+
+/**
+ * Get locally stored order IDs
+ */
+export const getLocalOrders = () => safeRead(ORDERS_KEY, []);
 
 export const deletePlot = async (id, userId = null) => {
     if (userId && userId !== 'demo-user-123' && supabase) {
