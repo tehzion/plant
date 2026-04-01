@@ -34,9 +34,16 @@ vi.mock('lucide-react', async () => {
         ShieldCheck: Icon,
         ShoppingBag: Icon,
         ScanLine: Icon,
+        Calendar: Icon,
+        Microscope: Icon,
+        FlaskConical: Icon,
+        Wheat: Icon,
+        MapPin: Icon,
+        BarChart2: Icon,
         BarChart3: Icon,
         LayoutDashboard: Icon,
         Leaf: Icon,
+        User: Icon,
     };
 });
 
@@ -47,6 +54,7 @@ vi.mock('react-router-dom', () => ({
 vi.mock('../i18n/i18n.jsx', () => ({
     useLanguage: () => ({
         t: (key) => translationMap[key],
+        label: (key, fallback) => translationMap[key] ?? fallback,
     }),
 }));
 

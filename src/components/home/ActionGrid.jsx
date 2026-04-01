@@ -30,8 +30,8 @@ const ActionGrid = ({ onScan }) => {
 
     return (
         <>
-            <div className="section-header-row mb-sm" style={{ padding: '0 4px' }}>
-                <h3 className="section-title" style={{ fontSize: '1.35rem', fontWeight: '850', margin: '14px 0 12px 0' }}>
+            <div className="section-header-row home-section-header-row home-action-grid-header">
+                <h3 className="section-title home-section-title home-action-grid-title">
                     {t('profile.quickActions') || 'Quick Actions'}
                 </h3>
             </div>

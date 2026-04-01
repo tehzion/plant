@@ -37,21 +37,21 @@ const PlotsTab = ({
             {addingPlot && (
                 <form className="udp-inline-form" onSubmit={handleAddPlot}>
                     <div className="udp-form-row">
-                        <div style={{ flex: 1 }}>
+                        <div className="udp-form-field udp-form-field--grow">
                             <label className="udp-form-label">{label('profile.plotName', 'Plot Name')} <span className="udp-form-required">*</span></label>
                             <input className="udp-input" required placeholder={label('form.plotNamePlaceholder', 'e.g. Block A or Durian Grove')} value={plotForm.name} onChange={(event) => setPlotForm((form) => ({ ...form, name: event.target.value }))} />
                         </div>
                     </div>
                     <div className="udp-form-row">
-                        <div style={{ flex: 1 }}>
+                        <div className="udp-form-field udp-form-field--grow">
                             <label className="udp-form-label">{label('profile.cropType', 'Crop Type')}</label>
                             <input className="udp-input" placeholder={label('form.cropTypePlaceholder', 'e.g. Durian (Musang King)')} value={plotForm.cropType} onChange={(event) => setPlotForm((form) => ({ ...form, cropType: event.target.value }))} />
                         </div>
-                        <div>
+                        <div className="udp-form-field">
                             <label className="udp-form-label">{label('profile.area', 'Area')}</label>
-                            <div style={{ display: 'flex' }}>
-                                <input className="udp-input" type="number" step="0.1" style={{ width: 60, borderRadius: '8px 0 0 8px' }} value={plotForm.area} onChange={(event) => setPlotForm((form) => ({ ...form, area: event.target.value }))} />
-                                <select className="udp-input" style={{ width: 70, borderRadius: '0 8px 8px 0', borderLeft: 'none' }} value={plotForm.unit} onChange={(event) => setPlotForm((form) => ({ ...form, unit: event.target.value }))}>
+                            <div className="udp-input-split">
+                                <input className="udp-input udp-input-split__field udp-input-split__field--number" type="number" step="0.1" value={plotForm.area} onChange={(event) => setPlotForm((form) => ({ ...form, area: event.target.value }))} />
+                                <select className="udp-input udp-input-split__field udp-input-split__field--unit" value={plotForm.unit} onChange={(event) => setPlotForm((form) => ({ ...form, unit: event.target.value }))}>
                                     {PLOT_UNITS_CFG.map(u => (
                                         <option key={u.value} value={u.value}>{label(u.key, u.label)}</option>
                                     ))}
@@ -60,13 +60,13 @@ const PlotsTab = ({
                         </div>
                     </div>
 
-                    <div style={{ marginTop: 8 }}>
-                        <button type="button" className="udp-see-all" style={{ fontSize: '0.8rem' }} onClick={() => setShowSoilFields(!showSoilFields)}>
+                    <div className="udp-advanced-fields">
+                        <button type="button" className="udp-see-all udp-see-all--compact" onClick={() => setShowSoilFields(!showSoilFields)}>
                             {showSoilFields ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             {label('profile.advancedSoilData', 'Soil & Nutrient Data (Optional)')}
                         </button>
                         {showSoilFields && (
-                            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div className="udp-advanced-fields-grid">
                                 <div><label className="udp-form-label">{soilPhLabel}</label><input className="udp-input" type="number" step="0.1" placeholder={label('form.phPlaceholder', 'e.g. 6.5')} value={plotForm.soil_ph} onChange={(event) => setPlotForm((form) => ({ ...form, soil_ph: event.target.value }))} /></div>
                                 <div />
                                 <div><label className="udp-form-label">{label('profile.soilNitrogen', 'N (mg/kg)')}</label><input className="udp-input" type="number" placeholder="20" value={plotForm.npk_n} onChange={(event) => setPlotForm((form) => ({ ...form, npk_n: event.target.value }))} /></div>
@@ -88,7 +88,7 @@ const PlotsTab = ({
                         <div className="udp-plot-info">
                             <span className="udp-plot-name">{plot.name} {plot.area ? `(${plot.area} ${getUnitLabel(plot.unit)})` : ''}</span>
                             <span className="udp-plot-meta">{plot.cropType || label('profile.mixCrop', 'Mixed Crop')}</span>
-                            {plot.soil_ph && <span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 700 }}>{soilPhLabel}: {plot.soil_ph}</span>}
+                            {plot.soil_ph && <span className="udp-plot-soil-ph">{soilPhLabel}: {plot.soil_ph}</span>}
                         </div>
                         <button className="udp-delete-btn" onClick={() => handleDeletePlot(plot.id)}><Trash2 size={16} /></button>
                     </div>

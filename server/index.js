@@ -8,7 +8,7 @@ import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk } from './services/aiService.js';
-import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds } from './services/wooCommerceService.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -301,6 +301,13 @@ app.post('/api/products/search', async (req, res, next) => {
         
         if (!diagnosis) {
             return res.status(400).json({ error: 'Diagnosis object is required' });
+        }
+
+        if (!isWooCommerceEnabled()) {
+            return res.status(503).json({
+                error: 'PRODUCT_CATALOG_UNAVAILABLE',
+                message: 'Live product catalog is not configured right now.',
+            });
         }
         
         // 1. Fetch all available WooCommerce tags AND categories in parallel

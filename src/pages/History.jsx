@@ -64,7 +64,7 @@ const History = () => {
 
     return (
         <div className="page history-page">
-            <div className="container">
+            <div className="container-superapp history-shell">
                 {/* Header */}
                 <div className="history-header">
                     <div className="header-title-row">
@@ -72,8 +72,14 @@ const History = () => {
                             <HistoryIcon size={22} className="header-icon" />
                         </span>
                         <div className="history-title-copy">
-                            <h2 className="page-title">{t('history.scanHistory')}</h2>
-                            <p className="history-subtitle">{t('history.noHistoryMessage')}</p>
+                            <h2 className="history-page-title">{t('history.scanHistory')}</h2>
+                            <p className="history-page-subtitle">
+                                {hasScans
+                                    ? (t('history.reviewScansHint') === 'history.reviewScansHint'
+                                        ? 'Review recent scans, revisit diagnoses, and keep your field timeline organized.'
+                                        : t('history.reviewScansHint'))
+                                    : t('history.noHistoryMessage')}
+                            </p>
                         </div>
                     </div>
                     {hasScans && (
@@ -104,7 +110,7 @@ const History = () => {
                     <div className="history-content">
                         {/* Today */}
                         {groupedScans.today && groupedScans.today.length > 0 && (
-                            <div className="history-group">
+                            <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.today')}</h3>
                                     <span className="app-pill">{groupedScans.today.length}</span>
@@ -116,12 +122,12 @@ const History = () => {
                                         onDelete={handleDelete}
                                     />
                                 ))}
-                            </div>
+                            </section>
                         )}
 
                         {/* Yesterday */}
                         {groupedScans.yesterday && groupedScans.yesterday.length > 0 && (
-                            <div className="history-group">
+                            <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.yesterday')}</h3>
                                     <span className="app-pill">{groupedScans.yesterday.length}</span>
@@ -133,12 +139,12 @@ const History = () => {
                                         onDelete={handleDelete}
                                     />
                                 ))}
-                            </div>
+                            </section>
                         )}
 
                         {/* This Week */}
                         {groupedScans.thisWeek && groupedScans.thisWeek.length > 0 && (
-                            <div className="history-group">
+                            <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.thisWeek')}</h3>
                                     <span className="app-pill">{groupedScans.thisWeek.length}</span>
@@ -150,12 +156,12 @@ const History = () => {
                                         onDelete={handleDelete}
                                     />
                                 ))}
-                            </div>
+                            </section>
                         )}
 
                         {/* Last Week */}
                         {groupedScans.lastWeek && groupedScans.lastWeek.length > 0 && (
-                            <div className="history-group">
+                            <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.lastWeek')}</h3>
                                     <span className="app-pill">{groupedScans.lastWeek.length}</span>
@@ -167,12 +173,12 @@ const History = () => {
                                         onDelete={handleDelete}
                                     />
                                 ))}
-                            </div>
+                            </section>
                         )}
 
                         {/* Older */}
                         {groupedScans.older && groupedScans.older.length > 0 && (
-                            <div className="history-group">
+                            <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.older')}</h3>
                                     <span className="app-pill">{groupedScans.older.length}</span>
@@ -184,7 +190,7 @@ const History = () => {
                                         onDelete={handleDelete}
                                     />
                                 ))}
-                            </div>
+                            </section>
                         )}
                     </div>
                 )}

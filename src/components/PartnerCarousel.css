@@ -1,0 +1,87 @@
+.partner-carousel {
+  margin-top: 32px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.partner-carousel__viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 10px 0;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.partner-carousel__track {
+  display: flex;
+  gap: 32px;
+  width: max-content;
+  animation: partnerCarouselScrollMobile 45s linear infinite;
+}
+
+.partner-carousel__track:hover {
+  animation-play-state: paused;
+}
+
+.partner-carousel__card {
+  width: 220px;
+  height: 130px;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f3f4f6;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.partner-carousel__logo-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.partner-carousel__logo {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transition: transform 0.2s;
+  transform: scale(1.1);
+}
+
+.partner-carousel__logo[alt="Bayer"] {
+  transform: scale(1.5);
+}
+
+@keyframes partnerCarouselScrollMobile {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-220px * 11 - 32px * 11)); }
+}
+
+@media (min-width: 768px) {
+  .partner-carousel__card {
+    width: 280px;
+    height: 160px;
+  }
+
+  .partner-carousel__logo-wrap {
+    padding: 24px;
+  }
+
+  .partner-carousel__track {
+    animation-name: partnerCarouselScrollDesktop;
+  }
+}
+
+@keyframes partnerCarouselScrollDesktop {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-280px * 11 - 32px * 11)); }
+}

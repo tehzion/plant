@@ -1,45 +1,66 @@
-import { useState } from 'react';
-import { diseaseDatabase, searchDiseases, getDiseasesByCategory, getCategories } from '../data/diseaseDatabase';
+import { useMemo, useState } from 'react';
+import { diseaseDatabase, getDiseasesByCategory, getCategories } from '../data/diseaseDatabase';
 import DiseaseCard from '../components/DiseaseCard';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Search } from 'lucide-react';
 import './Encyclopedia.css';
 
 const Encyclopedia = () => {
-  const { t } = useLanguage();
+  const { t, label } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const categories = ['all', ...getCategories().sort((a, b) => {
-    const labelA = (t(`encyclopedia.${a?.toLowerCase().replace(/ /g, '')}`) || a).toLowerCase();
-    const labelB = (t(`encyclopedia.${b?.toLowerCase().replace(/ /g, '')}`) || b).toLowerCase();
-    const finalA = labelA.includes('encyclopedia.') ? a.toLowerCase() : labelA;
-    const finalB = labelB.includes('encyclopedia.') ? b.toLowerCase() : labelB;
-    return finalA.localeCompare(finalB);
-  })];
-
-  const getFilteredDiseases = () => {
-    let diseases = diseaseDatabase;
-
-    if (selectedCategory !== 'all') {
-      diseases = getDiseasesByCategory(selectedCategory);
-    }
-
-    if (searchQuery) {
-      diseases = searchDiseases(searchQuery);
-    }
-
-    return diseases;
+  const safeLabel = (key, fallback) => {
+    if (typeof label === 'function') return label(key, fallback);
+    const value = t(key);
+    return value && value !== key ? value : fallback;
   };
 
-  const filteredDiseases = getFilteredDiseases();
+  const getLocalizedValue = (field) => {
+    if (!field) return '';
+    if (typeof field === 'object') {
+      return Object.values(field).filter(Boolean).join(' ');
+    }
+    return String(field);
+  };
+
+  const getCategoryLabel = (category) => {
+    if (category === 'all') return safeLabel('encyclopedia.all', 'All');
+    const key = `encyclopedia.${category?.toLowerCase().replace(/ /g, '')}`;
+    return safeLabel(key, category);
+  };
+
+  const categories = useMemo(() => ['all', ...getCategories().sort((a, b) => {
+    return getCategoryLabel(a).toLowerCase().localeCompare(getCategoryLabel(b).toLowerCase());
+  })], [t, label]);
+
+  const filteredDiseases = useMemo(() => {
+    const baseDiseases = selectedCategory !== 'all'
+      ? getDiseasesByCategory(selectedCategory)
+      : diseaseDatabase;
+
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return baseDiseases;
+
+    return baseDiseases.filter((disease) => {
+      const haystack = [
+        getLocalizedValue(disease.name),
+        getLocalizedValue(disease.symptoms),
+        getLocalizedValue(disease.causes),
+        getLocalizedValue(disease.pathogen),
+        getLocalizedValue(disease.category),
+      ].join(' ').toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [searchQuery, selectedCategory]);
 
   return (
     <div className="page encyclopedia-page slide-up">
       <div className="encyclopedia-layout">
         <header className="encyclopedia-header">
-          <h1 className="page-title">{t('encyclopedia.title')}</h1>
-          <p className="page-subtitle">
+          <h1 className="encyclopedia-page-title">{t('encyclopedia.title')}</h1>
+          <p className="encyclopedia-page-subtitle">
             {t('encyclopedia.subtitle')}
           </p>
         </header>
@@ -59,31 +80,16 @@ const Encyclopedia = () => {
           </div>
 
           <div className="category-wrapper">
-            <div className="superapp-shelf-container" style={{ padding: '4px 0 8px 0', gap: '8px' }}>
+            <div className="superapp-shelf-container encyclopedia-category-shelf">
               {categories.map(category => {
                 const isActive = selectedCategory === category;
-                const labelText = category === 'all'
-                  ? t('encyclopedia.all')
-                  : (t(`encyclopedia.${category.toLowerCase().replace(/ /g, '')}`)?.includes('encyclopedia.') ? category : t(`encyclopedia.${category.toLowerCase().replace(/ /g, '')}`));
+                const labelText = getCategoryLabel(category);
                 
                 return (
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
                     className={`filter-btn ${isActive ? 'active' : ''}`}
-                    style={{
-                      padding: '10px 18px',
-                      borderRadius: '14px',
-                      fontSize: '0.85rem',
-                      fontWeight: '700',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s ease',
-                      border: '1.5px solid',
-                      borderColor: isActive ? 'var(--color-primary)' : '#e2e8f0',
-                      background: isActive ? 'var(--color-brand-mist)' : '#f8fafc',
-                      color: isActive ? 'var(--color-primary)' : '#64748b',
-                      fontFamily: 'var(--font-heading)'
-                    }}
                   >
                     {labelText}
                   </button>
@@ -94,7 +100,7 @@ const Encyclopedia = () => {
         </section>
 
         <div className="results-info">
-          <span className="superapp-stat-pill" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+          <span className="superapp-stat-pill encyclopedia-results-pill">
             {filteredDiseases.length} {filteredDiseases.length === 1 ? t('encyclopedia.disease') : t('encyclopedia.diseases')} {t('encyclopedia.found')}
           </span>
         </div>

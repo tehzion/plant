@@ -2,6 +2,39 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import OverviewTab from './OverviewTab.jsx';
 
+vi.mock('lucide-react', async () => {
+    const React = await import('react');
+    const Icon = ({ children, ...props }) => React.createElement('svg', props, children);
+    return {
+        AlertTriangle: Icon,
+        CheckCircle2: Icon,
+        Calendar: Icon,
+        MapPin: Icon,
+        BrainCircuit: Icon,
+        ShieldCheck: Icon,
+        ScanLine: Icon,
+        Sprout: Icon,
+        Sun: Icon,
+        Cloud: Icon,
+        Sparkles: Icon,
+        CheckSquare: Icon,
+        Info: Icon,
+        ChevronRight: Icon,
+        BookOpen: Icon,
+        Database: Icon,
+        Leaf: Icon,
+        ClipboardList: Icon,
+        Search: Icon,
+        FlaskConical: Icon,
+        Droplets: Icon,
+        Scissors: Icon,
+        PackageCheck: Icon,
+        Microscope: Icon,
+        Wheat: Icon,
+        BarChart2: Icon,
+    };
+});
+
 const t = (key) => ({
     'profile.weatherForecast': 'Weather Forecast',
     'profile.weatherForecastUnavailable': 'Forecast will appear here after weather data is loaded.',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Info, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n';
 
 const ComplianceCalendar = ({ events = [] }) => {
@@ -13,6 +13,13 @@ const ComplianceCalendar = ({ events = [] }) => {
     const year = viewDate.getFullYear();
     const locale = t('common.dateLocale') || (t('common.madeInMY') === 'Proudly made in MALAYSIA' ? 'en-US' : 'ms-MY');
     const monthName = viewDate.toLocaleString(locale, { month: 'long' });
+    const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const legendItems = [
+        { key: 'harvest', color: '#10b981', label: t('profile.actHarvest') || 'Harvest' },
+        { key: 'spray', color: '#f59e0b', label: t('profile.actSpray') || 'Spray' },
+        { key: 'scout', color: '#3b82f6', label: t('profile.actScout') || 'Scout' },
+        { key: 'scan', color: '#94a3b8', label: t('profile.totalScans') || 'Scan' },
+    ];
 
     const calendarDays = useMemo(() => {
         const days = [];
@@ -57,48 +64,36 @@ const ComplianceCalendar = ({ events = [] }) => {
     const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
     return (
-        <div className="comp-cal" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>{monthName} {year}</h3>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => changeMonth(-1)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'white'}><ChevronLeft size={16} /></button>
-                    <button onClick={() => changeMonth(1)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'white'}><ChevronRight size={16} /></button>
+        <div className="comp-cal">
+            <div className="comp-cal-header">
+                <h3 className="comp-cal-title">{monthName} {year}</h3>
+                <div className="comp-cal-nav">
+                    <button type="button" className="comp-cal-nav-btn" onClick={() => changeMonth(-1)}><ChevronLeft size={16} /></button>
+                    <button type="button" className="comp-cal-nav-btn" onClick={() => changeMonth(1)}><ChevronRight size={16} /></button>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0', background: 'white' }}>
-                {['S','M','T','W','T','F','S'].map(d => (
-                    <div key={d} style={{ textAlign: 'center', padding: '12px 0', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', borderBottom: '1px solid #f1f5f9' }}>{d}</div>
+            <div className="comp-cal-grid">
+                {weekDays.map((day) => (
+                    <div key={`${monthName}-${day}`} className="comp-cal-weekday">{day}</div>
                 ))}
                 {calendarDays.map((d, i) => {
                     const isToday = d?.dateStr === todayStr;
                     return (
-                        <div key={i} style={{ 
-                            minHeight: '50px', position: 'relative', 
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            borderBottom: '1px solid #f8fafc',
-                            borderRight: (i + 1) % 7 === 0 ? 'none' : '1px solid #f8fafc',
-                            background: isToday ? '#f0fdf4' : 'transparent'
-                        }}>
+                        <div
+                            key={i}
+                            className={`comp-cal-day ${isToday ? 'is-today' : ''} ${((i + 1) % 7 === 0) ? 'is-week-end' : ''}`}
+                        >
                             {d && (
                                 <>
-                                    <span style={{ 
-                                        fontSize: '0.75rem', 
-                                        fontWeight: 700, 
-                                        color: isToday ? '#10b981' : (d.events.length > 0 ? '#1e293b' : '#94a3b8'), 
-                                        zIndex: 1 
-                                    }}>
+                                    <span className={`comp-cal-day-number ${isToday ? 'is-today' : ''} ${d.events.length > 0 ? 'has-events' : 'is-muted'}`}>
                                         {d.day}
                                     </span>
                                     {d.events.length > 0 && (
-                                        <div style={{ 
-                                            width: '4px', height: '4px', borderRadius: '50%', 
-                                            background: getDayColor(d.events),
-                                            marginTop: '4px'
-                                        }} />
+                                        <div className="comp-cal-event-dot" style={{ '--comp-dot': getDayColor(d.events) }} />
                                     )}
                                     {isToday && (
-                                        <div style={{ position: 'absolute', top: '4px', right: '4px', width: '4px', height: '4px', borderRadius: '50%', background: '#10b981' }} />
+                                        <div className="comp-cal-today-dot" />
                                     )}
                                 </>
                             )}
@@ -107,11 +102,13 @@ const ComplianceCalendar = ({ events = [] }) => {
                 })}
             </div>
 
-            <div style={{ padding: '16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '0.65rem', fontWeight: 700, color: '#475569' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} /> {t('profile.actHarvest') || 'Harvest'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b' }} /> {t('profile.actSpray') || 'Spray'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3b82f6' }} /> {t('profile.actScout') || 'Scout'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: '#94a3b8' }} /> {t('profile.totalScans') || 'Scan'}</div>
+            <div className="comp-cal-legend">
+                {legendItems.map((item) => (
+                    <div key={item.key} className="comp-cal-legend-item">
+                        <div className="comp-cal-legend-dot" style={{ '--comp-dot': item.color }} />
+                        {item.label}
+                    </div>
+                ))}
             </div>
         </div>
     );

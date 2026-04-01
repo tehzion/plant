@@ -32,6 +32,9 @@ Backend `server/.env`:
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 PLANTNET_API_KEY=your_plantnet_api_key_here
+WOOCOMMERCE_URL=https://your-store-domain
+WOOCOMMERCE_CONSUMER_KEY=your_woocommerce_consumer_key
+WOOCOMMERCE_CONSUMER_SECRET=your_woocommerce_consumer_secret
 PORT=3002
 ```
 
@@ -72,6 +75,9 @@ NODE_ENV=production
 OPENAI_API_KEY=your_openai_api_key_here
 PLANTNET_API_KEY=your_plantnet_api_key_here
 FRONTEND_URL=https://your-public-domain
+WOOCOMMERCE_URL=https://your-store-domain
+WOOCOMMERCE_CONSUMER_KEY=your_woocommerce_consumer_key
+WOOCOMMERCE_CONSUMER_SECRET=your_woocommerce_consumer_secret
 ```
 
 Use the included [render.yaml](/C:/Users/yl/OneDrive/Desktop/Plant/render.yaml) as the deployment source of truth.

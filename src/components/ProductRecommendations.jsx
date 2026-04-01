@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { suppliers, getProductRecommendations } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
+import './ProductRecommendations.css';
 import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search } from 'lucide-react';
 import { showToast } from '../utils/toast';
 import {
@@ -27,6 +28,12 @@ const sanitizeProductDescription = (value) => {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+};
+
+const isWooProductId = (value) => {
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'string') return false;
+  return /^\d+$/.test(value.trim());
 };
 
 const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onRecommendationsLoaded }) => {
@@ -106,7 +113,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   }, [onRecommendationsLoaded, recommendationKey, requestAttempt]);
 
   const toggleProductSelection = (productId) => {
-    if (!productId) return;
+    if (!productId || !isWooProductId(productId) || !storeUrl) return;
     setSelectedProductIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(productId)) {
@@ -118,8 +125,13 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     });
   };
 
+  const checkoutEligibleIds = useMemo(
+    () => Array.from(selectedProductIds).filter((productId) => isWooProductId(productId)),
+    [selectedProductIds],
+  );
+
   const handleCheckout = () => {
-    if (selectedProductIds.size === 0) return;
+    if (checkoutEligibleIds.length === 0) return;
     if (!storeUrl) {
       showToast(
         t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.',
@@ -130,8 +142,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     
     // WooCommerce Bulk Add-to-Cart format
     // https://your-store.com/cart/?add-to-cart=ID1,ID2&quantity=1,1
-    const ids = Array.from(selectedProductIds).join(',');
-    const quantities = Array(selectedProductIds.size).fill('1').join(',');
+    const ids = checkoutEligibleIds.join(',');
+    const quantities = Array(checkoutEligibleIds.length).fill('1').join(',');
     
     // Construct checkout URL using dynamically fetched storeUrl
     const checkoutUrl = `${storeUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`;
@@ -139,7 +151,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     window.open(checkoutUrl, '_blank');
   };
 
-  const canCheckout = selectedProductIds.size > 0 && Boolean(storeUrl);
+  const canCheckout = checkoutEligibleIds.length > 0 && Boolean(storeUrl);
   const usingCachedProducts = fallbackMeta?.used && fallbackMeta?.source === 'cache';
 
   const retryProducts = () => {
@@ -152,7 +164,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       ? (t('results.productsTimeoutHint') || 'The catalog is responding slowly. Please try again in a moment.')
       : (t('results.productsUnavailableHint') || 'The live catalog is temporarily unavailable right now.');
 
-  // Use local fallback data if no products are returned from the server OR it's an exploration
+  // Use local fallback data only when the live store is available but there are no matching items.
   const processedProducts = useMemo(() => {
     if (!products) return null;
     
@@ -162,7 +174,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
                        (products.supplements?.length || 0) + 
                        (products.otherPopular?.length || 0) > 0;
     
-    if (!hasAnyLive) {
+    if (!hasAnyLive && products.storeUrl) {
       // Fetch from local hardcoded database as absolute last resort
       const localData = getProductRecommendations(plantType, disease);
       return {
@@ -179,9 +191,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
   if (loading) {
     return (
-      <div className="product-recommendations-container" style={{ textAlign: 'center', padding: '40px' }}>
+      <div className="product-recommendations-container product-state product-state--loading">
         <Loader className="spinner" size={32} color="var(--color-primary)" />
-        <p style={{ marginTop: '12px', color: '#6B7280' }}>{t('results.loadingProducts') || 'Discovering the best local agriculture products...'}</p>
+        <p>{t('results.loadingProducts') || 'Discovering the best local agriculture products...'}</p>
       </div>
     );
   }
@@ -189,10 +201,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   if (error) {
     return (
       <div className="product-recommendations-container">
-        <div className="product-section" style={{ textAlign: 'center', color: '#EF4444' }}>
-          <p style={{ marginBottom: '8px' }}>{error}</p>
-          <p style={{ color: '#6B7280', marginBottom: '16px' }}>{productRecoveryHint}</p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="product-section product-state product-state--error">
+          <p className="product-state-title">{error}</p>
+          <p className="product-state-hint">{productRecoveryHint}</p>
+          <div className="product-state-actions">
             <button type="button" className="add-to-cart-button" onClick={retryProducts}>
               <span>{t('common.retry') || 'Try Again'}</span>
             </button>
@@ -256,7 +268,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   const renderProductCard = (product, index) => {
     const isSelected = selectedProductIds.has(product.id);
     const isFertilizer = product.name?.toLowerCase().includes('baja') || product.name?.toLowerCase().includes('fertilizer') || product.categories?.some(c => c.toLowerCase().includes('fertilizer'));
-    const iconBg = isFertilizer ? '#ECFDF5' : '#FEF2F2';
+    const hasImage = Boolean(product.image);
+    const packageSize = product.count || product.packageSize || '';
+    const isLocalCatalogItem = typeof product.id === 'string' && product.id.startsWith('local-');
+    const canSelectForCheckout = isWooProductId(product.id) && Boolean(storeUrl);
 
     // Helper to translate if it looks like a key
     const translateIfNeeded = (val) => {
@@ -268,18 +283,36 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     const productDesc = sanitizeProductDescription(translateIfNeeded(product.description));
 
     return (
-      <div key={product.id || index} className={`product-card-wrapper ${isSelected ? 'selected' : ''}`} onClick={() => toggleProductSelection(product.id)}>
+      <div
+        key={product.id || index}
+        className={`product-card-wrapper ${isSelected ? 'selected' : ''} ${canSelectForCheckout ? '' : 'product-card-wrapper--informational'}`}
+        onClick={() => toggleProductSelection(product.id)}
+      >
         <div className="product-image-container">
-           {product.image ? (
+           {hasImage ? (
               <img src={product.image} alt={productName} className="product-image" />
            ) : (
-              <div className="product-image-placeholder" style={{ backgroundColor: iconBg }}></div>
+              <div className={`product-image-placeholder ${isFertilizer ? 'product-image-placeholder--fertilizer' : 'product-image-placeholder--treatment'}`}>
+                <div className="product-image-placeholder-content">
+                  {isFertilizer ? <Leaf size={28} /> : <Pill size={28} />}
+                  <span className="product-image-placeholder-label">
+                    {isLocalCatalogItem
+                      ? (t('results.discoveryCatalog') || 'Discovery Catalog')
+                      : (t('results.viewProduct') || 'View Product')}
+                  </span>
+                </div>
+              </div>
            )}
-           <div className="checkbox-container">
-             <div className={`custom-checkbox ${isSelected ? 'checked' : ''}`}>
-               {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+           {packageSize && (
+             <div className="product-package-pill">{packageSize}</div>
+           )}
+           {canSelectForCheckout && (
+             <div className="checkbox-container">
+               <div className={`custom-checkbox ${isSelected ? 'checked' : ''}`}>
+                 {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+               </div>
              </div>
-           </div>
+           )}
         </div>
 
         <div className="product-content">
@@ -337,8 +370,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       {fallbackMeta?.used && (
         <div className={`ai-reasoning-banner ${fallbackMeta.isExploration ? 'exploration-banner' : 'fallback-banner'}`}>
           {fallbackMeta.isExploration ? <Search size={16} /> : <PackageX size={16} />}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <strong style={{ fontSize: '0.9rem' }}>{fallbackMeta.isExploration ? (t('results.explorationTitle') || 'General Store Selection') : (t('results.fallbackTitle') || 'Notice')}</strong>
+          <div className="reasoning-copy">
+            <strong>{fallbackMeta.isExploration ? (t('results.explorationTitle') || 'General Store Selection') : (t('results.fallbackTitle') || 'Notice')}</strong>
             <span>{fallbackMeta.reason || (t('results.fallbackProductsDesc') || 'No direct diagnosis-matched products were found. Showing general store suggestions as a fallback.')}</span>
           </div>
           {usingCachedProducts && (
@@ -356,8 +389,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       {processedProducts?.isLocalFallback && (
         <div className="ai-reasoning-banner exploration-banner">
           <Info size={16} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <strong style={{ fontSize: '0.9rem' }}>{t('results.discoveryCatalog') || 'Discovery Catalog'}</strong>
+          <div className="reasoning-copy">
+            <strong>{t('results.discoveryCatalog') || 'Discovery Catalog'}</strong>
             <span>{t('results.noDirectMatchDisclaimer') || 'We couldn\'t find a direct match for this specific diagnosis in our store, but here are some popular items other farmers are using.'}</span>
           </div>
         </div>
@@ -365,16 +398,16 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Empty State when AI finds no matching products */}
       {hasNoProducts && (
-        <div className="product-section" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ background: '#F3F4F6', padding: '16px', borderRadius: '50%' }}>
+        <div className="product-section product-state product-state--empty">
+          <div className="product-state-icon-wrap">
+            <div className="product-state-icon">
               <PackageX size={32} color="#9CA3AF" />
             </div>
           </div>
-          <h3 style={{ color: '#374151', fontSize: '1.1rem', marginBottom: '8px' }}>
+          <h3 className="product-state-title">
             {t('results.noProductsFound') || 'No specific products found'}
           </h3>
-          <p style={{ color: '#6B7280', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto' }}>
+          <p className="product-state-hint">
             {t('results.noProductsDesc') || 'We couldn\'t find specific products in our store matching this condition right now. You can still contact our suppliers directly.'}
           </p>
         </div>
@@ -453,11 +486,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       )}
 
       {/* Checkout Section Bar */}
-      {selectedProductIds.size > 0 && (
+      {checkoutEligibleIds.length > 0 && (
          <div className="checkout-bar-container">
            <div className="checkout-bar">
              <div className="checkout-info">
-               <span className="checkout-count">{selectedProductIds.size} {t('results.itemsSelected') || 'Items Selected'}</span>
+               <span className="checkout-count">{checkoutEligibleIds.length} {t('results.itemsSelected') || 'Items Selected'}</span>
                {!storeUrl && (
                  <span className="checkout-note">{t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.'}</span>
                )}
@@ -492,8 +525,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
               href="https://www.guanchongagro.com/category/"
               target="_blank"
               rel="noopener noreferrer"
-              className="buy-button"
-              style={{ marginTop: 'auto' }}
+              className="buy-button supplier-buy-button"
             >
               {t('results.viewProduct')}
             </a>
@@ -514,8 +546,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
               href="https://www.tanagro.com.my/category/"
               target="_blank"
               rel="noopener noreferrer"
-              className="buy-button"
-              style={{ marginTop: 'auto' }}
+              className="buy-button supplier-buy-button"
             >
               {t('results.viewProduct')}
             </a>
@@ -525,311 +556,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Partner Carousel */}
       <PartnerCarousel />
-
-      <style>{`
-        .product-recommendations-container {
-          margin-top: 24px;
-        }
-
-        .ai-reasoning-banner {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 12px 16px;
-          background: var(--color-primary-light, #E8F5E9);
-          border-radius: 12px;
-          margin-bottom: 20px;
-          border-left: 3px solid var(--color-primary, #00B14F);
-        }
-        
-        .ai-reasoning-banner svg {
-          flex-shrink: 0;
-          color: var(--color-primary-dark, #008C3E);
-          margin-top: 2px;
-        }
-        
-        .ai-reasoning-banner span {
-          font-size: 0.85rem;
-          color: var(--color-primary-dark, #008C3E);
-          line-height: 1.5;
-          font-weight: 500;
-        }
-
-        .exploration-banner {
-          background: #f0f9ff;
-          border-left-color: #0ea5e9;
-        }
-
-        .exploration-banner svg,
-        .exploration-banner span,
-        .exploration-banner strong {
-          color: #0369a1;
-        }
-
-        .fallback-banner {
-          background: #fff7ed;
-          border-left-color: #f97316;
-        }
-
-        .fallback-banner svg,
-        .fallback-banner span {
-          color: #9a3412;
-        }
-
-        .fallback-refresh-button {
-          margin-left: auto;
-          background: white;
-          color: #9a3412;
-          border: 1px solid #fdba74;
-          border-radius: 999px;
-          padding: 6px 12px;
-          font-size: 0.75rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          flex-shrink: 0;
-        }
-
-        .fallback-refresh-button:hover {
-          background: #ffedd5;
-        }
-
-        .product-section {
-          background: var(--color-primary-lighter, #F1F8F1);
-          padding: 20px;
-          border-radius: 16px;
-          margin-bottom: 24px;
-        }
-
-        .suppliers-info-section {
-             margin-top: 32px;
-             margin-bottom: 32px;
-        }
-
-        .suppliers-info-section .section-header-centered {
-            margin-bottom: 24px; /* Increased spacing as requested */
-        }
-
-        .section-header-centered {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 4px;
-        }
-        
-        .section-icon-pill, .section-icon-leaf, .section-icon-building {
-            /* Sizes handled by inline props */
-             color: var(--color-primary);
-        }
-
-        .section-title, .suppliers-title {
-          font-size: 1.25rem;
-          color: #1F2937;
-          margin: 0;
-          text-align: center;
-          font-weight: 700;
-        }
-
-        .section-subtitle {
-          text-align: center;
-          color: #6B7280;
-          margin-bottom: 20px;
-          font-size: 0.9rem;
-          line-height: 1.5;
-        }
-
-        .scale-badge {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          font-size: 0.95rem;
-          font-weight: 600;
-          color: var(--color-primary);
-          margin-bottom: 20px; /* Increased from 4px for breathing space */
-        }
-        
-        .scale-note {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 6px 12px;
-          background: #F0FDF4;
-          border-radius: 99px;
-          color: #166534;
-          font-weight: 500;
-          margin-bottom: 24px;
-          font-size: 0.85rem;
-          max-width: fit-content;
-          margin-left: auto;
-          margin-right: auto;
-        }
-
-        /* GRAB MART STYLE GRID & CARDS */
-        .products-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Slightly narrower for mobile density */
-          gap: 12px;
-        }
-
-        .product-card-wrapper {
-          background: white;
-          border-radius: 8px; /* Slightly sharper, app-like */
-          overflow: hidden;
-          border: 1px solid #F3F4F6; /* Very subtle border */
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .product-card-wrapper:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.06);
-            border-color: #E5E7EB;
-        }
-
-        .product-image-placeholder {
-            height: 150px; /* Square-ish */
-            width: 100%;
-            background: #F9FAFB;
-        }
-        
-        .product-content {
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-        }
-        
-        .product-info-top {
-            margin-bottom: 6px;
-        }
-
-        .product-name {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #1F2937;
-          margin: 0 0 4px 0;
-          line-height: 1.35;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          min-height: 2.7em; /* Consistent height for alignment */
-        }
-
-        .product-price {
-          font-size: 0.95rem;
-          color: var(--color-primary-dark);
-          font-weight: 700;
-          margin: 0;
-        }
-
-        .product-description {
-          font-size: 0.75rem;
-          color: #6B7280;
-          line-height: 1.4;
-          margin-bottom: 12px;
-          flex: 1;
-           display: -webkit-box;
-          -webkit-line-clamp: 2; /* Limit to 2 lines for cleaner look */
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        
-        .product-actions {
-            margin-top: auto;
-        }
-        
-        .buy-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 8px 0;
-            background: white;
-            color: var(--color-primary);
-            border: 1px solid var(--color-primary);
-            border-radius: 6px; /* Slightly sharper button */
-            font-size: 0.85rem;
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        
-        /* Modern 'Add' style button hover */
-        .buy-button:hover {
-            background: var(--color-primary);
-            color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Supplier Cards */
-        .suppliers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
-        }
-        
-        .supplier-card {
-            background: white;
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid #E5E7EB;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        
-        .supplier-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        
-        .supplier-icon-bg {
-             width: 40px;
-             height: 40px;
-             border-radius: 8px;
-             background: #F3F4F6;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-        }
-
-        .supplier-company-name {
-             font-size: 1rem;
-             font-weight: 700;
-             margin: 0;
-             color: #1F2937;
-        }
-        
-        .supplier-description {
-            font-size: 0.85rem;
-            color: #6B7280;
-            margin-bottom: 12px;
-            line-height: 1.5;
-            flex: 1; /* Push content apart if needed */
-        }
-        
-        .supplier-contact {
-            margin-top: 8px;
-            margin-bottom: 20px;
-        }
-
-        .supplier-contact p {
-            font-size: 0.85rem;
-            color: #4B5563;
-            margin: 4px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+ï»¿import { useState } from 'react';
 import {
     Camera,
     ChevronRight,
@@ -92,6 +92,12 @@ const NotesTab = ({
         return key ? label(key, category) : category;
     };
 
+    const getSeverityClass = (severity) => {
+        if (severity === 'High') return 'notes-severity--high';
+        if (severity === 'Moderate') return 'notes-severity--moderate';
+        return 'notes-severity--low';
+    };
+
     const pendingLabel = notes.length > 0
         ? label('profile.activityLog', 'Activity Log')
         : label('profile.logDailyTask', 'Daily Log Pending');
@@ -161,12 +167,20 @@ const NotesTab = ({
                         <div key={note.id} className="udp-note-card notes-card">
                             <div className="udp-note-top notes-card-top">
                                 <div className="notes-card-main">
-                                    <span className="notes-card-icon" style={{ background: badgeCfg.bg, color: badgeCfg.color }}>
+                                    <span
+                                        className="notes-card-icon"
+                                        style={{ '--notes-badge-bg': badgeCfg.bg, '--notes-badge-color': badgeCfg.color }}
+                                    >
                                         <NoteIcon size={18} />
                                     </span>
                                     <div className="notes-card-heading">
                                         <div className="notes-card-heading-row">
-                                            <span className="udp-note-badge" style={{ background: badgeCfg.bg, color: badgeCfg.color }}>{typeLabel}</span>
+                                            <span
+                                                className="udp-note-badge"
+                                                style={{ '--notes-badge-bg': badgeCfg.bg, '--notes-badge-color': badgeCfg.color }}
+                                            >
+                                                {typeLabel}
+                                            </span>
                                             <span className="udp-note-date">{relDate(note.created_at || note.timestamp, t)}</span>
                                         </div>
                                         {plotName && (
@@ -185,8 +199,8 @@ const NotesTab = ({
                                     <FlaskConical size={15} />
                                     <span>
                                         <strong>{note.chemical_name}</strong>
-                                        {note.chemical_qty && <> · {note.chemical_qty}</>}
-                                        {note.application_timing && <> · {localizeTiming(note.application_timing)}</>}
+                                        {note.chemical_qty && <> Â· {note.chemical_qty}</>}
+                                        {note.application_timing && <> Â· {localizeTiming(note.application_timing)}</>}
                                     </span>
                                 </div>
                             )}
@@ -196,20 +210,10 @@ const NotesTab = ({
                                     <Search size={15} />
                                     <span>
                                         <strong>{note.disease_name_observed || label('profile.fieldObservation', 'Field Observation')}</strong>
-                                        {note.growth_stage && <> · {localizeGrowthStage(note.growth_stage)}</>}
-                                        {note.disease_incidence != null && <> · {note.disease_incidence}% {label('profile.diseaseIncidence', 'Disease Incidence (%)')}</>}
+                                        {note.growth_stage && <> Â· {localizeGrowthStage(note.growth_stage)}</>}
+                                        {note.disease_incidence != null && <> Â· {note.disease_incidence}% {label('profile.diseaseIncidence', 'Disease Incidence (%)')}</>}
                                         <br />
-                                        <span
-                                            style={{
-                                                color: note.scout_severity === 'High'
-                                                    ? '#ef4444'
-                                                    : note.scout_severity === 'Moderate'
-                                                        ? '#f59e0b'
-                                                        : '#374151',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 600,
-                                            }}
-                                        >
+                                        <span className={`notes-severity ${getSeverityClass(note.scout_severity)}`}>
                                             {label('profile.severity', 'Severity')}: {label(`profile.severity${note.scout_severity || 'Low'}`, note.scout_severity || 'Low')}
                                         </span>
                                     </span>
@@ -221,8 +225,8 @@ const NotesTab = ({
                                     <PackageCheck size={15} />
                                     <span>
                                         <strong>{note.kg_harvested} kg</strong> ({label(`profile.quality${note.quality_grade}`, note.quality_grade || 'Unrated')})
-                                        {note.price_per_kg != null && <> · RM{Number(note.price_per_kg).toFixed(2)}/kg</>}
-                                        {note.buyer_name && <> · {label('profile.soldTo', 'Sold to')} {note.buyer_name}</>}
+                                        {note.price_per_kg != null && <> Â· RM{Number(note.price_per_kg).toFixed(2)}/kg</>}
+                                        {note.buyer_name && <> Â· {label('profile.soldTo', 'Sold to')} {note.buyer_name}</>}
                                         {revenue && <div className="notes-revenue-chip">+RM{revenue}</div>}
                                     </span>
                                 </div>
@@ -234,7 +238,7 @@ const NotesTab = ({
                                     <span>
                                         -RM{Number(note.expense_amount).toFixed(2)}
                                         {note.expense_category && (
-                                            <span style={{ color: '#ef4444', fontWeight: 400 }}>
+                                            <span className="notes-expense-category">
                                                 {' '}({localizeExpenseCategory(note.expense_category)})
                                             </span>
                                         )}
@@ -247,7 +251,7 @@ const NotesTab = ({
                                     {note.temperature_am != null && (
                                         <span>
                                             <Thermometer size={12} />
-                                            {note.temperature_am}°C
+                                            {note.temperature_am}Â°C
                                         </span>
                                     )}
                                     {note.humidity != null && (
@@ -296,4 +300,3 @@ const NotesTab = ({
 };
 
 export default NotesTab;
-

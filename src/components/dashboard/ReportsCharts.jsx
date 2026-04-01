@@ -30,11 +30,11 @@ const ReportsCharts = ({
   qualityData,
 }) => (
   <>
-    <div className="udp-section rep-chart-card" style={{ marginTop: 0 }}>
+    <div className="udp-section rep-chart-card rep-chart-card--flush">
       <SectionHeader icon={<BarChart2 size={15} />} title={label('profile.healthBreakdown', 'Health Breakdown')} />
       <div className="rep-chart-body">
         {healthData.length > 0 ? (
-          <div className="rep-chart-figure" style={{ height: 220, minHeight: 220 }}>
+          <div className="rep-chart-figure rep-chart-figure--health">
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
                 <Pie data={healthData} innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
@@ -43,13 +43,13 @@ const ReportsCharts = ({
                 <RechartsTooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="rep-chart-legend" style={{ marginTop: '0.5rem' }}>
-              <span className="rep-chart-legend-item" style={{ color: '#10b981' }}>
-                <span className="rep-chart-legend-dot" style={{ background: '#10b981' }} />
+            <div className="rep-chart-legend rep-chart-legend--spaced">
+              <span className="rep-chart-legend-item" style={{ '--rep-legend-color': '#10b981' }}>
+                <span className="rep-chart-legend-dot" />
                 {label('profile.healthy', 'Healthy')}: {stats.healthy}
               </span>
-              <span className="rep-chart-legend-item" style={{ color: '#f59e0b' }}>
-                <span className="rep-chart-legend-dot" style={{ background: '#f59e0b' }} />
+              <span className="rep-chart-legend-item" style={{ '--rep-legend-color': '#f59e0b' }}>
+                <span className="rep-chart-legend-dot" />
                 {label('profile.diseased', 'Diseased')}: {stats.diseases}
               </span>
             </div>
@@ -66,8 +66,7 @@ const ReportsCharts = ({
         title={label('profile.harvestSummary', 'Financial & Yield Summary')}
         action={(
           <select
-            className="udp-input"
-            style={{ width: 130, padding: 4, height: 26, fontSize: '0.75rem', borderRadius: 6 }}
+            className="udp-input rep-plot-select"
             value={selectedPlotId}
             onChange={(event) => onSelectPlot(event.target.value)}
           >
@@ -110,7 +109,7 @@ const ReportsCharts = ({
                 <div className="rep-forecast-meta">{label('profile.basedOnHarvestTrends', 'Based on harvest trends')}</div>
               </div>
             )}
-            <div className="rep-chart-figure" style={{ height: 180, minHeight: 180 }}>
+            <div className="rep-chart-figure rep-chart-figure--trend">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={yieldChartData.data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -138,7 +137,7 @@ const ReportsCharts = ({
         {expenseData.length > 0 && (
           <div className="rep-chart-block">
             <div className="rep-chart-title">{label('profile.expenseBreakdown', 'Expense Breakdown')}</div>
-            <div className="rep-chart-figure" style={{ height: 220, minHeight: 220 }}>
+            <div className="rep-chart-figure rep-chart-figure--expenses">
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
                   <Pie data={expenseData} innerRadius={45} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
@@ -148,10 +147,10 @@ const ReportsCharts = ({
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="rep-chart-legend" style={{ marginTop: '0.25rem' }}>
+            <div className="rep-chart-legend rep-chart-legend--compact">
               {expenseData.map((entry) => (
-                <span key={entry.name} className="rep-chart-legend-item" style={{ color: entry.fill }}>
-                  <span className="rep-chart-legend-dot" style={{ background: entry.fill }} />
+                <span key={entry.name} className="rep-chart-legend-item" style={{ '--rep-legend-color': entry.fill }}>
+                  <span className="rep-chart-legend-dot" />
                   {entry.label}: RM{entry.value}
                 </span>
               ))}
@@ -162,7 +161,7 @@ const ReportsCharts = ({
         {harvestLogs.length > 0 && qualityData.length > 0 && (
           <div className="rep-chart-block">
             <div className="rep-chart-title">{label('profile.qualityBreakdown', 'Quality Breakdown')}</div>
-            <div className="rep-chart-figure" style={{ height: 200, minHeight: 200 }}>
+            <div className="rep-chart-figure rep-chart-figure--quality">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={qualityData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} interval={0} />

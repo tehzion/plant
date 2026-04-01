@@ -131,6 +131,11 @@
     color: #166534;
 }
 
+.checklist-item.is-auto-derived {
+    cursor: default;
+    border: 1px dashed rgba(34, 197, 94, 0.28);
+}
+
 .check-icon {
     color: #9ca3af;
     flex-shrink: 0;

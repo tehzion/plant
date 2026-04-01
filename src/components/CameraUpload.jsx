@@ -3,6 +3,7 @@ import { Camera, Image, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { compressImage } from '../utils/imageCompressor';
+import './CameraUpload.css';
 
 const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     const { t } = useLanguage();
@@ -156,7 +157,7 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
                             <X size={24} />
                         </button>
                         <button onClick={capturePhoto} className="btn-circle large capture"></button>
-                        <div style={{ width: 40 }}></div> {/* Spacer for balance */}
+                        <div className="camera-controls-spacer" aria-hidden="true"></div>
                     </div>
                 </div>
             ) : preview ? (
@@ -201,14 +202,14 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
                 accept="image/*"
                 capture="environment"
                 onChange={handleFileSelect}
-                style={{ display: 'none' }}
+                className="camera-upload-input"
             />
             <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleFileSelect}
-                style={{ display: 'none' }}
+                className="camera-upload-input"
             />
 
         </div>

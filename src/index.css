@@ -1173,6 +1173,32 @@ p {
   line-height: 1.3;
 }
 
+.species-id-info {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ecfdf5;
+  padding: 4px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.species-id-common-name {
+  font-weight: 400;
+  margin-left: 4px;
+  color: #4b5563;
+}
+
+.species-id-confidence {
+  opacity: 0.8;
+  margin-left: 4px;
+}
+
 /* Severity Badge Standard */
 .severity-badge {
   padding: 4px 12px !important;
@@ -2317,6 +2343,15 @@ p {
   width: fit-content;
   border: 1px solid #6EE7B7;
   font-weight: 600;
+}
+
+.status-severity-container {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .severity-mild .severity-badge {

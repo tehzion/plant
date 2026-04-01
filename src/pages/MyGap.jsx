@@ -88,6 +88,11 @@ const MyGapPage = () => {
         { id: 'check8', label: t('mygap.check8') },
     ];
 
+    const completedChecklistCount = checklistItems.filter((item) => Boolean(derivedChecklist[item.id])).length;
+    const checklistProgressPct = checklistItems.length > 0
+        ? Math.round((completedChecklistCount / checklistItems.length) * 100)
+        : 0;
+
     const generateReport = async () => {
         const doc = new jsPDF();
         const renderer = createPdfTextRenderer(doc);
@@ -407,13 +412,13 @@ const MyGapPage = () => {
                             <div className="progress-header">
                                 <span className="progress-label">{t('mygap.complianceProgress') || 'Compliance Progress'}</span>
                                 <span className="progress-stats">
-                                    {Object.values(checklist).filter(Boolean).length}/{checklistItems.length} {t('mygap.completed') || 'Completed'} - {Math.round((Object.values(checklist).filter(Boolean).length / checklistItems.length) * 100)}%
+                                    {completedChecklistCount}/{checklistItems.length} {t('mygap.completed') || 'Completed'} - {checklistProgressPct}%
                                 </span>
                             </div>
                             <div className="progress-track">
                                 <div 
                                     className="progress-fill" 
-                                    style={{ width: `${Math.round((Object.values(checklist).filter(Boolean).length / checklistItems.length) * 100)}%` }}
+                                    style={{ width: `${checklistProgressPct}%` }}
                                 ></div>
                             </div>
                         </div>
@@ -426,8 +431,10 @@ const MyGapPage = () => {
                                 return (
                                     <div
                                         key={item.id}
-                                        className={`checklist-item ${isCompleted ? 'completed' : ''}`}
-                                        onClick={() => handleCheckToggle(item.id)}
+                                        className={`checklist-item ${isCompleted ? 'completed' : ''} ${isAuto ? 'is-auto-derived' : ''}`}
+                                        onClick={() => {
+                                            if (!isAuto) handleCheckToggle(item.id);
+                                        }}
                                     >
                                         <div className="check-icon">
                                             {isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
@@ -437,7 +444,7 @@ const MyGapPage = () => {
                                             {isAuto && (
                                                 <span className="synced-badge">
                                                     <RefreshCw size={10} />
-                                                    {t('common.synced') || 'Synced from data'}
+                                                    {t('mygap.syncedFromRecords') || 'Completed from farm records'}
                                                 </span>
                                             )}
                                         </div>

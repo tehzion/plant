@@ -57,12 +57,6 @@ const getWooRequestConfig = (endpoint, params = {}, method = 'GET') => {
     if (!config) return null;
 
     const url = new URL(`${config.url}/wp-json/wc/v3/${endpoint}`);
-    
-    // For GET, query params are fine. For POST, Basic Auth is better.
-    if (method === 'GET') {
-        url.searchParams.append('consumer_key', config.consumerKey);
-        url.searchParams.append('consumer_secret', config.consumerSecret);
-    }
 
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -74,11 +68,8 @@ const getWooRequestConfig = (endpoint, params = {}, method = 'GET') => {
         'Content-Type': 'application/json',
     };
 
-    // Use Basic Auth for non-GET or as a more robust fallback
-    if (method !== 'GET') {
-        const auth = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64');
-        headers['Authorization'] = `Basic ${auth}`;
-    }
+    const auth = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64');
+    headers['Authorization'] = `Basic ${auth}`;
 
     return { url: url.toString(), headers };
 };
@@ -107,7 +98,7 @@ export const getAllTags = async () => {
             const req = getWooRequestConfig('products/tags', { per_page: 100, page });
             if (!req) break;
 
-            const response = await fetch(req.url);
+            const response = await fetch(req.url, { headers: req.headers });
             if (!response.ok) {
                 throw new Error(`WooCommerce Tags API error: ${response.status}`);
             }
@@ -159,7 +150,7 @@ export const getAllCategories = async () => {
             const req = getWooRequestConfig('products/categories', { per_page: 100, page });
             if (!req) break;
 
-            const response = await fetch(req.url);
+            const response = await fetch(req.url, { headers: req.headers });
             if (!response.ok) {
                 throw new Error(`WooCommerce Categories API error: ${response.status}`);
             }
@@ -209,7 +200,7 @@ export const getAllProducts = async () => {
             const req = getWooRequestConfig('products', { per_page: 100, status: 'publish', page });
             if (!req) break;
 
-            const response = await fetch(req.url);
+            const response = await fetch(req.url, { headers: req.headers });
             if (!response.ok) {
                 throw new Error(`WooCommerce API error: ${response.status}`);
             }
@@ -341,7 +332,7 @@ export const getOrdersByIds = async (ids) => {
     try {
         // WooCommerce 'include' param handles multiple IDs
         const req = getWooRequestConfig('orders', { include: ids.join(',') });
-        const response = await fetch(req.url);
+        const response = await fetch(req.url, { headers: req.headers });
         if (!response.ok) return [];
         
         return await response.json();
@@ -367,7 +358,7 @@ export const getOrdersByAppId = async (appId) => {
             const req = getWooRequestConfig('orders', { per_page: 100, page });
             if (!req) break;
 
-            const response = await fetch(req.url);
+            const response = await fetch(req.url, { headers: req.headers });
             if (!response.ok) break;
             
             const orders = await response.json();
@@ -398,7 +389,7 @@ export const getOrdersByAppId = async (appId) => {
 export const getOrderStatus = async (orderId) => {
     try {
         const req = getWooRequestConfig(`orders/${orderId}`);
-        const response = await fetch(req.url);
+        const response = await fetch(req.url, { headers: req.headers });
         if (!response.ok) return null;
         return await response.json();
     } catch (error) {

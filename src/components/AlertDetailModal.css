@@ -1,0 +1,366 @@
+.adm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: adm-fade-in 0.15s ease;
+}
+
+@keyframes adm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.adm-modal {
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: adm-slide-up 0.2s ease;
+}
+
+@keyframes adm-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.adm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1.5px solid var(--adm-border, #d1d5db);
+  gap: 12px;
+}
+
+.adm-header-left {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.adm-disease-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--adm-soft, #f9fafb);
+  color: var(--adm-accent, #16a34a);
+}
+
+.adm-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0 0 6px;
+}
+
+.adm-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adm-sev-badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: var(--adm-soft, #f9fafb);
+  color: var(--adm-accent, #16a34a);
+}
+
+.adm-cat {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.adm-close-btn {
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adm-close-btn:hover {
+  background: #e5e7eb;
+}
+
+.adm-body {
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adm-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  flex-wrap: wrap;
+}
+
+.adm-info-row svg {
+  color: #9ca3af;
+}
+
+.adm-section {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.adm-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+  text-align: left;
+}
+
+.adm-section-toggle svg {
+  color: var(--color-primary);
+}
+
+.adm-section-toggle span {
+  flex: 1;
+}
+
+.adm-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.adm-section-header svg {
+  color: var(--color-primary);
+}
+
+.adm-section-header--split {
+  justify-content: space-between;
+  padding-right: 14px;
+}
+
+.adm-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-sop-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f5f3ff;
+  color: #8b5cf6;
+  border: 1px solid #ddd6fe;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.adm-sop-btn:hover:not(:disabled) {
+  background: #ede9fe;
+}
+
+.adm-sop-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.adm-steps {
+  margin: 0;
+  padding: 12px 14px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adm-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.adm-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.adm-step span:last-child {
+  font-size: 0.83rem;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.adm-status-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.adm-status-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.adm-status-btn.active-amber {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.adm-status-btn.active-green {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.adm-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 0.85rem;
+  color: #1f2937;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  min-height: 72px;
+}
+
+.adm-textarea:focus {
+  background: white;
+}
+
+.adm-footer-btns {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.adm-ack-btn {
+  flex: 1;
+  padding: 11px;
+  background: none;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.adm-ack-btn:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.adm-log-btn {
+  flex: 2;
+  padding: 11px;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.adm-log-btn:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.adm-log-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.adm-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.adm-success-icon {
+  color: #16a34a;
+}

@@ -28,16 +28,16 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
                     {scientificName && <p className="scientific-name">{scientificName}</p>}
 
                     {showIdentification && (
-                        <div className="species-id-info" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', width: 'fit-content', maxWidth: '100%', flexWrap: 'wrap' }}>
+                        <div className="species-id-info">
                             <Leaf size={14} color="#059669" />
                             <span>
                                 <strong>{result.identification.scientificName}</strong>
                                 {result.identification.commonNames && result.identification.commonNames.length > 0 && (
-                                    <span style={{ fontWeight: 'normal', marginLeft: '4px', color: '#4B5563' }}>
+                                    <span className="species-id-common-name">
                                         ({result.identification.commonNames[0]})
                                     </span>
                                 )}
-                                <span style={{ opacity: 0.8, marginLeft: '4px' }}>
+                                <span className="species-id-confidence">
                                     {result.identification.confidence}%
                                 </span>
                             </span>
@@ -75,14 +75,7 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
                         <span className="status-value">{translatedHealthStatus}</span>
 
                         {!healthy && result.severity && (
-                            <div className="status-severity-container" style={{
-                                marginTop: '12px',
-                                paddingTop: '12px',
-                                borderTop: '1px solid rgba(0,0,0,0.1)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '2px',
-                            }}>
+                            <div className="status-severity-container">
                                 <span className="status-label">{t('results.severity')}</span>
                                 <span className="status-value">{translatedSeverity}</span>
                             </div>

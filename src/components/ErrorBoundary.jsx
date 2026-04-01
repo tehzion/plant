@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import translations from '../i18n/translations';
 import { isRetryableLazyLoadError } from '../utils/lazyWithRetry';
+import './ErrorBoundary.css';
 
 class ErrorBoundary extends Component {
     constructor(props) {
@@ -86,59 +87,25 @@ class ErrorBoundary extends Component {
             }
 
             return (
-                <div style={{
-                    minHeight: '100vh',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '20px',
-                    background: 'var(--color-bg-secondary)'
-                }}>
-                    <div style={{
-                        background: 'white',
-                        padding: '40px',
-                        borderRadius: 'var(--radius-xl)',
-                        boxShadow: 'var(--shadow-lg)',
-                        maxWidth: '500px',
-                        textAlign: 'center'
-                    }}>
-                        <h2 style={{ color: 'var(--color-primary-dark)', marginBottom: '16px' }}>
+                <div className="error-boundary-shell">
+                    <div className="error-boundary-card">
+                        <h2 className="error-boundary-title">
                             {t('home.errorBoundaryTitle') || 'Something went wrong'}
                         </h2>
-                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px' }}>
+                        <p className="error-boundary-message">
                             {t('home.errorBoundaryMessage') || 'Please refresh the page to try again.'}
                         </p>
                         {showDetails && (
-                            <div style={{
-                                textAlign: 'left',
-                                background: '#F9FAFB',
-                                border: '1px solid #E5E7EB',
-                                borderRadius: '12px',
-                                padding: '12px',
-                                marginBottom: '16px',
-                                fontSize: '12px',
-                                color: '#374151',
-                                overflow: 'auto',
-                                maxHeight: '200px'
-                            }}>
-                                <div style={{ fontWeight: 700, marginBottom: '8px' }}>{t('common.errorDetails')}</div>
-                                <div style={{ whiteSpace: 'pre-wrap' }}>
+                            <div className="error-boundary-details">
+                                <div className="error-boundary-details-title">{t('common.errorDetails')}</div>
+                                <div className="error-boundary-details-copy">
                                     {this.state.error?.message || String(this.state.error)}
                                 </div>
                             </div>
                         )}
                         <button
                             onClick={() => window.location.reload()}
-                            style={{
-                                background: 'var(--color-primary)',
-                                color: 'white',
-                                border: 'none',
-                                padding: '12px 24px',
-                                borderRadius: 'var(--radius-lg)',
-                                fontSize: 'var(--font-size-base)',
-                                fontWeight: '600',
-                                cursor: 'pointer'
-                            }}
+                            className="error-boundary-btn"
                         >
                             {t('home.errorBoundaryButton') || 'Refresh Page'}
                         </button>

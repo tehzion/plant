@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-  ScanLine, AlertCircle, Leaf, ChevronDown
+  ScanLine, AlertCircle, Leaf, ChevronDown, X
 } from 'lucide-react';
 import { checkServerHealth } from '../utils/diseaseDetection';
 import { getScanHistory } from '../utils/localStorage';
@@ -361,7 +361,7 @@ const Home = () => {
         cancelText={modalConfig.cancelText}
       />
 
-      <div className="container">
+      <div className="container-superapp home-scan-shell">
         {(loading || currentStep === 3) ? (
           <div className="loading-overlay">
             <div className="loading-card">
@@ -404,7 +404,7 @@ const Home = () => {
           </div>
         ) : (
           <>
-            <div style={{ marginTop: '24px' }}>
+            <div className="home-scan-stepper">
               <ProgressStepper currentStep={currentStep} steps={steps} onStepClick={(step) => {
                 if (step < currentStep) scanActions.setStep(step);
               }} />
@@ -417,7 +417,9 @@ const Home = () => {
                   <span>{error}</span>
                   {errorSupportHint && <small>{errorSupportHint}</small>}
                 </div>
-                <button onClick={() => scanActions.setError('')} className="close-error" aria-label={t('common.close') || 'Close'}>×</button>
+                <button onClick={() => scanActions.setError('')} className="close-error" aria-label={t('common.close') || 'Close'}>
+                  <X size={16} />
+                </button>
               </div>
             )}
 

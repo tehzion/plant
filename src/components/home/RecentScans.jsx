@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
+import { AlertTriangle, CheckCircle, MapPin, Leaf } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { getStandardizedStatus } from '../../utils/statusUtils';
 
@@ -20,27 +20,27 @@ const resolveLocationLabel = (scan, t) => {
     return translated && translated !== translationKey ? translated : scan.locationName;
 };
 
+const formatScanDate = (timestamp, locale) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(locale, {
+        day: 'numeric',
+        month: 'short',
+    });
+};
+
 const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
     const { t, label: labelFn } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
 
     return (
         <div className="section mt-md slide-up">
-            <div className="section-header-row mb-sm" style={{ padding: '0 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="section-title" style={{ fontSize: '1.35rem', fontWeight: '850', margin: '0' }}>
+            <div className="section-header-row home-section-header-row">
+                <h3 className="section-title home-section-title">
                     {t('profile.recentActivity') || 'Recent Scans'}
                 </h3>
-                <button
-                    onClick={onSeeAll}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--color-primary)',
-                        fontWeight: '700',
-                        fontSize: '0.85rem',
-                        cursor: 'pointer'
-                    }}
-                >
+                <button onClick={onSeeAll} className="home-section-link">
                     {t('home.seeAll')}
                 </button>
             </div>
@@ -52,6 +52,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                         const imageSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url || '';
                         const scanTimestamp = scan.timestamp || scan.created_at;
                         const locationLabel = resolveLocationLabel(scan, t);
+                        const formattedDate = formatScanDate(scanTimestamp, label('common.dateLocale', 'en-MY'));
 
                         return (
                             <div
@@ -59,47 +60,35 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                 className="superapp-activity-card"
                                 onClick={() => onScanClick(scan.id)}
                             >
-                                <div className="superapp-activity-img-wrapper" style={{ backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                <div className="superapp-activity-img-wrapper home-scan-card-media">
                                     {imageSrc ? (
-                                        <img 
-                                            src={imageSrc} 
-                                            alt={scan.disease} 
+                                        <img
+                                            src={imageSrc}
+                                            alt={scan.disease}
                                             className="superapp-activity-img"
-                                            onError={(e) => { e.target.src = 'https://via.placeholder.com/120x80?text=Scan'; }}
                                         />
                                     ) : (
-                                        <div style={{ color: '#94a3b8' }}>
-                                            <MapPin size={24} opacity={0.3} />
+                                        <div className="home-scan-card-fallback" aria-hidden="true">
+                                            <Leaf size={24} />
                                         </div>
                                     )}
                                 </div>
                                 <div className="superapp-activity-info">
-                                    <h4 className="scan-disease" style={{
-                                        fontSize: '0.95rem',
-                                        fontWeight: '850',
-                                        fontFamily: 'var(--font-heading)',
-                                        margin: '0',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>
+                                    <h4 className="scan-disease home-scan-card-title">
                                         {scan.disease}
                                     </h4>
-                                    <p className="scan-meta" style={{
-                                        fontSize: '0.72rem',
-                                        fontWeight: '700',
-                                        color: 'var(--color-text-secondary)',
-                                        textTransform: 'uppercase',
-                                        margin: '0'
-                                    }}>
-                                        {resolveCategoryLabel(scan, t)} • {new Date(scanTimestamp).toLocaleDateString(label('common.dateLocale', 'en-MY'), {
-                                            day: 'numeric',
-                                            month: 'short'
-                                        })}
+                                    <p className="scan-meta home-scan-card-meta">
+                                        {resolveCategoryLabel(scan, t)}
+                                        {formattedDate && (
+                                            <>
+                                                <span className="home-scan-card-separator">•</span>
+                                                {formattedDate}
+                                            </>
+                                        )}
                                     </p>
-                                    <div className="scan-badge-row mt-xs" style={{ display: 'flex', gap: '6px' }}>
-                                        <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`} style={{ fontSize: '0.65rem' }}>
-                                            <span className="status-icon" style={{ display: 'flex' }}>
+                                    <div className="scan-badge-row mt-xs home-scan-card-badges">
+                                        <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'} home-scan-status-badge`}>
+                                            <span className="status-icon home-scan-status-icon">
                                                 {healthy
                                                     ? <CheckCircle size={8} strokeWidth={3} />
                                                     : <AlertTriangle size={8} strokeWidth={3} />}
@@ -107,12 +96,18 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                             <span className="status-text">{t(`results.${standardizedStatus}`)}</span>
                                         </div>
                                     </div>
+                                    {locationLabel && (
+                                        <p className="scan-location home-scan-card-location">
+                                            <MapPin size={12} />
+                                            <span>{locationLabel}</span>
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         );
                     })
                 ) : (
-                    <div className="app-empty-state" style={{ minWidth: '100%' }}>
+                    <div className="app-empty-state home-recent-empty">
                         <span>{t('home.noRecentScans')}</span>
                     </div>
                 )}

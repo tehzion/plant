@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { MapPin, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { MapPin, Trash2, CheckCircle, AlertTriangle, Leaf } from 'lucide-react';
 import { getStandardizedStatus } from '../utils/statusUtils';
 import './ScanHistoryCard.css';
 
@@ -34,7 +34,9 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
   };
 
   const formatDate = (timestamp) => {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleDateString(safeLabel('common.dateLocale', 'en-US'), {
       month: 'short',
       day: 'numeric',
@@ -48,6 +50,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
       ? safeLabel(scan.locationName, scan.locationName.replace(/^common\./, ''))
       : safeLabel(`common.${scan.locationName}`, scan.locationName)
     : '';
+  const previewSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url;
 
   const handleClick = () => {
     navigate(`/results/${scan.id}`);
@@ -61,11 +64,19 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
   return (
     <div className="scan-history-card" onClick={handleClick}>
       <div className="card-content">
-        <img
-          src={scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url}
-          alt={scan.disease}
-          className="scan-thumbnail"
-        />
+        <div className="scan-thumbnail-shell">
+          {previewSrc ? (
+            <img
+              src={previewSrc}
+              alt={scan.disease}
+              className="scan-thumbnail"
+            />
+          ) : (
+            <div className="scan-thumbnail scan-thumbnail-fallback" aria-hidden="true">
+              <Leaf size={28} />
+            </div>
+          )}
+        </div>
         <div className="scan-info">
           <h4 className="scan-disease">{scan.disease}</h4>
           <div className="scan-meta-group">
@@ -76,7 +87,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
                 return (translated.includes('home.category') ? pType : translated).toUpperCase();
               })()}
               <span className="meta-separator">/</span>
-              <span className="meta-date">{formatDate(scan.timestamp)}</span>
+              <span className="meta-date">{formatDate(scan.timestamp ?? scan.created_at)}</span>
             </p>
 
             <div className="scan-badge-row">

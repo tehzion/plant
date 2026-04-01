@@ -1,3 +1,524 @@
+.home-scan-shell {
+  padding-top: 18px;
+}
+
+.home-scan-stepper {
+  margin-top: 24px;
+}
+
+.close-error {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  background: rgba(255, 255, 255, 0.82);
+  color: #b91c1c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-error:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.home-hero-shell {
+  padding-bottom: 24px;
+}
+
+.home-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-hero-greeting {
+  margin: 0 0 16px 0;
+  font-size: 2.05rem;
+  font-weight: 850;
+  color: var(--color-primary-dark);
+  line-height: 1.08;
+}
+
+.home-hero-shelf {
+  margin: 0;
+  padding: 4px 0 12px 0;
+}
+
+.home-location-pill {
+  cursor: pointer;
+  flex: 1;
+}
+
+.home-location-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-location-value {
+  font-size: 1.1rem;
+}
+
+.home-weather-pill {
+  flex: 0 0 125px;
+}
+
+.home-weather-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-weather-value {
+  font-size: 1.25rem;
+}
+
+.weather-error-note {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.home-section-header-row {
+  padding: 0 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.home-section-title {
+  font-size: 1.15rem;
+  font-weight: 850;
+  margin: 0;
+  line-height: 1.2;
+  font-family: var(--font-heading);
+}
+
+.home-action-grid-header {
+  margin-bottom: 10px;
+}
+
+.home-action-grid-title {
+  margin: 10px 0 8px 0;
+}
+
+.home-section-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.home-scan-card-media {
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.home-scan-card-fallback {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.home-scan-card-title {
+  font-size: 0.92rem;
+  font-weight: 850;
+  font-family: var(--font-heading);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-scan-card-meta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.home-scan-card-separator {
+  margin: 0 5px;
+  color: #cbd5e1;
+}
+
+.home-scan-card-badges {
+  display: flex;
+  gap: 6px;
+}
+
+.home-scan-status-badge {
+  font-size: 0.65rem;
+}
+
+.home-scan-status-icon {
+  display: flex;
+}
+
+.home-scan-card-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-recent-empty {
+  min-width: 100%;
+}
+
+.home-daily-tips {
+  margin-top: 8px;
+}
+
+.daily-tips-carousel {
+  position: relative;
+}
+
+.daily-tip-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  padding: 22px 22px 18px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.daily-tip-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -30px -42px auto;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  filter: blur(4px);
+}
+
+.daily-tip-content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.daily-tip-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin-bottom: 10px;
+}
+
+.daily-tip-title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  line-height: 1.2;
+  font-family: var(--font-heading);
+  font-weight: 850;
+}
+
+.daily-tip-description {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  max-width: 34ch;
+}
+
+.daily-tip-icon {
+  position: relative;
+  z-index: 1;
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.daily-tip-dots {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 14px;
+  display: flex;
+  gap: 8px;
+  z-index: 1;
+}
+
+.daily-tip-dot {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.daily-tip-dot:hover {
+  transform: scale(1.05);
+}
+
+.daily-tip-dot.active {
+  transform: scale(1.1);
+}
+
+.daily-tip-theme-water {
+  background: linear-gradient(135deg, #eff8ff 0%, #dbeafe 100%);
+  color: #1d4ed8;
+}
+
+.daily-tip-theme-water .daily-tip-badge,
+.daily-tip-theme-water .daily-tip-title,
+.daily-tip-theme-water .daily-tip-description,
+.daily-tip-theme-water .daily-tip-icon {
+  color: #1d4ed8;
+}
+
+.daily-tip-theme-water .daily-tip-dot.active {
+  background: #1d4ed8;
+}
+
+.daily-tip-theme-nutrients {
+  background: linear-gradient(135deg, #eefdf3 0%, #d1fae5 100%);
+  color: #15803d;
+}
+
+.daily-tip-theme-nutrients .daily-tip-badge,
+.daily-tip-theme-nutrients .daily-tip-title,
+.daily-tip-theme-nutrients .daily-tip-description,
+.daily-tip-theme-nutrients .daily-tip-icon {
+  color: #15803d;
+}
+
+.daily-tip-theme-nutrients .daily-tip-dot.active {
+  background: #15803d;
+}
+
+.daily-tip-theme-pests {
+  background: linear-gradient(135deg, #fff8eb 0%, #fde6c7 100%);
+  color: #c2410c;
+}
+
+.daily-tip-theme-pests .daily-tip-badge,
+.daily-tip-theme-pests .daily-tip-title,
+.daily-tip-theme-pests .daily-tip-description,
+.daily-tip-theme-pests .daily-tip-icon {
+  color: #c2410c;
+}
+
+.daily-tip-theme-pests .daily-tip-dot.active {
+  background: #c2410c;
+}
+
+.daily-tip-theme-growth {
+  background: linear-gradient(135deg, #f6f2ff 0%, #eadcff 100%);
+  color: #7c3aed;
+}
+
+.daily-tip-theme-growth .daily-tip-badge,
+.daily-tip-theme-growth .daily-tip-title,
+.daily-tip-theme-growth .daily-tip-description,
+.daily-tip-theme-growth .daily-tip-icon {
+  color: #7c3aed;
+}
+
+.daily-tip-theme-growth .daily-tip-dot.active {
+  background: #7c3aed;
+}
+
+.fn-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.fn-today-card {
+  border-radius: 24px;
+  border: 1px solid;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+}
+
+.fn-status-good {
+  background: #effaf1;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.fn-status-caution {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.fn-status-warning {
+  background: #fff1f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.fn-today-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fn-today-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fn-section-title {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 850;
+  font-family: var(--font-heading);
+}
+
+.fn-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: currentColor;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fn-today-msg {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.fn-today-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.fn-days-list {
+  overflow: hidden;
+}
+
+.fn-day-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  font-size: 0.81rem;
+  color: #334155;
+}
+
+.fn-day-row:last-child {
+  border-bottom: none;
+}
+
+.fn-day-row > svg,
+.fn-day-badge > svg {
+  flex-shrink: 0;
+}
+
+.fn-day-row > svg {
+  color: #94a3b8;
+}
+
+.fn-day-label {
+  width: 78px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #334155;
+}
+
+.fn-day-msg {
+  flex: 1;
+  font-size: 0.79rem;
+  line-height: 1.4;
+  color: #475569;
+}
+
+.fn-day-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fn-day-badge-good {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.fn-day-badge-caution {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.fn-day-badge-warning {
+  background: #fff1f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
 .overlay-actions {
   margin-top: 24px;
   display: flex;
@@ -74,4 +595,64 @@
   color: #7f1d1d;
   font-size: 0.75rem;
   line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .home-scan-shell {
+    padding-top: 12px;
+  }
+
+  .home-hero-greeting {
+    font-size: 1.55rem;
+    line-height: 1.2;
+  }
+
+  .home-section-title {
+    font-size: 1.08rem;
+  }
+
+  .home-weather-pill {
+    flex-basis: 132px;
+  }
+
+  .daily-tip-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px 18px 16px;
+  }
+
+  .daily-tip-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+  }
+
+  .daily-tip-dots {
+    position: static;
+    margin-top: 4px;
+  }
+
+  .daily-tip-description {
+    max-width: none;
+    font-size: 0.88rem;
+  }
+
+  .fn-today-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .fn-day-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .fn-day-label {
+    width: auto;
+    min-width: 68px;
+  }
+
+  .fn-day-badge {
+    margin-left: auto;
+  }
 }

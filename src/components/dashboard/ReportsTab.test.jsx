@@ -17,12 +17,19 @@ vi.mock('lucide-react', async () => {
     const Icon = ({ children, ...props }) => React.createElement('svg', props, children);
     return {
         AlertTriangle: Icon,
+        Calendar: Icon,
         BarChart3: Icon,
+        BarChart2: Icon,
         BrainCircuit: Icon,
+        ScanLine: Icon,
+        Microscope: Icon,
+        FlaskConical: Icon,
+        Wheat: Icon,
+        MapPin: Icon,
+        ShieldCheck: Icon,
         ChevronRight: Icon,
         DollarSign: Icon,
         Leaf: Icon,
-        ShieldCheck: Icon,
         Sparkles: Icon,
         Sprout: Icon,
     };

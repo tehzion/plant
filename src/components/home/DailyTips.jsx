@@ -9,10 +9,10 @@ const DailyTips = () => {
     const touchEnd = useRef(null);
 
     const dailyTips = React.useMemo(() => [
-        { id: 1, categoryKey: 'tip1Cat', titleKey: 'tip1Title', descKey: 'tip1Desc', icon: <Droplets size={36} />, bg: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)', color: '#1565C0' },
-        { id: 2, categoryKey: 'tip2Cat', titleKey: 'tip2Title', descKey: 'tip2Desc', icon: <FlaskConical size={36} />, bg: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)', color: '#2E7D32' },
-        { id: 3, categoryKey: 'tip3Cat', titleKey: 'tip3Title', descKey: 'tip3Desc', icon: <Bug size={36} />, bg: 'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)', color: '#EF6C00' },
-        { id: 4, categoryKey: 'tip4Cat', titleKey: 'tip4Title', descKey: 'tip4Desc', icon: <Sprout size={36} />, bg: 'linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%)', color: '#6A1B9A' }
+        { id: 1, categoryKey: 'tip1Cat', titleKey: 'tip1Title', descKey: 'tip1Desc', icon: <Droplets size={36} />, themeClass: 'daily-tip-theme-water' },
+        { id: 2, categoryKey: 'tip2Cat', titleKey: 'tip2Title', descKey: 'tip2Desc', icon: <FlaskConical size={36} />, themeClass: 'daily-tip-theme-nutrients' },
+        { id: 3, categoryKey: 'tip3Cat', titleKey: 'tip3Title', descKey: 'tip3Desc', icon: <Bug size={36} />, themeClass: 'daily-tip-theme-pests' },
+        { id: 4, categoryKey: 'tip4Cat', titleKey: 'tip4Title', descKey: 'tip4Desc', icon: <Sprout size={36} />, themeClass: 'daily-tip-theme-growth' }
     ], []);
 
     // Carousel Logic
@@ -45,65 +45,47 @@ const DailyTips = () => {
         touchStart.current = null;
     };
 
+    const currentTip = dailyTips[currentTipIndex];
+
     return (
-        <div className="section mt-md tips-section slide-up delay-200">
-            <div className="section-header">
-                <h3 className="section-title">{t('home.dailyTips')}</h3>
+        <section className="home-section home-daily-tips slide-up delay-200">
+            <div className="home-section-header-row">
+                <h3 className="home-section-title">{t('home.dailyTips')}</h3>
             </div>
 
             <div
-                className="tips-carousel-container"
+                className="daily-tips-carousel"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
             >
                 <div
                     key={currentTipIndex}
-                    className="tips-card fade-in-fast"
-                    style={{ 
-                        background: dailyTips[currentTipIndex].bg, 
-                        position: 'relative',
-                        borderRadius: 'var(--radius-xl)',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
-                        border: '1px solid rgba(255,255,255,0.3)'
-                    }}
+                    className={`daily-tip-card fade-in-fast ${currentTip.themeClass}`}
                 >
-                    <div className="tip-content">
-                        <span
-                            className="tip-badge"
-                            style={{ 
-                                background: 'rgba(255,255,255,0.8)',
-                                padding: '4px 12px',
-                                borderRadius: '20px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
-                                marginBottom: '8px',
-                                display: 'inline-block',
-                                color: dailyTips[currentTipIndex].color 
-                            }}
-                        >
-                            {t(`home.${dailyTips[currentTipIndex].categoryKey}`) || t('home.tipBadge')}
+                    <div className="daily-tip-content">
+                        <span className="daily-tip-badge">
+                            {t(`home.${currentTip.categoryKey}`) || t('home.tipBadge')}
                         </span>
-                        <h4 style={{ color: dailyTips[currentTipIndex].color, fontSize: '1.25rem', marginBottom: '8px' }}>{t(`home.${dailyTips[currentTipIndex].titleKey}`)}</h4>
-                        <p style={{ color: dailyTips[currentTipIndex].color, fontSize: '0.95rem', lineHeight: '1.5', opacity: 0.9 }}>{t(`home.${dailyTips[currentTipIndex].descKey}`)}</p>
+                        <h4 className="daily-tip-title">{t(`home.${currentTip.titleKey}`)}</h4>
+                        <p className="daily-tip-description">{t(`home.${currentTip.descKey}`)}</p>
                     </div>
-                    <div className="tip-image">{dailyTips[currentTipIndex].icon}</div>
+                    <div className="daily-tip-icon">{currentTip.icon}</div>
 
-                    <div className="dots-container">
+                    <div className="daily-tip-dots">
                         {dailyTips.map((_, idx) => (
-                            <div
+                            <button
                                 key={idx}
-                                className={`carousel-dot ${idx === currentTipIndex ? 'active' : ''}`}
+                                type="button"
+                                className={`daily-tip-dot ${idx === currentTipIndex ? 'active' : ''}`}
                                 onClick={() => setCurrentTipIndex(idx)}
-                                style={{
-                                    backgroundColor: idx === currentTipIndex ? dailyTips[currentTipIndex].color : 'rgba(0,0,0,0.1)'
-                                }}
+                                aria-label={`${t('home.dailyTips')} ${idx + 1}`}
                             />
                         ))}
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     );
 };
 
