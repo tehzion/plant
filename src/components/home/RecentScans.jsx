@@ -35,7 +35,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
 
     return (
-        <div className="section mt-md slide-up">
+        <div className="mt-md slide-up">
             <div className="section-header-row home-section-header-row">
                 <h3 className="section-title home-section-title">
                     {t('profile.recentActivity') || 'Recent Scans'}
