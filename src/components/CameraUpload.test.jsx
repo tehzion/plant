@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import CameraUpload from './CameraUpload.jsx';
 
@@ -12,6 +12,10 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'common.clearImage': 'Clear Image',
             'common.takePhoto': 'Take Photo',
             'common.uploadGallery': 'Upload from Gallery',
+            'common.cameraUnsupported': 'Camera access is not available on this device. You can upload a photo from your gallery instead.',
+            'common.cameraPermissionDenied': 'Camera access was blocked. You can upload a photo from your gallery instead.',
+            'common.cameraUnavailable': 'We could not find an available camera. Please upload a photo from your gallery instead.',
+            'common.cameraOpenFailed': 'We could not open the camera right now. Please try again or upload a photo from your gallery.',
         }[key] || key),
     }),
 }));
@@ -29,6 +33,7 @@ vi.mock('../utils/imageCompressor', () => ({
 describe('CameraUpload', () => {
     beforeEach(() => {
         notifyErrorMock.mockReset();
+        vi.restoreAllMocks();
     });
 
     it('shows a toast error for non-image files', () => {
@@ -50,5 +55,27 @@ describe('CameraUpload', () => {
         fireEvent.change(input, { target: { files: [bigFile] } });
 
         expect(notifyErrorMock).toHaveBeenCalledWith('Image size must be less than 10MB');
+    });
+
+    it('shows a clear error and falls back to gallery when camera permission is denied', async () => {
+        const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
+        Object.defineProperty(navigator, 'mediaDevices', {
+            configurable: true,
+            value: {
+                getUserMedia: vi.fn().mockRejectedValue({ name: 'NotAllowedError' }),
+            },
+        });
+
+        render(<CameraUpload onImageCapture={vi.fn()} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Take Photo' }));
+
+        await waitFor(() => {
+            expect(notifyErrorMock).toHaveBeenCalledWith(
+                'Camera access was blocked. You can upload a photo from your gallery instead.',
+                expect.objectContaining({ actionLabel: 'Upload from Gallery' }),
+            );
+        });
+
+        expect(clickSpy).toHaveBeenCalled();
     });
 });

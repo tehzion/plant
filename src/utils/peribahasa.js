@@ -1,13 +1,37 @@
 import { translations } from '../i18n/translations';
 
-const getFallbackPeribahasa = (language = 'en') => (
-    translations[language]?.home?.peribahasaFallback
-    || translations.en?.home?.peribahasaFallback
-    || 'Your plants are growing strong! 🌱'
+const fallbackPeribahasaByLanguage = {
+    en: 'Your plants are growing strong! 🌱',
+    ms: 'Tanaman anda membesar dengan sihat! 🌱',
+    zh: '您的植物正在茁壮成长！ 🌱',
+};
+
+const isBrokenPeribahasaText = (value) => (
+    typeof value !== 'string'
+    || !value.trim()
+    || /ðŸ|Ã|�/.test(value)
 );
 
+const getSafePeribahasaList = (language = 'en') => {
+    const localizedList = translations[language]?.home?.peribahasa;
+    if (!Array.isArray(localizedList)) {
+        return [];
+    }
+
+    return localizedList.filter((item) => !isBrokenPeribahasaText(item));
+};
+
+const getFallbackPeribahasa = (language = 'en') => {
+    const localizedFallback = translations[language]?.home?.peribahasaFallback;
+    if (!isBrokenPeribahasaText(localizedFallback)) {
+        return localizedFallback;
+    }
+
+    return fallbackPeribahasaByLanguage[language] || fallbackPeribahasaByLanguage.en;
+};
+
 export const getRandomPeribahasa = (language = 'en') => {
-    const peribahasa = translations[language]?.home?.peribahasa || [];
+    const peribahasa = getSafePeribahasaList(language);
 
     if (peribahasa.length === 0) {
         return getFallbackPeribahasa(language);
@@ -18,7 +42,7 @@ export const getRandomPeribahasa = (language = 'en') => {
 };
 
 export const getRandomPeribahasaList = (language = 'en', count = 3) => {
-    const peribahasa = translations[language]?.home?.peribahasa || [];
+    const peribahasa = getSafePeribahasaList(language);
 
     if (peribahasa.length === 0) {
         return [getFallbackPeribahasa(language)];
@@ -29,7 +53,7 @@ export const getRandomPeribahasaList = (language = 'en', count = 3) => {
 };
 
 export const getContextualPeribahasa = (language = 'en', _context = 'loading') => {
-    const peribahasa = translations[language]?.home?.peribahasa || [];
+    const peribahasa = getSafePeribahasaList(language);
 
     if (peribahasa.length === 0) {
         return getRandomPeribahasa(language);

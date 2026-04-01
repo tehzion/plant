@@ -143,7 +143,7 @@ const homeTranslations = {
                 "Plant with hope, harvest with gratitude",
                 "A good farmer knows their land like their own hand"
             ],
-            "peribahasaFallback": "Your plants are growing strong! ðŸŒ±",
+            "peribahasaFallback": "Your plants are growing strong! 🌱",
             "categoryRice": "Rice",
             "categoryVegetables": "Vegetables",
             "categoryFruits": "Fruits",
@@ -302,7 +302,7 @@ const homeTranslations = {
                 "Tanam dengan harapan, tuai dengan syukur",
                 "Petani yang baik mengenali tanahnya seperti tapak tangannya"
             ],
-            "peribahasaFallback": "Tanaman anda membesar dengan sihat! ðŸŒ±",
+            "peribahasaFallback": "Tanaman anda membesar dengan sihat! 🌱",
             "categoryRice": "Padi",
             "categoryVegetables": "Sayur-sayuran",
             "categoryFruits": "Buah-buahan",

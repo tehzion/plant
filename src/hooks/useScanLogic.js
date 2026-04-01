@@ -199,6 +199,14 @@ export const useScanLogic = () => {
                                     : errorCode,
                     }
                 });
+                err.userMessage = errorMessage;
+                err.userCode = isTimeoutError(err)
+                    ? 'ANALYSIS_TIMEOUT'
+                    : isNetworkUnavailableError(err)
+                        ? 'ANALYSIS_NETWORK'
+                        : err.status >= 500
+                            ? 'ANALYSIS_UNAVAILABLE'
+                            : errorCode;
                 dispatch({ type: 'SET_STEP', payload: 2 });
                 throw err;
             }

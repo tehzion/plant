@@ -35,7 +35,11 @@ export const NotificationProvider = ({ children }) => {
 
     // ── Sync active notification from queue head ──────────────────────────────
     useEffect(() => {
-        setActive(queue[0] ?? null);
+        const nextActive =
+            queue.find((notification) => notification.duration !== 0)
+            || queue[0]
+            || null;
+        setActive(nextActive);
     }, [queue]);
 
     // ── Auto-dismiss timer ────────────────────────────────────────────────────

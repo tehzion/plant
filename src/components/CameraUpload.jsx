@@ -16,6 +16,17 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
 
+    const openFilePicker = (inputRef) => {
+        if (inputRef.current) {
+            inputRef.current.value = '';
+            inputRef.current.click();
+        }
+    };
+
+    const openGalleryPicker = () => {
+        openFilePicker(fileInputRef);
+    };
+
     // Sync preview with prop
     useEffect(() => {
         if (currentImage) {
@@ -32,6 +43,15 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     }, [currentImage]);
 
     const startCamera = async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            notifyError(t('common.cameraUnsupported'), {
+                actionLabel: t('common.uploadGallery'),
+                action: openGalleryPicker,
+            });
+            openGalleryPicker();
+            return;
+        }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'environment' }
@@ -40,8 +60,18 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
             setIsCameraOpen(true);
         } catch (err) {
             console.error("Camera access failed:", err);
-            // Fallback to native input if webcam fails
-            cameraInputRef.current?.click();
+            const errorName = err?.name;
+            const messageKey = ['NotAllowedError', 'PermissionDeniedError', 'SecurityError'].includes(errorName)
+                ? 'common.cameraPermissionDenied'
+                : ['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError', 'NotReadableError', 'TrackStartError'].includes(errorName)
+                    ? 'common.cameraUnavailable'
+                    : 'common.cameraOpenFailed';
+
+            notifyError(t(messageKey), {
+                actionLabel: t('common.uploadGallery'),
+                action: openGalleryPicker,
+            });
+            openGalleryPicker();
         }
     };
 
@@ -49,6 +79,9 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
         }
         setIsCameraOpen(false);
     };
@@ -83,6 +116,16 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
             videoRef.current.srcObject = streamRef.current;
         }
     }, [isCameraOpen]);
+
+    useEffect(() => () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+    }, []);
 
     const handleFileSelect = async (event) => {
         const file = event.target.files?.[0];
@@ -130,7 +173,7 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     };
 
     const handleGalleryClick = () => {
-        fileInputRef.current?.click();
+        openGalleryPicker();
     };
 
     const clearPreview = () => {

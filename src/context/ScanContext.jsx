@@ -61,14 +61,15 @@ export const ScanProvider = ({ children }) => {
                 const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
 
                 if (!isActivelyScanning) {
-                    notify({
+                    let successNotificationId = null;
+                    successNotificationId = notify({
                         type: 'success',
                         message: t('home.analysisComplete') || 'Analysis Complete!',
                         actionLabel: t('home.viewResults') || 'View Now',
                         duration: 8000, 
                         action: () => {
                             navigate(`/results/${id}`);
-                            dismissNotification();
+                            dismissNotification(successNotificationId);
                         }
                     });
                 }
@@ -87,7 +88,7 @@ export const ScanProvider = ({ children }) => {
                 if (!isActivelyScanning) {
                     notify({
                         type: 'error',
-                        message: e.message || 'Analysis Failed',
+                        message: e.userMessage || e.message || t('home.errorAnalysis') || 'Analysis Failed',
                         duration: 5000
                     });
                 }
