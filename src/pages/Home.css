@@ -31,6 +31,12 @@
   padding-bottom: 24px;
 }
 
+.home-dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .home-hero-content {
   display: flex;
   flex-direction: column;
@@ -107,6 +113,12 @@
 
 .home-action-grid-title {
   margin: 10px 0 8px 0;
+}
+
+.home-recent-scans,
+.fn-wrapper,
+.home-daily-tips {
+  margin-top: 0;
 }
 
 .home-section-link {
@@ -186,10 +198,6 @@
 
 .home-recent-empty {
   min-width: 100%;
-}
-
-.home-daily-tips {
-  margin-top: 20px;
 }
 
 .daily-tips-carousel {
@@ -605,6 +613,10 @@
   .home-hero-greeting {
     font-size: 1.55rem;
     line-height: 1.2;
+  }
+
+  .home-dashboard-stack {
+    gap: 20px;
   }
 
   .home-section-title {

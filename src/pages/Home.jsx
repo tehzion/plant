@@ -313,7 +313,8 @@ const Home = () => {
             weatherError={weatherError}
           />
 
-          <ActionGrid onScan={handleStartScan} />
+          <div className="home-dashboard-stack">
+            <ActionGrid onScan={handleStartScan} />
           <RecentScans
             scans={recentScans}
             onSeeAll={() => navigate('/history')}
@@ -325,7 +326,8 @@ const Home = () => {
             <FarmingNotices forecast={forecast} />
           )}
 
-          <DailyTips />
+            <DailyTips />
+          </div>
         </div>
       </div>
     );
