@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import LanguageSelector from './LanguageSelector';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { checkServerHealth } from '../utils/diseaseDetection';
 import './AppHeader.css';
 
 const AppHeader = ({ isHome }) => {
@@ -11,15 +12,70 @@ const AppHeader = ({ isHome }) => {
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
     const { user } = useAuth();
     const location = useLocation();
+    const [systemStatus, setSystemStatus] = useState(() => (
+        typeof navigator !== 'undefined' && navigator.onLine ? 'checking' : 'offline'
+    ));
 
     const initials = user?.email
         ? user.email.split('@')[0].slice(0, 2).toUpperCase()
         : null;
 
+    const refreshSystemStatus = useCallback(async () => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setSystemStatus('offline');
+            return;
+        }
+
+        setSystemStatus((current) => (current === 'online' ? current : 'checking'));
+
+        try {
+            await checkServerHealth();
+            setSystemStatus('online');
+        } catch {
+            setSystemStatus('offline');
+        }
+    }, []);
+
+    useEffect(() => {
+        refreshSystemStatus();
+
+        const handleOnline = () => {
+            setSystemStatus('checking');
+            refreshSystemStatus();
+        };
+        const handleOffline = () => setSystemStatus('offline');
+        const handleFocus = () => refreshSystemStatus();
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                refreshSystemStatus();
+            }
+        };
+
+        const interval = window.setInterval(refreshSystemStatus, 60000);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.clearInterval(interval);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [refreshSystemStatus]);
+
     const isActive = (path) => {
         if (path === '/') return location.pathname === '/';
         return location.pathname.startsWith(path);
     };
+
+    const statusLabel = systemStatus === 'online'
+        ? label('home.onlineStatus', 'Live')
+        : systemStatus === 'offline'
+            ? label('common.offline', 'Offline')
+            : label('common.loading', 'Checking');
 
     return (
         <header className={`app-header ${isHome ? 'is-home' : ''}`}>
@@ -55,15 +111,23 @@ const AppHeader = ({ isHome }) => {
                     </nav>
 
                     <div className="app-header__actions">
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="app-header__refresh-btn"
-                            title={t('common.refreshApp')}
-                            aria-label={t('common.refreshApp')}
-                            type="button"
-                        >
-                            <RefreshCw size={19} />
-                        </button>
+                        <div className="app-header__status-cluster">
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="app-header__refresh-btn"
+                                title={t('common.refreshApp')}
+                                aria-label={t('common.refreshApp')}
+                                type="button"
+                            >
+                                <RefreshCw size={19} />
+                            </button>
+                            <span
+                                className={`app-header__status-dot app-header__status-dot--${systemStatus}`}
+                                title={statusLabel}
+                                aria-label={statusLabel}
+                                role="status"
+                            />
+                        </div>
                         <div className="app-header__language-wrap">
                             <LanguageSelector />
                         </div>

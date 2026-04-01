@@ -4,7 +4,6 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import {
   ScanLine, AlertCircle, Leaf, ChevronDown, X
 } from 'lucide-react';
-import { checkServerHealth } from '../utils/diseaseDetection';
 import { getScanHistory } from '../utils/localStorage';
 import CameraUpload from '../components/CameraUpload';
 import PlantCategorySelector from '../components/PlantCategorySelector';
@@ -22,7 +21,6 @@ import { useAuth } from '../context/AuthContext';
 
 // UI Components
 import HeroSection from '../components/home/HeroSection';
-import ServerStatus from '../components/home/ServerStatus';
 import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
 import DailyTips from '../components/home/DailyTips';
@@ -72,7 +70,6 @@ const Home = () => {
 
   // UI States
   const [recentScans, setRecentScans] = useState([]);
-  const [serverStatus, setServerStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
 
   // Peribahasa State (UI only)
   const [currentPeribahasa, setCurrentPeribahasa] = useState('');
@@ -94,13 +91,6 @@ const Home = () => {
     { label: t('home.step2') },
     { label: t('home.step3') },
   ];
-
-  // Initialize
-  useEffect(() => {
-    checkServerHealth()
-      .then(() => setServerStatus('online'))
-      .catch(() => setServerStatus('offline'));
-  }, []);
 
   // Initialize and Update Dashboard Data
   useEffect(() => {
@@ -324,9 +314,6 @@ const Home = () => {
           />
 
           <ActionGrid onScan={handleStartScan} />
-
-          <ServerStatus status={serverStatus} />
-
           <RecentScans
             scans={recentScans}
             onSeeAll={() => navigate('/history')}
