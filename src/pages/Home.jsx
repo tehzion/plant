@@ -70,6 +70,8 @@ const Home = () => {
 
   // UI States
   const [recentScans, setRecentScans] = useState([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [weatherResolved, setWeatherResolved] = useState(false);
 
   // Peribahasa State (UI only)
   const [currentPeribahasa, setCurrentPeribahasa] = useState('');
@@ -98,7 +100,9 @@ const Home = () => {
       // Refresh scan history whenever dashboard is active or scan completes
       const fetchHistory = async () => {
         const history = await Promise.resolve(getScanHistory(user?.id ?? null));
+        if (!isMounted.current) return;
         setRecentScans(history.slice(0, 4));
+        setHistoryLoaded(true);
       };
       fetchHistory();
     }
@@ -111,7 +115,7 @@ const Home = () => {
         // Optimistic Update: Show KL weather immediately while locating
         // This prevents the "--Â°C" flash or hang if GPS is slow
         if (!weatherTemp) {
-          fetchWeather(3.1412, 101.6865);
+          await fetchWeather(3.1412, 101.6865);
           setLocationName('Malaysia');
         }
 
@@ -119,12 +123,20 @@ const Home = () => {
         const loc = await getLocation();
         if (loc) {
           // Update with real location if found
-          fetchWeather(loc.lat, loc.lng);
+          await fetchWeather(loc.lat, loc.lng);
         }
       };
       initData();
     }
   }, [viewMode]); // Keep location fetch separate to avoid re-fetching on scan updates
+
+  useEffect(() => {
+    if (viewMode !== 'dashboard' || weatherResolved) return;
+
+    if (Number.isFinite(weatherTemp) || forecast.length > 0 || weatherError) {
+      setWeatherResolved(true);
+    }
+  }, [viewMode, weatherResolved, weatherTemp, forecast.length, weatherError]);
 
   // URL-DRIVEN VIEW MODES (Fixes 'Imbas Lagi' and Race Conditions)
   useEffect(() => {
@@ -285,6 +297,86 @@ const Home = () => {
     });
   };
 
+  const showHomeSkeleton = viewMode === 'dashboard' && (!historyLoaded || !weatherResolved);
+
+  const renderHomeSkeleton = () => (
+    <div className="home-dashboard-skeleton" aria-hidden="true">
+      <section className="home-skeleton-hero app-surface">
+        <div className="home-skeleton-line home-skeleton-line-greeting"></div>
+        <div className="home-skeleton-pill-row">
+          <div className="home-skeleton-pill"></div>
+          <div className="home-skeleton-pill home-skeleton-pill-compact"></div>
+        </div>
+      </section>
+
+      <section className="home-skeleton-section">
+        <div className="home-skeleton-section-header">
+          <div className="home-skeleton-line home-skeleton-line-title"></div>
+        </div>
+        <div className="home-skeleton-actions">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={`action-${index}`} className="home-skeleton-action-card app-surface">
+              <div className="home-skeleton-icon"></div>
+              <div className="home-skeleton-line home-skeleton-line-label"></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-skeleton-section">
+        <div className="home-skeleton-section-header">
+          <div className="home-skeleton-line home-skeleton-line-title"></div>
+          <div className="home-skeleton-line home-skeleton-line-link"></div>
+        </div>
+        <div className="home-skeleton-cards">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={`scan-${index}`} className="home-skeleton-scan-card app-surface">
+              <div className="home-skeleton-scan-media"></div>
+              <div className="home-skeleton-card-body">
+                <div className="home-skeleton-line home-skeleton-line-card-title"></div>
+                <div className="home-skeleton-line home-skeleton-line-card-meta"></div>
+                <div className="home-skeleton-chip-row">
+                  <div className="home-skeleton-chip"></div>
+                </div>
+                <div className="home-skeleton-line home-skeleton-line-card-location"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="home-skeleton-section">
+        <div className="home-skeleton-section-header">
+          <div className="home-skeleton-line home-skeleton-line-title"></div>
+        </div>
+        <div className="home-skeleton-notice app-surface">
+          <div className="home-skeleton-notice-top">
+            <div className="home-skeleton-icon home-skeleton-icon-small"></div>
+            <div className="home-skeleton-line home-skeleton-line-subtitle"></div>
+            <div className="home-skeleton-chip home-skeleton-chip-small"></div>
+          </div>
+          <div className="home-skeleton-line home-skeleton-line-body"></div>
+          <div className="home-skeleton-line home-skeleton-line-body home-skeleton-line-body-short"></div>
+        </div>
+      </section>
+
+      <section className="home-skeleton-section">
+        <div className="home-skeleton-section-header">
+          <div className="home-skeleton-line home-skeleton-line-title"></div>
+        </div>
+        <div className="home-skeleton-tip-card app-surface">
+          <div className="home-skeleton-tip-copy">
+            <div className="home-skeleton-chip home-skeleton-chip-medium"></div>
+            <div className="home-skeleton-line home-skeleton-line-card-title"></div>
+            <div className="home-skeleton-line home-skeleton-line-body"></div>
+            <div className="home-skeleton-line home-skeleton-line-body home-skeleton-line-body-short"></div>
+          </div>
+          <div className="home-skeleton-icon home-skeleton-tip-icon"></div>
+        </div>
+      </section>
+    </div>
+  );
+
   // Render Dashboard
   if (viewMode === 'dashboard') {
     return (
@@ -303,6 +395,10 @@ const Home = () => {
           cancelText={modalConfig.cancelText}
         />
         <div className="container-superapp">
+          {showHomeSkeleton ? (
+            renderHomeSkeleton()
+          ) : (
+            <>
           <HeroSection
             greeting={getGreeting()}
             locationName={locationName}
@@ -328,6 +424,8 @@ const Home = () => {
 
             <DailyTips />
           </div>
+            </>
+          )}
         </div>
       </div>
     );

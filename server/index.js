@@ -22,6 +22,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3002;
 
+const withStageTimeout = async (promise, timeoutMs, fallbackValue = null) => {
+    let timeoutId = null;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise((resolve) => {
+                timeoutId = setTimeout(() => resolve(fallbackValue), timeoutMs);
+            }),
+        ]);
+    } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+    }
+};
+
 // Initialize Cache (Default TTL: 7 days for Questions, 24h for images)
 const aiCache = new NodeCache({ stdTTL: 86400 });
 
@@ -218,12 +232,20 @@ app.post('/api/analyze', async (req, res, next) => {
         console.log('🧠 Image Analysis Cache MISS - Processing...');
 
         // 3. Identify Species
-        let plantNetResult = await identifyPlantWithPlantNet(mainImage);
+        let plantNetResult = await withStageTimeout(
+            identifyPlantWithPlantNet(mainImage),
+            12000,
+            null,
+        );
         let identificationSource = 'PlantNet';
 
         // 4. Fallback Identification (GPT Vision)
         if (!plantNetResult) {
-            const gptVisionResult = await identifyPlantWithGPTVision(mainImage, category);
+            const gptVisionResult = await withStageTimeout(
+                identifyPlantWithGPTVision(mainImage, category),
+                12000,
+                null,
+            );
             if (gptVisionResult) {
                 if (gptVisionResult.isPlant === false) {
                     console.warn('⚠️ Image identified as NOT a plant.');

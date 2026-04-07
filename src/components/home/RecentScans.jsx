@@ -81,7 +81,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                         {resolveCategoryLabel(scan, t)}
                                         {formattedDate && (
                                             <>
-                                                <span className="home-scan-card-separator">•</span>
+                                                <span className="home-scan-card-separator">&bull;</span>
                                                 {formattedDate}
                                             </>
                                         )}

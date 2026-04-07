@@ -1775,11 +1775,11 @@ const parseOpenAIJson = (content, errorLabel) => {
 const createModelMessagesWithImages = (prompt, treeImage, leafImage = null) => {
     const content = [
         { type: 'text', text: prompt },
-        { type: 'image_url', image_url: { url: treeImage, detail: 'high' } },
+        { type: 'image_url', image_url: { url: treeImage, detail: 'auto' } },
     ];
 
     if (leafImage) {
-        content.push({ type: 'image_url', image_url: { url: leafImage, detail: 'high' } });
+        content.push({ type: 'image_url', image_url: { url: leafImage, detail: 'auto' } });
     }
 
     return [
@@ -1792,6 +1792,20 @@ const createModelMessagesWithImages = (prompt, treeImage, leafImage = null) => {
             content,
         },
     ];
+};
+
+const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
+    let timeoutId = null;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+            }),
+        ]);
+    } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+    }
 };
 
 const callOpenAIJson = async (messages, maxTokens = 2400) => {
@@ -1986,8 +2000,17 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
                 },
             ];
 
-            const treatmentResponse = await callOpenAIJson(treatmentMessages, 2200);
-            stageTwo = parseOpenAIJson(treatmentResponse.choices[0].message.content, 'treatment stage');
+            try {
+                const treatmentResponse = await withTimeout(
+                    callOpenAIJson(treatmentMessages, 1600),
+                    12000,
+                    'Treatment enrichment timed out',
+                );
+                stageTwo = parseOpenAIJson(treatmentResponse.choices[0].message.content, 'treatment stage');
+            } catch (treatmentError) {
+                console.warn('Treatment enrichment skipped:', treatmentError.message);
+                stageTwo = null;
+            }
         }
 
         const finalResult = mergeDiagnosisResult({

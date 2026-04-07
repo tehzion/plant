@@ -37,6 +37,249 @@
   gap: 24px;
 }
 
+.home-dashboard-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0 4px;
+}
+
+.home-skeleton-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-skeleton-hero,
+.home-skeleton-notice,
+.home-skeleton-tip-card,
+.home-skeleton-action-card,
+.home-skeleton-scan-card {
+  overflow: hidden;
+}
+
+.home-skeleton-hero {
+  padding: 28px 24px;
+  border-radius: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home-skeleton-pill-row,
+.home-skeleton-actions,
+.home-skeleton-cards,
+.home-skeleton-section-header,
+.home-skeleton-notice-top,
+.home-skeleton-chip-row,
+.home-skeleton-tip-card {
+  display: flex;
+  align-items: center;
+}
+
+.home-skeleton-pill-row,
+.home-skeleton-actions,
+.home-skeleton-cards {
+  gap: 14px;
+}
+
+.home-skeleton-actions,
+.home-skeleton-cards {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.home-skeleton-actions::-webkit-scrollbar,
+.home-skeleton-cards::-webkit-scrollbar {
+  display: none;
+}
+
+.home-skeleton-section-header {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.home-skeleton-line,
+.home-skeleton-pill,
+.home-skeleton-icon,
+.home-skeleton-chip,
+.home-skeleton-scan-media {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.68) 0%, rgba(255, 255, 255, 0.92) 50%, rgba(226, 232, 240, 0.68) 100%);
+  background-size: 220% 100%;
+  animation: home-skeleton-shimmer 1.45s ease-in-out infinite;
+}
+
+.home-skeleton-line,
+.home-skeleton-pill,
+.home-skeleton-chip {
+  border-radius: 999px;
+}
+
+.home-skeleton-line-greeting {
+  width: min(78%, 420px);
+  height: 26px;
+}
+
+.home-skeleton-pill {
+  flex: 1;
+  height: 72px;
+  border-radius: 24px;
+}
+
+.home-skeleton-pill-compact {
+  flex: 0 0 132px;
+}
+
+.home-skeleton-line-title {
+  width: 156px;
+  height: 16px;
+}
+
+.home-skeleton-line-link {
+  width: 72px;
+  height: 12px;
+}
+
+.home-skeleton-action-card {
+  flex: 1;
+  min-height: 128px;
+  border-radius: 28px;
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.home-skeleton-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+}
+
+.home-skeleton-icon-small {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+}
+
+.home-skeleton-line-label {
+  width: 68%;
+  height: 12px;
+}
+
+.home-skeleton-scan-card {
+  flex: 1;
+  min-width: 0;
+  border-radius: 28px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-skeleton-scan-media {
+  width: 100%;
+  aspect-ratio: 1.18 / 1;
+  border-radius: 22px;
+}
+
+.home-skeleton-card-body,
+.home-skeleton-tip-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-skeleton-line-card-title {
+  width: 82%;
+  height: 15px;
+}
+
+.home-skeleton-line-card-meta {
+  width: 52%;
+  height: 11px;
+}
+
+.home-skeleton-chip {
+  width: 78px;
+  height: 24px;
+}
+
+.home-skeleton-chip-small {
+  width: 86px;
+  height: 20px;
+}
+
+.home-skeleton-chip-medium {
+  width: 110px;
+  height: 24px;
+}
+
+.home-skeleton-line-card-location {
+  width: 58%;
+  height: 11px;
+}
+
+.home-skeleton-notice,
+.home-skeleton-tip-card {
+  border-radius: 28px;
+  padding: 22px 22px 20px;
+}
+
+.home-skeleton-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-skeleton-notice-top {
+  gap: 10px;
+}
+
+.home-skeleton-line-subtitle {
+  flex: 1;
+  height: 14px;
+}
+
+.home-skeleton-line-body {
+  width: 100%;
+  height: 13px;
+}
+
+.home-skeleton-line-body-short {
+  width: 72%;
+}
+
+.home-skeleton-tip-card {
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.home-skeleton-tip-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 22px;
+  flex-shrink: 0;
+}
+
+@keyframes home-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .home-hero-content {
   display: flex;
   flex-direction: column;
@@ -608,6 +851,52 @@
 @media (max-width: 768px) {
   .home-scan-shell {
     padding-top: 12px;
+  }
+
+  .home-dashboard-skeleton {
+    gap: 20px;
+  }
+
+  .home-skeleton-hero {
+    padding: 22px 18px;
+    border-radius: 26px;
+  }
+
+  .home-skeleton-pill {
+    height: 64px;
+    min-width: 0;
+  }
+
+  .home-skeleton-pill-compact {
+    flex-basis: 118px;
+  }
+
+  .home-skeleton-action-card {
+    min-width: 124px;
+    min-height: 118px;
+    padding: 18px 16px;
+    border-radius: 24px;
+  }
+
+  .home-skeleton-scan-card {
+    min-width: 174px;
+    border-radius: 24px;
+  }
+
+  .home-skeleton-notice,
+  .home-skeleton-tip-card {
+    border-radius: 24px;
+    padding: 18px;
+  }
+
+  .home-skeleton-tip-card {
+    align-items: flex-start;
+  }
+
+  .home-skeleton-tip-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
   }
 
   .home-hero-greeting {

@@ -91,23 +91,14 @@ export const useScanLogic = () => {
             const currentState = stateRef.current;
             dispatch({ type: 'START_ANALYSIS' });
 
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Analysis timed out')), 60000)
-            );
-
             const analysisTask = async () => {
-                const performStep = (stepIndex, duration) => {
-                    return new Promise(resolve => {
-                        dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: stepIndex });
-                        setTimeout(resolve, duration);
-                    });
-                };
-
-                await performStep(0, 1500);
-                const treeQuality = await analyzeLocalImageQuality(currentState.selectedImage);
-                const leafQuality = currentState.selectedLeafImage
-                    ? await analyzeLocalImageQuality(currentState.selectedLeafImage)
-                    : null;
+                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 0 });
+                const [treeQuality, leafQuality] = await Promise.all([
+                    analyzeLocalImageQuality(currentState.selectedImage),
+                    currentState.selectedLeafImage
+                        ? analyzeLocalImageQuality(currentState.selectedLeafImage)
+                        : Promise.resolve(null),
+                ]);
                 if (treeQuality.requiresRetake) {
                     const qualityError = new Error(treeQuality.retakeReason || 'LOW_IMAGE_QUALITY');
                     qualityError.code = treeQuality.retakeReason || 'LOW_IMAGE_QUALITY';
@@ -119,10 +110,23 @@ export const useScanLogic = () => {
                     throw qualityError;
                 }
 
-                const treeImageBase64 = await imageToBase64(currentState.selectedImage);
-                const leafImageBase64 = currentState.selectedLeafImage ? await imageToBase64(currentState.selectedLeafImage) : null;
+                const [
+                    treeImageBase64,
+                    leafImageBase64,
+                    treeImageThumbnail,
+                    leafImageThumbnail,
+                ] = await Promise.all([
+                    imageToBase64(currentState.selectedImage),
+                    currentState.selectedLeafImage
+                        ? imageToBase64(currentState.selectedLeafImage)
+                        : Promise.resolve(null),
+                    imageToBase64(currentState.selectedImage, 400),
+                    currentState.selectedLeafImage
+                        ? imageToBase64(currentState.selectedLeafImage, 400)
+                        : Promise.resolve(null),
+                ]);
 
-                await performStep(1, 2000);
+                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 1 });
                 const result = await analyzePlantDisease(
                     treeImageBase64,
                     currentState.selectedCategory || 'Vegetables',
@@ -132,10 +136,7 @@ export const useScanLogic = () => {
                     { tree: treeQuality, leaf: leafQuality }
                 );
 
-                await performStep(2, 1000);
-
-                const treeImageThumbnail = await imageToBase64(currentState.selectedImage, 400);
-                const leafImageThumbnail = currentState.selectedLeafImage ? await imageToBase64(currentState.selectedLeafImage, 400) : null;
+                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
                 const standardizedHealthStatus = getStandardizedStatus(result);
 
                 const savedScan = await saveScan({
@@ -167,7 +168,7 @@ export const useScanLogic = () => {
             };
 
             try {
-                return await Promise.race([analysisTask(), timeoutPromise]);
+                return await analysisTask();
             } catch (err) {
                 console.error('Analysis error:', err);
                 const qualityErrors = {
