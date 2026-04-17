@@ -220,6 +220,33 @@ export const analyzePlantDisease = async (
   }
 };
 
+export const localizeStoredAnalysisResult = async (result, language = 'en') => {
+  try {
+    return await fetchJsonWithTimeout(
+      `${API_URL}/api/results/localize`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          result,
+          language,
+        }),
+      },
+      {
+        timeoutMs: 20000,
+        timeoutMessage: 'Refreshing the result language is taking too long. Please try again.',
+        networkMessage: 'Could not refresh the result language. Please check your connection and try again.',
+        unavailableMessage: 'Result translation is temporarily unavailable. Please try again shortly.',
+      },
+    );
+  } catch (error) {
+    console.warn('Stored analysis localization failed:', error);
+    throw error;
+  }
+};
+
 /**
  * Get server health status
  * @returns {Promise<Object>} Health status

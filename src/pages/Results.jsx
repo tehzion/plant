@@ -1,4 +1,4 @@
-﻿﻿import { useNavigate, useParams } from 'react-router-dom';
+﻿import { useNavigate, useParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
