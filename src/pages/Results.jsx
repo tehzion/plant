@@ -1,4 +1,4 @@
-﻿import { useNavigate, useParams } from 'react-router-dom';
+﻿﻿import { useNavigate, useParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -14,6 +14,7 @@ import { showToast } from '../utils/toast';
 
 import { getStandardizedStatus } from '../utils/statusUtils';
 import { getNutrientNames, normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
+import { localizeStoredAnalysisResult as refreshStoredAnalysisLanguage } from '../utils/diseaseDetection.js';
 import {
   createEmptyProductRecommendations,
   fetchLiveProductRecommendations,
@@ -70,6 +71,36 @@ const Results = () => {
         setScanLoading(false);
       });
   }, [id, user?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshLanguage = async () => {
+      if (!scan || scanLoading) return;
+
+      const sourceLanguage = scan.analysisLanguage || scan.language || null;
+      if (sourceLanguage === language) return;
+
+      try {
+        const localizedScan = await refreshStoredAnalysisLanguage(scan, language);
+        if (!cancelled && localizedScan?.analysisLanguage === language) {
+          setScan((current) => {
+            if (!current || current.id !== localizedScan.id) return current;
+            if (current === localizedScan) return current;
+            return localizedScan;
+          });
+        }
+      } catch {
+        // Keep showing the stored result language if refresh is unavailable.
+      }
+    };
+
+    refreshLanguage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scan, scanLoading, language]);
 
   const normalizedNutrition = useMemo(
     () => normalizeNutritionalIssues(scan?.nutritionalIssues),
@@ -153,6 +184,14 @@ const Results = () => {
   const lat = Number(scan?.location?.lat);
   const lng = Number(scan?.location?.lng);
   const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const locationNameRaw = scan?.locationName;
+  const locationNameValue = typeof locationNameRaw === 'string' ? locationNameRaw : (locationNameRaw ? String(locationNameRaw) : '');
+  const hasLocationName = Boolean(
+    locationNameValue
+    && locationNameValue !== 'N/A'
+    && locationNameValue !== 'common.locationNA'
+    && locationNameValue !== t('common.locationNA')
+  );
 
   const standardizedStatus = result.healthStatus;
   const healthy = standardizedStatus === 'healthy';
@@ -176,6 +215,7 @@ const Results = () => {
             plantType: scanForExport.plantType,
             disease: scanForExport.disease,
             scanResult: result,
+            language,
           });
         } catch (productError) {
           console.warn('Unable to preload live product recommendations for PDF export:', productError);
@@ -424,6 +464,7 @@ ${t('pdf.generatedBy')}
 
         {/* Scan Metadata Card - Modern Design */}
         <div className="scan-metadata-card app-surface app-surface--soft">
+          <div className="results-section-kicker">{t('results.plantDetails') || 'Scan details'}</div>
           <div className="metadata-grid">
             {/* Category */}
             <div className="metadata-item">
@@ -452,7 +493,7 @@ ${t('pdf.generatedBy')}
                   {scan.farmScale === 'personal' && t('home.personalScale')}
                   {!scan.farmScale && t('results.notSpecified')}
                   {scan.scaleQuantity && Number(scan.scaleQuantity) > 0 && (
-                    <div style={{ fontWeight: 'normal', color: '#6B7280', fontSize: '0.9em', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div className="metadata-scale-detail">
                       <span>
                         ({scan.scaleQuantity}{' '}
                         {scan.farmScale === 'acre' ? t('home.acres') :
@@ -461,7 +502,7 @@ ${t('pdf.generatedBy')}
                       </span>
                       {/* Show Estimated Trees for Acre Scale */}
                       {scan.farmScale === 'acre' && (
-                        <span style={{ color: '#059669', fontWeight: '600', fontSize: '0.9em' }}>
+                        <span className="metadata-scale-estimate">
                           ~ {(() => {
                             const densityMap = {
                               'Durian': 35, 'Coconut': 60, 'Banana': 500, 'Cocoa': 450,
@@ -482,17 +523,17 @@ ${t('pdf.generatedBy')}
             </div>
 
             {/* Location */}
-            {scan.locationName && scan.locationName !== 'N/A' && scan.locationName !== 'common.locationNA' && scan.locationName !== t('common.locationNA') && (
-              <div className="metadata-item">
+            {hasLocationName && (
+              <div className="metadata-item metadata-item--location">
                 <div className="metadata-icon location-icon">
                   <MapPin size={20} />
                 </div>
                 <div className="metadata-content">
                   <span className="metadata-label">{t('common.location')}</span>
                   <span className="metadata-value">
-                    {scan.locationName.startsWith('common.') 
-                      ? t(scan.locationName) 
-                      : scan.locationName}
+                    {locationNameValue.startsWith('common.')
+                      ? t(locationNameValue)
+                      : locationNameValue}
                   </span>
                   {hasValidCoords && (
                     <span className="metadata-coords">
@@ -557,5 +598,3 @@ ${t('pdf.generatedBy')}
 };
 
 export default Results;
-
-

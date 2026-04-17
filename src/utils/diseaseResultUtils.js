@@ -97,7 +97,11 @@ export const normalizeDiseaseResult = (result, t) => {
         });
     }
 
-    if (!healthy && (result.pathogenType || result.nutritionalIssues?.hasDeficiency) && result.pathogenType !== 'unknown') {
+    const pathogenTypeRaw = typeof result.pathogenType === 'string'
+        ? result.pathogenType
+        : (result.pathogenType ? String(result.pathogenType) : '');
+
+    if (!healthy && (pathogenTypeRaw || result.nutritionalIssues?.hasDeficiency) && pathogenTypeRaw !== 'unknown') {
         detailItems.push({
             key: 'pathogen',
             icon: 'bug',
@@ -107,7 +111,7 @@ export const normalizeDiseaseResult = (result, t) => {
                 : t('results.pathogenType'),
             value: result.nutritionalIssues?.hasDeficiency
                 ? t('results.nutrientDeficiencyType')
-                : result.pathogenType.charAt(0).toUpperCase() + result.pathogenType.slice(1).toLowerCase(),
+                : pathogenTypeRaw.charAt(0).toUpperCase() + pathogenTypeRaw.slice(1).toLowerCase(),
         });
     }
 
@@ -144,10 +148,8 @@ export const normalizeDiseaseResult = (result, t) => {
         showDemoModeWarning: typeof result.additionalNotes === 'string'
             && DEMO_TERMS.some((term) => result.additionalNotes.toLowerCase().includes(term)),
         detailItems,
-        translatedHealthStatus: result.healthStatus
-            ? t(`results.${(result.healthStatus || 'unknown').toLowerCase().replace(/\s+/g, '')}`)
-            : '',
-        translatedSeverity: result.severity
+        translatedHealthStatus: t(`results.${healthy ? 'healthy' : 'unhealthy'}`),
+        translatedSeverity: !healthy && result.severity
             ? t(`results.${(result.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`)
             : '',
     };
