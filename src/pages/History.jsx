@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getGroupedScans, deleteScan, clearAllScans } from '../utils/localStorage';
 import ScanHistoryCard from '../components/ScanHistoryCard';
@@ -10,6 +10,47 @@ import { useNotifications } from '../context/NotificationProvider.jsx';
 import { ClipboardList, ScanLine, Trash2, History as HistoryIcon } from 'lucide-react';
 import './History.css';
 
+const HistorySkeleton = () => {
+    const skeletonCards = Array.from({ length: 3 }, (_, index) => (
+        <div key={index} className="scan-history-card history-skeleton-card" aria-hidden="true">
+            <div className="card-content">
+                <div className="scan-thumbnail-shell">
+                    <div className="scan-thumbnail history-skeleton-block history-skeleton-thumb" />
+                </div>
+                <div className="scan-info">
+                    <div className="history-skeleton-line history-skeleton-line--title" />
+                    <div className="history-skeleton-line history-skeleton-line--meta" />
+                    <div className="history-skeleton-line history-skeleton-line--metaShort" />
+                    <div className="scan-badge-row">
+                        <div className="history-skeleton-pill" />
+                        <div className="history-skeleton-pill history-skeleton-pill--small" />
+                    </div>
+                </div>
+                <div className="history-skeleton-circle" />
+            </div>
+        </div>
+    ));
+
+    return (
+        <div className="history-content">
+            <section className="history-group app-surface app-surface--soft history-group--skeleton" aria-hidden="true">
+                <div className="group-title-row">
+                    <div className="history-skeleton-line history-skeleton-line--groupTitle" />
+                    <div className="history-skeleton-pill history-skeleton-pill--count" />
+                </div>
+                {skeletonCards}
+            </section>
+            <section className="history-group app-surface app-surface--soft history-group--skeleton" aria-hidden="true">
+                <div className="group-title-row">
+                    <div className="history-skeleton-line history-skeleton-line--groupTitle" />
+                    <div className="history-skeleton-pill history-skeleton-pill--count" />
+                </div>
+                {skeletonCards}
+            </section>
+        </div>
+    );
+};
+
 const History = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
@@ -18,14 +59,24 @@ const History = () => {
     const { notifySuccess } = useNotifications();
     const [groupedScans, setGroupedScans] = useState({ today: [], yesterday: [], thisWeek: [], lastWeek: [], older: [] });
     const [pendingAction, setPendingAction] = useState(null);
+    const [historyLoading, setHistoryLoading] = useState(true);
+    const [historyLoadedOnce, setHistoryLoadedOnce] = useState(false);
 
-    const refreshHistory = async () => {
-        const grouped = await getGroupedScans(user?.id ?? null);
-        setGroupedScans(grouped);
+    const refreshHistory = async ({ showSkeleton = false } = {}) => {
+        if (showSkeleton) {
+            setHistoryLoading(true);
+        }
+        try {
+            const grouped = await getGroupedScans(user?.id ?? null);
+            setGroupedScans(grouped);
+        } finally {
+            setHistoryLoading(false);
+            setHistoryLoadedOnce(true);
+        }
     };
     // Initial load + refresh when user or scan state changes
     useEffect(() => {
-        refreshHistory();
+        refreshHistory({ showSkeleton: true });
     }, [user?.id]);
 
     // Auto-refresh when background scan completes
@@ -60,7 +111,8 @@ const History = () => {
         refreshHistory();
     };
 
-    const hasScans = Object.values(groupedScans).some(group => group.length > 0);
+    const hasScans = useMemo(() => Object.values(groupedScans).some(group => group.length > 0), [groupedScans]);
+    const showSkeleton = historyLoading && !historyLoadedOnce;
 
     return (
         <div className="page history-page">
@@ -91,7 +143,9 @@ const History = () => {
                 </div>
 
                 {/* Empty State */}
-                {!hasScans ? (
+                {showSkeleton ? (
+                    <HistorySkeleton />
+                ) : !hasScans ? (
                     <div className="empty-state app-surface app-empty-state">
                         <div className="empty-icon-wrapper">
                             <ClipboardList size={64} className="empty-icon" />

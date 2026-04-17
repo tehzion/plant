@@ -154,6 +154,90 @@
     margin-bottom: 0;
 }
 
+.history-group--skeleton {
+    overflow: hidden;
+}
+
+.history-skeleton-card {
+    pointer-events: none;
+}
+
+.history-skeleton-block,
+.history-skeleton-line,
+.history-skeleton-pill,
+.history-skeleton-circle {
+    background: linear-gradient(90deg, rgba(226, 232, 240, 0.75) 0%, rgba(241, 245, 249, 0.95) 50%, rgba(226, 232, 240, 0.75) 100%);
+    background-size: 200% 100%;
+    animation: historySkeletonShimmer 1.4s ease-in-out infinite;
+    border-radius: 12px;
+}
+
+.history-skeleton-thumb {
+    width: 88px;
+    height: 88px;
+    border-radius: 20px;
+    box-shadow:
+        inset 0 0 0 1px rgba(148, 163, 184, 0.12),
+        0 10px 20px rgba(15, 23, 42, 0.03);
+}
+
+.history-skeleton-line {
+    width: 100%;
+    height: 12px;
+    margin-bottom: 10px;
+}
+
+.history-skeleton-line--title {
+    height: 16px;
+    width: 72%;
+    margin-bottom: 12px;
+}
+
+.history-skeleton-line--meta {
+    width: 62%;
+}
+
+.history-skeleton-line--metaShort {
+    width: 48%;
+}
+
+.history-skeleton-line--groupTitle {
+    width: 120px;
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.history-skeleton-pill {
+    height: 18px;
+    width: 86px;
+    border-radius: 999px;
+}
+
+.history-skeleton-pill--small {
+    width: 64px;
+}
+
+.history-skeleton-pill--count {
+    width: 34px;
+}
+
+.history-skeleton-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+@keyframes historySkeletonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 @media (max-width: 768px) {
     .history-shell {
         padding-top: 12px;
@@ -226,5 +310,15 @@
 
     .group-title {
         font-size: 0.9rem;
+    }
+
+    .history-skeleton-thumb {
+        width: 76px;
+        height: 76px;
+    }
+
+    .history-skeleton-circle {
+        width: 36px;
+        height: 36px;
     }
 }

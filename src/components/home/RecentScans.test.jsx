@@ -43,4 +43,17 @@ describe('RecentScans', () => {
         fireEvent.click(screen.getByText('Leaf Blight'));
         expect(onScanClick).toHaveBeenCalledWith('scan-1');
     });
+
+    it('shows a skeleton state when scans are still loading', () => {
+        render(
+            <RecentScans
+                scans={undefined}
+                onSeeAll={() => {}}
+                onScanClick={() => {}}
+            />,
+        );
+
+        expect(document.querySelectorAll('.home-recent-skeleton-card').length).toBeGreaterThan(0);
+        expect(screen.queryByText('No recent scans')).not.toBeInTheDocument();
+    });
 });

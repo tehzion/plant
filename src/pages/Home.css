@@ -270,6 +270,24 @@
   flex-shrink: 0;
 }
 
+.home-recent-skeleton-card {
+  pointer-events: none;
+}
+
+.home-recent-skeleton-media {
+  height: 125px;
+}
+
+.home-recent-skeleton-body {
+  gap: 10px;
+}
+
+.home-recent-skeleton-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 @keyframes home-skeleton-shimmer {
   0% {
     background-position: 200% 0;

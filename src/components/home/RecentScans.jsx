@@ -4,7 +4,13 @@ import { useLanguage } from '../../i18n/i18n.jsx';
 import { getStandardizedStatus } from '../../utils/statusUtils';
 
 const resolveCategoryLabel = (scan, t) => {
-    const plantType = scan.plantType || '';
+    const rawPlantType = scan?.plantType;
+    const plantType = typeof rawPlantType === 'string'
+        ? rawPlantType
+        : (rawPlantType ? String(rawPlantType) : '');
+
+    if (!plantType) return '';
+
     const key = `home.category${plantType.charAt(0).toUpperCase()}${plantType.slice(1).toLowerCase()}`;
     const translated = t(key);
     const finalName = translated.includes('home.category') ? plantType : translated;
@@ -12,12 +18,17 @@ const resolveCategoryLabel = (scan, t) => {
 };
 
 const resolveLocationLabel = (scan, t) => {
-    if (!scan.locationName) return '';
-    if (scan.locationName.startsWith('common.')) return t(scan.locationName);
+    const rawLocationName = scan?.locationName;
+    const locationName = typeof rawLocationName === 'string'
+        ? rawLocationName
+        : (rawLocationName ? String(rawLocationName) : '');
 
-    const translationKey = `common.${scan.locationName}`;
+    if (!locationName) return '';
+    if (locationName.startsWith('common.')) return t(locationName);
+
+    const translationKey = `common.${locationName}`;
     const translated = t(translationKey);
-    return translated && translated !== translationKey ? translated : scan.locationName;
+    return translated && translated !== translationKey ? translated : locationName;
 };
 
 const formatScanDate = (timestamp, locale) => {
@@ -33,6 +44,9 @@ const formatScanDate = (timestamp, locale) => {
 const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
     const { t, label: labelFn } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
+    const scanList = Array.isArray(scans) ? scans : null;
+    const isLoading = scanList === null;
+    const hasScans = Boolean(scanList && scanList.length > 0);
 
     return (
         <div className="home-recent-scans slide-up">
@@ -45,8 +59,23 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                 </button>
             </div>
             <div className="superapp-shelf-container">
-                {scans.length > 0 ? (
-                    scans.map((scan) => {
+                {isLoading ? (
+                    Array.from({ length: 3 }, (_, index) => (
+                        <div key={index} className="superapp-activity-card home-recent-skeleton-card" aria-hidden="true">
+                            <div className="superapp-activity-img-wrapper home-skeleton-scan-media home-recent-skeleton-media" />
+                            <div className="superapp-activity-info home-recent-skeleton-body">
+                                <div className="home-skeleton-line home-skeleton-line-card-title" />
+                                <div className="home-skeleton-line home-skeleton-line-card-meta" />
+                                <div className="home-recent-skeleton-chip-row">
+                                    <div className="home-skeleton-chip" />
+                                    <div className="home-skeleton-chip home-skeleton-chip-small" />
+                                </div>
+                                <div className="home-skeleton-line home-skeleton-line-card-location" />
+                            </div>
+                        </div>
+                    ))
+                ) : hasScans ? (
+                    scanList.map((scan) => {
                         const standardizedStatus = getStandardizedStatus(scan);
                         const healthy = standardizedStatus === 'healthy';
                         const imageSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url || '';
