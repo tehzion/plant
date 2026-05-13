@@ -204,6 +204,44 @@ describe('aiService helpers', () => {
         expect(examples).toContain('Nutrient deficiency example');
     });
 
+    it('anchors diagnosis-stage examples to named likely conditions and retake cases', () => {
+        const examples = aiService.buildDiagnosisStageFewShotExamples('en');
+
+        expect(examples).toContain('Papaya white cottony fruit patches');
+        expect(examples).toContain('Suspected Papaya Mealybug / Scale Infestation');
+        expect(examples).toContain('Coconut leaf lesion likely fungal blight');
+        expect(examples).toContain('Likely Coconut Leaf Blight');
+        expect(examples).toContain('Weak or blurred image retake');
+        expect(examples).toContain('"requiresRetake": true');
+    });
+
+    it('diagnosis prompt requires named likely diagnoses instead of generic category labels', () => {
+        const prompt = aiService.buildDiagnosisStagePrompt({
+            plantNetResult: null,
+            speciesAssessment: null,
+            category: 'Papaya',
+            language: 'en',
+            userLocation: 'Malaysia',
+            malaysiaCropInfo: {
+                cropType: 'papaya',
+                info: {
+                    commonDiseases: [
+                        'Papaya Mealybug - white cottony wax on fruit, stems, and leaf undersides',
+                    ],
+                    nutrientIssues: [],
+                },
+            },
+            leafImage: null,
+            imageQuality: null,
+        });
+
+        expect(prompt).toContain('primaryDiagnosis MUST be a named likely/suspected condition');
+        expect(prompt).toContain('Avoid generic labels such as "Potential Pest Infestation"');
+        expect(prompt).toContain('Visual evidence checklist');
+        expect(prompt).toContain('needsMoreEvidence may be true');
+        expect(prompt).toContain('Suspected Papaya Mealybug / Scale Infestation');
+    });
+
     it('does not lock weak PlantNet identification as confirmed species context', () => {
         const assessment = aiService.assessSpeciesIdentification({
             scientificName: 'Mangifera indica',
@@ -237,6 +275,57 @@ describe('aiService helpers', () => {
 
         expect(filtered.status).not.toBe('confirmed');
         expect(filtered.needsMoreEvidence).toBe(true);
+    });
+
+    it('keeps suspected pest results actionable without claiming confirmed treatment', () => {
+        const fallback = aiService.createFallbackTreatmentPlan({
+            disease: 'Potential Pest Infestation',
+            healthStatus: 'unhealthy',
+            pathogenType: 'pest',
+            symptoms: ['white patches on fruit'],
+            requiresRetake: true,
+        }, 'en');
+
+        expect(fallback.immediateActions.join(' ')).toContain('Inspect fruit clusters');
+        expect(fallback.treatments.join(' ')).toContain('If pests are visible');
+        expect(fallback.treatments.join(' ')).toContain('after field confirmation');
+        expect(fallback.treatments.join(' ')).not.toContain('No treatment recommended');
+        expect(fallback.productSearchTags).toContain('pest-control');
+    });
+
+    it('refines papaya white-patch pest results into a named suspected diagnosis', () => {
+        const filtered = aiService.applyDiseaseSanityFilters({
+            plantType: 'Carica papaya (Papaya)',
+            disease: 'Potential Pest Infestation',
+            healthStatus: 'unhealthy',
+            severity: 'moderate',
+            pathogenType: 'Pest',
+            diseaseCategory: 'pest',
+            confidence: 78,
+            status: 'uncertain',
+            needsMoreEvidence: true,
+            additionalNotes: 'The presence of white patches suggests a pest issue, but further evidence is needed for a definitive diagnosis.',
+            symptoms: ['white patches on papaya fruit'],
+            diagnosticEvidence: {
+                likelyCauseCategory: 'pest',
+                evidenceFor: ['white cottony patches on fruit'],
+            },
+        }, 'en', {
+            cropType: 'papaya',
+            info: {
+                commonDiseases: [
+                    'Papaya Mealybug - white cottony wax on fruit, stems, and leaf undersides',
+                    'Scale Insect Infestation - white or brown waxy patches on fruit and stems',
+                ],
+            },
+        });
+
+        expect(filtered.disease).toBe('Suspected Papaya Mealybug / Scale Infestation');
+        expect(filtered.status).toBe('likely');
+        expect(filtered.needsMoreEvidence).toBe(false);
+        expect(filtered.additionalNotes).toContain('mealybug or scale-type pests');
+        expect(filtered.additionalNotes).not.toContain('further evidence is needed');
+        expect(filtered.productSearchTags).toContain('mealybug-control');
     });
 
     it('normalizes predictive-risk output so generic product names do not prefill spray actions', () => {
@@ -279,6 +368,75 @@ describe('aiService helpers', () => {
             supplementTagIds: [77],
             supplementCategoryIds: [88],
             reasoning: 'Matched store catalog ids only.',
+        });
+    });
+
+    it('keeps cautious product recommendation cache keys separate from confirmed diagnoses', () => {
+        const likelyKey = aiService.buildProductRecommendationCacheKey({
+            plantType: 'Papaya',
+            disease: 'Suspected Papaya Mealybug / Scale Infestation',
+            healthStatus: 'unhealthy',
+            pathogenType: 'pest',
+            status: 'likely',
+            confidence: 78,
+            diagnosisConfidence: 82,
+            needsMoreEvidence: true,
+            requiresRetake: false,
+            diseaseCategory: 'pest',
+            nutritionalStatus: 'none',
+            diagnosticEvidence: { likelyCauseCategory: 'pest' },
+            productSearchTags: ['pest-control'],
+        }, 'en');
+
+        const confirmedKey = aiService.buildProductRecommendationCacheKey({
+            plantType: 'Papaya',
+            disease: 'Suspected Papaya Mealybug / Scale Infestation',
+            healthStatus: 'unhealthy',
+            pathogenType: 'pest',
+            status: 'confirmed',
+            confidence: 94,
+            diagnosisConfidence: 92,
+            needsMoreEvidence: false,
+            requiresRetake: false,
+            diseaseCategory: 'pest',
+            nutritionalStatus: 'none',
+            diagnosticEvidence: { likelyCauseCategory: 'pest' },
+            productSearchTags: ['pest-control'],
+        }, 'en');
+
+        expect(likelyKey).not.toBe(confirmedKey);
+        expect(likelyKey).toContain('_likely_');
+        expect(likelyKey).toContain('_needs-evidence_');
+        expect(confirmedKey).toContain('_confirmed_');
+        expect(confirmedKey).toContain('_evidence-ok_');
+    });
+
+    it('returns stored analysis unchanged when already in the target language', async () => {
+        const result = await aiService.localizeStoredAnalysisResult({
+            disease: 'Leaf Spot',
+            analysisLanguage: 'ms',
+        }, 'ms');
+
+        expect(result).toEqual({
+            disease: 'Leaf Spot',
+            analysisLanguage: 'ms',
+        });
+    });
+
+    it('does not overwrite analysisLanguage when localization is unavailable', async () => {
+        const previousKey = process.env.OPENAI_API_KEY;
+        delete process.env.OPENAI_API_KEY;
+
+        const result = await aiService.localizeStoredAnalysisResult({
+            disease: 'Leaf Spot',
+            analysisLanguage: 'en',
+        }, 'zh');
+
+        process.env.OPENAI_API_KEY = previousKey;
+
+        expect(result).toEqual({
+            disease: 'Leaf Spot',
+            analysisLanguage: 'en',
         });
     });
 });

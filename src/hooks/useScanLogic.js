@@ -143,6 +143,7 @@ export const useScanLogic = () => {
                     image: treeImageThumbnail,
                     leafImage: leafImageThumbnail,
                     ...result,
+                    analysisLanguage: language,
                     healthStatus: standardizedHealthStatus,
                     disease: result.disease,
                     plantType: result.plantType || currentState.selectedCategory,

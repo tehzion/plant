@@ -6,11 +6,16 @@ const fetchMock = vi.fn();
 
 vi.mock('../i18n/i18n.jsx', () => ({
     useLanguage: () => ({
+        language: 'en',
         t: (key) => ({
             'results.loadingProducts': 'Loading products',
             'results.productsError': 'Could not load products',
+            'results.productsUnavailableTitle': 'Live product catalog is temporarily unavailable',
+            'results.productsUnavailableHint': 'Catalog unavailable hint',
+            'results.confirmBeforeUseTitle': 'Confirm before use',
+            'results.confirmBeforeUseDesc': 'Confirm field signs before applying treatment.',
             'results.checkoutUnavailable': 'Checkout unavailable',
-            'results.whyTheseProducts': 'Why these products?',
+            'results.whyTheseProducts': 'Selection note',
             'results.noProductsFound': 'No products found',
             'results.noProductsDesc': 'No products description',
             'results.diseaseControl': 'Disease Control',
@@ -165,5 +170,57 @@ describe('ProductRecommendations', () => {
 
         expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
         expect(await screen.findByText(/Showing recent saved product matches/i)).toBeInTheDocument();
+    });
+
+    it('does not expose backend configuration messages in the product error state', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: false,
+            status: 503,
+            statusText: 'Service Unavailable',
+            json: async () => ({
+                error: 'PRODUCT_CATALOG_UNAVAILABLE',
+                message: 'Live product catalog is not configured right now.',
+            }),
+        });
+
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Potential Pest Infestation"
+                farmScale="tree"
+                scanResult={{
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'pest',
+                    symptoms: ['White patches'],
+                    treatments: ['Inspect fruit clusters'],
+                    productSearchTags: ['pest-control'],
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('Live product catalog is temporarily unavailable')).toBeInTheDocument();
+        expect(screen.queryByText('Live product catalog is not configured right now.')).not.toBeInTheDocument();
+    });
+
+    it('shows a confirmation notice for suspected disease-control matches', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Suspected Papaya Mealybug / Scale Infestation"
+                farmScale="tree"
+                scanResult={{
+                    status: 'likely',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'pest',
+                    symptoms: ['White cottony patches'],
+                    treatments: ['Use registered pest product after field confirmation'],
+                    productSearchTags: ['pest-control'],
+                }}
+            />,
+        );
+
+        await screen.findByText('Copper Guard');
+        expect(screen.getByText('Confirm before use')).toBeInTheDocument();
+        expect(screen.getByText('Confirm field signs before applying treatment.')).toBeInTheDocument();
     });
 });

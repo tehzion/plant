@@ -11,7 +11,10 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-// Cache GPT-5 mini product recommendations for 1 hour
+const OPENAI_PRIMARY_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
+const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
+
+// Cache product recommendations for 1 hour
 const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
 /**
@@ -431,6 +434,110 @@ const buildRetakeTreatmentItems = (language) => ([
     }),
 ]);
 
+const buildSuspectedIssueText = (result = {}) => [
+    result.disease,
+    result.plantType,
+    result.pathogenType,
+    result.diseaseCategory,
+    result.additionalNotes,
+    result.abstainReason,
+    result.diagnosticEvidence?.likelyCauseCategory,
+    ...(Array.isArray(result.diagnosticEvidence?.evidenceFor) ? result.diagnosticEvidence.evidenceFor : normalizeArray(result.diagnosticEvidence?.evidenceFor)),
+    ...(Array.isArray(result.symptoms) ? result.symptoms : normalizeArray(result.symptoms)),
+    ...(Array.isArray(result.productSearchTags) ? result.productSearchTags : normalizeArray(result.productSearchTags)),
+]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+const isSuspectedPestIssue = (result = {}) => {
+    const issueText = buildSuspectedIssueText(result);
+    return /pest|insect|mite|mealybug|scale|whitefly|aphid|thrip|bug|kutu|serangga|perosak|hama|ulat|\u5bb3\u866b|\u6606\u866b|\u7c89\u86a7|\u4ecb\u58f3|\u767d\u7c89\u8671|\u86dc\u866b/.test(issueText);
+};
+
+const isPapayaCrop = (result = {}) => /papaya|carica|betik|\u6728\u74dc|\u756a\u6728\u74dc/.test(buildSuspectedIssueText(result));
+const hasWhiteWaxyPestPattern = (result = {}) => /white|cotton|cottony|waxy|patch|powdery|residue|putih|berlilin|tompok|\u767d|\u7ef5|\u8721|\u6591|\u7c89/.test(buildSuspectedIssueText(result));
+const isGenericPestDiagnosis = (result = {}) => /potential pest|suspected pest|pest infestation|pest issue|serangan perosak|isu perosak|\u5bb3\u866b/.test(buildSuspectedIssueText(result));
+
+const buildPapayaPestDiagnosisLabel = (language) => translateText(language, {
+    en: 'Suspected Papaya Mealybug / Scale Infestation',
+    ms: 'Disyaki Serangan Kutu Putih / Serangga Sisik Betik',
+    zh: '\u7591\u4f3c\u6728\u74dc\u7c89\u86a7 / \u4ecb\u58f3\u866b\u4fb5\u5bb3',
+});
+
+const buildPapayaPestKeyIdea = (language) => translateText(language, {
+    en: 'White cottony or waxy patches on papaya fruit are most consistent with mealybug or scale-type pests. Confirm by checking the fruit clusters, stems, and leaf undersides for live insects or sticky residue before spraying.',
+    ms: 'Tompok putih seperti kapas atau berlilin pada buah betik paling konsisten dengan kutu putih atau serangga sisik. Sahkan dengan memeriksa gugusan buah, batang dan bawah daun untuk serangga hidup atau sisa melekit sebelum menyembur.',
+    zh: '\u6728\u74dc\u679c\u5b9e\u4e0a\u7684\u767d\u8272\u7ef5\u72b6\u6216\u8721\u72b6\u6591\u5757\uff0c\u6700\u7b26\u5408\u7c89\u86a7\u6216\u4ecb\u58f3\u866b\u7c7b\u5bb3\u866b\u3002\u55b7\u65bd\u524d\uff0c\u8bf7\u68c0\u67e5\u679c\u4e32\u3001\u830e\u90e8\u548c\u53f6\u80cc\u662f\u5426\u6709\u6d3b\u866b\u6216\u9ecf\u6027\u6b8b\u7559\u7269\u3002',
+});
+
+const buildSuspectedPestActionItems = (language) => ([
+    translateText(language, {
+        en: 'Inspect fruit clusters, stems, and leaf undersides for live insects, waxy residue, or eggs',
+        ms: 'Periksa gugusan buah, batang dan bawah daun untuk serangga hidup, sisa berlilin atau telur',
+        zh: '\u68c0\u67e5\u679c\u4e32\u3001\u830e\u90e8\u548c\u53f6\u80cc\u662f\u5426\u6709\u6d3b\u866b\u3001\u8721\u72b6\u6b8b\u7559\u6216\u866b\u5375',
+    }),
+    translateText(language, {
+        en: 'Mark affected plants and avoid moving infested fruit or plant material to clean plots',
+        ms: 'Tanda tanaman terjejas dan elakkan memindahkan buah atau bahan tanaman berperosak ke plot bersih',
+        zh: '\u6807\u8bb0\u53d7\u5f71\u54cd\u690d\u682a\uff0c\u907f\u514d\u5c06\u53ef\u80fd\u5e26\u866b\u7684\u679c\u5b9e\u6216\u690d\u7269\u6750\u6599\u79fb\u5230\u6e05\u6d01\u5730\u5757',
+    }),
+    translateText(language, {
+        en: 'Take one close-up photo of the white patches or insects before applying any chemical treatment',
+        ms: 'Ambil satu foto dekat pada tompok putih atau serangga sebelum menggunakan sebarang rawatan kimia',
+        zh: '\u5728\u4f7f\u7528\u4efb\u4f55\u5316\u5b66\u5904\u7406\u524d\uff0c\u8bf7\u5148\u62cd\u4e00\u5f20\u767d\u8272\u6591\u5757\u6216\u866b\u4f53\u7684\u8fd1\u7167',
+    }),
+]);
+
+const buildSuspectedPestTreatmentItems = (language) => ([
+    translateText(language, {
+        en: 'If pests are visible, remove heavily infested material where practical and dispose of it away from the farm block',
+        ms: 'Jika perosak jelas kelihatan, buang bahagian yang teruk diserang jika sesuai dan lupuskan jauh dari blok tanaman',
+        zh: '\u5982\u679c\u53ef\u89c1\u5bb3\u866b\uff0c\u5728\u53ef\u884c\u65f6\u79fb\u9664\u4e25\u91cd\u53d7\u5bb3\u90e8\u4f4d\uff0c\u5e76\u5728\u79cd\u690d\u533a\u5916\u5904\u7406',
+    }),
+    translateText(language, {
+        en: 'For small patches, gently wash or wipe affected surfaces before considering sprays',
+        ms: 'Untuk tompok kecil, basuh atau lap permukaan terjejas dengan lembut sebelum mempertimbangkan semburan',
+        zh: '\u5c0f\u8303\u56f4\u767d\u6591\u53ef\u5148\u8f7b\u8f7b\u51b2\u6d17\u6216\u64e6\u62ed\u53d7\u5f71\u54cd\u8868\u9762\uff0c\u518d\u8003\u8651\u662f\u5426\u9700\u8981\u55b7\u65bd',
+    }),
+    translateText(language, {
+        en: 'Use only crop-safe, registered pest products after field confirmation and follow the physical label rate',
+        ms: 'Gunakan hanya produk perosak berdaftar yang selamat untuk tanaman selepas pengesahan lapangan dan ikut kadar pada label fizikal',
+        zh: '\u5b9e\u5730\u786e\u8ba4\u540e\uff0c\u53ea\u4f7f\u7528\u9002\u7528\u4e8e\u8be5\u4f5c\u7269\u7684\u767b\u8bb0\u9632\u866b\u4ea7\u54c1\uff0c\u5e76\u4e25\u683c\u6309\u5b9e\u7269\u6807\u7b7e\u7528\u91cf',
+    }),
+]);
+
+const buildSuspectedPestPrevention = (language) => ([
+    translateText(language, {
+        en: 'Check nearby plants every 2-3 days for the same pest pattern',
+        ms: 'Periksa tanaman berhampiran setiap 2-3 hari untuk corak perosak yang sama',
+        zh: '\u6bcf 2-3 \u5929\u68c0\u67e5\u9644\u8fd1\u690d\u682a\u662f\u5426\u51fa\u73b0\u76f8\u540c\u5bb3\u866b\u8ff9\u8c61',
+    }),
+    translateText(language, {
+        en: 'Improve canopy airflow and remove fallen or infested debris from the block',
+        ms: 'Tingkatkan aliran udara kanopi dan bersihkan sisa gugur atau bahan berperosak dari blok',
+        zh: '\u6539\u5584\u6811\u51a0\u901a\u98ce\uff0c\u5e76\u6e05\u9664\u5730\u5757\u5185\u7684\u843d\u679c\u6216\u53d7\u5bb3\u6b8b\u4f53',
+    }),
+]);
+
+export const buildCautiousFallbackTreatmentSections = (result = {}, language = 'en') => {
+    if (isSuspectedPestIssue(result)) {
+        return {
+            immediateActions: buildSuspectedPestActionItems(language),
+            treatments: buildSuspectedPestTreatmentItems(language),
+            prevention: buildSuspectedPestPrevention(language),
+            productSearchTags: ['pest-control', 'insecticide', 'horticultural-oil'],
+        };
+    }
+
+    return {
+        immediateActions: buildRetakeActionItems(language),
+        treatments: buildRetakeTreatmentItems(language),
+        prevention: buildRetakePrevention(language),
+        productSearchTags: [],
+    };
+};
+
 export function assessSpeciesIdentification(plantNetResult, category = '') {
     if (!plantNetResult) {
         return {
@@ -801,7 +908,7 @@ export function buildAnalyzeFewShotExamples(language = 'en') {
         .join('\n\n');
 }
 
-const buildDiagnosisStageFewShotExamples = (language = 'en') => {
+export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
     const examples = [
         {
             label: 'Healthy leaf vs mild stress',
@@ -997,6 +1104,162 @@ const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                         evidenceAgainst: [translateText(language, { en: 'No round halo lesions are seen', ms: 'Tiada lesi bulat berhalo kelihatan', zh: '未见圆形带晕圈病斑' })],
                         rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
                         rejectedReason: translateText(language, { en: 'The pattern is diffuse nutrient stress instead of discrete lesions', ms: 'Corak ini ialah tekanan nutrien yang merebak, bukan lesi berasingan', zh: '该模式更像弥散性缺素，而不是离散病斑' }),
+                    },
+                },
+            },
+        },
+        {
+            label: 'Papaya white cottony fruit patches',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 86,
+                    leafDetailSufficient: true,
+                    requiresRetake: false,
+                    retakeReason: '',
+                    qualityFlags: [],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Papaya (Carica papaya)', ms: 'Betik (Carica papaya)', zh: '木瓜 (Carica papaya)' }),
+                    primaryDiagnosis: translateText(language, {
+                        en: 'Suspected Papaya Mealybug / Scale Infestation',
+                        ms: 'Disyaki Serangan Kutu Putih / Serangga Sisik Betik',
+                        zh: '疑似木瓜粉蚧 / 介壳虫侵害',
+                    }),
+                    healthStatus: 'unhealthy',
+                    severity: 'moderate',
+                    diagnosisConfidence: 78,
+                    diseaseCategory: 'pest',
+                    pathogenType: 'Pest',
+                    symptoms: [
+                        translateText(language, { en: 'White cottony or waxy patches on fruit', ms: 'Tompok putih seperti kapas atau berlilin pada buah', zh: '果实上有白色绵状或蜡状斑块' }),
+                        translateText(language, { en: 'Residue concentrated around fruit clusters', ms: 'Sisa tertumpu pada gugusan buah', zh: '残留物集中在果串附近' }),
+                    ],
+                    additionalNotes: translateText(language, {
+                        en: 'The white cottony patches on papaya fruit fit mealybug or scale-type pests. Confirm by checking fruit clusters, stems, and leaf undersides for live insects or sticky residue before spraying.',
+                        ms: 'Tompok putih seperti kapas pada buah betik sesuai dengan kutu putih atau serangga sisik. Sahkan dengan memeriksa gugusan buah, batang dan bawah daun untuk serangga hidup atau sisa melekit sebelum menyembur.',
+                        zh: '木瓜果实上的白色绵状斑块符合粉蚧或介壳虫类害虫。喷施前请检查果串、茎部和叶背是否有活虫或黏性残留物。',
+                    }),
+                    needsMoreEvidence: false,
+                    abstainReason: '',
+                    differentialDiagnoses: [
+                        {
+                            name: translateText(language, { en: 'Fungal fruit mildew', ms: 'Kulat/mildew pada buah', zh: '果实霉菌' }),
+                            likelihood: 28,
+                            reason: translateText(language, { en: 'White growth is possible, but the clustered cottony residue favors pests', ms: 'Pertumbuhan putih mungkin berlaku, tetapi sisa seperti kapas berkelompok lebih menyokong perosak', zh: '白色霉状物也可能出现，但成团绵状残留更偏向害虫' }),
+                        },
+                    ],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'Fruit and nearby canopy', ms: 'Buah dan kanopi berhampiran', zh: '果实及附近冠层' }),
+                        lesionShape: translateText(language, { en: 'Cottony/waxy patches rather than lesions', ms: 'Tompok seperti kapas/berlilin, bukan lesi', zh: '绵状/蜡状斑块，而非病斑' }),
+                        lesionBorderHalo: translateText(language, { en: 'No angular or water-soaked lesion edge', ms: 'Tiada tepi lesi bersudut atau berair', zh: '无角斑或水渍状边缘' }),
+                        distributionPattern: translateText(language, { en: 'Clustered on fruit surfaces', ms: 'Berkelompok pada permukaan buah', zh: '集中在果面' }),
+                        colorPattern: translateText(language, { en: 'White waxy/cottony residue', ms: 'Sisa putih berlilin/seperti kapas', zh: '白色蜡状/绵状残留' }),
+                        likelyCauseCategory: 'pest',
+                        evidenceFor: [translateText(language, { en: 'Cottony white residue is a common field sign of mealybug or scale', ms: 'Sisa putih seperti kapas ialah tanda biasa kutu putih atau serangga sisik', zh: '白色绵状残留是粉蚧或介壳虫常见田间特征' })],
+                        evidenceAgainst: [translateText(language, { en: 'No clear sunken rot or circular fungal lesion is visible', ms: 'Tiada reput lekuk atau lesi kulat bulat yang jelas', zh: '未见明显凹陷腐烂或圆形真菌病斑' })],
+                        rejectedDiagnosis: translateText(language, { en: 'Generic pest issue', ms: 'Isu perosak umum', zh: '一般害虫问题' }),
+                        rejectedReason: translateText(language, { en: 'A named likely pest group is visible enough to show a suspected diagnosis', ms: 'Kumpulan perosak berkemungkinan dapat dinamakan berdasarkan bukti visual', zh: '可根据可见证据给出较具体的疑似害虫类别' }),
+                    },
+                },
+            },
+        },
+        {
+            label: 'Coconut leaf lesion likely fungal blight',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 82,
+                    leafDetailSufficient: true,
+                    requiresRetake: false,
+                    retakeReason: '',
+                    qualityFlags: [],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Coconut (Cocos nucifera)', ms: 'Kelapa (Cocos nucifera)', zh: '椰子 (Cocos nucifera)' }),
+                    primaryDiagnosis: translateText(language, { en: 'Likely Coconut Leaf Blight', ms: 'Kemungkinan Hawar Daun Kelapa', zh: '疑似椰子叶枯病' }),
+                    healthStatus: 'unhealthy',
+                    severity: 'moderate',
+                    diagnosisConfidence: 76,
+                    diseaseCategory: 'fungal',
+                    pathogenType: 'Fungal',
+                    symptoms: [
+                        translateText(language, { en: 'Elongated brown necrotic leaf lesions', ms: 'Lesi nekrotik perang memanjang pada daun', zh: '叶片上有拉长的褐色坏死斑' }),
+                        translateText(language, { en: 'Yellowing around damaged tissue', ms: 'Kekuningan sekitar tisu rosak', zh: '受损组织周围发黄' }),
+                    ],
+                    additionalNotes: translateText(language, {
+                        en: 'The brown necrotic lesions and surrounding yellowing are more consistent with coconut leaf blight than nutrient stress alone.',
+                        ms: 'Lesi perang nekrotik dan kekuningan sekeliling lebih konsisten dengan hawar daun kelapa berbanding tekanan nutrien sahaja.',
+                        zh: '褐色坏死斑及周围发黄更符合椰子叶枯病，而不只是营养胁迫。',
+                    }),
+                    needsMoreEvidence: false,
+                    abstainReason: '',
+                    differentialDiagnoses: [
+                        {
+                            name: translateText(language, { en: 'Potassium deficiency', ms: 'Kekurangan kalium', zh: '缺钾' }),
+                            likelihood: 30,
+                            reason: translateText(language, { en: 'Yellowing can overlap, but discrete necrotic lesions favor disease', ms: 'Kekuningan boleh bertindih, tetapi lesi nekrotik berasingan lebih menyokong penyakit', zh: '黄化可能重叠，但离散坏死斑更支持病害' }),
+                        },
+                    ],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'Mature fronds', ms: 'Pelepah matang', zh: '成熟叶片' }),
+                        lesionShape: translateText(language, { en: 'Elongated necrotic lesions', ms: 'Lesi nekrotik memanjang', zh: '拉长坏死斑' }),
+                        lesionBorderHalo: translateText(language, { en: 'Yellowing around brown tissue', ms: 'Kekuningan sekitar tisu perang', zh: '褐色组织周围发黄' }),
+                        distributionPattern: translateText(language, { en: 'Patchy along frondlets', ms: 'Bertompok sepanjang anak pelepah', zh: '沿小叶片斑块状分布' }),
+                        colorPattern: translateText(language, { en: 'Brown necrosis with chlorosis', ms: 'Nekrosis perang dengan klorosis', zh: '褐色坏死伴黄化' }),
+                        likelyCauseCategory: 'fungal',
+                        evidenceFor: [translateText(language, { en: 'Discrete necrotic lesions are visible', ms: 'Lesi nekrotik berasingan kelihatan', zh: '可见离散坏死病斑' })],
+                        evidenceAgainst: [translateText(language, { en: 'Not a uniform whole-frond deficiency pattern', ms: 'Bukan corak kekurangan nutrien seragam pada seluruh pelepah', zh: '不是整片叶均匀缺素模式' })],
+                        rejectedDiagnosis: translateText(language, { en: 'Generic fungal issue', ms: 'Isu kulat umum', zh: '一般真菌问题' }),
+                        rejectedReason: translateText(language, { en: 'The crop and lesion pattern support a named likely blight diagnosis', ms: 'Tanaman dan corak lesi menyokong diagnosis hawar yang lebih khusus', zh: '作物与病斑模式支持更具体的叶枯诊断' }),
+                    },
+                },
+            },
+        },
+        {
+            label: 'Weak or blurred image retake',
+            payload: {
+                capture_assessment: {
+                    imageQualityConfidence: 34,
+                    leafDetailSufficient: false,
+                    requiresRetake: true,
+                    retakeReason: translateText(language, {
+                        en: 'The image is too blurry or distant to safely separate disease, pest, and nutrient patterns.',
+                        ms: 'Imej terlalu kabur atau jauh untuk membezakan corak penyakit, perosak dan nutrien dengan selamat.',
+                        zh: '图像过于模糊或距离太远，无法安全区分病害、虫害和营养问题。',
+                    }),
+                    qualityFlags: ['too_blurry', 'too_distant'],
+                },
+                diagnosis_assessment: {
+                    plantType: translateText(language, { en: 'Unknown crop', ms: 'Tanaman tidak diketahui', zh: '未知作物' }),
+                    primaryDiagnosis: translateText(language, { en: 'Image Too Unclear For Diagnosis', ms: 'Imej Terlalu Tidak Jelas Untuk Diagnosis', zh: '图像过于不清晰，无法诊断' }),
+                    healthStatus: 'unhealthy',
+                    severity: 'mild',
+                    diagnosisConfidence: 35,
+                    diseaseCategory: 'unknown',
+                    pathogenType: 'Unknown',
+                    symptoms: [],
+                    additionalNotes: translateText(language, {
+                        en: 'Please retake a closer, brighter photo before relying on treatment advice.',
+                        ms: 'Sila ambil semula foto yang lebih dekat dan terang sebelum bergantung pada nasihat rawatan.',
+                        zh: '请重新拍摄更近、更明亮的照片后再参考处理建议。',
+                    }),
+                    needsMoreEvidence: true,
+                    abstainReason: translateText(language, {
+                        en: 'Image quality is too weak for a named diagnosis.',
+                        ms: 'Kualiti imej terlalu lemah untuk diagnosis bernama.',
+                        zh: '图像质量太弱，无法给出具体诊断。',
+                    }),
+                    differentialDiagnoses: [],
+                    diagnosticEvidence: {
+                        leafAgeAffected: translateText(language, { en: 'Unclear', ms: 'Tidak jelas', zh: '不清楚' }),
+                        lesionShape: translateText(language, { en: 'Unclear', ms: 'Tidak jelas', zh: '不清楚' }),
+                        lesionBorderHalo: translateText(language, { en: 'Unclear', ms: 'Tidak jelas', zh: '不清楚' }),
+                        distributionPattern: translateText(language, { en: 'Unclear', ms: 'Tidak jelas', zh: '不清楚' }),
+                        colorPattern: translateText(language, { en: 'Unclear', ms: 'Tidak jelas', zh: '不清楚' }),
+                        likelyCauseCategory: 'unknown',
+                        evidenceFor: [],
+                        evidenceAgainst: [translateText(language, { en: 'Detail is insufficient to see lesions or pests', ms: 'Perincian tidak cukup untuk melihat lesi atau perosak', zh: '细节不足，无法看清病斑或害虫' })],
+                        rejectedDiagnosis: '',
+                        rejectedReason: '',
                     },
                 },
             },
@@ -1242,7 +1505,26 @@ const normalizeDiagnosticEvidence = (evidence = {}, language = 'en') => ({
 });
 
 const getPlausibleDiseaseTokens = (malaysiaCropInfo) => {
-    const diseaseTokens = new Set(['spot', 'blight', 'rot', 'wilt', 'rust', 'mildew', 'anthracnose', 'scab', 'canker']);
+    const diseaseTokens = new Set([
+        'spot',
+        'blight',
+        'rot',
+        'wilt',
+        'rust',
+        'mildew',
+        'anthracnose',
+        'scab',
+        'canker',
+        'pest',
+        'insect',
+        'mealybug',
+        'scale',
+        'whitefly',
+        'aphid',
+        'mite',
+        'thrip',
+        'infestation',
+    ]);
     malaysiaCropInfo?.info?.commonDiseases?.forEach((name) => {
         normalizeLookupText(name)
             .split(' ')
@@ -1297,6 +1579,58 @@ export function applyDiseaseSanityFilters(result = {}, language = 'en', malaysia
         ...evidence.evidenceFor,
         ...evidence.evidenceAgainst,
     ].join(' ').toLowerCase();
+    const papayaWhitePest = isPapayaCrop(next)
+        && isSuspectedPestIssue(next)
+        && hasWhiteWaxyPestPattern(next);
+
+    if (papayaWhitePest) {
+        if (isGenericPestDiagnosis(next) || !/mealybug|scale|kutu putih|sisik|\u7c89\u86a7|\u4ecb\u58f3/.test(buildSuspectedIssueText(next))) {
+            next.disease = buildPapayaPestDiagnosisLabel(language);
+        }
+        next.pathogenType = 'Pest';
+        next.diseaseCategory = 'pest';
+        next.additionalNotes = buildPapayaPestKeyIdea(language);
+        next.abstainReason = '';
+        if (!next.requiresRetake) {
+            next.needsMoreEvidence = false;
+            next.status = next.status === 'confirmed' ? 'confirmed' : 'likely';
+        }
+        next.differentialDiagnoses = normalizeDifferentialDiagnoses([
+            {
+                name: translateText(language, {
+                    en: 'Papaya mealybug infestation',
+                    ms: 'Serangan kutu putih betik',
+                    zh: '\u6728\u74dc\u7c89\u86a7\u4fb5\u5bb3',
+                }),
+                likelihood: Math.max(65, Number(next.confidence || next.diagnosisConfidence || 65)),
+                reason: translateText(language, {
+                    en: 'White cottony residue on papaya fruit is a common field sign.',
+                    ms: 'Sisa putih seperti kapas pada buah betik ialah tanda lapangan yang biasa.',
+                    zh: '\u6728\u74dc\u679c\u5b9e\u4e0a\u7684\u767d\u8272\u7ef5\u72b6\u6b8b\u7559\u662f\u5e38\u89c1\u7530\u95f4\u5f81\u8c61\u3002',
+                }),
+            },
+            {
+                name: translateText(language, {
+                    en: 'Scale insect infestation',
+                    ms: 'Serangan serangga sisik',
+                    zh: '\u4ecb\u58f3\u866b\u4fb5\u5bb3',
+                }),
+                likelihood: 55,
+                reason: translateText(language, {
+                    en: 'Scale insects can also appear as waxy patches on fruit and stems.',
+                    ms: 'Serangga sisik juga boleh kelihatan seperti tompok berlilin pada buah dan batang.',
+                    zh: '\u4ecb\u58f3\u866b\u4e5f\u53ef\u80fd\u5728\u679c\u5b9e\u548c\u830e\u4e0a\u5448\u73b0\u8721\u72b6\u6591\u5757\u3002',
+                }),
+            },
+            ...(next.differentialDiagnoses || []),
+        ]);
+        next.productSearchTags = normalizeArray([
+            ...normalizeArray(next.productSearchTags),
+            'mealybug-control',
+            'scale-insect-control',
+            'pest-control',
+        ]).slice(0, 5);
+    }
 
     if (nutrientDiagnosis && /fungal|fungus|kulat/.test(String(next.pathogenType || '').toLowerCase()) && !/halo|circular|round|spore|bulat/.test(evidenceText)) {
         next.pathogenType = 'Nutritional';
@@ -1400,8 +1734,8 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
     try {
         console.log('🔍 Using backup identification method...');
 
-        // Try gpt-4o-mini first (Fast & Latest)
-        let model = 'gpt-4o-mini';
+        // Use the shared primary model so plant ID fallback matches the analysis stack.
+        let model = OPENAI_PRIMARY_MODEL;
         let response;
 
         try {
@@ -1444,9 +1778,9 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
         } catch (primaryError) {
             console.error(`⚠️ Primary model (${model}) failed: ${primaryError.code || primaryError.status || primaryError.message}`);
 
-            // Fallback to GPT-5 mini if 4o-mini fails
+            // Fallback if the primary model is unavailable for this project.
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'gpt-5-mini';
+            model = OPENAI_FALLBACK_MODEL;
 
             response = await openai.chat.completions.create({
                 model: model,
@@ -1533,6 +1867,9 @@ function getMalaysiaCropInfo(plantNetResult, category) {
     if (scientificName.includes('musa') || categoryLower.includes('banana') || categoryLower.includes('pisang')) {
         return { cropType: 'banana', info: MALAYSIA_CROP_KNOWLEDGE.banana };
     }
+    if (scientificName.includes('carica') || categoryLower.includes('papaya') || categoryLower.includes('betik')) {
+        return { cropType: 'papaya', info: MALAYSIA_CROP_KNOWLEDGE.papaya };
+    }
     if (scientificName.includes('cocos') || categoryLower.includes('coconut') || categoryLower.includes('kelapa')) {
         return { cropType: 'coconut', info: MALAYSIA_CROP_KNOWLEDGE.coconut };
     }
@@ -1546,13 +1883,14 @@ function getMalaysiaCropInfo(plantNetResult, category) {
 /**
  * Analyze plant with GPT-5 Nano (optimized for Malaysia)
  */
-const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) => {
+export const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) => {
     const healthy = String(result.healthStatus).toLowerCase() === 'healthy';
+    const fallbackSections = buildCautiousFallbackTreatmentSections(result, language);
 
     return {
-        immediateActions: healthy ? [] : buildRetakeActionItems(language),
-        treatments: healthy ? [] : buildRetakeTreatmentItems(language),
-        prevention: buildRetakePrevention(language),
+        immediateActions: healthy ? [] : fallbackSections.immediateActions,
+        treatments: healthy ? [] : fallbackSections.treatments,
+        prevention: fallbackSections.prevention,
         healthyCarePlan: DEFAULT_CARE_PLANS[language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en'],
         nutritionalIssues: {
             status: 'none',
@@ -1591,11 +1929,11 @@ const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) => {
             treatmentCost: 'RM 0 - 50',
             roi: healthy ? 'High' : 'Unknown',
         },
-        productSearchTags: healthy ? ['fertilizer', 'foliar-feed'] : [],
+        productSearchTags: healthy ? ['fertilizer', 'foliar-feed'] : fallbackSections.productSearchTags,
     };
 };
 
-const buildDiagnosisStagePrompt = ({
+export const buildDiagnosisStagePrompt = ({
     plantNetResult,
     speciesAssessment,
     category,
@@ -1636,10 +1974,22 @@ Rules:
 - Use ranked differentials when a single diagnosis is not secure.
 - If image quality is weak, set requiresRetake to true and explain why.
 - If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
+- If visible evidence supports a plausible issue, primaryDiagnosis MUST be a named likely/suspected condition, not only a broad category. Avoid generic labels such as "Potential Pest Infestation", "Possible Disease", "Leaf Problem", or "Further Diagnosis Needed" unless the image is genuinely too unclear.
+- needsMoreEvidence may be true for a likely/suspected condition, but it must not erase the named primaryDiagnosis or make additionalNotes only say that more evidence is needed.
+- additionalNotes must briefly state the named likely condition and the visible evidence that supports it.
 - Bacterial diagnoses require angular or water-soaked evidence.
 - Nutrient deficiency should match leaf age pattern and diffuse color change, not discrete fungal lesions.
+- White cottony or waxy patches, visible insects, eggs, or residue on fruit, stems, or leaf undersides should be treated as pest evidence.
+- For papaya / Carica papaya fruit with white cottony or waxy patches, prefer the primaryDiagnosis "Suspected Papaya Mealybug / Scale Infestation" over generic labels such as "Potential Pest Infestation". The key idea must name this likely pest group and explain what visual evidence supports it.
+- If the exact pest is unclear, use "suspected" wording and include mealybug/scale as the likely pest group instead of only saying further evidence is needed.
 - If fungal evidence is primary but nutrient stress is still plausible, keep fungal as the main diagnosis and mention the nutrient possibility in differential reasoning instead of forcing a nutrient diagnosis.
 - Healthy plants must remain severity mild and diagnosis "${buildNoIssuesLabel(language)}".
+
+Visual evidence checklist:
+- Pest: cottony/waxy residue, visible insects, eggs, sticky residue, honeydew, clustered damage on fruit, stems, or leaf undersides.
+- Fungal: circular or elongated necrotic lesions, dark margins, yellow halos, rot, mildew, spores, or expanding blight patches.
+- Bacterial: angular lesions, vein-limited spots, water-soaked tissue, ooze, or wet-looking margins.
+- Nutrient: leaf-age pattern, diffuse yellowing, marginal scorch, interveinal chlorosis, or uniform growth stress without discrete lesions.
 
 Return STRICT JSON:
 {
@@ -1757,7 +2107,11 @@ Rules for nutritionalIssues:
 - Use "status": "confirmed" only when nutrient deficiency evidence is strong. In that case set "hasDeficiency": true and fill "deficientNutrients".
 - Use "status": "possible" when fungal or other disease signs are primary but nutrient stress may also be contributing. In that case keep "hasDeficiency": false, fill "possibleNutrients", and add concise "reasoning".
 - Use "status": "none" when there is no meaningful nutrient signal.
-- Do not label a possible overlap as a confirmed deficiency.`;
+- Do not label a possible overlap as a confirmed deficiency.
+
+Rules for uncertain pest findings:
+- If the diagnosis is suspected pest infestation, keep recommendations practical but cautious: inspect affected surfaces, isolate/mark affected plants, clean or remove heavily infested material where appropriate, and only recommend registered crop-safe pest products after field confirmation.
+- Do not return an empty or retake-only treatment plan when visible pest evidence is present.`;
 };
 
 const parseOpenAIJson = (content, errorLabel) => {
@@ -1809,7 +2163,7 @@ const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
 };
 
 const callOpenAIJson = async (messages, maxTokens = 2400) => {
-    let model = 'gpt-4o-mini';
+    let model = OPENAI_PRIMARY_MODEL;
 
     try {
         return await openai.chat.completions.create({
@@ -1821,7 +2175,7 @@ const callOpenAIJson = async (messages, maxTokens = 2400) => {
         });
     } catch (primaryError) {
         console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
-        model = 'gpt-5-mini';
+        model = OPENAI_FALLBACK_MODEL;
         return await openai.chat.completions.create({
             model,
             response_format: { type: 'json_object' },
@@ -1915,9 +2269,14 @@ const mergeDiagnosisResult = ({
     merged.nutritionalIssues = normalizeNutritionalIssues(merged.nutritionalIssues);
 
     if (merged.requiresRetake && merged.immediateActions.length === 0) {
-        merged.immediateActions = buildRetakeActionItems(language);
-        merged.treatments = buildRetakeTreatmentItems(language);
-        merged.prevention = buildRetakePrevention(language);
+        const fallbackSections = buildCautiousFallbackTreatmentSections(merged, language);
+        merged.immediateActions = fallbackSections.immediateActions;
+        merged.treatments = fallbackSections.treatments;
+        merged.prevention = fallbackSections.prevention;
+        merged.productSearchTags = normalizeArray([
+            ...normalizeArray(merged.productSearchTags),
+            ...fallbackSections.productSearchTags,
+        ]).slice(0, 5);
     }
 
     const filtered = applyDiseaseSanityFilters(merged, language, malaysiaCropInfo);
@@ -2323,8 +2682,8 @@ ${fewShotExamples}`
             });
         }
 
-        // Call GPT with model fallback (gpt-4o-mini primary, GPT-5 mini backup)
-        let model = 'gpt-4o-mini';
+        // Call the shared primary model with fallback for account/model availability.
+        let model = OPENAI_PRIMARY_MODEL;
         let response;
 
         try {
@@ -2338,9 +2697,9 @@ ${fewShotExamples}`
         } catch (primaryError) {
             console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
 
-            // Fallback to GPT-5 mini if 4o-mini fails
+            // Fallback if the primary model is unavailable for this project.
             console.log('⚠️ Primary model unavailable, using backup...');
-            model = 'gpt-5-mini';
+            model = OPENAI_FALLBACK_MODEL;
 
             response = await openai.chat.completions.create({
                 model: model,
@@ -2406,7 +2765,7 @@ export async function askAI(question, language, recentNotes = [], recentAlerts =
         ? `Farmer question:\n${question}\n\nRelevant farm context:\n${contextSummary}\n\nUse the context only when it is relevant to the answer.`
         : question;
     const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: OPENAI_PRIMARY_MODEL,
         messages: [
             {
                 role: 'system',
@@ -2419,6 +2778,122 @@ export async function askAI(question, language, recentNotes = [], recentAlerts =
         temperature: 0.5
     });
     return response.choices[0].message.content;
+}
+
+const buildResultLocalizationPayload = (result = {}) => ({
+    disease: result.disease || '',
+    additionalNotes: result.additionalNotes || '',
+    description: result.description || '',
+    analysisSummary: result.analysisSummary || result.analysis_summary || '',
+    retakeReason: result.retakeReason || '',
+    abstainReason: result.abstainReason || '',
+    symptoms: Array.isArray(result.symptoms) ? result.symptoms : normalizeArray(result.symptoms),
+    immediateActions: Array.isArray(result.immediateActions) ? result.immediateActions : normalizeArray(result.immediateActions),
+    treatments: Array.isArray(result.treatments) ? result.treatments : normalizeArray(result.treatments),
+    prevention: Array.isArray(result.prevention) ? result.prevention : normalizeArray(result.prevention),
+    healthyCarePlan: {
+        dailyCare: Array.isArray(result.healthyCarePlan?.dailyCare) ? result.healthyCarePlan.dailyCare : normalizeArray(result.healthyCarePlan?.dailyCare),
+        weeklyCare: Array.isArray(result.healthyCarePlan?.weeklyCare) ? result.healthyCarePlan.weeklyCare : normalizeArray(result.healthyCarePlan?.weeklyCare),
+        monthlyCare: Array.isArray(result.healthyCarePlan?.monthlyCare) ? result.healthyCarePlan.monthlyCare : normalizeArray(result.healthyCarePlan?.monthlyCare),
+        bestPractices: Array.isArray(result.healthyCarePlan?.bestPractices) ? result.healthyCarePlan.bestPractices : normalizeArray(result.healthyCarePlan?.bestPractices),
+    },
+    differentialDiagnoses: Array.isArray(result.differentialDiagnoses) ? result.differentialDiagnoses : [],
+    diagnosticEvidence: result.diagnosticEvidence || null,
+    nutritionalIssues: result.nutritionalIssues || null,
+});
+
+const mergeLocalizedResult = (baseResult = {}, localized = {}, language = 'en') => {
+    const next = {
+        ...baseResult,
+        disease: localized.disease ?? baseResult.disease,
+        additionalNotes: localized.additionalNotes ?? baseResult.additionalNotes,
+        description: localized.description ?? localized.additionalNotes ?? baseResult.description,
+        analysisSummary: localized.analysisSummary ?? baseResult.analysisSummary,
+        analysis_summary: localized.analysisSummary ?? baseResult.analysis_summary,
+        retakeReason: localized.retakeReason ?? baseResult.retakeReason,
+        abstainReason: localized.abstainReason ?? baseResult.abstainReason,
+        symptoms: Array.isArray(localized.symptoms) ? localized.symptoms : baseResult.symptoms,
+        immediateActions: Array.isArray(localized.immediateActions) ? localized.immediateActions : baseResult.immediateActions,
+        treatments: Array.isArray(localized.treatments) ? localized.treatments : baseResult.treatments,
+        prevention: Array.isArray(localized.prevention) ? localized.prevention : baseResult.prevention,
+        analysisLanguage: language,
+    };
+
+    if (localized.healthyCarePlan && typeof localized.healthyCarePlan === 'object') {
+        next.healthyCarePlan = {
+            ...baseResult.healthyCarePlan,
+            ...localized.healthyCarePlan,
+        };
+    }
+
+    if (Array.isArray(localized.differentialDiagnoses)) {
+        next.differentialDiagnoses = localized.differentialDiagnoses;
+    }
+
+    if (localized.diagnosticEvidence && typeof localized.diagnosticEvidence === 'object') {
+        next.diagnosticEvidence = {
+            ...baseResult.diagnosticEvidence,
+            ...localized.diagnosticEvidence,
+        };
+    }
+
+    if (localized.nutritionalIssues && typeof localized.nutritionalIssues === 'object') {
+        next.nutritionalIssues = {
+            ...baseResult.nutritionalIssues,
+            ...localized.nutritionalIssues,
+        };
+    }
+
+    return next;
+};
+
+export async function localizeStoredAnalysisResult(result = {}, language = 'en') {
+    const targetLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
+    if (!result || typeof result !== 'object') return result;
+    if ((result.analysisLanguage || result.language) === targetLanguage) {
+        return { ...result, analysisLanguage: targetLanguage };
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+        return { ...result };
+    }
+
+    const payload = buildResultLocalizationPayload(result);
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: OPENAI_PRIMARY_MODEL,
+            response_format: { type: 'json_object' },
+            messages: [
+                {
+                    role: 'system',
+                    content: `You translate plant diagnosis result content into a target UI language while preserving JSON structure.
+
+Rules:
+- Translate ONLY human-readable values.
+- Keep numbers, percentages, IDs, scientific names, URLs, product codes, and Latin species names unchanged.
+- Preserve arrays and object keys exactly.
+- If a value is already appropriate as-is, keep it.
+- Do not add or remove fields.
+- Return valid JSON only.
+- Target language: ${targetLanguage === 'ms' ? 'Bahasa Malaysia' : targetLanguage === 'zh' ? 'Simplified Chinese (简体中文)' : 'English'}.`,
+                },
+                {
+                    role: 'user',
+                    content: JSON.stringify(payload),
+                },
+            ],
+            max_tokens: 1800,
+            temperature: 0.1,
+        });
+
+        const content = response.choices?.[0]?.message?.content || '{}';
+        const localized = JSON.parse(cleanJsonString(content));
+        return mergeLocalizedResult(result, localized, targetLanguage);
+    } catch (error) {
+        console.warn('Stored analysis localization failed, keeping original text.', error?.message || error);
+        return { ...result };
+    }
 }
 
 /**
@@ -2452,7 +2927,7 @@ function ensureCarePlan(result, language) {
 }
 
 /**
- * GPT-5 mini Product Recommendation Engine
+ * Product recommendation engine
  * Takes disease diagnosis info + available WooCommerce tags & categories
  * Returns two separate lists: treatment tag/category IDs and nutrition tag/category IDs
  * @param {Object} diagnosisInfo - { disease, healthStatus, pathogenType, plantType, symptoms, treatments }
@@ -2489,7 +2964,50 @@ export const validateProductRecommendationSelection = (recommendation = {}, avai
     };
 };
 
-export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = []) {
+const normalizeCacheFragment = (value, fallback = 'none') => {
+    const normalized = String(value ?? fallback)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9._-]/g, '')
+        .slice(0, 120);
+    return normalized || fallback;
+};
+
+const normalizeCacheNumber = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? String(Math.round(number)) : 'unknown';
+};
+
+export const buildProductRecommendationCacheKey = (diagnosisInfo = {}, language = 'en') => {
+    const safeLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
+    const diagnosticEvidence = diagnosisInfo.diagnosticEvidence && typeof diagnosisInfo.diagnosticEvidence === 'object'
+        ? diagnosisInfo.diagnosticEvidence
+        : {};
+    const safeSearchTags = Array.isArray(diagnosisInfo.productSearchTags)
+        ? diagnosisInfo.productSearchTags.map((tag) => normalizeCacheFragment(tag)).filter(Boolean).join('-')
+        : normalizeCacheFragment(diagnosisInfo.productSearchTags, 'no-tags');
+
+    return [
+        'rec',
+        safeLanguage,
+        normalizeCacheFragment(diagnosisInfo.plantType, 'unknown'),
+        normalizeCacheFragment(diagnosisInfo.disease, 'none'),
+        normalizeCacheFragment(diagnosisInfo.healthStatus, 'unknown'),
+        normalizeCacheFragment(diagnosisInfo.pathogenType, 'none'),
+        normalizeCacheFragment(diagnosisInfo.status, 'unknown'),
+        normalizeCacheFragment(diagnosisInfo.diseaseCategory, 'unknown'),
+        normalizeCacheNumber(diagnosisInfo.confidence),
+        normalizeCacheNumber(diagnosisInfo.diagnosisConfidence),
+        diagnosisInfo.needsMoreEvidence ? 'needs-evidence' : 'evidence-ok',
+        diagnosisInfo.requiresRetake ? 'retake' : 'no-retake',
+        normalizeCacheFragment(diagnosisInfo.nutritionalStatus, 'none'),
+        normalizeCacheFragment(diagnosticEvidence.likelyCauseCategory, 'unknown'),
+        safeSearchTags || 'no-tags',
+    ].join('_');
+};
+
+export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en') {
     if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
         console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');
         return {
@@ -2503,24 +3021,22 @@ export async function recommendProductTags(diagnosisInfo, availableTags, availab
         };
     }
 
-    // Cache key based on comprehensive diagnosis signature to prevent cross-crop collisions
-    const safePlantType = (diagnosisInfo.plantType || 'unknown').toLowerCase().replace(/\s+/g, '-');
-    const safeDisease = (diagnosisInfo.disease || 'none').toLowerCase().replace(/\s+/g, '-');
-    const safeStatus = (diagnosisInfo.healthStatus || 'unknown').toLowerCase();
-    const safePathogen = (diagnosisInfo.pathogenType || 'none').toLowerCase().replace(/\s+/g, '-');
-    const safeSearchTags = Array.isArray(diagnosisInfo.productSearchTags)
-        ? diagnosisInfo.productSearchTags.join('-').toLowerCase()
-        : 'no-tags';
-
-    const cacheKey = `rec_${safePlantType}_${safeDisease}_${safeStatus}_${safePathogen}_${safeSearchTags}`;
+    const safeLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
+    const diagnosisStatus = String(diagnosisInfo.status || '').toLowerCase();
+    const suspectedOrLikely = ['likely', 'uncertain', 'retake_required', 'possible'].includes(diagnosisStatus)
+        || Boolean(diagnosisInfo.needsMoreEvidence || diagnosisInfo.requiresRetake);
+    const diagnosticEvidence = diagnosisInfo.diagnosticEvidence && typeof diagnosisInfo.diagnosticEvidence === 'object'
+        ? diagnosisInfo.diagnosticEvidence
+        : {};
+    const cacheKey = buildProductRecommendationCacheKey(diagnosisInfo, safeLanguage);
     const cached = recommendationCache.get(cacheKey);
     if (cached) {
-        console.log(`🧠 GPT-5 mini recommendation cache HIT for: ${cacheKey}`);
+        console.log(`Product recommendation cache HIT for ${OPENAI_PRIMARY_MODEL}: ${cacheKey}`);
         return cached;
     }
 
     try {
-        console.log('🛒 GPT-5 mini: Recommending products based on diagnosis...');
+        console.log(`Recommending products with ${OPENAI_PRIMARY_MODEL} based on diagnosis...`);
 
         // Build compact catalogs for the prompt
         const tagCatalog = (availableTags || [])
@@ -2532,7 +3048,7 @@ export async function recommendProductTags(diagnosisInfo, availableTags, availab
             .join('\n');
 
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
                 {
@@ -2550,20 +3066,39 @@ Rules:
 - IMPORTANT: You MUST heavily prioritize selecting WooCommerce Tags/Categories that contain or exactly match the "EXPLICIT PRODUCT SEARCH HINTS" provided below.
 - For healthy plants: treatment group can be empty, but focus on fertilizer and supplement.
 - For unhealthy plants: treatment group should address the specific disease.
+- For likely/suspected diagnoses, prefer cautious or IPM-aligned treatment supplies and state in the reasoning that field confirmation and physical product labels are required before use.
+- Do not recommend broad chemical disease-control products from weak evidence alone. If evidence is weak or retake is required, treatment can be empty and fertilizer/supplement can be general support only.
+- Fertilizer recommendations should be tied to confirmed/possible nutrition issues or general maintenance, not used as a cure for pest/fungal disease.
+- Fallback/exploratory products must not be described as diagnosis-specific.
 - Return ONLY IDs that exist in the provided catalogs
-- Output valid JSON only`
+- Output valid JSON only
+- Keep the reasoning short, factual, and non-promotional
+- Return the "reasoning" field in ${safeLanguage === 'ms' ? 'Bahasa Malaysia' : safeLanguage === 'zh' ? 'Simplified Chinese' : 'English'}`
                 },
                 {
                     role: 'user',
                     content: `PLANT DIAGNOSIS:
 - Plant Type: ${diagnosisInfo.plantType || 'Unknown'}
 - Disease: ${diagnosisInfo.disease || 'None'}
+- Diagnosis Status: ${diagnosisInfo.status || 'unknown'}
+- Overall Confidence: ${Number.isFinite(Number(diagnosisInfo.confidence)) ? `${diagnosisInfo.confidence}%` : 'unknown'}
+- Diagnosis Confidence: ${Number.isFinite(Number(diagnosisInfo.diagnosisConfidence)) ? `${diagnosisInfo.diagnosisConfidence}%` : 'unknown'}
+- Needs More Evidence: ${diagnosisInfo.needsMoreEvidence ? 'yes' : 'no'}
+- Requires Retake: ${diagnosisInfo.requiresRetake ? 'yes' : 'no'}
 - Health Status: ${diagnosisInfo.healthStatus || 'unknown'}
 - Pathogen Type: ${diagnosisInfo.pathogenType || 'None'}
+- Disease Category: ${diagnosisInfo.diseaseCategory || 'unknown'}
 - Symptoms: ${Array.isArray(diagnosisInfo.symptoms) ? diagnosisInfo.symptoms.join(', ') : (diagnosisInfo.symptoms || 'None')}
+- Immediate Actions: ${Array.isArray(diagnosisInfo.immediateActions) ? diagnosisInfo.immediateActions.join(', ') : (diagnosisInfo.immediateActions || 'None')}
 - Treatments Suggested: ${Array.isArray(diagnosisInfo.treatments) ? diagnosisInfo.treatments.join(', ') : (diagnosisInfo.treatments || 'None')}
+- Prevention Suggested: ${Array.isArray(diagnosisInfo.prevention) ? diagnosisInfo.prevention.join(', ') : (diagnosisInfo.prevention || 'None')}
+- Nutrition Status: ${diagnosisInfo.nutritionalStatus || 'none'}
+- Evidence Category: ${diagnosticEvidence.likelyCauseCategory || 'unknown'}
+- Evidence For: ${Array.isArray(diagnosticEvidence.evidenceFor) ? diagnosticEvidence.evidenceFor.join(', ') : 'None'}
+- Evidence Against: ${Array.isArray(diagnosticEvidence.evidenceAgainst) ? diagnosticEvidence.evidenceAgainst.join(', ') : 'None'}
+- Recommendation Caution Mode: ${suspectedOrLikely ? 'likely/suspected - confirm before use' : 'confirmed/maintenance'}
 
-🎯 EXPLICIT PRODUCT SEARCH HINTS (Use these strict keywords to immediately find matching tags below):
+EXPLICIT PRODUCT SEARCH HINTS (Use these strict keywords to immediately find matching tags below):
 ${Array.isArray(diagnosisInfo.productSearchTags) ? diagnosisInfo.productSearchTags.join(', ') : (diagnosisInfo.productSearchTags || 'None')}
 
 AVAILABLE PRODUCT TAGS:
@@ -2599,7 +3134,7 @@ Return JSON with three separate recommendation groups:
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) {
-            console.error('❌ GPT-5 mini product recommendation: Failed to parse response');
+            console.error(`${OPENAI_PRIMARY_MODEL} product recommendation: Failed to parse response`);
             return { treatmentTagIds: [], treatmentCategoryIds: [], fertilizerTagIds: [], fertilizerCategoryIds: [], supplementTagIds: [], supplementCategoryIds: [] };
         }
 
@@ -2615,7 +3150,7 @@ Return JSON with three separate recommendation groups:
             reasoning: result.reasoning || ''
         }, availableTags, availableCategories);
 
-        console.log(`✅ GPT-5 mini recommended Treatment: ${output.treatmentTagIds.length} | Fertilizer: ${output.fertilizerTagIds.length} | Supplement: ${output.supplementTagIds.length}`);
+        console.log(`${OPENAI_PRIMARY_MODEL} recommended Treatment: ${output.treatmentTagIds.length} | Fertilizer: ${output.fertilizerTagIds.length} | Supplement: ${output.supplementTagIds.length}`);
         console.log(`   Reason: ${output.reasoning}`);
 
         // Cache this recommendation
@@ -2624,7 +3159,7 @@ Return JSON with three separate recommendation groups:
         return output;
 
     } catch (error) {
-        console.error('❌ GPT-5 mini product recommendation failed:', error.message);
+        console.error(`${OPENAI_PRIMARY_MODEL} product recommendation failed:`, error.message);
         return {
             treatmentTagIds: [],
             treatmentCategoryIds: [],
@@ -2655,7 +3190,7 @@ export async function generateAgronomistInsights(logs, alerts, harvestData, plot
         const summarizedAlerts = summarizeFarmAlertsForAI(alerts);
         const summarizedHarvests = summarizeHarvestDataForAI(harvestData);
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
                 {
@@ -2702,7 +3237,7 @@ export async function generateTreatmentSOP(crop, disease, severity, language = '
     try {
         console.log(`🤖 Generating Treatment SOP for ${disease} on ${crop}...`);
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
                 {
@@ -2747,7 +3282,7 @@ export async function parseNaturalLanguageLog(text, language = 'en') {
     try {
         console.log(`🤖 Auto-Enhance Request: "${text.substring(0, 50)}..."`);
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
                 {
@@ -2831,7 +3366,7 @@ export async function generatePredictiveRisk(plots, logs, alerts, location, lang
 
         console.log('🤖 Running AI Predictive Risk Analysis...');
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
                 {

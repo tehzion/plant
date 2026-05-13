@@ -56,6 +56,26 @@ export const MALAYSIA_CROP_KNOWLEDGE = {
         localFertilizers: ['NPK MARDI 15-15-15', 'Muriate of Potash (KCl)', 'Dolomite'],
         harvestSeason: 'Year-round with 9-12 month cycle'
     },
+    papaya: {
+        commonVarieties: ['Sekaki', 'Eksotika', 'Hong Kong', 'Solo'],
+        growingRegions: ['Johor', 'Perak', 'Pahang', 'Selangor', 'Sabah'],
+        soilType: 'Well-drained loam or sandy loam, pH 5.5-6.7',
+        climate: 'Warm lowland crop, sensitive to waterlogging and prolonged wet fruit surfaces',
+        commonDiseases: [
+            'Papaya Mealybug - white cottony wax on fruit, stems, and leaf undersides',
+            'Scale Insect Infestation - white or brown waxy patches on fruit and stems',
+            'Papaya Ringspot Virus - mosaic leaves and ring spots on fruit',
+            'Anthracnose Fruit Rot - sunken dark fruit lesions in humid weather',
+            'Phytophthora Stem or Fruit Rot - water-soaked rot after heavy rain'
+        ],
+        nutrientIssues: [
+            'Nitrogen deficiency - pale older leaves and weak growth',
+            'Potassium deficiency - poor fruit quality and marginal leaf scorch',
+            'Boron deficiency - distorted fruit and poor flowering'
+        ],
+        localFertilizers: ['NPK 15-15-15', 'NPK 12-12-17-2 + TE', 'Organic compost'],
+        harvestSeason: 'Year-round in warm lowlands'
+    },
     coconut: {
         commonVarieties: ['Malayan Tall', 'Malayan Dwarf', 'MAWA Hybrid'],
         growingRegions: ['Coastal areas - Kedah, Perak, Terengganu, Sabah, Sarawak'],

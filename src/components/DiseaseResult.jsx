@@ -77,10 +77,12 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         /* Container matching other sections */
         .disease-info-container {
-          background: #FAFAFA;
-          padding: 20px;
-          border-radius: 16px;
+          background: #ffffff;
+          padding: 22px;
+          border-radius: 24px;
           margin-bottom: 24px;
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
         }
 
         .section-header-centered {
@@ -100,36 +102,44 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         /* Disease Title Card (Maklumat Penyakit) */
         .disease-title-card {
-          background: white;
-          padding: 20px;
-          border-radius: 12px;
-          border: 1px solid #E5E7EB;
-          margin-bottom: 16px;
+          background: #ffffff;
+          padding: 22px;
+          border-radius: 20px;
+          border: 1px solid rgba(148, 163, 184, 0.14);
+          margin-bottom: 18px;
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
           gap: 16px;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 14px 28px rgba(15, 23, 42, 0.04);
         }
 
         .disease-name {
-          font-size: 1.1rem;
+          font-size: 1.32rem;
           color: #111827;
           margin: 0 0 4px 0;
-          font-weight: 700;
+          font-weight: 800;
           line-height: 1.4;
+          font-family: var(--font-heading);
         }
 
-        /* Idea Utama Card - Blue Style */
+        .scientific-name {
+          margin: 0;
+          color: #64748b;
+          font-size: 0.94rem;
+          font-style: italic;
+        }
+
         .idea-utama-card {
           display: flex;
           flex-direction: column; 
-          gap: 8px;
-          padding: 16px;
-          border-radius: 12px;
-          background: #EFF6FF; /* Light blue bg */
-          border: 1px solid #3B82F6; /* Blue border */
+          gap: 10px;
+          padding: 18px;
+          border-radius: 20px;
+          background: #f8fafc;
+          border: 1px solid rgba(148, 163, 184, 0.18);
           margin-bottom: 24px;
+          box-shadow: none;
         }
         
         /* Inner wrapper for icon + label row */
@@ -141,23 +151,25 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .idea-icon-wrapper {
-          width: 24px;
-          height: 24px;
+          width: 30px;
+          height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: transparent;
-          color: #2563EB; /* Strong blue */
+          background: #ffffff;
+          color: #0f172a;
           flex-shrink: 0;
-          border-radius: 0;
+          border-radius: 999px;
+          box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
         }
 
         .idea-header {
           font-size: 0.75rem;
-          font-weight: 700;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #2563EB; /* Strong blue */
+          letter-spacing: 0.08em;
+          color: #475569;
+          font-family: var(--font-heading);
         }
 
         .idea-content-wrapper {
@@ -165,11 +177,11 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .idea-content {
-          font-size: 0.9rem;
-          color: #374151;
-          line-height: 1.5;
+          font-size: 0.98rem;
+          color: #334155;
+          line-height: 1.65;
           margin: 0;
-          font-weight: 400;
+          font-weight: 500;
         }
 
         @keyframes fade-in {
@@ -187,32 +199,34 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .status-banner {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 16px;
-          border-radius: 12px;
+          gap: 14px;
+          padding: 18px;
+          border-radius: 20px;
           border: 1px solid;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
         }
 
         .status-banner.status-healthy {
-          background: #D1FAE5;
-          border-color: #6EE7B7;
+          background: #f0fdf4;
+          border-color: #86efac;
         }
 
         .status-banner.status-unhealthy {
-          background: #FEE2E2;
-          border-color: #FCA5A5;
+          background: #fef2f2;
+          border-color: #fca5a5;
         }
 
         .status-icon-wrapper {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
+          width: 46px;
+          height: 46px;
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: white;
           flex-shrink: 0;
+          box-shadow: 0 10px 16px rgba(15, 23, 42, 0.06);
         }
 
         .status-healthy .status-icon-wrapper {
@@ -220,7 +234,7 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .status-unhealthy .status-icon-wrapper {
-          color: #EF4444;
+          color: #dc2626;
         }
 
         .status-content {
@@ -231,10 +245,11 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .status-label {
-          font-size: 0.75rem;
-          font-weight: 600;
+          font-size: 0.72rem;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.08em;
+          font-family: var(--font-heading);
         }
 
         .status-healthy .status-label {
@@ -242,19 +257,20 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .status-unhealthy .status-label {
-          color: #991B1B;
+          color: #991b1b;
         }
 
         .status-value {
-          font-size: 1.125rem;
-          font-weight: 700;
+          font-size: 1.28rem;
+          font-weight: 800;
+          font-family: var(--font-heading);
         }
         .status-healthy .status-value {
           color: #047857;
         }
 
         .status-unhealthy .status-value {
-          color: #DC2626;
+          color: #dc2626;
         }
 
         /* Details Section */
@@ -536,5 +552,3 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 };
 
 export default DiseaseResult;
-
-

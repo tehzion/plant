@@ -36,8 +36,24 @@ const isWooProductId = (value) => {
   return /^\d+$/.test(value.trim());
 };
 
+const getProductErrorTitle = (t, error) => {
+  if (error?.code === 'NETWORK_UNAVAILABLE') {
+    return t('results.productsNetworkTitle') || t('results.productsError') || 'Could not load products.';
+  }
+
+  if (error?.code === 'REQUEST_TIMEOUT') {
+    return t('results.productsTimeoutTitle') || t('results.productsError') || 'Could not load products.';
+  }
+
+  if (error?.status === 503) {
+    return t('results.productsUnavailableTitle') || t('results.productsError') || 'Could not load products.';
+  }
+
+  return t('results.productsError') || 'Could not load specialized products at this time.';
+};
+
 const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onRecommendationsLoaded }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [products, setProducts] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
@@ -50,12 +66,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
   const diagnosis = useMemo(
     () => buildProductDiagnosisPayload({ plantType, disease, scanResult }),
-    [plantType, disease, scanResult?.healthStatus, scanResult?.pathogenType, scanResult?.symptoms, scanResult?.treatments, scanResult?.productSearchTags],
+    [plantType, disease, scanResult],
   );
 
   const recommendationKey = useMemo(
-    () => createProductRecommendationsKey(diagnosis),
-    [diagnosis],
+    () => createProductRecommendationsKey(diagnosis, language),
+    [diagnosis, language],
   );
 
   useEffect(() => {
@@ -84,6 +100,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           plantType: diagnosis.plantType,
           disease: diagnosis.disease,
           scanResult: diagnosis,
+          language,
         });
         if (isCancelled) return;
 
@@ -96,7 +113,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       } catch (err) {
         if (isCancelled) return;
         console.error('Failed to load recommended products:', err);
-        setError(err?.message || t('results.productsError') || 'Could not load specialized products at this time.');
+        setError(getProductErrorTitle(t, err));
         setErrorCode(err?.code || '');
         onRecommendationsLoaded?.(null);
       } finally {
@@ -110,7 +127,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     return () => {
       isCancelled = true;
     };
-  }, [onRecommendationsLoaded, recommendationKey, requestAttempt]);
+  }, [language, onRecommendationsLoaded, recommendationKey, requestAttempt]);
 
   const toggleProductSelection = (productId) => {
     if (!productId || !isWooProductId(productId) || !storeUrl) return;
@@ -148,11 +165,12 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     // Construct checkout URL using dynamically fetched storeUrl
     const checkoutUrl = `${storeUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`;
     
-    window.open(checkoutUrl, '_blank');
+    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
   };
 
   const canCheckout = checkoutEligibleIds.length > 0 && Boolean(storeUrl);
   const usingCachedProducts = fallbackMeta?.used && fallbackMeta?.source === 'cache';
+  const diagnosisState = diagnosis.status || (diagnosis.requiresRetake ? 'retake_required' : diagnosis.needsMoreEvidence ? 'uncertain' : 'likely');
 
   const retryProducts = () => {
     setRequestAttempt((value) => value + 1);
@@ -191,7 +209,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
   if (loading) {
     return (
-      <div className="product-recommendations-container product-state product-state--loading">
+      <div className="product-recommendations-container product-state product-state--loading app-surface">
         <Loader className="spinner" size={32} color="var(--color-primary)" />
         <p>{t('results.loadingProducts') || 'Discovering the best local agriculture products...'}</p>
       </div>
@@ -201,18 +219,18 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   if (error) {
     return (
       <div className="product-recommendations-container">
-        <div className="product-section product-state product-state--error">
+        <div className="product-section product-state product-state--error app-surface">
           <p className="product-state-title">{error}</p>
           <p className="product-state-hint">{productRecoveryHint}</p>
           <div className="product-state-actions">
-            <button type="button" className="add-to-cart-button" onClick={retryProducts}>
+            <button type="button" className="add-to-cart-button add-to-cart-button--quiet" onClick={retryProducts}>
               <span>{t('common.retry') || 'Try Again'}</span>
             </button>
             <a
               href="https://www.mojosense.app/kanb/products/"
               target="_blank"
               rel="noopener noreferrer"
-              className="add-to-cart-button"
+              className="add-to-cart-button add-to-cart-button--quiet"
             >
               <span>{t('results.openCatalog') || 'Open Catalog'}</span>
             </a>
@@ -228,6 +246,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
                        !processedProducts.fertilizers?.length && 
                        !processedProducts.supplements?.length && 
                        !processedProducts.otherPopular?.length;
+  const showCautiousProductNotice = !hasNoProducts
+    && processedProducts.diseaseControl?.length > 0
+    && !['confirmed', 'healthy'].includes(diagnosisState);
 
   // Get scale-specific recommendations
   const getScaleRecommendation = () => {
@@ -361,23 +382,26 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     <div className="product-recommendations-container">
       {/* AI Reasoning Explainer */}
       {reasoning && !hasNoProducts && (
-        <div className="ai-reasoning-banner">
+        <div className="product-note-banner product-note-banner--selection app-surface">
           <Info size={16} />
-          <span>{t('results.whyTheseProducts') || 'Why these products?'} {reasoning}</span>
+          <div className="product-note-copy">
+            <strong>{t('results.whyTheseProducts') || 'Selection note'}</strong>
+            <span>{reasoning}</span>
+          </div>
         </div>
       )}
 
       {fallbackMeta?.used && (
-        <div className={`ai-reasoning-banner ${fallbackMeta.isExploration ? 'exploration-banner' : 'fallback-banner'}`}>
+        <div className={`product-note-banner ${fallbackMeta.isExploration ? 'product-note-banner--exploration' : 'product-note-banner--fallback'} app-surface`}>
           {fallbackMeta.isExploration ? <Search size={16} /> : <PackageX size={16} />}
-          <div className="reasoning-copy">
+          <div className="product-note-copy">
             <strong>{fallbackMeta.isExploration ? (t('results.explorationTitle') || 'General Store Selection') : (t('results.fallbackTitle') || 'Notice')}</strong>
             <span>{fallbackMeta.reason || (t('results.fallbackProductsDesc') || 'No direct diagnosis-matched products were found. Showing general store suggestions as a fallback.')}</span>
           </div>
           {usingCachedProducts && (
             <button
               type="button"
-              className="fallback-refresh-button"
+              className="product-note-action"
               onClick={retryProducts}
             >
               {t('results.tryLiveCatalogAgain') || 'Try live catalog again'}
@@ -386,10 +410,20 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         </div>
       )}
 
-      {processedProducts?.isLocalFallback && (
-        <div className="ai-reasoning-banner exploration-banner">
+      {showCautiousProductNotice && (
+        <div className="product-note-banner product-note-banner--caution app-surface">
           <Info size={16} />
-          <div className="reasoning-copy">
+          <div className="product-note-copy">
+            <strong>{t('results.confirmBeforeUseTitle') || 'Confirm before use'}</strong>
+            <span>{t('results.confirmBeforeUseDesc') || 'These products match a likely or suspected diagnosis. Confirm the field signs and follow the physical product label before applying treatment.'}</span>
+          </div>
+        </div>
+      )}
+
+      {processedProducts?.isLocalFallback && (
+        <div className="product-note-banner product-note-banner--exploration app-surface">
+          <Info size={16} />
+          <div className="product-note-copy">
             <strong>{t('results.discoveryCatalog') || 'Discovery Catalog'}</strong>
             <span>{t('results.noDirectMatchDisclaimer') || 'We couldn\'t find a direct match for this specific diagnosis in our store, but here are some popular items other farmers are using.'}</span>
           </div>
@@ -398,7 +432,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Empty State when AI finds no matching products */}
       {hasNoProducts && (
-        <div className="product-section product-state product-state--empty">
+        <div className="product-section product-state product-state--empty app-surface">
           <div className="product-state-icon-wrap">
             <div className="product-state-icon">
               <PackageX size={32} color="#9CA3AF" />
@@ -415,10 +449,13 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Disease Control Products */}
       {processedProducts.diseaseControl && processedProducts.diseaseControl.length > 0 && (
-        <div className="product-section">
+        <div className="product-section app-surface">
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.diseaseControl')}</h3>
           </div>
+          <p className="section-subtitle">
+            {t('results.diseaseControlSubtitle') || 'Professional agrochemicals from trusted Malaysian suppliers'}
+          </p>
 
           <div className="products-grid">
             {processedProducts.diseaseControl.map((product, index) => renderProductCard(product, index))}
@@ -428,7 +465,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Recommended Fertilizers */}
       {processedProducts.fertilizers && processedProducts.fertilizers.length > 0 && (
-        <div className="product-section">
+        <div className="product-section app-surface">
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.recommendedFertilizers')}</h3>
           </div>
@@ -451,7 +488,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Recommended Supplements */}
       {processedProducts.supplements && processedProducts.supplements.length > 0 && (
-        <div className="product-section">
+        <div className="product-section app-surface">
           <div className="section-header-centered">
             <h3 className="section-title">{t('results.recommendedSupplements')}</h3>
           </div>
@@ -464,7 +501,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
       {/* Other Popular Products */}
       {processedProducts.otherPopular && processedProducts.otherPopular.length > 0 && (
-        <div className="product-section">
+        <div className="product-section app-surface">
           <div className="section-header-centered">
             <h3 className="section-title">
               {fallbackMeta?.used
@@ -488,7 +525,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       {/* Checkout Section Bar */}
       {checkoutEligibleIds.length > 0 && (
          <div className="checkout-bar-container">
-           <div className="checkout-bar">
+           <div className="checkout-bar app-surface">
              <div className="checkout-info">
                <span className="checkout-count">{checkoutEligibleIds.length} {t('results.itemsSelected') || 'Items Selected'}</span>
                {!storeUrl && (
@@ -504,7 +541,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       )}
 
       {/* Suppliers Information */}
-      <div className="product-section">
+      <div className="product-section app-surface">
         <div className="section-header-centered">
           <h3 className="section-title">{t('results.ourTrustedSuppliers')}</h3>
         </div>

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
 import { getNutrientNames, normalizeNutritionalIssues } from './nutritionUtils.js';
+import { getDiagnosisStatusLabel } from './diagnosisStatusLabels.js';
 
 const PT_TO_MM = 25.4 / 72;
 
@@ -367,6 +368,12 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     if (!healthy && scanData.disease) {
         metadataRows.push([t('results.diagnosis') || t('results.disease'), scanData.disease]);
     }
+    if (scanData.status) {
+        metadataRows.push([t('results.diagnosisStatus') || 'Diagnosis status', getDiagnosisStatusLabel(t, scanData.status)]);
+    }
+    if (scanData.diagnosticEvidence?.likelyCauseCategory) {
+        metadataRows.push([t('results.likelyCauseCategory') || 'Likely cause', scanData.diagnosticEvidence.likelyCauseCategory]);
+    }
     if (scanData.fungusType) {
         metadataRows.push([t('results.fungusSpecies'), scanData.fungusType]);
     }
@@ -599,6 +606,16 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         });
         doc.setDrawColor(...primaryColor);
         doc.line(14, yPos - 6, pageWidth - 14, yPos - 6);
+
+        if (products.diseaseControl?.length > 0 && scanData.status && scanData.status !== 'confirmed') {
+            await writeParagraph(t('results.confirmBeforeUseDesc') || 'Confirm field signs and follow the physical product label before applying treatment.', {
+                x: 14,
+                width: pageWidth - 28,
+                fontSize: 9,
+                color: [146, 64, 14],
+                gapAfter: 6,
+            });
+        }
 
         const renderProductList = async (productList, categoryTitle) => {
             if (!Array.isArray(productList) || productList.length === 0) return;

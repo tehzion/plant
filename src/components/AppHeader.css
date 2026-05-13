@@ -22,6 +22,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 20px;
+    width: 100%;
+    min-width: 0;
 }
 
 .app-header__logo-link {
@@ -121,6 +123,7 @@
     align-items: center;
     gap: 12px;
     flex: 0 0 auto;
+    min-width: 0;
 }
 
 .app-header__status-cluster {
@@ -177,11 +180,15 @@
 .app-header__language-wrap {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
     min-height: 44px;
+    min-width: 0;
     padding: 2px;
     border-radius: 999px;
     background: rgba(248, 250, 252, 0.9);
     border: 1px solid rgba(148, 163, 184, 0.18);
+    flex: 0 1 220px;
+    max-width: 100%;
 }
 
 .app-header__avatar-badge {
@@ -226,12 +233,18 @@
         padding: 10px 10px;
     }
 
+    .app-header__logo-link {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
     .app-header__logo-image {
-        height: 52px;
+        height: 48px;
     }
 
     .app-header__actions {
-        gap: 10px;
+        gap: 8px;
+        flex: 0 1 auto;
     }
 
     .app-header__refresh-btn {
@@ -242,6 +255,10 @@
     .app-header__status-dot {
         width: 10px;
         height: 10px;
+    }
+
+    .app-header__language-wrap {
+        flex-basis: 168px;
     }
 }
 
@@ -257,7 +274,7 @@
     }
 
     .app-header__logo-image {
-        height: 48px;
+        height: 44px;
     }
 
     .app-header__refresh-btn {
@@ -270,6 +287,14 @@
         right: 0;
         width: 9px;
         height: 9px;
+    }
+
+    .app-header__content {
+        gap: 8px;
+    }
+
+    .app-header__language-wrap {
+        flex-basis: 144px;
     }
 }
 
@@ -297,7 +322,7 @@
     }
     
     .app-header__language-wrap {
-        zoom: 0.9;
+        flex-basis: 132px;
     }
 }
 

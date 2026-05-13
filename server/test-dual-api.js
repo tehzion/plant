@@ -1,6 +1,6 @@
 /**
  * Test Script for Dual-API System
- * Tests PlantNet + GPT-4o integration
+ * Tests PlantNet + configured OpenAI model integration
  */
 
 import fetch from 'node-fetch';
@@ -72,7 +72,7 @@ async function runTests() {
         console.log('  3. Check the browser console and server logs');
         console.log('\n🔍 You should see:');
         console.log('  - PlantNet identifying species first');
-        console.log('  - GPT-4o analyzing with species context');
+        console.log('  - Configured OpenAI model analyzing with species context');
         console.log('  - Combined result with both data sources\n');
     } else {
         console.log('═'.repeat(50));

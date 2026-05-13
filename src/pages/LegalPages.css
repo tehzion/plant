@@ -69,6 +69,14 @@
     margin: 0;
 }
 
+.legal-section-lead {
+    max-width: 760px;
+    margin: 16px auto 0;
+    font-size: 0.98rem;
+    line-height: 1.75;
+    color: #4b5563;
+}
+
 .legal-content-wrapper {
     display: flex;
     flex-direction: column;
@@ -145,6 +153,56 @@
     margin-bottom: 0;
 }
 
+.legal-list--detailed li {
+    padding-left: 26px;
+}
+
+.legal-contact-card {
+    margin-top: 20px;
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.legal-contact-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #166534;
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+}
+
+.legal-contact-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 10px;
+    font-size: 0.93rem;
+    color: #475569;
+}
+
+.legal-contact-row:last-child {
+    margin-bottom: 0;
+}
+
+.legal-contact-row span {
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.legal-contact-row a {
+    color: #15803d;
+    text-decoration: none;
+    text-align: right;
+    word-break: break-word;
+}
+
+.legal-contact-row a:hover {
+    text-decoration: underline;
+}
+
 .legal-footer {
     margin-top: 48px;
     padding: 24px 0 40px;
@@ -191,5 +249,15 @@
 @media (max-width: 768px) {
     .legal-container {
         padding-bottom: 180px !important;
+    }
+
+    .legal-contact-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .legal-contact-row a {
+        text-align: left;
     }
 }

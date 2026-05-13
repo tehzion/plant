@@ -4,6 +4,8 @@ import { normalizeDiseaseResult } from './diseaseResultUtils.js';
 const t = (key) => ({
     'results.unknownDisease': 'Unknown disease',
     'results.noIssues': 'No issues',
+    'results.healthy': 'Healthy',
+    'results.unhealthy': 'Unhealthy',
     'results.demoModeDesc': 'Demo mode',
     'results.defaultHealthyReasoning': 'Healthy default',
     'results.defaultUnhealthyReasoning': 'Unhealthy default',
@@ -48,5 +50,19 @@ describe('normalizeDiseaseResult', () => {
                 value: '4 weeks',
             }),
         ]);
+        expect(normalized.translatedHealthStatus).toBe('Healthy');
+    });
+
+    it('keeps translated health status aligned with normalized healthy state', () => {
+        const normalized = normalizeDiseaseResult({
+            disease: 'Tiada Masalah Dikesan',
+            healthStatus: 'unhealthy',
+            severity: 'low',
+            abstainReason: 'Image quality is limited.',
+        }, t);
+
+        expect(normalized.healthy).toBe(true);
+        expect(normalized.translatedHealthStatus).toBe('Healthy');
+        expect(normalized.translatedSeverity).toBe('');
     });
 });

@@ -13,6 +13,7 @@ import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-
 import { showToast } from '../utils/toast';
 
 import { getStandardizedStatus } from '../utils/statusUtils';
+import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
 import { getNutrientNames, normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
 import { localizeStoredAnalysisResult as refreshStoredAnalysisLanguage } from '../utils/diseaseDetection.js';
 import {
@@ -114,6 +115,7 @@ const Results = () => {
     disease: scan?.disease,
     fungusType: scan?.fungusType,
     pathogenType: scan?.pathogenType,
+    diseaseCategory: scan?.diseaseCategory,
     estimatedAge: scan?.estimatedAge,
     confidence: scan?.confidence,
     confidenceBreakdown: scan?.confidenceBreakdown,
@@ -125,6 +127,7 @@ const Results = () => {
     prevention: scan?.prevention,
     healthyCarePlan: scan?.healthyCarePlan,
     additionalNotes: scan?.additionalNotes,
+    needsMoreEvidence: scan?.needsMoreEvidence,
     requiresRetake: scan?.requiresRetake,
     retakeReason: scan?.retakeReason,
     abstainReason: scan?.abstainReason,
@@ -290,9 +293,11 @@ ${t('results.confidence')}: ${scan.confidence}%
 ${scan.confidenceBreakdown ? `${t('results.diagnosisConfidence') || 'Diagnosis confidence'}: ${scan.confidenceBreakdown.diagnosisConfidence}%` : ''}
 ${scan.confidenceBreakdown ? `${t('results.imageQualityConfidence') || 'Image quality confidence'}: ${scan.confidenceBreakdown.imageQualityConfidence}%` : ''}
 ${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}
+${scan.status ? `${t('results.diagnosisStatus') || 'Diagnosis status'}: ${getDiagnosisStatusLabel(t, scan.status)}` : ''}
+${scan.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${scan.diagnosticEvidence.likelyCauseCategory}` : ''}
 
 ${t('results.symptoms')}:
-${scan.symptoms}
+${normalizeList(scan.symptoms).map((symptom, i) => `${i + 1}. ${symptom}`).join('\n')}
 
 ${!healthy ? `
 ${t('results.immediateActions')}:
@@ -354,6 +359,8 @@ ${t('pdf.generatedBy')}
       `${t('results.status')}: ${t(`results.${standardizedStatus}`)}`,
       scan.severity ? `${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}` : '',
       scan.confidence ? `${t('results.confidence')}: ${scan.confidence}%` : '',
+      scan.status ? `${t('results.diagnosisStatus') || 'Diagnosis status'}: ${getDiagnosisStatusLabel(t, scan.status)}` : '',
+      scan.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${scan.diagnosticEvidence.likelyCauseCategory}` : '',
       nutritionSummary,
       scan.additionalNotes || '',
     ].filter(Boolean).join('\n');

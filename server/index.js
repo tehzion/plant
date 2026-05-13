@@ -7,7 +7,7 @@ import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk } from './services/aiService.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult } from './services/aiService.js';
 import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
 import path from 'path';
@@ -263,7 +263,7 @@ app.post('/api/analyze', async (req, res, next) => {
             console.warn('⚠️ Both PlantNet and Backup Model failed to identify species');
         }
 
-        // 5. Analyze Health (GPT-4o-mini)
+        // 5. Analyze Health (configured OpenAI primary model)
 
         const analysisResult = await analyzeWithGPT4Mini(
             plantNetResult,
@@ -279,7 +279,8 @@ app.post('/api/analyze', async (req, res, next) => {
             ...analysisResult,
             description: analysisResult.additionalNotes, // Map for PDF compatibility
             identification: plantNetResult,
-            identificationSource
+            identificationSource,
+            analysisLanguage: language,
         };
 
         // 6. Cache Result (24 Hours)
@@ -314,12 +315,28 @@ app.post('/api/analyze', async (req, res, next) => {
     }
 });
 
+app.post('/api/results/localize', async (req, res, next) => {
+    try {
+        const { result, language = 'en' } = req.body;
+
+        if (!result || typeof result !== 'object') {
+            return res.status(400).json({ error: 'Result object is required' });
+        }
+
+        const localized = await localizeStoredAnalysisResult(result, language);
+        res.json(localized);
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 
 // WooCommerce Products Search Endpoint (GPT-5-mini Powered)
 app.post('/api/products/search', async (req, res, next) => {
     try {
-        const { diagnosis } = req.body;
+        const { diagnosis, language = 'en' } = req.body;
+        const targetLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
         
         if (!diagnosis) {
             return res.status(400).json({ error: 'Diagnosis object is required' });
@@ -328,7 +345,11 @@ app.post('/api/products/search', async (req, res, next) => {
         if (!isWooCommerceEnabled()) {
             return res.status(503).json({
                 error: 'PRODUCT_CATALOG_UNAVAILABLE',
-                message: 'Live product catalog is not configured right now.',
+                message: targetLanguage === 'ms'
+                    ? 'Katalog produk langsung belum dikonfigurasikan.'
+                    : targetLanguage === 'zh'
+                        ? '\u5b9e\u65f6\u4ea7\u54c1\u76ee\u5f55\u5c1a\u672a\u914d\u7f6e\u3002'
+                        : 'Live product catalog is not configured right now.',
             });
         }
         
@@ -339,20 +360,19 @@ app.post('/api/products/search', async (req, res, next) => {
         ]);
         
         if (availableTags.length === 0 && availableCategories.length === 0) {
-            return res.json({
-                diseaseControl: [],
-                fertilizers: [],
-                supplements: [],
-                otherPopular: [],
-                reasoning: '',
-                fallbackMeta: null,
-                storeUrl: getStoreUrl()
+            return res.status(503).json({
+                error: 'PRODUCT_CATALOG_EMPTY',
+                message: targetLanguage === 'ms'
+                    ? 'Katalog produk langsung belum sedia untuk dipadankan lagi.'
+                    : targetLanguage === 'zh'
+                        ? '\u5b9e\u65f6\u4ea7\u54c1\u76ee\u5f55\u5c1a\u672a\u51c6\u5907\u597d\u8fdb\u884c\u5339\u914d\u3002'
+                        : 'The live product catalog is not ready for matching yet.',
             });
         }
         
         // 2. Ask GPT to pick the best tags & categories
         console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
-        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories);
+        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage);
         
         // 3. Fetch products for each category in parallel
         const [treatmentProducts, fertilizerProducts, supplementProducts, allStoreProducts] = await Promise.all([
@@ -403,7 +423,11 @@ app.post('/api/products/search', async (req, res, next) => {
             fallbackMeta = {
                 used: true,
                 isExploration: true,
-                reason: 'We currently don\'t have a specific medicine for this diagnosis in our inventory. Below are general agriculture supplies that other farmers often explore.',
+                reason: targetLanguage === 'ms'
+                    ? 'Kami belum mempunyai padanan khusus untuk diagnosis ini dalam inventori kami. Berikut ialah beberapa input pertanian umum yang sering diterokai oleh petani lain.'
+                    : targetLanguage === 'zh'
+                        ? '\u76ee\u524d\u5e93\u5b58\u4e2d\u8fd8\u6ca1\u6709\u4e0e\u6b64\u8bca\u65ad\u76f4\u63a5\u5339\u914d\u7684\u4ea7\u54c1\u3002\u4ee5\u4e0b\u662f\u5176\u4ed6\u519c\u6237\u5e38\u67e5\u770b\u7684\u901a\u7528\u519c\u4e1a\u7528\u54c1\u3002'
+                        : 'We do not currently have a direct match for this diagnosis in our inventory. Here are some general agriculture supplies that other farmers often review.',
             };
         } else {
             otherPopular = []; // Keep it clean if we HAVE specific products

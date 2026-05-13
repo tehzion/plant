@@ -1,12 +1,34 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import './LanguageSelector.css';
 
 const LanguageSelector = () => {
   const { language, setLanguage } = useLanguage();
+  const [isCompact, setIsCompact] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 480px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const media = window.matchMedia('(max-width: 480px)');
+    const updateMode = (event) => setIsCompact(event.matches);
+
+    setIsCompact(media.matches);
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', updateMode);
+      return () => media.removeEventListener('change', updateMode);
+    }
+
+    media.addListener(updateMode);
+    return () => media.removeListener(updateMode);
+  }, []);
 
   const languages = [
-    { code: 'en', name: 'English', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
-    { code: 'ms', name: 'Bahasa Malaysia', flag: '\uD83C\uDDF2\uD83C\uDDFE' },
+    { code: 'en', name: isCompact ? 'English' : 'English', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
+    { code: 'ms', name: isCompact ? 'Bahasa MY' : 'Bahasa Malaysia', flag: '\uD83C\uDDF2\uD83C\uDDFE' },
     { code: 'zh', name: '\u4E2D\u6587', flag: '\uD83C\uDDE8\uD83C\uDDF3' },
   ];
 

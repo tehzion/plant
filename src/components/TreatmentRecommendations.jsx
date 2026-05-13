@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { Zap, Pill, Shield } from 'lucide-react';
+import { AlertCircle, Zap, Pill, Shield } from 'lucide-react';
 import './TreatmentRecommendations.css';
 
 const TreatmentRecommendations = ({ result }) => {
@@ -12,6 +12,9 @@ const TreatmentRecommendations = ({ result }) => {
   });
 
   if (!result) return null;
+
+  const diagnosisState = result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
+  const showCautiousNotice = !['confirmed', 'healthy'].includes(diagnosisState) || result.needsMoreEvidence;
 
   const normalizeList = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -63,18 +66,28 @@ const TreatmentRecommendations = ({ result }) => {
         </h3>
       </div>
 
+      {showCautiousNotice && (
+        <div className="tr-caution app-surface app-surface--soft">
+          <AlertCircle size={18} />
+          <p>{t('results.confirmBeforeTreatment') || 'This is a likely/suspected diagnosis. Confirm the visible signs in the field and follow the physical product label before applying any treatment.'}</p>
+        </div>
+      )}
+
       {sections.map(
         (section) =>
           section.data &&
           section.data.length > 0 && (
-            <div key={section.key} className="treatment-section app-surface app-surface--soft">
+            <div
+              key={section.key}
+              className={`treatment-section treatment-section--${section.key} app-surface app-surface--soft`}
+            >
               <button
                 className="tr-toggle"
                 onClick={() => toggleSection(section.key)}
                 aria-expanded={expandedSections[section.key]}
               >
                 <div className="tr-toggle-left">
-                  <div className="tr-icon">{section.icon}</div>
+                  <div className={`tr-icon tr-icon--${section.key}`}>{section.icon}</div>
                   <h4 className="tr-subtitle">{section.title}</h4>
                 </div>
                 <svg

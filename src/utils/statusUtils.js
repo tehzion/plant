@@ -89,12 +89,12 @@ export const isHealthy = (scanOrStatus) => {
         const severity = normalize(scanOrStatus.severity);
         const status = normalize(scanOrStatus.healthStatus || scanOrStatus.status);
 
-        if (severity && UNHEALTHY_SEVERITY_KEYWORDS.some(k => severity.includes(k))) return false;
-
         if (disease) {
             if (HEALTHY_DISEASE_KEYWORDS.some(k => disease.includes(k))) return true;
             if (!UNKNOWN_KEYWORDS.some(k => disease.includes(k))) return false;
         }
+
+        if (severity && UNHEALTHY_SEVERITY_KEYWORDS.some(k => severity.includes(k))) return false;
 
         if (!status) return false;
         return HEALTHY_KEYWORDS.some(keyword => status.includes(keyword));
