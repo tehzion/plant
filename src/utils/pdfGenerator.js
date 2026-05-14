@@ -90,6 +90,12 @@ const normalizeList = (value) => {
     return [];
 };
 
+const formatConfidenceValue = (value) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return '';
+    return `${Math.round(numericValue)}%`;
+};
+
 const sanitizeFileStem = (value) => {
     if (!value || containsComplexPdfText(value)) {
         return 'report';
@@ -128,6 +134,10 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     const doc = new jsPDF();
     const renderer = createPdfTextRenderer(doc);
     const t = (key) => getTranslation(translations, language, key);
+    const label = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const pageLabel = t('common.page');
     const ofLabel = t('common.of');
 
@@ -139,6 +149,10 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     const darkColor = [28, 36, 52];
     const lightText = [100, 116, 139];
     const unhealthyColor = [239, 68, 68];
+    const warningColor = [217, 119, 6];
+    const warningFill = [255, 247, 237];
+    const infoColor = [37, 99, 235];
+    const infoFill = [239, 246, 255];
 
     let yPos = 20;
 
@@ -238,6 +252,70 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         yPos += blockHeight + marginBottom;
     };
 
+    const writeCallout = async ({
+        title,
+        body,
+        rows = [],
+        fillColor = infoFill,
+        borderColor = infoColor,
+        titleColor = darkColor,
+        textColor = darkColor,
+        marginBottom = 10,
+    }) => {
+        const x = 14;
+        const width = pageWidth - 28;
+        const padding = 5;
+        const innerWidth = width - (padding * 2);
+        const safeRows = rows.filter((row) => row?.[0] && row?.[1]);
+        const titleHeight = title ? renderer.measureTextHeight(title, innerWidth, { fontSize: 11, fontStyle: 'bold' }) : 0;
+        const bodyHeight = body ? renderer.measureTextHeight(body, innerWidth, { fontSize: 9.5, lineHeight: 1.35 }) : 0;
+        const rowHeight = safeRows.reduce((total, [rowLabel, value]) => {
+            const text = `${rowLabel}: ${value}`;
+            return total + renderer.measureTextHeight(text, innerWidth, { fontSize: 9.5, lineHeight: 1.25 }) + 2;
+        }, 0);
+        const blockHeight = padding + titleHeight + (title && (body || safeRows.length) ? 3 : 0) + bodyHeight + (body && safeRows.length ? 3 : 0) + rowHeight + padding;
+
+        checkPageBreak(blockHeight + marginBottom);
+        doc.setFillColor(...fillColor);
+        doc.setDrawColor(...borderColor);
+        doc.roundedRect(x, yPos, width, blockHeight, 4, 4, 'FD');
+
+        let contentY = yPos + padding;
+        if (title) {
+            await renderer.drawText(title, x + padding, contentY, {
+                maxWidth: innerWidth,
+                fontSize: 11,
+                fontStyle: 'bold',
+                color: titleColor,
+            });
+            contentY += titleHeight + 3;
+        }
+
+        if (body) {
+            await renderer.drawText(body, x + padding, contentY, {
+                maxWidth: innerWidth,
+                fontSize: 9.5,
+                color: textColor,
+                lineHeight: 1.35,
+            });
+            contentY += bodyHeight + 3;
+        }
+
+        for (const [rowLabel, value] of safeRows) {
+            const text = `${rowLabel}: ${value}`;
+            const measuredHeight = renderer.measureTextHeight(text, innerWidth, { fontSize: 9.5, lineHeight: 1.25 });
+            await renderer.drawText(text, x + padding, contentY, {
+                maxWidth: innerWidth,
+                fontSize: 9.5,
+                color: textColor,
+                lineHeight: 1.25,
+            });
+            contentY += measuredHeight + 2;
+        }
+
+        yPos += blockHeight + marginBottom;
+    };
+
     const localizeField = (value, prefix) => {
         if (!value) return t('common.unknown');
         const trimmedValue = value.toString().trim();
@@ -268,9 +346,9 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
     doc.fill();
 
-    await renderer.drawText('Smart Plant Advisor', 42, 14, {
+    await renderer.drawText('KANB Agropreneur Nasional', 42, 14, {
         maxWidth: 90,
-        fontSize: 18,
+        fontSize: 16,
         fontStyle: 'bold',
         color: [255, 255, 255],
     });
@@ -324,6 +402,24 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     }
 
     const healthy = isHealthy(scanData);
+    const diagnosisState = scanData.status
+        || (scanData.requiresRetake ? 'retake_required' : scanData.needsMoreEvidence || scanData.abstainReason ? 'uncertain' : (healthy ? 'healthy' : 'likely'));
+    const diagnosisStatusLabel = getDiagnosisStatusLabel(t, diagnosisState);
+    const speciesContext = scanData.speciesContext || scanData.speciesAssessment || null;
+    const topSpeciesCandidate = speciesContext?.topCandidates?.[0] || speciesContext?.candidates?.[0] || null;
+    const speciesConfidence = formatConfidenceValue(
+        speciesContext?.confidence
+        ?? topSpeciesCandidate?.confidence
+        ?? scanData.identificationConfidence,
+    );
+    const speciesName = speciesContext?.scientificName
+        || topSpeciesCandidate?.scientificName
+        || topSpeciesCandidate?.scientific_name
+        || scanData.identification;
+    const speciesContextText = speciesName
+        ? `${speciesName}${speciesConfidence ? ` (${speciesConfidence})` : ''}${speciesContext?.confirmed === false ? ` - ${label('results.unconfirmed', 'unconfirmed')}` : ''}`
+        : '';
+    const needsConfirmation = !['confirmed', 'healthy'].includes(diagnosisState);
     const statusColor = healthy ? primaryColor : unhealthyColor;
     doc.setFillColor(...statusColor);
     doc.roundedRect(14, yPos, pageWidth - 28, 18, 3, 3, 'F');
@@ -368,11 +464,11 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     if (!healthy && scanData.disease) {
         metadataRows.push([t('results.diagnosis') || t('results.disease'), scanData.disease]);
     }
-    if (scanData.status) {
-        metadataRows.push([t('results.diagnosisStatus') || 'Diagnosis status', getDiagnosisStatusLabel(t, scanData.status)]);
+    if (diagnosisState && diagnosisState !== 'healthy') {
+        metadataRows.push([label('results.diagnosisStatus', 'Diagnosis status'), diagnosisStatusLabel]);
     }
     if (scanData.diagnosticEvidence?.likelyCauseCategory) {
-        metadataRows.push([t('results.likelyCauseCategory') || 'Likely cause', scanData.diagnosticEvidence.likelyCauseCategory]);
+        metadataRows.push([label('results.likelyCauseCategory', 'Likely cause'), scanData.diagnosticEvidence.likelyCauseCategory]);
     }
     if (scanData.fungusType) {
         metadataRows.push([t('results.fungusSpecies'), scanData.fungusType]);
@@ -412,6 +508,27 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     }
     yPos += 10;
 
+    const summaryRows = [
+        [label('results.diagnosisStatus', 'Diagnosis status'), diagnosisStatusLabel],
+        [label('results.diagnosis', 'Diagnosis'), healthy ? t('results.healthy') : scanData.disease],
+        [label('results.plantType', 'Plant type'), speciesContextText],
+    ];
+    const summaryBody = healthy
+        ? label('results.healthySummary', 'No major disease signs were detected in this scan.')
+        : needsConfirmation
+            ? label('results.confirmBeforeTreatment', 'Treat this as a likely field diagnosis. Confirm visible signs and follow local product labels before applying treatment.')
+            : label('results.confirmedDiagnosisSummary', 'The result has enough visual evidence for a higher-confidence field diagnosis.');
+
+    await writeCallout({
+        title: label('pdf.fieldDecisionSummary', 'Field Decision Summary'),
+        body: summaryBody,
+        rows: summaryRows,
+        fillColor: needsConfirmation ? warningFill : secondaryColor,
+        borderColor: needsConfirmation ? warningColor : primaryColor,
+        titleColor: needsConfirmation ? warningColor : primaryColor,
+        textColor: darkColor,
+    });
+
     const description = scanData.description || scanData.additionalNotes;
     if (description) {
         await writeSectionTitle(t('results.aboutDisease'), {
@@ -426,6 +543,78 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             fontSize: 10,
             color: darkColor,
             gapAfter: 8,
+        });
+    }
+
+    const evidenceFor = normalizeList(scanData.diagnosticEvidence?.evidenceFor);
+    const evidenceAgainst = normalizeList(scanData.diagnosticEvidence?.evidenceAgainst);
+    if (evidenceFor.length > 0 || evidenceAgainst.length > 0) {
+        await writeSectionTitle(label('results.diagnosticEvidence', 'Diagnostic Evidence'), {
+            textColor: darkColor,
+            fontSize: 14,
+            paddingY: 0,
+            marginBottom: 6,
+        });
+
+        if (evidenceFor.length > 0) {
+            await writeParagraph(label('results.supportingSigns', 'Supporting signs'), {
+                x: 14,
+                width: pageWidth - 28,
+                fontSize: 10,
+                fontStyle: 'bold',
+                color: primaryColor,
+                gapAfter: 2,
+            });
+            await writeList(evidenceFor, {
+                x: 18,
+                width: pageWidth - 32,
+                bullet: '-',
+                gapAfter: 5,
+            });
+        }
+
+        if (evidenceAgainst.length > 0) {
+            await writeParagraph(label('results.limitingSigns', 'Limits or missing evidence'), {
+                x: 14,
+                width: pageWidth - 28,
+                fontSize: 10,
+                fontStyle: 'bold',
+                color: warningColor,
+                gapAfter: 2,
+            });
+            await writeList(evidenceAgainst, {
+                x: 18,
+                width: pageWidth - 32,
+                bullet: '-',
+                gapAfter: 8,
+            });
+        }
+    }
+
+    const differentials = normalizeList(scanData.differentialDiagnoses || scanData.differentials)
+        .map((item) => {
+            if (typeof item === 'string') return item;
+            const name = item.name || item.diagnosis || item.condition;
+            const likelihood = item.likelihood || item.confidence || item.probability;
+            const reason = item.reason || item.reasoning || item.notes;
+            return [
+                name,
+                likelihood ? `(${likelihood})` : '',
+                reason ? `- ${reason}` : '',
+            ].filter(Boolean).join(' ');
+        })
+        .filter(Boolean);
+    if (differentials.length > 0) {
+        await writeSectionTitle(label('results.differentialDiagnoses', 'Other Possibilities To Check'), {
+            textColor: darkColor,
+            fontSize: 14,
+            paddingY: 0,
+            marginBottom: 6,
+        });
+        await writeList(differentials, {
+            x: 18,
+            width: pageWidth - 32,
+            bullet: '-',
         });
     }
 
@@ -466,6 +655,18 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             fontSize: 12,
             marginBottom: 8,
         });
+
+        if (needsConfirmation) {
+            await writeCallout({
+                title: label('results.confirmBeforeTreatment', 'Confirm before treatment'),
+                body: label('results.confirmBeforeUseDesc', 'Confirm the field signs, crop safety, and the physical product label before applying any treatment. If the image is unclear, retake the scan before chemical action.'),
+                fillColor: warningFill,
+                borderColor: warningColor,
+                titleColor: warningColor,
+                textColor: darkColor,
+                marginBottom: 8,
+            });
+        }
 
         const immediateActions = normalizeList(scanData.immediateActions);
         if (immediateActions.length > 0) {
@@ -607,13 +808,15 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         doc.setDrawColor(...primaryColor);
         doc.line(14, yPos - 6, pageWidth - 14, yPos - 6);
 
-        if (products.diseaseControl?.length > 0 && scanData.status && scanData.status !== 'confirmed') {
-            await writeParagraph(t('results.confirmBeforeUseDesc') || 'Confirm field signs and follow the physical product label before applying treatment.', {
-                x: 14,
-                width: pageWidth - 28,
-                fontSize: 9,
-                color: [146, 64, 14],
-                gapAfter: 6,
+        if (products.diseaseControl?.length > 0 && needsConfirmation) {
+            await writeCallout({
+                title: label('results.confirmBeforeUseTitle', 'Confirm before use'),
+                body: label('results.confirmBeforeUseDesc', 'These products are cautious matches for the likely issue. Confirm field signs and follow the physical product label before applying treatment.'),
+                fillColor: warningFill,
+                borderColor: warningColor,
+                titleColor: warningColor,
+                textColor: darkColor,
+                marginBottom: 8,
             });
         }
 
@@ -663,7 +866,9 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         if (fallbackProducts.length > 0) {
             if (products?.fallbackMeta?.used) {
                 await writeParagraph(
-                    t('results.fallbackProductsLabel'),
+                    products?.fallbackMeta?.reason
+                        ? `${t('results.fallbackProductsLabel')}: ${products.fallbackMeta.reason}`
+                        : t('results.fallbackProductsLabel'),
                     {
                         x: 14,
                         width: pageWidth - 28,
@@ -682,6 +887,16 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             );
         }
     }
+
+    await writeCallout({
+        title: label('pdf.fieldUseNotice', 'Field Use Notice'),
+        body: label('pdf.fieldUseNoticeBody', 'This report is a decision-support summary, not a laboratory diagnosis. Use it together with field inspection, local agronomy advice, and Malaysian product-label requirements before treatment.'),
+        fillColor: [248, 250, 252],
+        borderColor: [203, 213, 225],
+        titleColor: darkColor,
+        textColor: lightText,
+        marginBottom: 8,
+    });
 
     const pageCount = doc.internal.getNumberOfPages();
     for (let pageIndex = 1; pageIndex <= pageCount; pageIndex += 1) {

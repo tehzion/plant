@@ -25,6 +25,11 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
             <div className="disease-title-card">
                 <div className="disease-name-section">
                     <h2 className="disease-name">{displayName}</h2>
+                    {!healthy && resultState && (
+                        <span className={`diagnosis-state-pill diagnosis-state-pill--${resultState}`}>
+                            {stateLabel}
+                        </span>
+                    )}
                     {scientificName && <p className="scientific-name">{scientificName}</p>}
 
                     {showIdentification && (

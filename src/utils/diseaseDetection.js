@@ -207,8 +207,8 @@ export const analyzePlantDisease = async (
         })
       },
       {
-        timeoutMs: 90000,
-        timeoutMessage: 'Plant analysis is taking longer than expected. Please try again in a moment.',
+        timeoutMs: 240000,
+        timeoutMessage: 'Plant analysis is still taking longer than expected. Please retry only if the connection has stopped or the page is no longer progressing.',
         networkMessage: 'Could not reach the plant analysis service. Please check your connection and try again.',
         unavailableMessage: 'Plant analysis is temporarily unavailable. Please try again shortly.',
       },

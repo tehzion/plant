@@ -233,7 +233,11 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // 3. Identify Species
         let plantNetResult = await withStageTimeout(
-            identifyPlantWithPlantNet(mainImage),
+            identifyPlantWithPlantNet(mainImage, {
+                leafImage,
+                category,
+                imageQuality,
+            }),
             12000,
             null,
         );
@@ -254,6 +258,7 @@ app.post('/api/analyze', async (req, res, next) => {
                         message: 'NOT_A_PLANT'
                     });
                 }
+                gptVisionResult.source = 'GPT-Vision';
                 plantNetResult = gptVisionResult;
                 identificationSource = 'GPT-Vision';
             }

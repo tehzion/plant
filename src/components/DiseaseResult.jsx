@@ -117,10 +117,40 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .disease-name {
           font-size: 1.32rem;
           color: #111827;
-          margin: 0 0 4px 0;
+          margin: 0 0 8px 0;
           font-weight: 800;
           line-height: 1.4;
           font-family: var(--font-heading);
+        }
+
+        .diagnosis-state-pill {
+          display: inline-flex;
+          align-items: center;
+          width: fit-content;
+          padding: 5px 10px;
+          margin-bottom: 8px;
+          border-radius: 999px;
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid #bbf7d0;
+          font-size: 0.72rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          font-family: var(--font-heading);
+        }
+
+        .diagnosis-state-pill--uncertain,
+        .diagnosis-state-pill--retake_required {
+          background: #fff7ed;
+          color: #c2410c;
+          border-color: #fed7aa;
+        }
+
+        .diagnosis-state-pill--confirmed {
+          background: #eff6ff;
+          color: #1d4ed8;
+          border-color: #bfdbfe;
         }
 
         .scientific-name {

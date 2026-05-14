@@ -21,6 +21,7 @@ export const ScanProvider = ({ children }) => {
 
     // Track the background notification ID
     const backgroundNotifId = useRef(null);
+    const backgroundScanRequestedRef = useRef(false);
 
     // Background Scan Notification
     useEffect(() => {
@@ -29,6 +30,7 @@ export const ScanProvider = ({ children }) => {
         const isScanView = location.pathname === '/' && searchParams.get('scan') === 'true';
 
         if (state.loading && !isScanView) {
+            backgroundScanRequestedRef.current = true;
             if (!backgroundNotifId.current) {
                 backgroundNotifId.current = notify({
                     type: 'info',
@@ -36,6 +38,10 @@ export const ScanProvider = ({ children }) => {
                     duration: 0 // Persistent
                 });
             }
+        } else if (state.loading && isScanView && backgroundNotifId.current) {
+            dismissNotification(backgroundNotifId.current);
+            backgroundNotifId.current = null;
+            backgroundScanRequestedRef.current = false;
         } else if (!state.loading && backgroundNotifId.current) {
             dismissNotification(backgroundNotifId.current);
             backgroundNotifId.current = null;
@@ -59,8 +65,10 @@ export const ScanProvider = ({ children }) => {
                 const currentPath = locationRef.current.pathname;
                 const currentSearch = locationRef.current.search;
                 const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
+                const shouldShowCompletionNotice = backgroundScanRequestedRef.current || !isActivelyScanning;
+                backgroundScanRequestedRef.current = false;
 
-                if (!isActivelyScanning) {
+                if (shouldShowCompletionNotice) {
                     let successNotificationId = null;
                     successNotificationId = notify({
                         type: 'success',
@@ -84,8 +92,10 @@ export const ScanProvider = ({ children }) => {
                 const currentPath = locationRef.current.pathname;
                 const currentSearch = locationRef.current.search;
                 const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');
+                const shouldShowFailureNotice = backgroundScanRequestedRef.current || !isActivelyScanning;
+                backgroundScanRequestedRef.current = false;
 
-                if (!isActivelyScanning) {
+                if (shouldShowFailureNotice) {
                     notify({
                         type: 'error',
                         message: e.userMessage || e.message || t('home.errorAnalysis') || 'Analysis Failed',
@@ -96,6 +106,7 @@ export const ScanProvider = ({ children }) => {
             }
         },
         showBackgroundNotification: () => {
+            backgroundScanRequestedRef.current = true;
             if (!backgroundNotifId.current) {
                 backgroundNotifId.current = notify({
                     type: 'info',

@@ -65,4 +65,26 @@ describe('normalizeDiseaseResult', () => {
         expect(normalized.translatedHealthStatus).toBe('Healthy');
         expect(normalized.translatedSeverity).toBe('');
     });
+
+    it('does not show a confirmed species badge when species context was downgraded by conflict', () => {
+        const normalized = normalizeDiseaseResult({
+            disease: 'Likely Leaf Blight',
+            healthStatus: 'unhealthy',
+            severity: 'moderate',
+            identification: {
+                scientificName: 'Mangifera indica',
+                commonNames: ['Mango'],
+                confidence: 90,
+            },
+            speciesAssessment: {
+                confirmed: true,
+            },
+            speciesContext: {
+                confirmed: false,
+                categoryConflict: true,
+            },
+        }, t);
+
+        expect(normalized.showIdentification).toBe(false);
+    });
 });

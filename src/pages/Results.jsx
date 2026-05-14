@@ -136,6 +136,7 @@ const Results = () => {
     identification: scan?.identification,
     identificationSource: scan?.identificationSource,
     speciesAssessment: scan?.speciesAssessment,
+    speciesContext: scan?.speciesContext,
     nutritionalIssues: normalizedNutrition,
     productSearchTags: scan?.productSearchTags || []
   }), [scan, normalizedNutrition]);

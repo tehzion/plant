@@ -17,22 +17,75 @@ const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
 // Cache product recommendations for 1 hour
 const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
+const normalizePlantNetOrgan = (value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (['leaf', 'flower', 'fruit', 'bark', 'habit', 'other'].includes(normalized)) {
+        return normalized;
+    }
+    if (['stem', 'trunk', 'branch'].includes(normalized)) return 'bark';
+    return 'leaf';
+};
+
+export const buildPlantNetOrganHints = ({ category = '', imageQuality = null, hasLeafImage = false } = {}) => {
+    const text = [
+        category,
+        imageQuality?.tree?.primaryIssue,
+        imageQuality?.leaf?.primaryIssue,
+        ...(Array.isArray(imageQuality?.tree?.flags) ? imageQuality.tree.flags : []),
+        ...(Array.isArray(imageQuality?.leaf?.flags) ? imageQuality.leaf.flags : []),
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    const hints = [];
+    if (/fruit|buah|papaya|betik|coconut|kelapa|banana|pisang|durian|mango|mangga|crop|pod/.test(text)) {
+        hints.push('fruit');
+    }
+    if (/stem|batang|trunk|bark|branch|canker|rot/.test(text)) {
+        hints.push('bark');
+    }
+    hints.push('leaf');
+    if (hasLeafImage) hints.push('leaf');
+    hints.push('habit');
+
+    return [...new Set(hints)].slice(0, 3);
+};
+
+const stripDataUrlPrefix = (imageBase64 = '') => String(imageBase64).replace(/^data:image\/\w+;base64,/, '');
+
+const appendPlantNetImage = (formData, imageBase64, organ, index) => {
+    if (!imageBase64) return;
+    const imageBuffer = Buffer.from(stripDataUrlPrefix(imageBase64), 'base64');
+    formData.append('images', imageBuffer, {
+        filename: `plant-${index + 1}.jpg`,
+        contentType: 'image/jpeg'
+    });
+    formData.append('organs', normalizePlantNetOrgan(organ));
+};
+
 /**
  * Helper function to call PlantNet API
  */
-export async function identifyPlantWithPlantNet(imageBase64) {
+export async function identifyPlantWithPlantNet(imageBase64, options = {}) {
     try {
         console.log('🔍 Identifying plant species...');
 
-        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-        const imageBuffer = Buffer.from(base64Data, 'base64');
-
         const formData = new FormData();
-        formData.append('images', imageBuffer, {
-            filename: 'plant.jpg',
-            contentType: 'image/jpeg'
+        const organHints = buildPlantNetOrganHints({
+            category: options.category,
+            imageQuality: options.imageQuality,
+            hasLeafImage: Boolean(options.leafImage || options.additionalImages?.length),
         });
-        formData.append('organs', 'leaf');
+        const images = [
+            imageBase64,
+            ...(options.leafImage ? [options.leafImage] : []),
+            ...(Array.isArray(options.additionalImages) ? options.additionalImages : []),
+        ].filter(Boolean);
+
+        images.slice(0, 3).forEach((image, index) => {
+            appendPlantNetImage(formData, image, index === 1 ? 'leaf' : organHints[index] || organHints[0], index);
+        });
 
         const response = await fetch(
             `https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.PLANTNET_API_KEY}`,
@@ -57,9 +110,13 @@ export async function identifyPlantWithPlantNet(imageBase64) {
                 family: bestMatch.species.family?.scientificNameWithoutAuthor || 'Unknown',
                 genus: bestMatch.species.genus?.scientificNameWithoutAuthor || 'Unknown',
                 confidence: Math.round(bestMatch.score * 100),
+                source: 'PlantNet',
+                organHints,
                 allMatches: data.results.slice(0, 5).map(match => ({
                     name: match.species.scientificNameWithoutAuthor,
                     commonNames: match.species.commonNames || [],
+                    family: match.species.family?.scientificNameWithoutAuthor || '',
+                    genus: match.species.genus?.scientificNameWithoutAuthor || '',
                     confidence: Math.round(match.score * 100)
                 }))
             };
@@ -580,9 +637,97 @@ export function assessSpeciesIdentification(plantNetResult, category = '') {
         margin,
         primaryName: primaryCommon,
         scientificName: plantNetResult.scientificName,
+        source: plantNetResult.source || 'PlantNet',
         topCandidates: normalizedMatches.slice(0, 3),
     };
 }
+
+const isBroadCropCategory = (category = '') => {
+    const normalized = normalizeLookupText(category);
+    return !normalized || [
+        'fruit',
+        'vegetable',
+        'ornamental',
+        'herb',
+        'tree',
+        'leaf',
+        'other',
+    ].includes(normalized);
+};
+
+const candidateMatchesCategory = (candidate = {}, category = '') => {
+    const normalizedCategory = normalizeLookupText(category);
+    if (!normalizedCategory || isBroadCropCategory(category)) return true;
+
+    const candidateText = normalizeLookupText([
+        candidate.name,
+        candidate.scientificName,
+        ...(Array.isArray(candidate.commonNames) ? candidate.commonNames : []),
+    ].filter(Boolean).join(' '));
+
+    return candidateText.includes(normalizedCategory) || normalizedCategory
+        .split(' ')
+        .filter((token) => token.length >= 4)
+        .some((token) => candidateText.includes(token));
+};
+
+export const buildSpeciesContext = ({
+    plantNetResult = null,
+    speciesAssessment = null,
+    category = '',
+    source = '',
+} = {}) => {
+    const assessment = speciesAssessment || assessSpeciesIdentification(plantNetResult, category);
+    const topCandidates = Array.isArray(assessment?.topCandidates) ? assessment.topCandidates : [];
+    const categoryConflict = Boolean(
+        plantNetResult
+        && category
+        && !isBroadCropCategory(category)
+        && topCandidates.length > 0
+        && !topCandidates.some((candidate) => candidateMatchesCategory(candidate, category))
+    );
+    const confirmed = Boolean(assessment?.confirmed && !categoryConflict);
+
+    return {
+        source: source || assessment?.source || plantNetResult?.source || (plantNetResult ? 'PlantNet' : 'User category'),
+        userCategory: category || '',
+        confirmed,
+        weak: !confirmed,
+        categoryConflict,
+        confidence: clampConfidence(assessment?.confidence, plantNetResult ? 50 : 55),
+        margin: Number.isFinite(Number(assessment?.margin)) ? Number(assessment.margin) : 0,
+        primaryName: assessment?.primaryName || category || 'Unknown crop',
+        scientificName: assessment?.scientificName || plantNetResult?.scientificName || null,
+        organHints: Array.isArray(plantNetResult?.organHints) ? plantNetResult.organHints : [],
+        topCandidates: topCandidates.slice(0, 3).map((candidate) => ({
+            name: candidate.name || candidate.scientificName || '',
+            commonNames: Array.isArray(candidate.commonNames) ? candidate.commonNames.slice(0, 4) : [],
+            confidence: clampConfidence(candidate.confidence, 0),
+        })).filter((candidate) => candidate.name),
+        instruction: confirmed
+            ? 'Use this as crop/species context only. It can unlock crop-specific disease context, but it is not disease evidence.'
+            : 'Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.',
+    };
+};
+
+export const buildSpeciesAssistantMessage = (speciesContext = {}) => ({
+    role: 'assistant',
+    content: `Species-identification context from ${speciesContext.source || 'PlantNet'}:
+${JSON.stringify({
+        userCategory: speciesContext.userCategory || '',
+        confirmed: Boolean(speciesContext.confirmed),
+        weak: Boolean(speciesContext.weak),
+        categoryConflict: Boolean(speciesContext.categoryConflict),
+        confidence: speciesContext.confidence ?? null,
+        margin: speciesContext.margin ?? null,
+        scientificName: speciesContext.scientificName || null,
+        primaryName: speciesContext.primaryName || '',
+        topCandidates: speciesContext.topCandidates || [],
+        organHints: speciesContext.organHints || [],
+    }, null, 2)}
+
+Use this as supporting crop/species context only. It must not be treated as disease evidence, must not increase disease confidence by itself, and must not override visible image symptoms.`,
+});
 
 const getSpeciesContextBlock = (speciesAssessment, plantNetResult, category, language) => {
     if (!speciesAssessment || !plantNetResult) {
@@ -1936,6 +2081,7 @@ export const createFallbackTreatmentPlan = (result, language, malaysiaCropInfo) 
 export const buildDiagnosisStagePrompt = ({
     plantNetResult,
     speciesAssessment,
+    speciesContext,
     category,
     language,
     userLocation,
@@ -1945,7 +2091,9 @@ export const buildDiagnosisStagePrompt = ({
 }) => {
     const isMalay = language === 'ms';
     const isChinese = language === 'zh';
-    const speciesBlock = getSpeciesContextBlock(speciesAssessment, plantNetResult, category, language);
+    const speciesBlock = speciesContext
+        ? `Species-assistant context is supplied as a separate assistant message. Confirmed species context: ${speciesContext.confirmed ? 'yes' : 'no'}. Category conflict: ${speciesContext.categoryConflict ? 'yes' : 'no'}.`
+        : getSpeciesContextBlock(speciesAssessment, plantNetResult, category, language);
     const cropBlock = malaysiaCropInfo
         ? `${isMalay ? 'KONTEKS TANAMAN MALAYSIA' : isChinese ? '马来西亚作物背景' : 'MALAYSIA CROP CONTEXT'}:\n${malaysiaCropInfo.info.commonDiseases.map((d) => `- ${d}`).join('\n')}\n${malaysiaCropInfo.info.nutrientIssues.map((n) => `- ${n}`).join('\n')}`
         : '';
@@ -1970,7 +2118,10 @@ Leaf close-up provided: ${leafImage ? 'yes' : 'no'}
 
 Rules:
 - Separate image capture quality from diagnosis confidence.
+- Treat PlantNet/species context as crop-identification support only, never as disease evidence.
+- Never increase disease confidence only because PlantNet species confidence is high.
 - Do not state any species is confirmed unless the species context says it is confirmed.
+- If species context is weak or conflicts with the user-selected category, use it only as a hypothesis and rely on visible symptoms.
 - Use ranked differentials when a single diagnosis is not secure.
 - If image quality is weak, set requiresRetake to true and explain why.
 - If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
@@ -2126,7 +2277,7 @@ const parseOpenAIJson = (content, errorLabel) => {
     return JSON.parse(jsonMatch[0]);
 };
 
-const createModelMessagesWithImages = (prompt, treeImage, leafImage = null) => {
+export const createModelMessagesWithImages = (prompt, treeImage, leafImage = null, speciesContext = null) => {
     const content = [
         { type: 'text', text: prompt },
         { type: 'image_url', image_url: { url: treeImage, detail: 'auto' } },
@@ -2136,16 +2287,25 @@ const createModelMessagesWithImages = (prompt, treeImage, leafImage = null) => {
         content.push({ type: 'image_url', image_url: { url: leafImage, detail: 'auto' } });
     }
 
-    return [
+    const messages = [
         {
             role: 'system',
-            content: 'You are a careful Malaysian agricultural analyst. Always return valid JSON only.',
-        },
+            content: 'You are a careful Malaysian agricultural analyst. Always return valid JSON only. PlantNet/species context is supporting crop-identification evidence only, not disease evidence.',
+        }
+    ];
+
+    if (speciesContext) {
+        messages.push(buildSpeciesAssistantMessage(speciesContext));
+    }
+
+    messages.push(
         {
             role: 'user',
             content,
         },
-    ];
+    );
+
+    return messages;
 };
 
 const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
@@ -2194,6 +2354,7 @@ const mergeDiagnosisResult = ({
     language,
     malaysiaCropInfo,
     speciesAssessment,
+    speciesContext,
     imageQuality,
 }) => {
     const captureAssessment = stageOne?.capture_assessment || {};
@@ -2247,6 +2408,7 @@ const mergeDiagnosisResult = ({
             overallConfidence: computeOverallConfidence(speciesConfidence, imageQualityConfidence, diagnosisConfidence),
         },
         speciesAssessment,
+        speciesContext,
     };
 
     baseResult.status = deriveStatus(baseResult);
@@ -2308,13 +2470,23 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         const isMalay = language === 'ms';
         const isChinese = language === 'zh';
 
-        // Get Malaysia-specific crop information
-        const malaysiaCropInfo = getMalaysiaCropInfo(plantNetResult, category);
         const speciesAssessment = assessSpeciesIdentification(plantNetResult, category);
+        const speciesContext = buildSpeciesContext({
+            plantNetResult,
+            speciesAssessment,
+            category,
+            source: plantNetResult?.source || 'User category',
+        });
+
+        // Use crop-specific knowledge only when species context is strong enough.
+        const malaysiaCropInfo = speciesContext.confirmed
+            ? getMalaysiaCropInfo(plantNetResult, category)
+            : null;
 
         const diagnosisPrompt = buildDiagnosisStagePrompt({
             plantNetResult,
             speciesAssessment,
+            speciesContext,
             category,
             language,
             userLocation,
@@ -2323,7 +2495,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             imageQuality,
         });
 
-        const diagnosisMessages = createModelMessagesWithImages(diagnosisPrompt, treeImage, leafImage);
+        const diagnosisMessages = createModelMessagesWithImages(diagnosisPrompt, treeImage, leafImage, speciesContext);
         const diagnosisResponse = await callOpenAIJson(diagnosisMessages, 2600);
         const stageOne = parseOpenAIJson(diagnosisResponse.choices[0].message.content, 'diagnosis stage');
 
@@ -2335,6 +2507,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             language,
             malaysiaCropInfo,
             speciesAssessment,
+            speciesContext,
             imageQuality,
         });
 
@@ -2362,7 +2535,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             try {
                 const treatmentResponse = await withTimeout(
                     callOpenAIJson(treatmentMessages, 1600),
-                    12000,
+                    25000,
                     'Treatment enrichment timed out',
                 );
                 stageTwo = parseOpenAIJson(treatmentResponse.choices[0].message.content, 'treatment stage');
@@ -2380,6 +2553,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             language,
             malaysiaCropInfo,
             speciesAssessment,
+            speciesContext,
             imageQuality,
         });
 

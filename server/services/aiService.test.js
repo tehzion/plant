@@ -237,6 +237,7 @@ describe('aiService helpers', () => {
 
         expect(prompt).toContain('primaryDiagnosis MUST be a named likely/suspected condition');
         expect(prompt).toContain('Avoid generic labels such as "Potential Pest Infestation"');
+        expect(prompt).toContain('Never increase disease confidence only because PlantNet species confidence is high');
         expect(prompt).toContain('Visual evidence checklist');
         expect(prompt).toContain('needsMoreEvidence may be true');
         expect(prompt).toContain('Suspected Papaya Mealybug / Scale Infestation');
@@ -255,6 +256,95 @@ describe('aiService helpers', () => {
 
         expect(assessment.confirmed).toBe(false);
         expect(assessment.margin).toBe(5);
+    });
+
+    it('builds safer PlantNet organ hints for fruit-heavy scans', () => {
+        expect(aiService.buildPlantNetOrganHints({
+            category: 'Papaya fruit',
+            hasLeafImage: true,
+        })).toEqual(['fruit', 'leaf', 'habit']);
+    });
+
+    it('creates confirmed species context only when PlantNet is strong and not conflicting', () => {
+        const assessment = aiService.assessSpeciesIdentification({
+            scientificName: 'Carica papaya',
+            commonNames: ['Papaya'],
+            confidence: 88,
+            source: 'PlantNet',
+            allMatches: [
+                { name: 'Carica papaya', commonNames: ['Papaya'], confidence: 88 },
+                { name: 'Mangifera indica', commonNames: ['Mango'], confidence: 12 },
+            ],
+        }, 'Papaya');
+
+        const context = aiService.buildSpeciesContext({
+            plantNetResult: { scientificName: 'Carica papaya', source: 'PlantNet', organHints: ['fruit', 'leaf'] },
+            speciesAssessment: assessment,
+            category: 'Papaya',
+        });
+
+        expect(context.confirmed).toBe(true);
+        expect(context.categoryConflict).toBe(false);
+        expect(context.scientificName).toBe('Carica papaya');
+        expect(context.instruction).toContain('not disease evidence');
+    });
+
+    it('downgrades strong PlantNet context when it conflicts with the selected crop', () => {
+        const assessment = aiService.assessSpeciesIdentification({
+            scientificName: 'Mangifera indica',
+            commonNames: ['Mango'],
+            confidence: 90,
+            allMatches: [
+                { name: 'Mangifera indica', commonNames: ['Mango'], confidence: 90 },
+                { name: 'Carica papaya', commonNames: ['Papaya'], confidence: 5 },
+            ],
+        }, 'Coconut');
+
+        const context = aiService.buildSpeciesContext({
+            plantNetResult: { scientificName: 'Mangifera indica', source: 'PlantNet' },
+            speciesAssessment: assessment,
+            category: 'Coconut',
+        });
+
+        expect(context.confirmed).toBe(false);
+        expect(context.weak).toBe(true);
+        expect(context.categoryConflict).toBe(true);
+    });
+
+    it('passes species context as a separate assistant message before image diagnosis', () => {
+        const messages = aiService.createModelMessagesWithImages(
+            'Return JSON',
+            'data:image/jpeg;base64,tree',
+            null,
+            {
+                source: 'PlantNet',
+                confirmed: false,
+                weak: true,
+                categoryConflict: true,
+                confidence: 42,
+                margin: 2,
+                userCategory: 'Coconut',
+                topCandidates: [{ name: 'Mangifera indica', confidence: 42 }],
+            },
+        );
+
+        expect(messages).toHaveLength(3);
+        expect(messages[1].role).toBe('assistant');
+        expect(messages[1].content).toContain('supporting crop/species context only');
+        expect(messages[1].content).toContain('must not be treated as disease evidence');
+        expect(messages[2].role).toBe('user');
+    });
+
+    it('uses user category as the species-context source when PlantNet is unavailable', () => {
+        const context = aiService.buildSpeciesContext({
+            plantNetResult: null,
+            category: 'Coconut',
+            source: 'User category',
+        });
+
+        expect(context.source).toBe('User category');
+        expect(context.confirmed).toBe(false);
+        expect(context.topCandidates[0].name).toBe('Coconut');
     });
 
     it('downgrades implausible bacterial diagnosis without bacterial evidence', () => {

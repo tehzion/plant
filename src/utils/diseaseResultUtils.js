@@ -65,7 +65,7 @@ export const normalizeDiseaseResult = (result, t) => {
     const diagnosticEvidence = result.diagnosticEvidence || null;
     const showIdentification = Boolean(
         result.identification
-        && (result.speciesAssessment?.confirmed ?? (Number(result.identification?.confidence) >= 60))
+        && (result.speciesContext?.confirmed ?? result.speciesAssessment?.confirmed ?? (Number(result.identification?.confidence) >= 60))
     );
     const symptomsList = Array.isArray(result.symptoms)
         ? result.symptoms.filter(Boolean)

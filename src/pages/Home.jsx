@@ -45,8 +45,8 @@ const Home = () => {
   useEffect(() => {
     isMounted.current = true;
 
-    // STALE SCAN CHECK: If returning to page and scan is old (>15s), auto-reset
-    if (scanState.loading && scanState.scanStartTime && (Date.now() - scanState.scanStartTime > 15000)) {
+    // Keep long-running analysis alive. Only reset if a stale loading state survives for several minutes.
+    if (scanState.loading && scanState.scanStartTime && (Date.now() - scanState.scanStartTime > 600000)) {
       scanActions.resetScan();
     }
 
@@ -189,10 +189,13 @@ const Home = () => {
 
   const analysisStatusHint = useMemo(() => {
     if (!(loading && currentStep === 3)) return '';
-    if (analysisElapsedMs > 30000) {
-      return t('home.analysisSlowHint') || 'This is taking longer than usual. A weak connection can slow down image analysis.';
+    if (analysisElapsedMs > 120000) {
+      return t('home.analysisDeepReviewHint') || 'Still reviewing the image carefully. This can take a little longer for better diagnosis quality.';
     }
-    if (analysisElapsedMs > 15000) {
+    if (analysisElapsedMs > 60000) {
+      return t('home.analysisSlowHint') || 'This is taking longer than usual, but the analysis is still running. Please keep this screen open.';
+    }
+    if (analysisElapsedMs > 20000) {
       return t('home.analysisNetworkHint') || 'Uploading large photos may take longer on mobile data. Please keep this screen open.';
     }
     return '';
