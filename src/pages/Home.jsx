@@ -65,6 +65,7 @@ const Home = () => {
     currentStep, loading, error, errorCode, analyzingStep, scanStartTime
   } = scanState;
 
+
   // View State: 'dashboard' | 'scan'
   const [viewMode, setViewMode] = useState('dashboard');
 
@@ -215,6 +216,21 @@ const Home = () => {
     return '';
   }, [errorCode, t]);
 
+  // Analysis failure: SET_ERROR always sets currentStep to 3, so just check error + not loading.
+  const hasAnalysisFailure = !loading && Boolean(error);
+
+  const runAnalysisAndNavigate = async () => {
+    try {
+      const scanId = await scanActions.performAnalyze(location, locationName);
+      const currentSearch = new URLSearchParams(window.location.search);
+      if (isMounted.current && scanId && currentSearch.get('scan') === 'true') {
+        navigate(`/results/${scanId}`);
+      }
+    } catch {
+      // Error state is owned by useScanLogic and rendered by the analysis failure card.
+    }
+  };
+
   // Handlers
   const handleStartScan = () => {
     setSearchParams({ scan: 'true' });
@@ -261,28 +277,17 @@ const Home = () => {
     scanActions.nextStep();
 
     if (currentStep === 2) {
-      // Start Analysis
-      try {
-        const scanId = await scanActions.performAnalyze(location, locationName);
-        // Only auto-navigate if the user is still actively looking at the scan overlay
-        const currentSearch = new URLSearchParams(window.location.search);
-        if (isMounted.current && scanId && currentSearch.get('scan') === 'true') {
-          navigate(`/results/${scanId}`);
-        }
-      } catch (e) {
-        // Error handled in hook, but we intercept it here to show as a modal if it's the non-plant error
-        if (e.message === 'NOT_A_PLANT' || scanActions.error === t('home.errorNotPlant')) {
-          setModalConfig({
-            isOpen: true,
-            title: t('common.error') || 'Error',
-            message: t('home.errorNotPlant'),
-            type: 'alert'
-          });
-          // Clear the inline error so it doesn't show at the bottom too
-          scanActions.setError('');
-        }
-      }
+      await runAnalysisAndNavigate();
     }
+  };
+
+  const handleRetryAnalysis = async () => {
+    if (!selectedImage) {
+      scanActions.setStep(1);
+      scanActions.setError(t('home.errorNoImage'));
+      return;
+    }
+    await runAnalysisAndNavigate();
   };
 
 
@@ -452,7 +457,7 @@ const Home = () => {
       />
 
       <div className="container-superapp home-scan-shell">
-        {(loading || currentStep === 3) ? (
+        {loading ? (
           <div className="loading-overlay">
             <div className="loading-card">
               <div className="loading-spinner-circle"></div>
@@ -492,12 +497,37 @@ const Home = () => {
               </div>
             </div>
           </div>
+        ) : hasAnalysisFailure ? (
+          <div className="analysis-failure-shell slide-up">
+            <div className="analysis-failure-card">
+              <div className="analysis-failure-icon">
+                <AlertCircle size={30} />
+              </div>
+              <div className="analysis-failure-copy">
+                <span className="analysis-failure-eyebrow">{t('common.error') || 'Scan needs attention'}</span>
+                <h2>{error}</h2>
+                {errorSupportHint && <p>{errorSupportHint}</p>}
+              </div>
+              <div className="analysis-failure-actions">
+                <button type="button" className="btn btn-primary" onClick={handleRetryAnalysis}>
+                  {t('common.retry') || 'Try Again'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => scanActions.setStepClear(2)}>
+                  {t('common.back') || 'Back'}
+                </button>
+                <button type="button" className="cancel-analysis-button" onClick={handleResetAndClose}>
+                  {t('home.cancelScan') || 'Cancel Scan'}
+                </button>
+              </div>
+            </div>
+          </div>
         ) : (
           <>
             <div className="home-scan-stepper">
               <ProgressStepper currentStep={currentStep} steps={steps} onStepClick={(step) => {
-                if (step < currentStep) scanActions.setStep(step);
+                if (step < currentStep) scanActions.setStepClear(step);
               }} />
+
             </div>
 
             {error && (

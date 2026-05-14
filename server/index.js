@@ -51,10 +51,20 @@ const allowedOrigins = [
     'https://tehzion-plant.vercel.app'
 ].filter(Boolean);
 
+// Allow all Vercel preview deployments for this project:
+//   tehzion-plant-<hash>.vercel.app          (Vercel deployment URL)
+//   tehzion-plant-git-<branch>-<team>.vercel.app  (git-branch preview)
+//   tehzion-plant-<anything>-tehzions-projects.vercel.app  (team project)
+const allowedOriginPatterns = [
+    /^https:\/\/tehzion-plant(?:-[a-z0-9-]+)?\.vercel\.app$/i,
+    /^https:\/\/tehzion-plant-git-[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/i,
+    /^https:\/\/tehzion-plant(?:-[a-z0-9-]+)*-tehzions-projects\.vercel\.app$/i,
+];
+
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl) or allowed origins
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin) || allowedOriginPatterns.some((pattern) => pattern.test(origin))) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -83,7 +93,9 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 
-// Health Check
+// Health Check — also used as a keep-alive ping after Render cold starts.
+// Render free-tier instances spin down after inactivity; the frontend pings
+// this endpoint on app load to wake the backend before the first API call.
 app.get('/api/health', (req, res) => {
     const isProduction = process.env.NODE_ENV === 'production';
     res.json({

@@ -27,7 +27,11 @@ const scanReducer = (state, action) => {
             return { ...state, currentStep: state.currentStep + 1, error: '', errorCode: '' };
         case 'PREV_STEP':
             return { ...state, currentStep: state.currentStep - 1, error: '', errorCode: '' };
+        // SET_STEP preserves error so the failure card stays visible when Back is clicked.
+        // Use SET_STEP_CLEAR for explicit forward navigation that should dismiss errors.
         case 'SET_STEP':
+            return { ...state, currentStep: action.payload };
+        case 'SET_STEP_CLEAR':
             return { ...state, currentStep: action.payload, error: '', errorCode: '' };
         case 'START_ANALYSIS':
             return { ...state, loading: true, error: '', errorCode: '', analyzingStep: 0, scanStartTime: Date.now() };
@@ -35,13 +39,16 @@ const scanReducer = (state, action) => {
             return { ...state, analyzingStep: action.payload };
         case 'COMPLETE_ANALYSIS':
             return { ...state, loading: false, analyzingStep: 0, scanStartTime: 0, errorCode: '' };
+        // SET_ERROR intentionally preserves selectedImage, selectedLeafImage, and
+        // selectedCategory so users can retry without re-uploading after a failure.
         case 'SET_ERROR':
             return {
                 ...state,
                 error: typeof action.payload === 'string' ? action.payload : action.payload?.message || '',
                 errorCode: typeof action.payload === 'string' ? '' : action.payload?.code || '',
                 loading: false,
-                scanStartTime: 0
+                scanStartTime: 0,
+                currentStep: 3,
             };
         case 'RESET_SCAN':
             return { ...initialScanState };
@@ -83,7 +90,10 @@ export const useScanLogic = () => {
         const setQuantity = (qty) => dispatchAction('SET_QUANTITY', qty);
         const nextStep = () => dispatchAction('NEXT_STEP');
         const prevStep = () => dispatchAction('PREV_STEP');
+        // setStep preserves the error state so the failure card remains visible.
+        // Use setStepClear when you explicitly want to dismiss any error too.
         const setStep = (step) => dispatchAction('SET_STEP', step);
+        const setStepClear = (step) => dispatchAction('SET_STEP_CLEAR', step);
         const resetScan = () => dispatchAction('RESET_SCAN');
         const setError = (payload) => dispatchAction('SET_ERROR', payload);
 
@@ -209,7 +219,6 @@ export const useScanLogic = () => {
                         : err.status >= 500
                             ? 'ANALYSIS_UNAVAILABLE'
                             : errorCode;
-                dispatch({ type: 'SET_STEP', payload: 2 });
                 throw err;
             }
         };
@@ -223,6 +232,7 @@ export const useScanLogic = () => {
             nextStep,
             prevStep,
             setStep,
+            setStepClear,
             resetScan,
             setError,
             performAnalyze

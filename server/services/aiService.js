@@ -17,6 +17,35 @@ const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
 // Cache product recommendations for 1 hour
 const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
+const usesModernCompletionLimit = (model = '') => /^(gpt-5|o\d|o[1-9]|gpt-oss)/i.test(String(model));
+const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(String(model));
+
+/**
+ * GPT-5 / O-series compatible chat completion wrapper.
+ *
+ * - Uses `max_completion_tokens` for GPT-5 and O-series models
+ *   (these reject the legacy `max_tokens` parameter).
+ * - Omits `temperature` for GPT-5 / O-series models, which do not
+ *   accept that parameter and will throw a 400 if it is present.
+ * - All other options are forwarded unchanged.
+ */
+const createChatCompletion = ({ model, messages, maxTokens, temperature, ...options }) => {
+    const request = {
+        ...options,
+        model,
+        messages,
+        ...(usesModernCompletionLimit(model)
+            ? { max_completion_tokens: maxTokens }
+            : { max_tokens: maxTokens }),
+    };
+
+    if (typeof temperature === 'number' && supportsTemperature(model)) {
+        request.temperature = temperature;
+    }
+
+    return openai.chat.completions.create(request);
+};
+
 const normalizePlantNetOrgan = (value) => {
     const normalized = String(value || '').trim().toLowerCase();
     if (['leaf', 'flower', 'fruit', 'bark', 'habit', 'other'].includes(normalized)) {
@@ -1884,7 +1913,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
         let response;
 
         try {
-            response = await openai.chat.completions.create({
+            response = await createChatCompletion({
                 model: model,
                 response_format: { type: "json_object" },
                 messages: [
@@ -1917,7 +1946,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                         ]
                     }
                 ],
-                max_tokens: 500,
+                maxTokens: 500,
                 temperature: 0.3
             });
         } catch (primaryError) {
@@ -1927,7 +1956,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
             console.log('⚠️ Primary model unavailable, using backup...');
             model = OPENAI_FALLBACK_MODEL;
 
-            response = await openai.chat.completions.create({
+            response = await createChatCompletion({
                 model: model,
                 response_format: { type: "json_object" },
                 messages: [
@@ -1960,7 +1989,7 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                         ]
                     }
                 ],
-                max_tokens: 500,
+                maxTokens: 500,
                 temperature: 0.3
             });
         }
@@ -2326,21 +2355,21 @@ const callOpenAIJson = async (messages, maxTokens = 2400) => {
     let model = OPENAI_PRIMARY_MODEL;
 
     try {
-        return await openai.chat.completions.create({
+        return await createChatCompletion({
             model,
             response_format: { type: 'json_object' },
             messages,
-            max_tokens: maxTokens,
+            maxTokens,
             temperature: 0.2,
         });
     } catch (primaryError) {
         console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
         model = OPENAI_FALLBACK_MODEL;
-        return await openai.chat.completions.create({
+        return await createChatCompletion({
             model,
             response_format: { type: 'json_object' },
             messages,
-            max_tokens: maxTokens,
+            maxTokens,
             temperature: 0.2,
         });
     }
@@ -2861,11 +2890,11 @@ ${fewShotExamples}`
         let response;
 
         try {
-            response = await openai.chat.completions.create({
+            response = await createChatCompletion({
                 model: model,
                 response_format: { type: "json_object" },
                 messages: messages,
-                max_tokens: 4000,
+                maxTokens: 4000,
                 temperature: 0.3,
             });
         } catch (primaryError) {
@@ -2875,11 +2904,11 @@ ${fewShotExamples}`
             console.log('⚠️ Primary model unavailable, using backup...');
             model = OPENAI_FALLBACK_MODEL;
 
-            response = await openai.chat.completions.create({
+            response = await createChatCompletion({
                 model: model,
                 response_format: { type: "json_object" },
                 messages: messages,
-                max_tokens: 4000,
+                maxTokens: 4000,
                 temperature: 0.3,
             });
         }
@@ -2938,7 +2967,7 @@ export async function askAI(question, language, recentNotes = [], recentAlerts =
     const userPrompt = contextSummary
         ? `Farmer question:\n${question}\n\nRelevant farm context:\n${contextSummary}\n\nUse the context only when it is relevant to the answer.`
         : question;
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
         model: OPENAI_PRIMARY_MODEL,
         messages: [
             {
@@ -2948,7 +2977,7 @@ export async function askAI(question, language, recentNotes = [], recentAlerts =
             },
             { role: 'user', content: userPrompt }
         ],
-        max_tokens: 300,
+        maxTokens: 300,
         temperature: 0.5
     });
     return response.choices[0].message.content;
@@ -3035,7 +3064,7 @@ export async function localizeStoredAnalysisResult(result = {}, language = 'en')
     const payload = buildResultLocalizationPayload(result);
 
     try {
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: 'json_object' },
             messages: [
@@ -3057,7 +3086,7 @@ Rules:
                     content: JSON.stringify(payload),
                 },
             ],
-            max_tokens: 1800,
+            maxTokens: 1800,
             temperature: 0.1,
         });
 
@@ -3221,7 +3250,7 @@ export async function recommendProductTags(diagnosisInfo, availableTags, availab
             .map(c => `[CAT:${c.id}] ${c.name}`)
             .join('\n');
 
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
@@ -3299,7 +3328,7 @@ Return JSON with three separate recommendation groups:
 }`
                 }
             ],
-            max_tokens: 600,
+            maxTokens: 600,
             temperature: 0.3,
         });
 
@@ -3363,7 +3392,7 @@ export async function generateAgronomistInsights(logs, alerts, harvestData, plot
         const summarizedLogs = summarizeFarmLogsForAI(logs);
         const summarizedAlerts = summarizeFarmAlertsForAI(alerts);
         const summarizedHarvests = summarizeHarvestDataForAI(harvestData);
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
@@ -3392,7 +3421,7 @@ Generate the insights report in JSON format.`
                 }
             ],
             temperature: 0.3,
-            max_tokens: 500
+            maxTokens: 500
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
@@ -3410,7 +3439,7 @@ Generate the insights report in JSON format.`
 export async function generateTreatmentSOP(crop, disease, severity, language = 'en') {
     try {
         console.log(`🤖 Generating Treatment SOP for ${disease} on ${crop}...`);
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
@@ -3437,7 +3466,7 @@ Return JSON.`
                 }
             ],
             temperature: 0.2,
-            max_tokens: 400
+            maxTokens: 400
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
@@ -3455,7 +3484,7 @@ Return JSON.`
 export async function parseNaturalLanguageLog(text, language = 'en') {
     try {
         console.log(`🤖 Auto-Enhance Request: "${text.substring(0, 50)}..."`);
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
@@ -3495,7 +3524,7 @@ Extract these exact fields (Return JSON):
                 }
             ],
             temperature: 0.1,
-            max_tokens: 300
+            maxTokens: 300
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
@@ -3539,7 +3568,7 @@ export async function generatePredictiveRisk(plots, logs, alerts, location, lang
         }
 
         console.log('🤖 Running AI Predictive Risk Analysis...');
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
             messages: [
@@ -3578,7 +3607,7 @@ Determine if an urgent prediction banner should be shown.`
                 }
             ],
             temperature: 0.1,
-            max_tokens: 300
+            maxTokens: 300
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
