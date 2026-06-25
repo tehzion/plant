@@ -7,9 +7,23 @@ import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
 
 dotenv.config();
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+let openaiClient = null;
+
+const getOpenAIClient = () => {
+    if (!process.env.OPENAI_API_KEY) {
+        const error = new Error('OpenAI API Key is missing on the server.');
+        error.status = 503;
+        throw error;
+    }
+
+    if (!openaiClient) {
+        openaiClient = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+    }
+
+    return openaiClient;
+};
 
 const OPENAI_PRIMARY_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
 const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
@@ -43,7 +57,7 @@ const createChatCompletion = ({ model, messages, maxTokens, temperature, ...opti
         request.temperature = temperature;
     }
 
-    return openai.chat.completions.create(request);
+    return getOpenAIClient().chat.completions.create(request);
 };
 
 const normalizePlantNetOrgan = (value) => {

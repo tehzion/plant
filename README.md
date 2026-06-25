@@ -24,7 +24,10 @@ npm install
 Root `.env`:
 
 ```env
-VITE_API_URL=http://localhost:3002
+# Optional in local dev. If left blank, Vite proxies /api to localhost:3002.
+VITE_API_URL=
+VITE_DEV_API_PROXY_TARGET=http://localhost:3002
+VITE_ENCRYPTION_KEY=
 ```
 
 Backend `server/.env`:
@@ -50,7 +53,7 @@ npm run dev
 npm run dev:server
 ```
 
-Frontend runs on `http://localhost:5173` and the backend on `http://localhost:3002`.
+Frontend runs on `http://localhost:3000` and the backend on `http://localhost:3002`.
 
 ### 5. Test and build
 

@@ -1,0 +1,17 @@
+name: Keep Render Warm
+
+on:
+  schedule:
+    # Render Free web services spin down after 15 minutes without inbound traffic.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping health endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request Render health check
+        run: |
+          curl --fail --silent --show-error --max-time 30 \
+            https://plant-2-uvev.onrender.com/api/health

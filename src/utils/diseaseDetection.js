@@ -257,7 +257,7 @@ export const checkServerHealth = async () => {
       `${API_URL}/api/health`,
       {},
       {
-        timeoutMs: 8000,
+        timeoutMs: 25000,
         timeoutMessage: 'Backend health check timed out.',
         networkMessage: 'Backend server is not reachable',
       },
@@ -272,4 +272,3 @@ export const checkServerHealth = async () => {
     throw new Error('Backend server is not reachable');
   }
 };
-
