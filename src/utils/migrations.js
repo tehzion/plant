@@ -7,7 +7,18 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { getScanHistory, getLogbook, getChecklistState, getDailyNotes, getPlots } from './localStorage';
+import {
+    getScanHistory,
+    getLogbook,
+    getChecklistState,
+    getDailyNotes,
+    getPlots,
+    saveProfileInfo,
+    toDailyNoteRow,
+    toLogbookRow,
+    toPlotRow,
+    toScanHistoryRow,
+} from './localStorage';
 
 const STORAGE_KEY     = 'sea_plant_scan_history';
 const LOGBOOK_KEY     = 'sea_plant_mygap_logbook';
@@ -23,49 +34,38 @@ export const migrateLocalStorageToSupabase = async (userId) => {
 
     console.log('🌱 Running one-time localStorage → Supabase migration...');
 
+    const errors = [];
+
+    const recordError = (label, error) => {
+        if (!error) return;
+        errors.push({ label, message: error.message || String(error) });
+        console.warn(`Migration: ${label} error`, error.message || error);
+    };
+
     try {
         // ── 1. Scan history ───────────────────────────────────────────────────
         const localScans = getScanHistory(); // synchronous, no userId
         if (localScans.length > 0) {
-            const rows = localScans.map(scan => ({
-                id:            scan.id,
-                user_id:       userId,
-                disease:       scan.disease       || null,
-                confidence:    scan.confidence    ?? null,
-                severity:      scan.severity      || null,
-                category:      scan.category      || null,
-                scale:         scan.farmScale     || scan.scale || null,
-                location_name: scan.locationName  || null,
-                // Strip image blobs — we don't re-upload during migration to keep it fast
-                result_json:   { ...scan, image: null, leafImage: null },
-                image_url:     null,
-                created_at:    scan.timestamp     || new Date().toISOString(),
-            }));
+            const rows = localScans.map(scan => toScanHistoryRow(scan, userId, scan.id, null, null));
 
             // Use upsert so duplicates are silently ignored
             const { error: scanErr } = await supabase
                 .from('scan_history')
                 .upsert(rows, { onConflict: 'id' });
 
-            if (scanErr) console.warn('Migration: scan_history partial error', scanErr.message);
+            recordError('scan_history', scanErr);
         }
 
         // ── 2. Logbook ────────────────────────────────────────────────────────
         const localLogs = getLogbook(); // synchronous, no userId
         if (localLogs.length > 0) {
-            const rows = localLogs.map(log => ({
-                id:         log.id,
-                user_id:    userId,
-                type:       log.type,
-                notes:      log.notes,
-                created_at: log.timestamp || new Date().toISOString(),
-            }));
+            const rows = localLogs.map(log => toLogbookRow(log, userId));
 
             const { error: logErr } = await supabase
                 .from('mygap_logs')
                 .upsert(rows, { onConflict: 'id' });
 
-            if (logErr) console.warn('Migration: mygap_logs partial error', logErr.message);
+            recordError('mygap_logs', logErr);
         }
 
         // ── 3. Checklist ──────────────────────────────────────────────────────
@@ -75,39 +75,47 @@ export const migrateLocalStorageToSupabase = async (userId) => {
                 .from('mygap_checklist')
                 .upsert({ user_id: userId, state: localChecklist, updated_at: new Date().toISOString() });
 
-            if (clErr) console.warn('Migration: mygap_checklist partial error', clErr.message);
+            recordError('mygap_checklist', clErr);
         }
 
         // ── 4. Daily Notes ───────────────────────────────────────────────────
         const localNotes = getDailyNotes();
         if (localNotes.length > 0) {
-            const rows = localNotes.map(note => ({
-                ...note,
-                user_id: userId,
-                // Ensure IDs are strings and types are correct
-                id: note.id.toString()
-            }));
+            const rows = localNotes.map(note => toDailyNoteRow(note, userId));
             const { error: noteErr } = await supabase
                 .from('daily_notes')
                 .upsert(rows, { onConflict: 'id' });
-            if (noteErr) console.warn('Migration: daily_notes partial error', noteErr.message);
+            recordError('daily_notes', noteErr);
         }
 
         // ── 5. Farm Plots ─────────────────────────────────────────────────────
         const localPlots = getPlots();
         if (localPlots.length > 0) {
-            const rows = localPlots.map(plot => ({
-                ...plot,
-                user_id: userId,
-                id: plot.id.toString()
-            }));
+            const rows = localPlots.map(plot => toPlotRow(plot, userId));
             const { error: plotErr } = await supabase
                 .from('plots')
                 .upsert(rows, { onConflict: 'id' });
-            if (plotErr) console.warn('Migration: plots partial error', plotErr.message);
+            recordError('plots', plotErr);
         }
 
-        // ── 6. Clear localStorage keys so data is not duplicated ──────────────
+        // ── 6. Profile info ──────────────────────────────────────────────────
+        const localProfileRaw = localStorage.getItem(`profile_info_${userId}`);
+        if (localProfileRaw) {
+            try {
+                const localProfile = JSON.parse(localProfileRaw);
+                const profileSaved = await saveProfileInfo(localProfile, userId);
+                if (!profileSaved) recordError('profiles', new Error('Profile save failed'));
+            } catch (profileErr) {
+                recordError('profiles', profileErr);
+            }
+        }
+
+        if (errors.length > 0) {
+            console.warn('Migration kept localStorage because one or more cloud writes failed.', errors);
+            return;
+        }
+
+        // ── 7. Clear localStorage keys so data is not duplicated ──────────────
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(LOGBOOK_KEY);
         localStorage.removeItem(CHECKLIST_KEY);

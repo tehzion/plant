@@ -28,7 +28,15 @@ Root `.env`:
 VITE_API_URL=
 VITE_DEV_API_PROXY_TARGET=http://localhost:3002
 VITE_ENCRYPTION_KEY=
+VITE_SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
+
+Supabase is wired for email/password auth and cloud sync. Apply
+`supabase/plant_app_schema.sql`
+to the Agropeuner project after it is active, then add the publishable key to
+your local `.env` and production environment. Do not put a Supabase service role
+or secret key in any `VITE_*` frontend variable.
 
 Backend `server/.env`:
 
@@ -78,6 +86,8 @@ NODE_ENV=production
 OPENAI_API_KEY=your_openai_api_key_here
 PLANTNET_API_KEY=your_plantnet_api_key_here
 FRONTEND_URL=https://your-public-domain
+VITE_SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 WOOCOMMERCE_URL=https://your-store-domain
 WOOCOMMERCE_CONSUMER_KEY=your_woocommerce_consumer_key
 WOOCOMMERCE_CONSUMER_SECRET=your_woocommerce_consumer_secret

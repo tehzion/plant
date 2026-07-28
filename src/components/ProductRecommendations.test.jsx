@@ -14,6 +14,15 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.productsUnavailableHint': 'Catalog unavailable hint',
             'results.confirmBeforeUseTitle': 'Confirm before use',
             'results.confirmBeforeUseDesc': 'Confirm field signs before applying treatment.',
+            'results.consultationRecommendedTitle': 'Consultation recommended',
+            'results.consultationAvailableTitle': 'Need help choosing?',
+            'results.contactForConsultation': 'Contact us for consultation',
+            'results.productsErrorConsultationDesc': 'Catalog failed. Contact agronomy support.',
+            'results.productMatchScore': 'Match',
+            'results.labelVerifiedMatch': 'Strong match',
+            'results.labelConfirmBeforeUse': 'Confirm before use',
+            'results.labelConsultFirst': 'Consult first',
+            'results.labelMaintenanceSupport': 'Maintenance support',
             'results.checkoutUnavailable': 'Checkout unavailable',
             'results.whyTheseProducts': 'Selection note',
             'results.noProductsFound': 'No products found',
@@ -80,6 +89,11 @@ describe('ProductRecommendations', () => {
                         price: '12.00',
                         description: 'Protective fungicide',
                         permalink: 'https://example.com/products/copper-guard',
+                        matchScore: 88,
+                        matchReason: 'Matched fungicide from the scan result.',
+                        matchedTerms: ['fungicide'],
+                        recommendationRole: 'treatment',
+                        cautionLevel: 'standard',
                     },
                 ],
                 fertilizers: [],
@@ -87,6 +101,15 @@ describe('ProductRecommendations', () => {
                 otherPopular: [],
                 reasoning: '',
                 fallbackMeta: null,
+                recommendationIntent: 'treatment_ready',
+                consultation: {
+                    phone: '+60136667810',
+                    url: 'https://wa.me/60136667810?text=scan',
+                    message: 'Scan ID: scan-123',
+                    label: 'Contact us for consultation',
+                    priority: 'secondary',
+                    reason: 'Send the scan details to our agronomy team before applying treatment.',
+                },
                 storeUrl: 'https://example.com/store',
             }),
         });
@@ -222,5 +245,106 @@ describe('ProductRecommendations', () => {
         await screen.findByText('Copper Guard');
         expect(screen.getByText('Confirm before use')).toBeInTheDocument();
         expect(screen.getByText('Confirm field signs before applying treatment.')).toBeInTheDocument();
+    });
+
+    it('shows match metadata and keeps consultation secondary for strong product matches', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-123',
+                    status: 'confirmed',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'fungal',
+                    confidence: 92,
+                    symptoms: ['Leaf spots'],
+                    treatments: ['Apply registered fungicide'],
+                    productSearchTags: ['fungicide'],
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
+        expect(screen.getByText('Match 88%')).toBeInTheDocument();
+        expect(screen.getByText('Matched fungicide from the scan result.')).toBeInTheDocument();
+        expect(screen.getByText('Strong match')).toBeInTheDocument();
+        expect(screen.getByText('Need help choosing?')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+    });
+
+    it('makes consultation primary when no safe disease-specific product match exists', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                diseaseControl: [],
+                fertilizers: [],
+                supplements: [],
+                otherPopular: [],
+                reasoning: '',
+                fallbackMeta: {
+                    used: true,
+                    isExploration: false,
+                    reason: 'No safe disease-specific product match was found.',
+                },
+                recommendationIntent: 'consultation_needed',
+                consultation: {
+                    phone: '+60136667810',
+                    url: 'https://wa.me/60136667810?text=scan',
+                    message: 'Scan ID: scan-999',
+                    label: 'Contact us for consultation',
+                    priority: 'primary',
+                    reason: 'No safe disease-specific product match was found.',
+                },
+                storeUrl: 'https://example.com/store',
+            }),
+        });
+
+        render(
+            <ProductRecommendations
+                plantType="Coconut"
+                disease="Bud Rot"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-999',
+                    status: 'confirmed',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'fungal',
+                    confidence: 88,
+                    symptoms: ['Spear leaf collapse'],
+                    productSearchTags: ['bud-rot'],
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('Consultation recommended')).toBeInTheDocument();
+        expect(screen.getAllByText('No safe disease-specific product match was found.').length).toBeGreaterThan(0);
+        expect(screen.getByText('No products found')).toBeInTheDocument();
+        expect(screen.queryByText('Recommended Fertilizers')).not.toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+    });
+
+    it('offers consultation when the live catalog fails', async () => {
+        fetchMock.mockRejectedValueOnce(new Error('Catalog offline'));
+
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Mealybug"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-error',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'pest',
+                    symptoms: ['White patches'],
+                    productSearchTags: ['pest-control'],
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('Could not load products')).toBeInTheDocument();
+        expect(screen.getByText('Catalog failed. Contact agronomy support.')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
     });
 });

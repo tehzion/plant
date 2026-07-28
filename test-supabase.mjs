@@ -3,14 +3,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabasePublishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabasePublishableKey) {
   console.log('❌ Missing credentials in .env');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 async function checkDatabase() {
   console.log('Testing Supabase Connection...');
@@ -29,9 +29,9 @@ async function checkDatabase() {
       console.log('✅ Auth Service Connection: OK (Endpoint is reachable)');
   }
 
-  // 2. Check Database Tables (Check if we can query the 'users' or 'scan_history' table)
+  // 2. Check Database Tables
   // We might get a Row Level Security (RLS) error if we aren't logged in, but that still proves the DB is connected!
-  const tablesToTest = ['scan_history', 'checklist_state', 'farm_plots', 'daily_logbook', 'daily_notes'];
+  const tablesToTest = ['profiles', 'scan_history', 'mygap_logs', 'mygap_checklist', 'daily_notes', 'plots', 'order_refs'];
   
   console.log('\nTesting Table Access (RLS might block reads, which is expected and fine, as long as the table exists):');
   

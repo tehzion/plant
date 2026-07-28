@@ -2,7 +2,17 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import UserDashboardPanel from './UserDashboardPanel.jsx';
 
-const navigateMock = vi.fn();
+const routerMocks = vi.hoisted(() => ({
+    navigate: vi.fn(),
+    setSearchParams: vi.fn(),
+    searchParamsString: '',
+}));
+
+const followUpDraftMocks = vi.hoisted(() => ({
+    consumeFollowUpDraft: vi.fn(),
+}));
+
+const navigateMock = routerMocks.navigate;
 const signOutMock = vi.fn();
 
 const translationMap = {
@@ -49,6 +59,10 @@ vi.mock('lucide-react', async () => {
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
+    useSearchParams: () => [
+        new URLSearchParams(routerMocks.searchParamsString),
+        routerMocks.setSearchParams,
+    ],
 }));
 
 vi.mock('../i18n/i18n.jsx', () => ({
@@ -122,9 +136,26 @@ vi.mock('../hooks/useAIAdvisor', () => ({
 
 vi.mock('../utils/localStorage', () => ({
     consumeStorageCleanupNotice: vi.fn(() => null),
+    getProfileInfo: vi.fn().mockResolvedValue({
+        name: '',
+        contact: '',
+        crops: '',
+        memberSince: 'July 2026',
+    }),
+    normalizeProfileInfo: (profile = {}) => ({
+        name: profile.name ?? '',
+        contact: profile.contact ?? '',
+        crops: profile.crops ?? '',
+        memberSince: profile.memberSince ?? profile.member_since ?? 'July 2026',
+    }),
     saveDailyNote: vi.fn(),
     savePlot: vi.fn(),
+    saveProfileInfo: vi.fn().mockResolvedValue(true),
     deletePlot: vi.fn(),
+}));
+
+vi.mock('../utils/scanFollowUpDraft.js', () => ({
+    consumeFollowUpDraft: followUpDraftMocks.consumeFollowUpDraft,
 }));
 
 vi.mock('../lib/supabase', () => ({
@@ -168,6 +199,9 @@ vi.mock('./AlertDetailModal', () => ({
 describe('UserDashboardPanel', () => {
     beforeEach(() => {
         navigateMock.mockReset();
+        routerMocks.setSearchParams.mockReset();
+        routerMocks.searchParamsString = '';
+        followUpDraftMocks.consumeFollowUpDraft.mockReset();
         signOutMock.mockReset();
     });
 
@@ -202,5 +236,27 @@ describe('UserDashboardPanel', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Products' }));
 
         expect(await screen.findByTestId('products-tab')).toBeInTheDocument();
+    });
+
+    it('consumes a scan follow-up draft and opens the daily log form from the URL', async () => {
+        routerMocks.searchParamsString = 'tab=notes&draft=scan-follow-up';
+        followUpDraftMocks.consumeFollowUpDraft.mockReturnValue({
+            activity_type: 'scout',
+            chemical_name: '',
+            chemical_qty: '',
+            disease_name_observed: 'Leaf Spot',
+            scout_severity: 'Moderate',
+            inspection_type: 'Pest/Disease',
+            inspection_status: 'Action Required',
+            expense_category: 'Labor',
+            note: 'Linked scan: scan-123\nFollow-up: verify field symptoms.',
+        });
+
+        render(<UserDashboardPanel />);
+
+        expect(await screen.findByTestId('notes-tab')).toHaveTextContent('scout||Linked scan: scan-123');
+        expect(followUpDraftMocks.consumeFollowUpDraft).toHaveBeenCalledTimes(1);
+        expect(routerMocks.setSearchParams).toHaveBeenCalledWith(expect.any(URLSearchParams), { replace: true });
+        expect(routerMocks.setSearchParams.mock.calls[0][0].toString()).toBe('');
     });
 });

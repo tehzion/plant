@@ -36,6 +36,17 @@ const UNKNOWN_KEYWORDS = [
     'n/a'
 ];
 
+const UNHEALTHY_STATUS_KEYWORDS = [
+    'unhealthy',
+    'diseased',
+    'disease detected',
+    'issue detected',
+    'issues detected',
+    'not healthy',
+    'sick',
+    'sakit'
+];
+
 const UNHEALTHY_SEVERITY_KEYWORDS = [
     'mild',
     'moderate',
@@ -97,11 +108,13 @@ export const isHealthy = (scanOrStatus) => {
         if (severity && UNHEALTHY_SEVERITY_KEYWORDS.some(k => severity.includes(k))) return false;
 
         if (!status) return false;
+        if (UNHEALTHY_STATUS_KEYWORDS.some(keyword => status.includes(keyword))) return false;
         return HEALTHY_KEYWORDS.some(keyword => status.includes(keyword));
     }
 
     const lowerStatus = normalize(scanOrStatus);
     if (!lowerStatus) return false;
+    if (UNHEALTHY_STATUS_KEYWORDS.some(keyword => lowerStatus.includes(keyword))) return false;
     return HEALTHY_KEYWORDS.some(keyword => lowerStatus.includes(keyword));
 };
 

@@ -217,6 +217,161 @@ export const normalizeStoredPlot = (plot = {}) => {
     };
 };
 
+const toNullableNumber = (value) => {
+    if (value === '' || value == null) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+};
+
+export const isCloudUser = (userId = null) => Boolean(userId && userId !== 'demo-user-123' && supabase);
+
+export const toScanHistoryRow = (scanData = {}, userId, id = scanData.id ?? crypto.randomUUID(), imageUrl = null, leafImageUrl = null) => ({
+    id,
+    user_id: userId,
+    disease: scanData.disease || null,
+    confidence: scanData.confidence ?? null,
+    severity: scanData.severity || null,
+    category: scanData.category || null,
+    scale: scanData.farmScale || scanData.scale || null,
+    location_name: scanData.locationName || scanData.location_name || null,
+    result_json: { ...scanData, image: null, leafImage: null },
+    image_url: imageUrl || scanData.image_url || null,
+    leaf_image_url: leafImageUrl || scanData.leaf_image_url || null,
+    created_at: scanData.timestamp || scanData.created_at || new Date().toISOString(),
+});
+
+export const fromScanHistoryRow = (row = {}) => ({
+    ...(row.result_json || {}),
+    id: row.id,
+    timestamp: row.created_at,
+    disease: row.disease,
+    confidence: row.confidence,
+    severity: row.severity,
+    category: row.category,
+    farmScale: row.scale,
+    image_url: row.image_url,
+    leaf_image_url: row.leaf_image_url,
+    locationName: row.location_name,
+});
+
+export const toLogbookRow = (log = {}, userId) => ({
+    id: String(log.id ?? crypto.randomUUID()),
+    user_id: userId,
+    type: log.type || 'pesticide',
+    notes: log.notes || '',
+    created_at: log.timestamp || log.created_at || new Date().toISOString(),
+});
+
+export const fromLogbookRow = (row = {}) => ({
+    id: row.id,
+    timestamp: row.created_at,
+    type: row.type,
+    notes: row.notes,
+});
+
+export const toDailyNoteRow = (note = {}, userId) => {
+    const normalized = normalizeLegacyDailyNote(note);
+    return {
+        id: String(normalized.id),
+        user_id: userId,
+        note: normalized.note || '',
+        activity_type: normalized.activity_type || 'note',
+        plot_id: normalized.plot_id || null,
+        chemical_name: normalized.chemical_name || null,
+        chemical_qty: normalized.chemical_qty || null,
+        application_timing: normalized.application_timing || null,
+        temperature_am: toNullableNumber(normalized.temperature_am),
+        humidity: toNullableNumber(normalized.humidity),
+        growth_stage: normalized.growth_stage || null,
+        pest_notes: normalized.pest_notes || null,
+        disease_incidence: toNullableNumber(normalized.disease_incidence),
+        disease_name_observed: normalized.disease_name_observed || null,
+        scout_severity: normalized.scout_severity || null,
+        kg_harvested: toNullableNumber(normalized.kg_harvested),
+        quality_grade: normalized.quality_grade || null,
+        price_per_kg: toNullableNumber(normalized.price_per_kg),
+        buyer_name: normalized.buyer_name || null,
+        expense_amount: toNullableNumber(normalized.expense_amount),
+        expense_category: normalized.expense_category || null,
+        pruned_count: toNullableNumber(normalized.pruned_count),
+        pruning_type: normalized.pruning_type || null,
+        inspection_type: normalized.inspection_type || null,
+        inspection_status: normalized.inspection_status || null,
+        photo_url: normalized.photo_url || null,
+        created_at: normalized.created_at || new Date().toISOString(),
+    };
+};
+
+export const toPlotRow = (plot = {}, userId) => {
+    const normalized = normalizeStoredPlot(plot);
+    return {
+        id: String(normalized.id),
+        user_id: userId,
+        name: normalized.name || '',
+        crop_type: normalized.crop_type || normalized.cropType || '',
+        area: toNullableNumber(normalized.area) ?? 0,
+        unit: normalized.unit || 'acres',
+        soil_ph: toNullableNumber(normalized.soil_ph),
+        npk_n: toNullableNumber(normalized.npk_n),
+        npk_p: toNullableNumber(normalized.npk_p),
+        npk_k: toNullableNumber(normalized.npk_k),
+        created_at: normalized.created_at || new Date().toISOString(),
+    };
+};
+
+export const normalizeProfileInfo = (profile = {}) => ({
+    name: profile.name ?? '',
+    contact: profile.contact ?? '',
+    crops: profile.crops ?? '',
+    memberSince: profile.memberSince ?? profile.member_since ?? new Date().toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }),
+});
+
+export const getProfileInfo = async (userId = null) => {
+    const localKey = `profile_info_${userId}`;
+    const fallback = normalizeProfileInfo(safeRead(localKey, {}));
+
+    if (isCloudUser(userId)) {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('name, contact, crops, member_since')
+            .eq('user_id', userId)
+            .maybeSingle();
+        if (error) {
+            console.error('getProfileInfo error:', error);
+            return fallback;
+        }
+        return data ? normalizeProfileInfo(data) : fallback;
+    }
+
+    return fallback;
+};
+
+export const saveProfileInfo = async (profileInfo = {}, userId = null) => {
+    const normalized = normalizeProfileInfo(profileInfo);
+    if (userId) {
+        safeWrite(`profile_info_${userId}`, normalized);
+    }
+
+    if (isCloudUser(userId)) {
+        const { error } = await supabase
+            .from('profiles')
+            .upsert({
+                user_id: userId,
+                name: normalized.name,
+                contact: normalized.contact,
+                crops: normalized.crops,
+                member_since: normalized.memberSince,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+        if (error) {
+            console.error('saveProfileInfo error:', error);
+            return false;
+        }
+    }
+
+    return true;
+};
+
 export const migrateLocalSchema = (key, version, migrateFn) => {
     const flagKey = `${key}_schema_v${version}`;
     if (localStorage.getItem(flagKey)) return;
@@ -284,27 +439,14 @@ const uploadImageToStorage = async (base64, userId, scanId, suffix = 'main') => 
 };
 
 export const saveScan = async (scanData, userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         try {
             const id = crypto.randomUUID();
             const [imageUrl, leafImageUrl] = await Promise.all([
                 uploadImageToStorage(scanData.image, userId, id, 'main'),
                 scanData.leafImage ? uploadImageToStorage(scanData.leafImage, userId, id, 'leaf') : null,
             ]);
-            const row = {
-                id,
-                user_id: userId,
-                disease: scanData.disease || null,
-                confidence: scanData.confidence ?? null,
-                severity: scanData.severity || null,
-                category: scanData.category || null,
-                scale: scanData.farmScale || scanData.scale || null,
-                location_name: scanData.locationName || null,
-                result_json: { ...scanData, image: null, leafImage: null },
-                image_url: imageUrl,
-                leaf_image_url: leafImageUrl,
-                created_at: new Date().toISOString(),
-            };
+            const row = toScanHistoryRow(scanData, userId, id, imageUrl, leafImageUrl);
             const { error } = await supabase.from('scan_history').insert(row);
             if (error) throw error;
             return {
@@ -331,7 +473,7 @@ export const saveScan = async (scanData, userId = null) => {
 };
 
 export const getScanHistory = (userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         return supabase
             .from('scan_history')
             .select('*')
@@ -342,18 +484,7 @@ export const getScanHistory = (userId = null) => {
                     console.error('getScanHistory error:', error);
                     return [];
                 }
-                return (data || []).map((row) => ({
-                    ...row.result_json,
-                    id: row.id,
-                    timestamp: row.created_at,
-                    disease: row.disease,
-                    confidence: row.confidence,
-                    severity: row.severity,
-                    category: row.category,
-                    image_url: row.image_url,
-                    leaf_image_url: row.leaf_image_url,
-                    locationName: row.location_name,
-                }));
+                return (data || []).map(fromScanHistoryRow);
             });
     }
     return safeRead(STORAGE_KEY, []);
@@ -365,7 +496,7 @@ export const getScanById = (id, userId = null) => {
         return history.find((scan) => scan.id === id) || null;
     };
 
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         return supabase
             .from('scan_history')
             .select('*')
@@ -374,18 +505,7 @@ export const getScanById = (id, userId = null) => {
             .single()
             .then(({ data, error }) => {
                 if (error || !data) return getLocalScan();
-                return {
-                    ...data.result_json,
-                    id: data.id,
-                    timestamp: data.created_at,
-                    disease: data.disease,
-                    confidence: data.confidence,
-                    severity: data.severity,
-                    category: data.category,
-                    image_url: data.image_url,
-                    leaf_image_url: data.leaf_image_url,
-                    locationName: data.location_name,
-                };
+                return fromScanHistoryRow(data);
             })
             .catch(() => getLocalScan());
     }
@@ -393,7 +513,7 @@ export const getScanById = (id, userId = null) => {
 };
 
 export const deleteScan = async (id, userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         const { error } = await supabase.from('scan_history').delete().eq('id', id).eq('user_id', userId);
         if (error) {
             console.error('deleteScan error:', error);
@@ -406,7 +526,7 @@ export const deleteScan = async (id, userId = null) => {
 };
 
 export const clearAllScans = async (userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         const { error } = await supabase.from('scan_history').delete().eq('user_id', userId);
         if (error) {
             console.error('clearAllScans error:', error);
@@ -448,14 +568,8 @@ export const getGroupedScans = async (userId = null) => {
 };
 
 export const saveLogEntry = async (logEntry, userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
-        const newLog = {
-            id: crypto.randomUUID(),
-            user_id: userId,
-            type: logEntry.type,
-            notes: logEntry.notes,
-            created_at: new Date().toISOString(),
-        };
+    if (isCloudUser(userId)) {
+        const newLog = toLogbookRow(logEntry, userId);
         const { error } = await supabase.from('mygap_logs').insert(newLog);
         if (error) {
             console.error('saveLogEntry error:', error);
@@ -472,7 +586,7 @@ export const saveLogEntry = async (logEntry, userId = null) => {
 };
 
 export const getLogbook = (userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         return supabase
             .from('mygap_logs')
             .select('*')
@@ -483,19 +597,14 @@ export const getLogbook = (userId = null) => {
                     console.error('getLogbook error:', error);
                     return [];
                 }
-                return (data || []).map((row) => ({
-                    id: row.id,
-                    timestamp: row.created_at,
-                    type: row.type,
-                    notes: row.notes,
-                }));
+                return (data || []).map(fromLogbookRow);
             });
     }
     return safeRead(LOGBOOK_KEY, []);
 };
 
 export const saveChecklistState = async (state, userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         const { error } = await supabase
             .from('mygap_checklist')
             .upsert({ user_id: userId, state, updated_at: new Date().toISOString() });
@@ -515,7 +624,7 @@ export const saveChecklistState = async (state, userId = null) => {
 };
 
 export const getChecklistState = (userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         return supabase
             .from('mygap_checklist')
             .select('state')
@@ -562,8 +671,8 @@ export const saveDailyNote = async (entry, userId = null) => {
         created_at: new Date().toISOString(),
     });
 
-    if (userId && userId !== 'demo-user-123' && supabase) {
-        const { error } = await supabase.from('daily_notes').insert({ ...newNote, user_id: userId });
+    if (isCloudUser(userId)) {
+        const { error } = await supabase.from('daily_notes').insert(toDailyNoteRow(newNote, userId));
         if (error) {
             console.error('saveDailyNote error:', error);
             return null;
@@ -578,7 +687,7 @@ export const saveDailyNote = async (entry, userId = null) => {
 };
 
 export const getDailyNotes = (userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         return supabase
             .from('daily_notes')
             .select('*')
@@ -610,8 +719,8 @@ export const savePlot = async (plot, userId = null) => {
         created_at: new Date().toISOString(),
     });
 
-    if (userId && userId !== 'demo-user-123' && supabase) {
-        const { error } = await supabase.from('plots').insert({ ...newPlot, user_id: userId });
+    if (isCloudUser(userId)) {
+        const { error } = await supabase.from('plots').insert(toPlotRow(newPlot, userId));
         if (error) {
             console.error('savePlot error:', error);
             return null;
@@ -626,7 +735,7 @@ export const savePlot = async (plot, userId = null) => {
 };
 
 export const getPlots = (userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         return supabase
             .from('plots')
             .select('*')
@@ -675,7 +784,7 @@ export const saveLocalOrder = (orderId) => {
 export const getLocalOrders = () => safeRead(ORDERS_KEY, []);
 
 export const deletePlot = async (id, userId = null) => {
-    if (userId && userId !== 'demo-user-123' && supabase) {
+    if (isCloudUser(userId)) {
         const { error } = await supabase.from('plots').delete().eq('id', id).eq('user_id', userId);
         if (error) {
             console.error('deletePlot error:', error);

@@ -61,6 +61,7 @@ vi.mock('lucide-react', () => {
         'Mail',
         'Map',
         'MapPin',
+        'MessageCircle',
         'MessageSquareWarning',
         'Microscope',
         'PackageX',

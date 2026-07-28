@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildProductDiagnosisPayload,
+  createProductConsultationFromDiagnosis,
   createProductRecommendationsKey,
+  normalizeProductRecommendationsResponse,
 } from './liveProductRecommendations.js';
 
 describe('live product recommendation payloads', () => {
@@ -68,5 +70,84 @@ describe('live product recommendation payloads', () => {
     expect(first).not.toBe(second);
     expect(first).toContain('"status":"likely"');
     expect(first).toContain('"needsMoreEvidence":true');
+  });
+
+  it('includes scan context in the product recommendation cache key', () => {
+    const first = createProductRecommendationsKey({
+      scanId: 'scan-1',
+      plantType: 'Durian',
+      disease: 'Leaf Spot',
+      confidence: 84,
+      severity: 'moderate',
+      locationName: 'Melaka',
+    }, 'en');
+
+    const second = createProductRecommendationsKey({
+      scanId: 'scan-2',
+      plantType: 'Durian',
+      disease: 'Leaf Spot',
+      confidence: 84,
+      severity: 'moderate',
+      locationName: 'Melaka',
+    }, 'en');
+
+    expect(first).not.toBe(second);
+    expect(first).toContain('"scanId":"scan-1"');
+    expect(first).toContain('"locationName":"Melaka"');
+  });
+
+  it('normalizes product match metadata and consultation payloads', () => {
+    const normalized = normalizeProductRecommendationsResponse({
+      diseaseControl: [
+        {
+          id: 12,
+          name: 'Copper Guard',
+          matchScore: '86',
+          matchReason: 'Matched copper.',
+          matchedTerms: ['copper', null, 'fungicide'],
+          recommendationRole: 'treatment',
+          cautionLevel: 'confirm_before_use',
+        },
+      ],
+      recommendationIntent: 'treatment_ready',
+      consultation: {
+        phone: '+60136667810',
+        url: 'https://wa.me/60136667810',
+        message: 'Scan ID: scan-1',
+        label: 'Contact us for consultation',
+        priority: 'secondary',
+        reason: 'Confirm before use.',
+      },
+    });
+
+    expect(normalized.diseaseControl[0]).toMatchObject({
+      matchScore: 86,
+      matchReason: 'Matched copper.',
+      matchedTerms: ['copper', 'fungicide'],
+      recommendationRole: 'treatment',
+      cautionLevel: 'confirm_before_use',
+    });
+    expect(normalized.recommendationIntent).toBe('treatment_ready');
+    expect(normalized.consultation.priority).toBe('secondary');
+  });
+
+  it('builds a consultation WhatsApp link from scan context', () => {
+    const consultation = createProductConsultationFromDiagnosis({
+      scanId: 'scan-789',
+      plantType: 'Papaya',
+      disease: 'Mealybug',
+      confidence: 82,
+      severity: 'moderate',
+      locationName: 'Johor',
+      symptoms: ['White patches', 'Sticky residue'],
+    }, 'consultation_needed', 'en');
+
+    const decodedUrl = decodeURIComponent(consultation.url);
+    expect(consultation.priority).toBe('primary');
+    expect(consultation.phone).toBe('+60136667810');
+    expect(decodedUrl).toContain('scan-789');
+    expect(decodedUrl).toContain('Papaya');
+    expect(decodedUrl).toContain('Mealybug');
+    expect(decodedUrl).toContain('Johor');
   });
 });

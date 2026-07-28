@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { suppliers, getProductRecommendations } from '../data/productRecommendations.js';
+import { suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
 import './ProductRecommendations.css';
-import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search } from 'lucide-react';
+import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search, MessageCircle } from 'lucide-react';
 import { showToast } from '../utils/toast';
 import {
   buildProductDiagnosisPayload,
+  createProductConsultationFromDiagnosis,
   createEmptyProductRecommendations,
   createProductRecommendationsKey,
   fetchLiveProductRecommendations,
+  PRODUCT_RECOMMENDATION_INTENTS,
 } from '../utils/liveProductRecommendations.js';
 
 const sanitizeProductDescription = (value) => {
@@ -52,6 +54,26 @@ const getProductErrorTitle = (t, error) => {
   return t('results.productsError') || 'Could not load specialized products at this time.';
 };
 
+const getLabel = (t, key, fallback) => {
+  const translated = t(key);
+  return translated && translated !== key ? translated : fallback;
+};
+
+const getCautionLabel = (t, cautionLevel) => {
+  switch (cautionLevel) {
+    case 'standard':
+      return getLabel(t, 'results.labelVerifiedMatch', 'Strong match');
+    case 'confirm_before_use':
+      return getLabel(t, 'results.labelConfirmBeforeUse', 'Confirm before use');
+    case 'consult_first':
+      return getLabel(t, 'results.labelConsultFirst', 'Consult first');
+    case 'maintenance':
+      return getLabel(t, 'results.labelMaintenanceSupport', 'Maintenance support');
+    default:
+      return '';
+  }
+};
+
 const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onRecommendationsLoaded }) => {
   const { t, language } = useLanguage();
   const [products, setProducts] = useState(null);
@@ -62,6 +84,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   const [reasoning, setReasoning] = useState('');
   const [fallbackMeta, setFallbackMeta] = useState(null);
   const [storeUrl, setStoreUrl] = useState('');
+  const [recommendationIntent, setRecommendationIntent] = useState('');
+  const [consultation, setConsultation] = useState(null);
   const [requestAttempt, setRequestAttempt] = useState(0);
 
   const diagnosis = useMemo(
@@ -85,6 +109,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         setSelectedProductIds(new Set());
         setReasoning('');
         setStoreUrl('');
+        setRecommendationIntent('');
+        setConsultation(null);
         setError(null);
         setErrorCode('');
         onRecommendationsLoaded?.(emptyProducts);
@@ -108,6 +134,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         setFallbackMeta(productData.fallbackMeta || null);
         setReasoning(productData.reasoning || '');
         setStoreUrl(productData.storeUrl || '');
+        setRecommendationIntent(productData.recommendationIntent || '');
+        setConsultation(productData.consultation || null);
         onRecommendationsLoaded?.(productData);
 
       } catch (err) {
@@ -182,30 +210,54 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       ? (t('results.productsTimeoutHint') || 'The catalog is responding slowly. Please try again in a moment.')
       : (t('results.productsUnavailableHint') || 'The live catalog is temporarily unavailable right now.');
 
-  // Use local fallback data only when the live store is available but there are no matching items.
   const processedProducts = useMemo(() => {
     if (!products) return null;
-    
-    // Check if the server returned any products at all
-    const hasAnyLive = (products.diseaseControl?.length || 0) + 
-                       (products.fertilizers?.length || 0) + 
-                       (products.supplements?.length || 0) + 
-                       (products.otherPopular?.length || 0) > 0;
-    
-    if (!hasAnyLive && products.storeUrl) {
-      // Fetch from local hardcoded database as absolute last resort
-      const localData = getProductRecommendations(plantType, disease);
-      return {
-        diseaseControl: [],
-        fertilizers: localData.fertilizers || [],
-        supplements: localData.supplements || [],
-        otherPopular: localData.nutrition || [],
-        isLocalFallback: true
-      };
-    }
-    
     return products;
-  }, [products, plantType, disease]);
+  }, [products]);
+
+  const fallbackConsultation = useMemo(
+    () => createProductConsultationFromDiagnosis(
+      diagnosis,
+      recommendationIntent || PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED,
+      language,
+    ),
+    [diagnosis, language, recommendationIntent],
+  );
+
+  const activeConsultation = consultation || fallbackConsultation;
+
+  const renderConsultationPanel = ({ primary = false, reason = '', compact = false } = {}) => {
+    if (!activeConsultation?.url) return null;
+    const title = primary
+      ? getLabel(t, 'results.consultationRecommendedTitle', 'Consultation recommended')
+      : getLabel(t, 'results.consultationAvailableTitle', 'Need help choosing?');
+    const description = reason
+      || activeConsultation.reason
+      || getLabel(t, 'results.consultationRecommendedDesc', 'Send this scan to our agronomy team for product guidance before applying treatment.');
+    const actionLabel = activeConsultation.label
+      || getLabel(t, 'results.contactForConsultation', 'Contact us for consultation');
+
+    return (
+      <div className={`consultation-panel ${primary ? 'consultation-panel--primary' : 'consultation-panel--secondary'} ${compact ? 'consultation-panel--compact' : ''} app-surface`}>
+        <div className="consultation-icon">
+          <MessageCircle size={22} />
+        </div>
+        <div className="consultation-copy">
+          <strong>{title}</strong>
+          <span>{description}</span>
+        </div>
+        <a
+          href={activeConsultation.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`consultation-button ${primary ? 'consultation-button--primary' : ''}`}
+        >
+          <MessageCircle size={16} />
+          <span>{actionLabel}</span>
+        </a>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -217,6 +269,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   }
 
   if (error) {
+    const errorConsultation = createProductConsultationFromDiagnosis(
+      diagnosis,
+      PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED,
+      language,
+    );
     return (
       <div className="product-recommendations-container">
         <div className="product-section product-state product-state--error app-surface">
@@ -236,6 +293,24 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
             </a>
           </div>
         </div>
+        <div className="consultation-panel consultation-panel--primary app-surface">
+          <div className="consultation-icon">
+            <MessageCircle size={22} />
+          </div>
+          <div className="consultation-copy">
+            <strong>{getLabel(t, 'results.consultationRecommendedTitle', 'Consultation recommended')}</strong>
+            <span>{getLabel(t, 'results.productsErrorConsultationDesc', 'The live catalog could not load. Send this scan to our agronomy team for product guidance.')}</span>
+          </div>
+          <a
+            href={errorConsultation.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="consultation-button consultation-button--primary"
+          >
+            <MessageCircle size={16} />
+            <span>{errorConsultation.label}</span>
+          </a>
+        </div>
       </div>
     );
   }
@@ -246,6 +321,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
                        !processedProducts.fertilizers?.length && 
                        !processedProducts.supplements?.length && 
                        !processedProducts.otherPopular?.length;
+  const intent = processedProducts.recommendationIntent || recommendationIntent;
+  const consultationIsPrimary = hasNoProducts
+    || [PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY, PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED].includes(intent)
+    || activeConsultation?.priority === 'primary';
   const showCautiousProductNotice = !hasNoProducts
     && processedProducts.diseaseControl?.length > 0
     && !['confirmed', 'healthy'].includes(diagnosisState);
@@ -302,6 +381,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
     const productName = translateIfNeeded(product.name);
     const productDesc = sanitizeProductDescription(translateIfNeeded(product.description));
+    const cautionLabel = getCautionLabel(t, product.cautionLevel);
+    const matchScore = Number(product.matchScore);
+    const hasMatchScore = Number.isFinite(matchScore) && matchScore > 0;
+    const matchReason = translateIfNeeded(product.matchReason);
 
     return (
       <div
@@ -343,6 +426,26 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           </div>
 
           <p className="product-description">{productDesc}</p>
+
+          {(hasMatchScore || matchReason || cautionLabel) && (
+            <div className="product-match-summary">
+              <div className="product-match-pills">
+                {hasMatchScore && (
+                  <span className="product-match-pill">
+                    {getLabel(t, 'results.productMatchScore', 'Match')} {Math.round(matchScore)}%
+                  </span>
+                )}
+                {cautionLabel && (
+                  <span className={`product-match-pill product-match-pill--${product.cautionLevel}`}>
+                    {cautionLabel}
+                  </span>
+                )}
+              </div>
+              {matchReason && (
+                <p className="product-match-reason">{matchReason}</p>
+              )}
+            </div>
+          )}
 
           <div className="product-actions">
             {product.cartUrl || product.permalink ? (
@@ -410,22 +513,17 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         </div>
       )}
 
+      {consultationIsPrimary && renderConsultationPanel({
+        primary: true,
+        reason: fallbackMeta?.reason || activeConsultation?.reason,
+      })}
+
       {showCautiousProductNotice && (
         <div className="product-note-banner product-note-banner--caution app-surface">
           <Info size={16} />
           <div className="product-note-copy">
             <strong>{t('results.confirmBeforeUseTitle') || 'Confirm before use'}</strong>
             <span>{t('results.confirmBeforeUseDesc') || 'These products match a likely or suspected diagnosis. Confirm the field signs and follow the physical product label before applying treatment.'}</span>
-          </div>
-        </div>
-      )}
-
-      {processedProducts?.isLocalFallback && (
-        <div className="product-note-banner product-note-banner--exploration app-surface">
-          <Info size={16} />
-          <div className="product-note-copy">
-            <strong>{t('results.discoveryCatalog') || 'Discovery Catalog'}</strong>
-            <span>{t('results.noDirectMatchDisclaimer') || 'We couldn\'t find a direct match for this specific diagnosis in our store, but here are some popular items other farmers are using.'}</span>
           </div>
         </div>
       )}
@@ -446,6 +544,11 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           </p>
         </div>
       )}
+
+      {!consultationIsPrimary && renderConsultationPanel({
+        primary: false,
+        compact: true,
+      })}
 
       {/* Disease Control Products */}
       {processedProducts.diseaseControl && processedProducts.diseaseControl.length > 0 && (

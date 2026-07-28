@@ -79,6 +79,20 @@
     border: 1px solid #d1fae5;
 }
 
+.auth-alert--info {
+    align-items: flex-start;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    line-height: 1.45;
+}
+
+.auth-alert--compact {
+    margin-top: -4px;
+    margin-bottom: 20px;
+    font-size: 0.82rem;
+}
+
 .login-form {
     margin-bottom: 24px;
 }

@@ -9,7 +9,7 @@ import DiseaseResult from '../components/DiseaseResult';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 
-import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink } from 'lucide-react';
+import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
 import { getStandardizedStatus } from '../utils/statusUtils';
@@ -20,6 +20,7 @@ import {
   createEmptyProductRecommendations,
   fetchLiveProductRecommendations,
 } from '../utils/liveProductRecommendations.js';
+import { buildFollowUpDraftFromScan, saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
 
@@ -58,6 +59,10 @@ const Results = () => {
   const [scan, setScan] = useState(null);
   const [scanLoading, setScanLoading] = useState(true);
   const [liveProductRecommendations, setLiveProductRecommendations] = useState(null);
+  const label = useCallback((key, fallback) => {
+    const translated = t(key);
+    return translated && translated !== key ? translated : fallback;
+  }, [t]);
 
   useEffect(() => {
     setScanLoading(true);
@@ -109,6 +114,7 @@ const Results = () => {
   );
 
   const result = useMemo(() => ({
+    id: scan?.id,
     healthStatus: getStandardizedStatus(scan),
     status: scan?.status || null,
     plantType: scan?.plantType,
@@ -120,6 +126,7 @@ const Results = () => {
     confidence: scan?.confidence,
     confidenceBreakdown: scan?.confidenceBreakdown,
     severity: scan?.severity,
+    locationName: scan?.locationName,
     plantPart: scan?.plantPart,
     symptoms: scan?.symptoms,
     immediateActions: scan?.immediateActions,
@@ -199,9 +206,31 @@ const Results = () => {
 
   const standardizedStatus = result.healthStatus;
   const healthy = standardizedStatus === 'healthy';
+  const followUpDraft = buildFollowUpDraftFromScan({
+    ...scan,
+    healthStatus: standardizedStatus,
+    nutritionalIssues: normalizedNutrition,
+  });
+  const followUpActionLabel = followUpDraft.activity_type === 'inspect'
+    ? label('results.logRoutineCheck', 'Log routine check')
+    : followUpDraft.activity_type === 'scout'
+      ? label('results.logFieldScouting', 'Log field scouting')
+      : label('results.logTreatmentAction', 'Log treatment action');
 
   const handleScanAgain = () => {
     navigate('/?scan=true');
+  };
+
+  const handleLogFollowUp = () => {
+    const saved = saveFollowUpDraft(followUpDraft);
+    if (!saved) {
+      showToast(
+        label('results.followUpDraftFailed', 'Could not prepare the follow-up log. Please try again.'),
+        'error',
+      );
+      return;
+    }
+    navigate('/profile?tab=notes&draft=scan-follow-up');
   };
 
   const handleDownload = async () => {
@@ -586,6 +615,31 @@ ${t('pdf.generatedBy')}
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="follow-up-card app-surface app-surface--soft">
+          <div className="follow-up-icon">
+            <ClipboardList size={22} />
+          </div>
+          <div className="follow-up-copy">
+            <div className="results-section-kicker">{label('results.followUpKicker', 'Farm follow-up')}</div>
+            <h3>{label('results.followUpTitle', 'Turn this scan into a farm log')}</h3>
+            <p>
+              {healthy
+                ? label('results.followUpHealthyDesc', 'A routine inspection draft is ready for the Daily Log.')
+                : followUpDraft.activity_type === 'scout'
+                  ? label('results.followUpScoutDesc', 'A scouting draft is ready so you can verify the issue in the field.')
+                  : label('results.followUpTreatmentDesc', 'A treatment draft is ready with the diagnosis, severity, and suggested actions.')}
+              {' '}
+              {user
+                ? label('results.followUpSignedInHint', 'Review and save it in your Daily Log.')
+                : label('results.followUpLoginHint', 'Sign in or use the demo account to save it.')}
+            </p>
+          </div>
+          <button type="button" className="follow-up-btn btn btn-primary" onClick={handleLogFollowUp}>
+            <ClipboardList size={16} />
+            <span>{followUpActionLabel}</span>
+          </button>
         </div>
 
         {/* Tabbed Results */}

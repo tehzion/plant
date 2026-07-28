@@ -2,10 +2,6 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import { getGuestId } from '../utils/localStorage';
 
-// NOTE: migrateLocalStorageToSupabase is intentionally NOT imported while
-// Supabase is disabled — importing it would trigger Supabase calls at module
-// load time, which would throw errors when supabase === null.
-
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -21,31 +17,34 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
-        // ── Supabase disabled → run entirely in guest/localStorage mode ───────
+        // ── Supabase not configured → run in guest/localStorage mode ──────────
         if (!supabase) {
             setUser(null);
             return;
         }
 
-        // ── Supabase enabled path (currently unreachable) ─────────────────────
+        const migrateForUser = async (currentUser) => {
+            if (!currentUser) return;
+            try {
+                const { migrateLocalStorageToSupabase } = await import('../utils/migrations');
+                await migrateLocalStorageToSupabase(currentUser.id);
+            } catch (e) {
+                console.warn('Migration skipped:', e.message);
+            }
+        };
+
+        // ── Supabase email/password auth path ─────────────────────────────────
         supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
+            const currentUser = session?.user ?? null;
+            setUser(currentUser);
+            migrateForUser(currentUser);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
                 const currentUser = session?.user ?? null;
                 setUser(currentUser);
-
-                // One-time migration when a real user logs in
-                if (currentUser) {
-                    try {
-                        const { migrateLocalStorageToSupabase } = await import('../utils/migrations');
-                        await migrateLocalStorageToSupabase(currentUser.id);
-                    } catch (e) {
-                        console.warn('Migration skipped:', e.message);
-                    }
-                }
+                await migrateForUser(currentUser);
             }
         );
 
@@ -72,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (!supabase) {
-            throw new Error('Cloud login is currently disabled. Use the demo account (test@test.com / Test321@) or enable Supabase in src/lib/supabase.js.');
+            throw new Error('Cloud login is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env, or use the demo account (test@test.com / Test321@).');
         }
 
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -82,7 +81,7 @@ export const AuthProvider = ({ children }) => {
 
     const signUp = async (email, password) => {
         if (!supabase) {
-            throw new Error('Cloud sign-up is currently disabled. Enable Supabase in src/lib/supabase.js to use this feature.');
+            throw new Error('Cloud sign-up is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env to use this feature.');
         }
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
@@ -109,19 +108,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signInWithGoogle = async () => {
-        if (!supabase) {
-            throw new Error('Google sign-in is currently disabled. Enable Supabase in src/lib/supabase.js to use this feature.');
-        }
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        return data;
+        throw new Error('Google sign-in is disabled. This app is configured for email/password auth only.');
     };
 
     return (
-        <AuthContext.Provider value={{ user, guestId, signIn, signUp, signOut, signInWithGoogle }}>
+        <AuthContext.Provider value={{ user, guestId, signIn, signUp, signOut, signInWithGoogle, isGoogleAuthEnabled: false }}>
             {children}
         </AuthContext.Provider>
     );

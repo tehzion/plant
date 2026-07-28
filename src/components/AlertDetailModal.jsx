@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationProvider.jsx';
-import { consumeStorageCleanupNotice, saveLogEntry } from '../utils/localStorage';
+import { consumeStorageCleanupNotice, saveDailyNote } from '../utils/localStorage';
+import { buildFollowUpDraftFromScan } from '../utils/scanFollowUpDraft.js';
 import {
     X,
     ShieldCheck,
@@ -94,16 +95,31 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
 
     const handleLog = async () => {
         setSubmitting(true);
-        const logEntry = {
-            id: Date.now().toString(36),
-            type: `Treatment: ${scan.disease}`,
-            notes: `Status: ${status === 'resolved' ? 'Resolved' : 'In Progress'}. ${resolution}`.trim(),
-            timestamp: new Date().toISOString(),
-            linkedScanId: scan.id,
-            treatmentStatus: status,
-        };
+        const followUpDraft = buildFollowUpDraftFromScan(scan);
+        const statusLabel = status === 'resolved' ? 'Resolved' : 'In Progress';
+        const resolutionNotes = resolution.trim() ? `Resolution notes: ${resolution.trim()}` : '';
+        const note = [
+            followUpDraft.note,
+            `Treatment status: ${statusLabel}`,
+            resolutionNotes,
+        ].filter(Boolean).join('\n\n');
 
-        await Promise.resolve(saveLogEntry(logEntry, user?.id ?? null));
+        const saved = await Promise.resolve(saveDailyNote({
+            ...followUpDraft,
+            note,
+        }, user?.id ?? null));
+
+        if (!saved) {
+            const saveFailureText = t('error.saveFailed');
+            notifyError(
+                saveFailureText === 'error.saveFailed'
+                    ? 'Failed to save. Please try again.'
+                    : (saveFailureText || 'Failed to save. Please try again.'),
+            );
+            setSubmitting(false);
+            return;
+        }
+
         const cleanupNotice = consumeStorageCleanupNotice();
         if (cleanupNotice) {
             notifyWarning(

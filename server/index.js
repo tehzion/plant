@@ -7,8 +7,8 @@ import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult } from './services/aiService.js';
-import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
+import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -390,13 +390,18 @@ app.post('/api/products/search', async (req, res, next) => {
         // 2. Ask GPT to pick the best tags & categories
         console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
         const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage);
+        const treatmentAllowed = canRecommendTreatmentProducts(diagnosis);
+        const safeRecommendation = {
+            ...recommendation,
+            treatmentTagIds: treatmentAllowed ? recommendation.treatmentTagIds : [],
+            treatmentCategoryIds: treatmentAllowed ? recommendation.treatmentCategoryIds : [],
+        };
         
         // 3. Fetch products for each category in parallel
-        const [treatmentProducts, fertilizerProducts, supplementProducts, allStoreProducts] = await Promise.all([
-            getProductsByTagIds(recommendation.treatmentTagIds, recommendation.treatmentCategoryIds),
-            getProductsByTagIds(recommendation.fertilizerTagIds, recommendation.fertilizerCategoryIds),
-            getProductsByTagIds(recommendation.supplementTagIds, recommendation.supplementCategoryIds),
-            getAllProducts()
+        const [treatmentProducts, fertilizerProducts, supplementProducts] = await Promise.all([
+            getProductsByTagIds(safeRecommendation.treatmentTagIds, safeRecommendation.treatmentCategoryIds),
+            getProductsByTagIds(safeRecommendation.fertilizerTagIds, safeRecommendation.fertilizerCategoryIds),
+            getProductsByTagIds(safeRecommendation.supplementTagIds, safeRecommendation.supplementCategoryIds),
         ]);
         
         // 4. Group and deduplicate
@@ -413,42 +418,45 @@ app.post('/api/products/search', async (req, res, next) => {
             return result;
         };
 
-        const finalTreatment = finalizeList(treatmentProducts);
-        const finalFertilizers = finalizeList(fertilizerProducts);
-        const finalSupplements = finalizeList(supplementProducts);
+        const rawTreatment = finalizeList(treatmentProducts);
+        const rawFertilizers = finalizeList(fertilizerProducts);
+        const rawSupplements = finalizeList(supplementProducts);
+        const finalTreatment = enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment');
+        const finalFertilizers = enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer');
+        const finalSupplements = enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement');
         
-        // 5. Always include some basic products if the main categories are empty
-        let otherPopular = [];
-        const totalCount = finalTreatment.length + finalFertilizers.length + finalSupplements.length;
+        // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
+        const otherPopular = [];
+        const recommendationIntent = getProductRecommendationIntent(diagnosis, {
+            treatmentCount: finalTreatment.length,
+            fertilizerCount: finalFertilizers.length,
+            supplementCount: finalSupplements.length,
+        });
+        const consultation = buildProductConsultation(diagnosis, recommendationIntent, targetLanguage);
         let fallbackMeta = null;
-        
-        // If we have nothing specific, pull "Other Popular" from the whole store
-        if (totalCount === 0 && allStoreProducts.length > 0) {
-            console.log('ℹ️ No direct diagnosis-matched products found. Adding fallback store suggestions...');
-            for (const product of allStoreProducts) {
-                if (otherPopular.length >= 8) break; // Increased to 8 for better exploration
-                if (!includedIds.has(product.id)) {
-                    otherPopular.push(product);
-                    includedIds.add(product.id);
-                }
-            }
-        }
 
-        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular`);
+        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular | intent=${recommendationIntent}`);
         
-        if (totalCount === 0) {
+        if (recommendationIntent === PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY) {
             fallbackMeta = {
                 used: true,
-                isExploration: true,
+                isExploration: false,
                 reason: targetLanguage === 'ms'
-                    ? 'Kami belum mempunyai padanan khusus untuk diagnosis ini dalam inventori kami. Berikut ialah beberapa input pertanian umum yang sering diterokai oleh petani lain.'
+                    ? 'Diagnosis ini belum cukup kukuh untuk mencadangkan produk rawatan. Hubungi pasukan kami untuk semakan lanjut sebelum membeli atau menggunakan input.'
                     : targetLanguage === 'zh'
-                        ? '\u76ee\u524d\u5e93\u5b58\u4e2d\u8fd8\u6ca1\u6709\u4e0e\u6b64\u8bca\u65ad\u76f4\u63a5\u5339\u914d\u7684\u4ea7\u54c1\u3002\u4ee5\u4e0b\u662f\u5176\u4ed6\u519c\u6237\u5e38\u67e5\u770b\u7684\u901a\u7528\u519c\u4e1a\u7528\u54c1\u3002'
-                        : 'We do not currently have a direct match for this diagnosis in our inventory. Here are some general agriculture supplies that other farmers often review.',
+                        ? '\u8be5\u8bca\u65ad\u8bc1\u636e\u8fd8\u4e0d\u8db3\uff0c\u6682\u4e0d\u5efa\u8bae\u76f4\u63a5\u9009\u62e9\u6cbb\u7597\u4ea7\u54c1\u3002\u8d2d\u4e70\u6216\u4f7f\u7528\u6295\u5165\u54c1\u524d\uff0c\u8bf7\u5148\u8054\u7cfb\u6211\u4eec\u8fdb\u4e00\u6b65\u6838\u5bf9\u3002'
+                        : 'This diagnosis is not strong enough for treatment-product recommendations yet. Contact our team for review before buying or applying inputs.',
             };
-        } else {
-            otherPopular = []; // Keep it clean if we HAVE specific products
-            fallbackMeta = null;
+        } else if (recommendationIntent === PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED) {
+            fallbackMeta = {
+                used: true,
+                isExploration: false,
+                reason: targetLanguage === 'ms'
+                    ? 'Kami belum menemui padanan produk rawatan khusus yang selamat untuk diagnosis ini. Hubungi kami untuk cadangan yang lebih tepat.'
+                    : targetLanguage === 'zh'
+                        ? '\u6211\u4eec\u5c1a\u672a\u627e\u5230\u9002\u5408\u6b64\u8bca\u65ad\u7684\u5b89\u5168\u4e13\u7528\u6cbb\u7597\u4ea7\u54c1\u3002\u8bf7\u8054\u7cfb\u6211\u4eec\u83b7\u53d6\u66f4\u51c6\u786e\u7684\u5efa\u8bae\u3002'
+                        : 'We did not find a safe disease-specific product match for this scan. Contact us for a more precise recommendation.',
+            };
         }
 
         res.json({
@@ -458,6 +466,8 @@ app.post('/api/products/search', async (req, res, next) => {
             otherPopular: otherPopular,
             reasoning: recommendation.reasoning,
             fallbackMeta,
+            recommendationIntent,
+            consultation,
             storeUrl: getStoreUrl()
         });
     } catch (error) {

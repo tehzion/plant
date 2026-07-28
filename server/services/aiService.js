@@ -3224,6 +3224,293 @@ export const buildProductRecommendationCacheKey = (diagnosisInfo = {}, language 
     ].join('_');
 };
 
+export const PRODUCT_RECOMMENDATION_INTENTS = Object.freeze({
+    TREATMENT_READY: 'treatment_ready',
+    HEALTHY_MAINTENANCE: 'healthy_maintenance',
+    SUPPORT_ONLY: 'support_only',
+    CONSULTATION_NEEDED: 'consultation_needed',
+});
+
+export const APP_CONSULTATION_WHATSAPP = '+60136667810';
+
+const PRODUCT_RECOMMENDATION_STOPWORDS = new Set([
+    'a',
+    'an',
+    'and',
+    'apply',
+    'are',
+    'before',
+    'for',
+    'from',
+    'in',
+    'of',
+    'on',
+    'or',
+    'plant',
+    'plants',
+    'the',
+    'to',
+    'use',
+    'with',
+    'yang',
+    'dan',
+    'untuk',
+    'pada',
+    'dengan',
+    'atau',
+]);
+
+const normalizeRecommendationText = (value = '') => String(value ?? '')
+    .toLowerCase()
+    .replace(/[-_/]+/g, ' ')
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const pushWeightedTerm = (terms, value, weight = 8) => {
+    const normalized = normalizeRecommendationText(value);
+    if (!normalized) return;
+
+    const addTerm = (term, termWeight) => {
+        if (!term || term.length < 3 || PRODUCT_RECOMMENDATION_STOPWORDS.has(term)) return;
+        const existing = terms.get(term) || 0;
+        terms.set(term, Math.max(existing, termWeight));
+    };
+
+    addTerm(normalized, weight);
+    normalized
+        .split(' ')
+        .filter((word) => word.length >= 4 && !PRODUCT_RECOMMENDATION_STOPWORDS.has(word))
+        .forEach((word) => addTerm(word, Math.max(4, Math.round(weight * 0.72))));
+};
+
+const getDiagnosisConfidenceValue = (diagnosisInfo = {}) => {
+    const primary = Number(diagnosisInfo.diagnosisConfidence);
+    if (Number.isFinite(primary)) return primary;
+    const fallback = Number(diagnosisInfo.confidence);
+    return Number.isFinite(fallback) ? fallback : null;
+};
+
+export const isHealthyProductDiagnosis = (diagnosisInfo = {}) => {
+    const healthStatus = normalizeRecommendationText(diagnosisInfo.healthStatus);
+    const disease = normalizeRecommendationText(diagnosisInfo.disease);
+    const status = normalizeRecommendationText(diagnosisInfo.status);
+
+    return healthStatus === 'healthy'
+        || status === 'healthy'
+        || disease === 'healthy'
+        || disease === 'normal'
+        || disease === 'none'
+        || disease === 'no disease detected';
+};
+
+export const isWeakProductDiagnosis = (diagnosisInfo = {}) => {
+    const status = normalizeRecommendationText(diagnosisInfo.status);
+    const confidence = getDiagnosisConfidenceValue(diagnosisInfo);
+
+    if (diagnosisInfo.requiresRetake || diagnosisInfo.needsMoreEvidence || diagnosisInfo.abstainReason) {
+        return true;
+    }
+
+    if (['uncertain', 'retake required', 'retake_required', 'possible', 'inconclusive'].includes(status)) {
+        return true;
+    }
+
+    return confidence !== null && confidence < 70;
+};
+
+export const canRecommendTreatmentProducts = (diagnosisInfo = {}) => {
+    if (isHealthyProductDiagnosis(diagnosisInfo) || isWeakProductDiagnosis(diagnosisInfo)) {
+        return false;
+    }
+
+    const status = normalizeRecommendationText(diagnosisInfo.status);
+    const confidence = getDiagnosisConfidenceValue(diagnosisInfo);
+    const pathogenType = normalizeRecommendationText(diagnosisInfo.pathogenType);
+    const diseaseCategory = normalizeRecommendationText(diagnosisInfo.diseaseCategory);
+    const hasDisease = Boolean(normalizeRecommendationText(diagnosisInfo.disease));
+    const diseaseLooksActionable = hasDisease && !isHealthyProductDiagnosis(diagnosisInfo);
+    const knownPathogen = ['fungal', 'fungus', 'bacterial', 'bacteria', 'pest', 'insect', 'viral', 'virus', 'nematode'].some((term) => (
+        pathogenType.includes(term) || diseaseCategory.includes(term)
+    ));
+
+    return status === 'confirmed'
+        || status === 'likely'
+        || (diseaseLooksActionable && knownPathogen && confidence !== null && confidence >= 75);
+};
+
+export const getProductRecommendationIntent = (diagnosisInfo = {}, counts = {}) => {
+    if (isHealthyProductDiagnosis(diagnosisInfo)) {
+        return PRODUCT_RECOMMENDATION_INTENTS.HEALTHY_MAINTENANCE;
+    }
+
+    if (isWeakProductDiagnosis(diagnosisInfo)) {
+        return PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY;
+    }
+
+    if (canRecommendTreatmentProducts(diagnosisInfo) && Number(counts.treatmentCount || 0) > 0) {
+        return PRODUCT_RECOMMENDATION_INTENTS.TREATMENT_READY;
+    }
+
+    return PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED;
+};
+
+const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatment') => {
+    const weighted = new Map();
+
+    pushWeightedTerm(weighted, diagnosisInfo.disease, recommendationRole === 'treatment' ? 22 : 10);
+    pushWeightedTerm(weighted, diagnosisInfo.pathogenType, recommendationRole === 'treatment' ? 18 : 7);
+    pushWeightedTerm(weighted, diagnosisInfo.diseaseCategory, recommendationRole === 'treatment' ? 18 : 7);
+    normalizeArray(diagnosisInfo.productSearchTags).forEach((tag) => pushWeightedTerm(weighted, tag, 30));
+    normalizeArray(diagnosisInfo.treatments).forEach((item) => pushWeightedTerm(weighted, item, recommendationRole === 'treatment' ? 16 : 8));
+    normalizeArray(diagnosisInfo.immediateActions).forEach((item) => pushWeightedTerm(weighted, item, 10));
+    normalizeArray(diagnosisInfo.symptoms).forEach((item) => pushWeightedTerm(weighted, item, 8));
+    normalizeArray(diagnosisInfo.prevention).forEach((item) => pushWeightedTerm(weighted, item, 6));
+
+    const evidence = diagnosisInfo.diagnosticEvidence && typeof diagnosisInfo.diagnosticEvidence === 'object'
+        ? diagnosisInfo.diagnosticEvidence
+        : {};
+    pushWeightedTerm(weighted, evidence.likelyCauseCategory, 12);
+    normalizeArray(evidence.evidenceFor).forEach((item) => pushWeightedTerm(weighted, item, 9));
+
+    if (recommendationRole === 'fertilizer' || recommendationRole === 'supplement') {
+        pushWeightedTerm(weighted, diagnosisInfo.nutritionalStatus, 12);
+        normalizeArray(diagnosisInfo.nutritionalIssues?.deficientNutrients).forEach((item) => (
+            pushWeightedTerm(weighted, item?.nutrient || item?.name || item, 18)
+        ));
+    }
+
+    return [...weighted.entries()]
+        .map(([term, weight]) => ({ term, weight }))
+        .sort((left, right) => right.weight - left.weight);
+};
+
+export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendationRole = 'treatment') => {
+    const searchable = normalizeRecommendationText([
+        product.name,
+        product.description,
+        ...(Array.isArray(product.tags) ? product.tags : []),
+        ...(Array.isArray(product.categories) ? product.categories : []),
+    ].filter(Boolean).join(' '));
+
+    const terms = getProductSearchTerms(diagnosisInfo, recommendationRole);
+    const matchedTerms = [];
+    let score = 0;
+
+    terms.forEach(({ term, weight }) => {
+        if (!term || matchedTerms.includes(term)) return;
+        if (searchable.includes(term)) {
+            matchedTerms.push(term);
+            score += weight;
+        }
+    });
+
+    const roleBoost = recommendationRole === 'treatment'
+        ? ['fungicide', 'pesticide', 'insecticide', 'bactericide', 'copper', 'disease control', 'pest control']
+        : recommendationRole === 'fertilizer'
+            ? ['fertilizer', 'baja', 'npk', 'nutrient', 'compost']
+            : ['supplement', 'trace', 'humic', 'seaweed', 'booster', 'amino'];
+
+    roleBoost.forEach((term) => {
+        if (searchable.includes(term)) score += 6;
+    });
+
+    const uniqueMatchedTerms = matchedTerms.slice(0, 6);
+    const matchScore = Math.max(0, Math.min(100, Math.round(score)));
+    const matchReason = uniqueMatchedTerms.length > 0
+        ? `Matched ${uniqueMatchedTerms.slice(0, 3).join(', ')} from the scan result.`
+        : 'Matched the WooCommerce tag or category selected for this scan.';
+
+    return {
+        matchScore,
+        matchedTerms: uniqueMatchedTerms,
+        matchReason,
+    };
+};
+
+export const getProductCautionLevel = (diagnosisInfo = {}, recommendationRole = 'treatment') => {
+    if (recommendationRole !== 'treatment') return 'maintenance';
+    if (!canRecommendTreatmentProducts(diagnosisInfo)) return 'consult_first';
+
+    const status = normalizeRecommendationText(diagnosisInfo.status);
+    const confidence = getDiagnosisConfidenceValue(diagnosisInfo);
+    if (status === 'confirmed' && confidence !== null && confidence >= 85) return 'standard';
+    return 'confirm_before_use';
+};
+
+export const enrichRecommendedProducts = (products = [], diagnosisInfo = {}, recommendationRole = 'treatment') => (
+    (Array.isArray(products) ? products : []).map((product) => {
+        const match = scoreProductMatch(product, diagnosisInfo, recommendationRole);
+        return {
+            ...product,
+            ...match,
+            recommendationRole,
+            cautionLevel: getProductCautionLevel(diagnosisInfo, recommendationRole),
+        };
+    })
+);
+
+const getConsultationReason = (intent, language = 'en') => {
+    if (intent === PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY) {
+        return translateText(language, {
+            en: 'The scan needs stronger field evidence before choosing treatment products.',
+            ms: 'Imbasan ini memerlukan bukti lapangan yang lebih kukuh sebelum memilih produk rawatan.',
+            zh: '在选择治疗产品前，此扫描需要更明确的现场证据。',
+        });
+    }
+
+    if (intent === PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED) {
+        return translateText(language, {
+            en: 'No safe disease-specific product match was found in the live catalog.',
+            ms: 'Tiada padanan produk khusus penyakit yang selamat ditemui dalam katalog langsung.',
+            zh: '实时目录中没有找到安全的病害专用产品匹配。',
+        });
+    }
+
+    return translateText(language, {
+        en: 'Send the scan details to our agronomy team before applying treatment.',
+        ms: 'Hantar butiran imbasan kepada pasukan agronomi kami sebelum membuat rawatan.',
+        zh: '用药前可将扫描详情发送给我们的农艺团队确认。',
+    });
+};
+
+export const buildProductConsultation = (diagnosisInfo = {}, intent = PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED, language = 'en') => {
+    const scanId = diagnosisInfo.scanId || diagnosisInfo.id || 'not recorded';
+    const plant = diagnosisInfo.plantType || 'Unknown crop';
+    const disease = diagnosisInfo.disease || 'Unknown issue';
+    const confidence = getDiagnosisConfidenceValue(diagnosisInfo);
+    const severity = diagnosisInfo.severity || diagnosisInfo.status || 'not recorded';
+    const location = diagnosisInfo.locationName || diagnosisInfo.location_name || '';
+    const symptoms = normalizeArray(diagnosisInfo.symptoms).slice(0, 3).join(', ');
+    const phoneDigits = APP_CONSULTATION_WHATSAPP.replace(/\D/g, '');
+    const message = [
+        'Hi MojoSense team, I need consultation for this plant scan.',
+        `Scan ID: ${scanId}`,
+        `Crop/plant: ${plant}`,
+        `Disease/issue: ${disease}`,
+        confidence !== null ? `Confidence: ${Math.round(confidence)}%` : '',
+        `Severity/status: ${severity}`,
+        location ? `Location: ${location}` : '',
+        symptoms ? `Symptoms: ${symptoms}` : '',
+    ].filter(Boolean).join('\n');
+
+    return {
+        phone: APP_CONSULTATION_WHATSAPP,
+        url: `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`,
+        message,
+        label: translateText(language, {
+            en: 'Contact us for consultation',
+            ms: 'Hubungi kami untuk konsultasi',
+            zh: '联系我们咨询',
+        }),
+        priority: [
+            PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY,
+            PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED,
+        ].includes(intent) ? 'primary' : 'secondary',
+        reason: getConsultationReason(intent, language),
+    };
+};
+
 export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en') {
     if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
         console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');

@@ -47,6 +47,63 @@ describe('localStorage utilities', () => {
         expect(twice).toEqual(once);
     });
 
+    it('maps daily notes to schema-safe Supabase rows', () => {
+        const row = localStorageUtils.toDailyNoteRow({
+            id: 'note-1',
+            note: 'Applied copper',
+            activity_type: 'spray',
+            chemical_name: 'Copper',
+            temperature_am: '27',
+            photo_base64: 'data:image/jpeg;base64,abc',
+            photo_url: 'https://example.com/note.jpg',
+        }, 'user-1');
+
+        expect(row).toMatchObject({
+            id: 'note-1',
+            user_id: 'user-1',
+            note: 'Applied copper',
+            activity_type: 'spray',
+            chemical_name: 'Copper',
+            temperature_am: 27,
+            photo_url: 'https://example.com/note.jpg',
+        });
+        expect(row).not.toHaveProperty('photo_base64');
+    });
+
+    it('maps plots to snake_case Supabase rows without cropType drift', () => {
+        const row = localStorageUtils.toPlotRow({
+            id: 'plot-1',
+            name: 'North Block',
+            cropType: 'Durian',
+            area: '2.5',
+            soil_ph: '6.1',
+        }, 'user-1');
+
+        expect(row).toMatchObject({
+            id: 'plot-1',
+            user_id: 'user-1',
+            name: 'North Block',
+            crop_type: 'Durian',
+            area: 2.5,
+            soil_ph: 6.1,
+        });
+        expect(row).not.toHaveProperty('cropType');
+    });
+
+    it('normalizes cloud profile rows into dashboard profile info', () => {
+        expect(localStorageUtils.normalizeProfileInfo({
+            name: 'Ali',
+            contact: '+6012',
+            crops: 'Durian',
+            member_since: 'July 2026',
+        })).toEqual({
+            name: 'Ali',
+            contact: '+6012',
+            crops: 'Durian',
+            memberSince: 'July 2026',
+        });
+    });
+
     it('cleans up the oldest eligible collections in priority order when quota is exceeded', () => {
         const store = new Map();
         const scanItems = makeItems(25, 'scan');

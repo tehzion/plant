@@ -2,6 +2,14 @@ import { fetchJsonWithTimeout } from './networkRequest.js';
 
 const PRODUCT_RECOMMENDATIONS_CACHE_PREFIX = 'kanb.productRecommendations.v1';
 const PRODUCT_RECOMMENDATIONS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export const PRODUCT_CONSULTATION_WHATSAPP = '+60136667810';
+
+export const PRODUCT_RECOMMENDATION_INTENTS = Object.freeze({
+    TREATMENT_READY: 'treatment_ready',
+    HEALTHY_MAINTENANCE: 'healthy_maintenance',
+    SUPPORT_ONLY: 'support_only',
+    CONSULTATION_NEEDED: 'consultation_needed',
+});
 
 const normalizeLanguage = (value = 'en') => (
     value === 'ms' ? 'ms' : value === 'zh' ? 'zh' : 'en'
@@ -48,6 +56,8 @@ export const createEmptyProductRecommendations = () => ({
     otherPopular: [],
     reasoning: '',
     fallbackMeta: null,
+    recommendationIntent: '',
+    consultation: null,
     storeUrl: '',
 });
 
@@ -85,6 +95,7 @@ const normalizeDiagnosticEvidence = (value) => {
 };
 
 export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', scanResult = {} } = {}) => ({
+    scanId: normalizeText(scanResult?.id || scanResult?.scanId),
     plantType: normalizeText(plantType),
     disease: normalizeText(disease, 'None') || 'None',
     status: normalizeText(scanResult?.status),
@@ -95,6 +106,8 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     healthStatus: normalizeText(scanResult?.healthStatus, 'unknown') || 'unknown',
     pathogenType: normalizeText(scanResult?.pathogenType, 'None') || 'None',
     diseaseCategory: normalizeText(scanResult?.diseaseCategory),
+    severity: normalizeText(scanResult?.severity),
+    locationName: normalizeText(scanResult?.locationName || scanResult?.location_name),
     symptoms: normalizeList(scanResult?.symptoms),
     treatments: normalizeList(scanResult?.treatments),
     immediateActions: normalizeList(scanResult?.immediateActions),
@@ -116,6 +129,9 @@ export const createProductRecommendationsKey = (payload, language = 'en') => JSO
     healthStatus: normalizeText(payload?.healthStatus, 'unknown') || 'unknown',
     pathogenType: normalizeText(payload?.pathogenType, 'None') || 'None',
     diseaseCategory: normalizeText(payload?.diseaseCategory),
+    scanId: normalizeText(payload?.scanId),
+    severity: normalizeText(payload?.severity),
+    locationName: normalizeText(payload?.locationName),
     symptoms: normalizeList(payload?.symptoms),
     treatments: normalizeList(payload?.treatments),
     immediateActions: normalizeList(payload?.immediateActions),
@@ -165,13 +181,83 @@ const writeProductRecommendationsCache = (payload, data, language = 'en') => {
     }
 };
 
+const normalizeProductItem = (product = {}) => {
+    if (!product || typeof product !== 'object') return null;
+    return {
+        ...product,
+        matchScore: normalizeNumber(product.matchScore) ?? 0,
+        matchReason: normalizeText(product.matchReason),
+        matchedTerms: normalizeList(product.matchedTerms),
+        recommendationRole: normalizeText(product.recommendationRole),
+        cautionLevel: normalizeText(product.cautionLevel),
+    };
+};
+
+const normalizeProductList = (value) => (
+    Array.isArray(value) ? value.map(normalizeProductItem).filter(Boolean) : []
+);
+
+const normalizeConsultation = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    return {
+        phone: normalizeText(value.phone),
+        url: normalizeText(value.url),
+        message: normalizeText(value.message),
+        label: normalizeText(value.label),
+        priority: normalizeText(value.priority),
+        reason: normalizeText(value.reason),
+    };
+};
+
+export const createProductConsultationFromDiagnosis = (diagnosis = {}, recommendationIntent = PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED, language = 'en') => {
+    const phoneDigits = PRODUCT_CONSULTATION_WHATSAPP.replace(/\D/g, '');
+    const confidence = normalizeNumber(diagnosis?.diagnosisConfidence ?? diagnosis?.confidence);
+    const lines = [
+        'Hi MojoSense team, I need consultation for this plant scan.',
+        `Scan ID: ${normalizeText(diagnosis?.scanId, 'not recorded') || 'not recorded'}`,
+        `Crop/plant: ${normalizeText(diagnosis?.plantType, 'Unknown crop') || 'Unknown crop'}`,
+        `Disease/issue: ${normalizeText(diagnosis?.disease, 'Unknown issue') || 'Unknown issue'}`,
+        confidence !== null ? `Confidence: ${Math.round(confidence)}%` : '',
+        `Severity/status: ${normalizeText(diagnosis?.severity || diagnosis?.status, 'not recorded') || 'not recorded'}`,
+        normalizeText(diagnosis?.locationName) ? `Location: ${normalizeText(diagnosis.locationName)}` : '',
+        normalizeList(diagnosis?.symptoms).length ? `Symptoms: ${normalizeList(diagnosis.symptoms).slice(0, 3).join(', ')}` : '',
+    ].filter(Boolean);
+    const message = lines.join('\n');
+    const primary = [
+        PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY,
+        PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED,
+    ].includes(recommendationIntent);
+
+    const label = normalizeLanguage(language) === 'ms'
+        ? 'Hubungi kami untuk konsultasi'
+        : normalizeLanguage(language) === 'zh'
+            ? '\u8054\u7cfb\u6211\u4eec\u54a8\u8be2'
+            : 'Contact us for consultation';
+    const reason = normalizeLanguage(language) === 'ms'
+        ? 'Hantar butiran imbasan kepada pasukan agronomi kami untuk semakan lanjut.'
+        : normalizeLanguage(language) === 'zh'
+            ? '\u5c06\u626b\u63cf\u8be6\u60c5\u53d1\u9001\u7ed9\u6211\u4eec\u7684\u519c\u827a\u56e2\u961f\u8fdb\u4e00\u6b65\u6838\u5bf9\u3002'
+            : 'Send the scan details to our agronomy team for review.';
+
+    return {
+        phone: PRODUCT_CONSULTATION_WHATSAPP,
+        url: `https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`,
+        message,
+        label,
+        priority: primary ? 'primary' : 'secondary',
+        reason,
+    };
+};
+
 export const normalizeProductRecommendationsResponse = (data = {}) => ({
-    diseaseControl: Array.isArray(data?.diseaseControl) ? data.diseaseControl : [],
-    fertilizers: Array.isArray(data?.fertilizers) ? data.fertilizers : [],
-    supplements: Array.isArray(data?.supplements) ? data.supplements : [],
-    otherPopular: Array.isArray(data?.otherPopular) ? data.otherPopular : [],
+    diseaseControl: normalizeProductList(data?.diseaseControl),
+    fertilizers: normalizeProductList(data?.fertilizers),
+    supplements: normalizeProductList(data?.supplements),
+    otherPopular: normalizeProductList(data?.otherPopular),
     reasoning: normalizeText(data?.reasoning),
     fallbackMeta: data?.fallbackMeta && typeof data.fallbackMeta === 'object' ? data.fallbackMeta : null,
+    recommendationIntent: normalizeText(data?.recommendationIntent),
+    consultation: normalizeConsultation(data?.consultation),
     storeUrl: normalizeText(data?.storeUrl),
 });
 

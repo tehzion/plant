@@ -1,5 +1,5 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from '../hooks/useLocation';
@@ -9,10 +9,14 @@ import { useFarmStats } from '../hooks/useFarmStats';
 import { useAIAdvisor } from '../hooks/useAIAdvisor';
 import {
     consumeStorageCleanupNotice,
+    getProfileInfo,
+    normalizeProfileInfo,
     saveDailyNote,
     savePlot,
+    saveProfileInfo,
     deletePlot,
 } from '../utils/localStorage';
+import { consumeFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import {
     BarChart3,
     LayoutDashboard,
@@ -59,11 +63,14 @@ const TAB_FALLBACK = (
     </div>
 );
 
+const VALID_DASHBOARD_TABS = new Set(['overview', 'reports', 'plots', 'notes', 'products']);
+
 // ─── Main component ──────────────────────────────────────────────────────────
 const UserDashboardPanel = () => {
     const { user, signOut }                 = useAuth();
     const { t, label }                      = useLanguage();
     const navigate                          = useNavigate();
+    const [searchParams, setSearchParams]   = useSearchParams();
     const { notify, notifyError, notifySuccess, notifyWarning } = useNotifications();
     const { getLocation }                   = useLocation();
     const { forecast, error: weatherError, fetchWeather } = useWeather();
@@ -99,6 +106,7 @@ const UserDashboardPanel = () => {
     const [selectedAlert, setSelectedAlert] = useState(null);
     const [signingOut,    setSigningOut]    = useState(false);
     const [tab,           setTab]           = useState('overview');
+    const followUpDraftHandledRef           = useRef(false);
 
     // ── AI advisor hook ───────────────────────────────────────────────────────
     const {
@@ -110,29 +118,54 @@ const UserDashboardPanel = () => {
 
     // ── Profile / Verification State ──────────────────────────────────────────
     const [profileInfo, setProfileInfo] = useState(() => {
-        const saved = localStorage.getItem(`profile_info_${user?.id}`);
-        return saved ? JSON.parse(saved) : { 
+        let saved = null;
+        try {
+            saved = user?.id ? JSON.parse(localStorage.getItem(`profile_info_${user.id}`) || 'null') : null;
+        } catch {
+            saved = null;
+        }
+        return normalizeProfileInfo(saved || {
             name: '', 
             contact: '', 
             crops: '', 
             memberSince: new Date().toLocaleDateString('en-MY', { month: 'long', year: 'numeric' })
-        };
+        });
     });
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const isVerified = !!(profileInfo.name && profileInfo.contact);
 
-    useEffect(() => {
-        if (user?.id) {
-            localStorage.setItem(`profile_info_${user.id}`, JSON.stringify(profileInfo));
-        }
-    }, [profileInfo, user?.id]);
-
     const [tempProfile, setTempProfile] = useState(profileInfo);
-    const handleProfileSave = (e) => {
+
+    useEffect(() => {
+        if (!user?.id) return;
+        let cancelled = false;
+
+        getProfileInfo(user.id)
+            .then((loadedProfile) => {
+                if (cancelled) return;
+                const normalized = normalizeProfileInfo(loadedProfile);
+                setProfileInfo(normalized);
+                setTempProfile(normalized);
+            })
+            .catch((error) => {
+                console.warn('Profile cloud load skipped:', error.message);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id]);
+
+    const handleProfileSave = async (e) => {
         e.preventDefault();
-        setProfileInfo(prev => ({ ...prev, ...tempProfile }));
+        const nextProfile = normalizeProfileInfo({ ...profileInfo, ...tempProfile });
+        setProfileInfo(nextProfile);
         setIsEditingProfile(false);
+        const saved = await saveProfileInfo(nextProfile, user?.id ?? null);
+        if (!saved) {
+            notifyWarning(label('profile.profileCloudSaveFailed', 'Profile saved locally. Cloud sync will retry after Supabase is ready.'));
+        }
         if (!isVerified) notifySuccess(label('profile.loggedSuccess', 'Profile updated!'));
     };
 
@@ -173,6 +206,32 @@ const UserDashboardPanel = () => {
         { id: 'notes',    label: label('profile.tabNotes', 'Daily Log'), icon: NotebookPen, badge: hasLoggedToday ? null : '!' },
         { id: 'products', label: label('profile.tabProducts', 'Products'), icon: ShoppingBag },
     ];
+
+    useEffect(() => {
+        const requestedTab = searchParams.get('tab');
+        if (requestedTab && VALID_DASHBOARD_TABS.has(requestedTab)) {
+            setTab(requestedTab);
+        }
+
+        if (searchParams.get('draft') !== 'scan-follow-up' || followUpDraftHandledRef.current) return;
+
+        followUpDraftHandledRef.current = true;
+        const draft = consumeFollowUpDraft();
+
+        if (draft) {
+            setNoteForm({ ...EMPTY_FORM, ...draft });
+            setAddingNote(true);
+            setTab('notes');
+            notifySuccess(label('profile.followUpDraftReady', 'Follow-up log prepared. Review and save it.'));
+        } else {
+            notifyWarning(label('profile.followUpDraftExpired', 'Follow-up draft expired. Open the scan result again to prepare a new log.'));
+        }
+
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('draft');
+        nextParams.delete('tab');
+        setSearchParams(nextParams, { replace: true });
+    }, [label, notifySuccess, notifyWarning, searchParams, setSearchParams]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleSignOut = async () => {
@@ -607,4 +666,3 @@ const UserDashboardPanel = () => {
 };
 
 export default UserDashboardPanel;
-

@@ -1,11 +1,11 @@
 import { Suspense, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, ClipboardList } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { peekFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import './Login.css';
 
 const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboardPanel'), 'dashboard-panel');
@@ -13,7 +13,11 @@ const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboa
 const Login = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
-    const { user, signIn, signUp, signInWithGoogle } = useAuth();
+    const { user, signIn, signUp } = useAuth();
+    const label = (key, fallback) => {
+        const translated = t(key);
+        return translated && translated !== key ? translated : fallback;
+    };
 
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -21,6 +25,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const hasPendingFollowUp = !user && Boolean(peekFollowUpDraft());
 
     // Already logged in: show the full dashboard panel.
     if (user) {
@@ -68,19 +73,6 @@ const Login = () => {
         }
     };
 
-    const handleGoogle = async () => {
-        setError('');
-        try {
-            await signInWithGoogle();
-        } catch (err) {
-            if (!supabase) {
-                setError('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env');
-            } else {
-                setError(err.message || 'Google sign-in failed.');
-            }
-        }
-    };
-
     return (
         <div className="login-page">
             <div className="login-container">
@@ -92,6 +84,18 @@ const Login = () => {
                         </h2>
                         <p className="login-subtitle">{t('login.subtitle') || 'KANB Agropreneur Nasional'}</p>
                     </div>
+
+                    {hasPendingFollowUp && (
+                        <div className="auth-alert auth-alert--info">
+                            <ClipboardList size={16} />
+                            <span>
+                                {label(
+                                    'login.scanFollowUpWaiting',
+                                    'Your scan follow-up log is ready. Sign in or use the demo account to review and save it.',
+                                )}
+                            </span>
+                        </div>
+                    )}
 
                     {error && (
                         <div className="auth-alert auth-alert--error">
@@ -151,13 +155,13 @@ const Login = () => {
                         </button>
                     </form>
 
-                    <div className="login-divider"><span>{t('login.or') || 'or'}</span></div>
-
-                    <div className="social-login">
-                        <button className="social-btn google-btn" onClick={handleGoogle} disabled={loading}>
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
-                            {t('login.continueGoogle') || 'Continue with Google'}
-                        </button>
+                    <div className="auth-alert auth-alert--info auth-alert--compact">
+                        <span>
+                            {label(
+                                'login.demoAccountHint',
+                                'Development demo: sign in with test@test.com and Test321@.',
+                            )}
+                        </span>
                     </div>
 
                     <div className="login-footer">

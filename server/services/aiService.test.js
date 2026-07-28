@@ -501,6 +501,86 @@ describe('aiService helpers', () => {
         expect(confirmedKey).toContain('_evidence-ok_');
     });
 
+    it('marks confident disease matches as treatment-ready and enriches products with match metadata', () => {
+        const diagnosis = {
+            scanId: 'scan-123',
+            plantType: 'Durian',
+            disease: 'Leaf Spot',
+            healthStatus: 'unhealthy',
+            pathogenType: 'fungal',
+            status: 'confirmed',
+            confidence: 91,
+            diagnosisConfidence: 89,
+            symptoms: ['Brown leaf spots'],
+            treatments: ['Apply registered copper fungicide'],
+            productSearchTags: ['fungicide', 'leaf-spot'],
+        };
+        const enriched = aiService.enrichRecommendedProducts([
+            {
+                id: 1,
+                name: 'Copper Fungicide',
+                description: 'Disease control for fungal leaf spot',
+                tags: ['fungicide'],
+                categories: ['Disease Control'],
+            },
+        ], diagnosis, 'treatment');
+
+        expect(aiService.canRecommendTreatmentProducts(diagnosis)).toBe(true);
+        expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: enriched.length })).toBe('treatment_ready');
+        expect(enriched[0]).toMatchObject({
+            recommendationRole: 'treatment',
+            cautionLevel: 'standard',
+        });
+        expect(enriched[0].matchScore).toBeGreaterThan(0);
+        expect(enriched[0].matchReason).toContain('Matched');
+        expect(enriched[0].matchedTerms).toContain('fungicide');
+    });
+
+    it('routes uncertain or retake-needed scans to support-only consultation instead of treatment', () => {
+        const diagnosis = {
+            plantType: 'Papaya',
+            disease: 'Possible Mealybug Infestation',
+            healthStatus: 'unhealthy',
+            pathogenType: 'pest',
+            status: 'uncertain',
+            confidence: 68,
+            needsMoreEvidence: true,
+            requiresRetake: true,
+            productSearchTags: ['pest-control'],
+        };
+
+        expect(aiService.canRecommendTreatmentProducts(diagnosis)).toBe(false);
+        expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 3 })).toBe('support_only');
+        expect(aiService.getProductCautionLevel(diagnosis, 'treatment')).toBe('consult_first');
+    });
+
+    it('uses consultation-needed when a strong disease scan has no direct treatment match', () => {
+        const diagnosis = {
+            scanId: 'scan-456',
+            plantType: 'Coconut',
+            disease: 'Bud Rot',
+            healthStatus: 'unhealthy',
+            pathogenType: 'fungal',
+            status: 'confirmed',
+            confidence: 88,
+            severity: 'severe',
+            locationName: 'Kota Tinggi',
+            symptoms: ['Spear leaf collapse'],
+        };
+        const consultation = aiService.buildProductConsultation(
+            diagnosis,
+            aiService.PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED,
+            'en',
+        );
+
+        expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 0, fertilizerCount: 2 })).toBe('consultation_needed');
+        expect(consultation.priority).toBe('primary');
+        expect(consultation.phone).toBe('+60136667810');
+        expect(decodeURIComponent(consultation.url)).toContain('scan-456');
+        expect(decodeURIComponent(consultation.url)).toContain('Bud Rot');
+        expect(decodeURIComponent(consultation.url)).toContain('Kota Tinggi');
+    });
+
     it('returns stored analysis unchanged when already in the target language', async () => {
         const result = await aiService.localizeStoredAnalysisResult({
             disease: 'Leaf Spot',

@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Results from './Results.jsx';
+import { SCAN_FOLLOW_UP_DRAFT_KEY } from '../utils/scanFollowUpDraft.js';
 
 const navigateMock = vi.fn();
 const getScanByIdMock = vi.fn();
@@ -98,6 +99,7 @@ describe('Results', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     getScanByIdMock.mockReset();
+    sessionStorage.clear();
   });
 
   it('passes persisted image URLs into the disease result view', async () => {
@@ -127,5 +129,33 @@ describe('Results', () => {
       expect(screen.getByText('No history')).toBeInTheDocument();
       expect(screen.getByText('No saved scan found.')).toBeInTheDocument();
     });
+  });
+
+  it('saves a follow-up draft and navigates to the profile daily log', async () => {
+    getScanByIdMock.mockResolvedValue({
+      id: 'scan-123',
+      disease: 'Leaf Blight',
+      plantType: 'Coconut',
+      healthStatus: 'unhealthy',
+      analysisLanguage: 'en',
+      severity: 'moderate',
+      confidence: 88,
+      immediateActions: ['Remove infected leaves'],
+      treatments: ['Apply labeled fungicide'],
+    });
+
+    render(<Results />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /log treatment action/i }));
+
+    const stored = JSON.parse(sessionStorage.getItem(SCAN_FOLLOW_UP_DRAFT_KEY));
+    expect(stored.draft).toMatchObject({
+      activity_type: 'spray',
+      disease_name_observed: 'Leaf Blight',
+      scout_severity: 'Moderate',
+      expense_category: 'Pesticide',
+    });
+    expect(stored.draft.note).toContain('Apply labeled fungicide');
+    expect(navigateMock).toHaveBeenCalledWith('/profile?tab=notes&draft=scan-follow-up');
   });
 });
