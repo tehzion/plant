@@ -10,8 +10,26 @@ jobs:
   ping:
     name: Ping health endpoint
     runs-on: ubuntu-latest
+    env:
+      RENDER_HEALTH_URL: ${{ vars.RENDER_HEALTH_URL || 'https://plant-2-uvev.onrender.com/api/health' }}
     steps:
       - name: Request Render health check
+        shell: bash
         run: |
-          curl --fail --silent --show-error --max-time 30 \
-            https://plant-2-uvev.onrender.com/api/health
+          for attempt in 1 2 3; do
+            echo "Health ping attempt ${attempt}: ${RENDER_HEALTH_URL}"
+            http_code=$(curl --silent --show-error --location --max-time 30 --retry 2 --retry-delay 5 \
+              --output /tmp/render-health.json \
+              --write-out "%{http_code} %{time_total}" \
+              "${RENDER_HEALTH_URL}") && curl_status=$? || curl_status=$?
+            status_code=$(echo "${http_code}" | awk '{print $1}')
+            total_time=$(echo "${http_code}" | awk '{print $2}')
+            echo "HTTP ${status_code:-000} in ${total_time:-unknown}s"
+            cat /tmp/render-health.json || true
+            echo
+            if [[ "${curl_status}" -eq 0 && "${status_code}" =~ ^[23] ]]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1

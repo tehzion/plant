@@ -147,6 +147,82 @@
   background: #f8fafc;
 }
 
+.product-bridge-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
+}
+
+.product-bridge-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.product-bridge-copy strong {
+  color: #111827;
+  font-size: 0.95rem;
+}
+
+.product-bridge-copy span {
+  color: #475569;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.product-bridge-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.product-bridge-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(22, 101, 52, 0.22);
+  background: #ffffff;
+  color: #14532d;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.product-bridge-button--primary,
+.product-bridge-button:hover {
+  background: #14532d;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(20, 83, 45, 0.14);
+}
+
+.product-bridge-button--primary:hover {
+  background: #0f3f25;
+}
+
+.product-bridge-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+
 .consultation-panel {
   display: flex;
   align-items: center;
@@ -538,6 +614,34 @@
   line-height: 1.45;
 }
 
+.product-active-ingredients,
+.product-rule-caution {
+  margin: 0;
+  color: #475569;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.product-active-ingredients {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #14532d;
+}
+
+.product-active-ingredients svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.product-rule-caution {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fff7ed;
+  color: #7c2d12;
+  border: 1px solid rgba(251, 146, 60, 0.32);
+}
+
 .product-actions {
   margin-top: auto;
 }
@@ -700,6 +804,7 @@
 @media (max-width: 640px) {
   .product-note-banner,
   .consultation-panel,
+  .product-bridge-panel,
   .checkout-bar {
     flex-direction: column;
     align-items: stretch;
@@ -711,6 +816,11 @@
   }
 
   .consultation-button {
+    width: 100%;
+  }
+
+  .product-bridge-actions,
+  .product-bridge-button {
     width: 100%;
   }
 

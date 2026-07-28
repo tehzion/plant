@@ -64,6 +64,35 @@ const QUALITY_REASON_CODES = {
   not_plant_like: 'IMAGE_NOT_PLANT',
 };
 
+const QUALITY_MESSAGE_KEYS = {
+  IMAGE_TOO_DARK: 'home.errorImageTooDark',
+  IMAGE_TOO_BLURRY: 'home.errorImageTooBlurry',
+  IMAGE_TOO_LITTLE_LEAF: 'home.errorImageTooLittleLeaf',
+  IMAGE_NOT_PLANT: 'home.errorImageNotPlantLike',
+};
+
+export const getImageQualityGuidanceFromMetrics = (metrics = {}) => {
+  const primaryIssue = metrics.primaryIssue || metrics.flags?.[0] || null;
+  if (!primaryIssue) {
+    return {
+      accepted: true,
+      blocking: false,
+      code: '',
+      messageKey: '',
+      quality: metrics,
+    };
+  }
+
+  const code = QUALITY_REASON_CODES[primaryIssue] || 'LOW_IMAGE_QUALITY';
+  return {
+    accepted: false,
+    blocking: true,
+    code,
+    messageKey: QUALITY_MESSAGE_KEYS[code] || 'home.errorAnalysis',
+    quality: metrics,
+  };
+};
+
 const estimateImageQuality = (imageData) => {
   const { data, width, height } = imageData;
   let totalBrightness = 0;
@@ -171,6 +200,11 @@ export const analyzeLocalImageQuality = (file, maxWidth = 640) => {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+};
+
+export const getImageQualityGuidance = async (file, maxWidth = 640) => {
+  const quality = await analyzeLocalImageQuality(file, maxWidth);
+  return getImageQualityGuidanceFromMetrics(quality);
 };
 
 /**

@@ -1,1 +1,1 @@
-export * from '../../node_modules/@vitest/mocker/node_modules/estree-walker/src/index.js';
+export * from '../../node_modules/.pnpm/node_modules/estree-walker/dist/esm/estree-walker.js';

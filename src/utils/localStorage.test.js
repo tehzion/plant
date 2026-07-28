@@ -56,6 +56,7 @@ describe('localStorage utilities', () => {
             temperature_am: '27',
             photo_base64: 'data:image/jpeg;base64,abc',
             photo_url: 'https://example.com/note.jpg',
+            photo_path: 'user-1/note.jpg',
         }, 'user-1');
 
         expect(row).toMatchObject({
@@ -66,8 +67,29 @@ describe('localStorage utilities', () => {
             chemical_name: 'Copper',
             temperature_am: 27,
             photo_url: 'https://example.com/note.jpg',
+            photo_path: 'user-1/note.jpg',
         });
         expect(row).not.toHaveProperty('photo_base64');
+    });
+
+    it('maps scan image paths separately from legacy display URLs', () => {
+        const row = localStorageUtils.toScanHistoryRow({
+            id: 'scan-1',
+            disease: 'Leaf Spot',
+            image_url: 'https://legacy.example/main.jpg',
+            leaf_image_url: 'https://legacy.example/leaf.jpg',
+        }, 'user-1', 'scan-1', 'https://signed.example/main.jpg', 'https://signed.example/leaf.jpg', 'user-1/scan-1_main.jpg', 'user-1/scan-1_leaf.jpg');
+
+        expect(row).toMatchObject({
+            id: 'scan-1',
+            user_id: 'user-1',
+            image_url: 'https://signed.example/main.jpg',
+            leaf_image_url: 'https://signed.example/leaf.jpg',
+            image_path: 'user-1/scan-1_main.jpg',
+            leaf_image_path: 'user-1/scan-1_leaf.jpg',
+        });
+        expect(row.result_json.image).toBeNull();
+        expect(row.result_json.leafImage).toBeNull();
     });
 
     it('maps plots to snake_case Supabase rows without cropType drift', () => {

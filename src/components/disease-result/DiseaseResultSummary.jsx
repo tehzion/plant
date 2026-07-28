@@ -6,6 +6,21 @@ import {
     Leaf,
     Sprout,
 } from 'lucide-react';
+import { SCAN_RESULT_STATES } from '../../utils/statusUtils';
+
+const REVIEW_STATE_HINT_KEYS = {
+    [SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO]: 'results.scanStateNeedsCloserPhotoDesc',
+    [SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE]: 'results.scanStatePossibleNutrientIssueDesc',
+    [SCAN_RESULT_STATES.POSSIBLE_PEST]: 'results.scanStatePossiblePestDesc',
+    [SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED]: 'results.scanStateExpertReviewNeededDesc',
+};
+
+const REVIEW_STATE_HINT_FALLBACKS = {
+    [SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO]: 'Please upload a clearer close-up leaf photo for a safer diagnosis.',
+    [SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE]: 'The scan may involve nutrition stress. Confirm with field signs or soil/leaf testing before choosing treatment products.',
+    [SCAN_RESULT_STATES.POSSIBLE_PEST]: 'Pest signs may be present. Check leaf undersides, stems, or fruit clusters before applying any product.',
+    [SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED]: 'The visible evidence is not strong enough for direct treatment. Ask an expert to review this scan before applying inputs.',
+};
 
 const DiseaseResultSummary = ({ result, normalized, t }) => {
     const {
@@ -89,12 +104,17 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
                 </div>
             )}
 
-            {(result.requiresRetake || resultState === 'uncertain') && (
+            {REVIEW_STATE_HINT_KEYS[resultState] && (
                 <div className="retake-banner">
                     <AlertCircle size={18} />
                     <div>
                         <strong>{stateLabel}</strong>
-                        <p>{result.retakeReason || result.abstainReason || t('results.retakeHint') || 'Please upload a clearer close-up leaf photo for a safer diagnosis.'}</p>
+                        <p>
+                            {result.retakeReason
+                                || result.abstainReason
+                                || t(REVIEW_STATE_HINT_KEYS[resultState])
+                                || REVIEW_STATE_HINT_FALLBACKS[resultState]}
+                        </p>
                     </div>
                 </div>
             )}

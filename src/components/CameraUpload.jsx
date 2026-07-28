@@ -3,6 +3,7 @@ import { Camera, Image, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { compressImage } from '../utils/imageCompressor';
+import { getImageQualityGuidance } from '../utils/diseaseDetection';
 import './CameraUpload.css';
 
 const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
@@ -86,6 +87,22 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
         setIsCameraOpen(false);
     };
 
+    const validateImageQuality = async (file) => {
+        try {
+            const guidance = await getImageQualityGuidance(file);
+            if (guidance.accepted) return true;
+
+            notifyError(t(guidance.messageKey), {
+                actionLabel: t('common.uploadGallery'),
+                action: openGalleryPicker,
+            });
+            return false;
+        } catch (error) {
+            console.warn('Photo quality check skipped:', error);
+            return true;
+        }
+    };
+
     const capturePhoto = () => {
         if (videoRef.current) {
             const canvas = document.createElement('canvas');
@@ -94,8 +111,10 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(videoRef.current, 0, 0);
 
-            canvas.toBlob((blob) => {
+            canvas.toBlob(async (blob) => {
                 const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+                const qualityAccepted = await validateImageQuality(file);
+                if (!qualityAccepted) return;
 
                 // Create preview
                 const reader = new FileReader();
@@ -144,6 +163,9 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
         }
 
         try {
+            const qualityAccepted = await validateImageQuality(file);
+            if (!qualityAccepted) return;
+
             // Compress Image (Resize to max 1280px, Quality 0.8)
             const compressedFile = await compressImage(file, {
                 maxWidth: 1280,

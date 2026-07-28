@@ -141,16 +141,31 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .diagnosis-state-pill--uncertain,
-        .diagnosis-state-pill--retake_required {
+        .diagnosis-state-pill--retake_required,
+        .diagnosis-state-pill--needs_closer_photo,
+        .diagnosis-state-pill--expert_review_needed {
           background: #fff7ed;
           color: #c2410c;
           border-color: #fed7aa;
         }
 
-        .diagnosis-state-pill--confirmed {
+        .diagnosis-state-pill--confirmed,
+        .diagnosis-state-pill--confident_treatment {
           background: #eff6ff;
           color: #1d4ed8;
           border-color: #bfdbfe;
+        }
+
+        .diagnosis-state-pill--possible_pest {
+          background: #fef2f2;
+          color: #b91c1c;
+          border-color: #fecaca;
+        }
+
+        .diagnosis-state-pill--possible_nutrient_issue {
+          background: #f0fdf4;
+          color: #15803d;
+          border-color: #bbf7d0;
         }
 
         .scientific-name {

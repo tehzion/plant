@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
+import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -192,6 +193,7 @@ export const normalizeLegacyDailyNote = (note = {}) => ({
     inspection_type: note.inspection_type ?? null,
     inspection_status: note.inspection_status ?? null,
     photo_url: note.photo_url ?? note.photo_base64 ?? null,
+    photo_path: note.photo_path ?? null,
     created_at: note.created_at ?? note.timestamp ?? new Date().toISOString(),
     ...note,
 });
@@ -225,7 +227,15 @@ const toNullableNumber = (value) => {
 
 export const isCloudUser = (userId = null) => Boolean(userId && userId !== 'demo-user-123' && supabase);
 
-export const toScanHistoryRow = (scanData = {}, userId, id = scanData.id ?? crypto.randomUUID(), imageUrl = null, leafImageUrl = null) => ({
+export const toScanHistoryRow = (
+    scanData = {},
+    userId,
+    id = scanData.id ?? crypto.randomUUID(),
+    imageUrl = null,
+    leafImageUrl = null,
+    imagePath = null,
+    leafImagePath = null,
+) => ({
     id,
     user_id: userId,
     disease: scanData.disease || null,
@@ -237,10 +247,12 @@ export const toScanHistoryRow = (scanData = {}, userId, id = scanData.id ?? cryp
     result_json: { ...scanData, image: null, leafImage: null },
     image_url: imageUrl || scanData.image_url || null,
     leaf_image_url: leafImageUrl || scanData.leaf_image_url || null,
+    image_path: imagePath || scanData.image_path || null,
+    leaf_image_path: leafImagePath || scanData.leaf_image_path || null,
     created_at: scanData.timestamp || scanData.created_at || new Date().toISOString(),
 });
 
-export const fromScanHistoryRow = (row = {}) => ({
+export const fromScanHistoryRow = (row = {}, signedUrls = {}) => ({
     ...(row.result_json || {}),
     id: row.id,
     timestamp: row.created_at,
@@ -249,10 +261,22 @@ export const fromScanHistoryRow = (row = {}) => ({
     severity: row.severity,
     category: row.category,
     farmScale: row.scale,
-    image_url: row.image_url,
-    leaf_image_url: row.leaf_image_url,
+    image_url: signedUrls.imageUrl || row.image_url,
+    leaf_image_url: signedUrls.leafImageUrl || row.leaf_image_url,
+    image_path: row.image_path || row.result_json?.image_path || null,
+    leaf_image_path: row.leaf_image_path || row.result_json?.leaf_image_path || null,
     locationName: row.location_name,
 });
+
+const hydrateScanHistoryRow = async (row = {}) => {
+    const imagePath = row.image_path || row.result_json?.image_path || '';
+    const leafImagePath = row.leaf_image_path || row.result_json?.leaf_image_path || '';
+    const [imageUrl, leafImageUrl] = await Promise.all([
+        resolvePrivateImageUrl(imagePath, row.image_url),
+        resolvePrivateImageUrl(leafImagePath, row.leaf_image_url),
+    ]);
+    return fromScanHistoryRow(row, { imageUrl, leafImageUrl });
+};
 
 export const toLogbookRow = (log = {}, userId) => ({
     id: String(log.id ?? crypto.randomUUID()),
@@ -298,9 +322,15 @@ export const toDailyNoteRow = (note = {}, userId) => {
         inspection_type: normalized.inspection_type || null,
         inspection_status: normalized.inspection_status || null,
         photo_url: normalized.photo_url || null,
+        photo_path: normalized.photo_path || null,
         created_at: normalized.created_at || new Date().toISOString(),
     };
 };
+
+const hydrateDailyNoteRow = async (row = {}) => ({
+    ...row,
+    photo_url: await resolvePrivateImageUrl(row.photo_path, row.photo_url),
+});
 
 export const toPlotRow = (plot = {}, userId) => {
     const normalized = normalizeStoredPlot(plot);
@@ -414,39 +444,23 @@ migrateLocalSchema(NOTES_KEY, 2, normalizeLegacyDailyNote);
 migrateLocalSchema(PLOTS_KEY, 1, normalizeStoredPlot);
 
 const uploadImageToStorage = async (base64, userId, scanId, suffix = 'main') => {
-    if (!supabase || !base64 || !userId) return null;
-    try {
-        const base64Data = base64.startsWith('data:') ? base64.split(',')[1] : base64;
-        const byteChars = atob(base64Data);
-        const blob = new Blob(
-            [new Uint8Array(Array.from(byteChars, (c) => c.charCodeAt(0)))],
-            { type: 'image/jpeg' },
-        );
-        const path = `${userId}/${scanId}_${suffix}.jpg`;
-        const { error } = await supabase.storage
-            .from('scan-images')
-            .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-        if (error) {
-            console.warn('Image upload failed:', error.message);
-            return null;
-        }
-        const { data } = supabase.storage.from('scan-images').getPublicUrl(path);
-        return data.publicUrl;
-    } catch (error) {
-        console.warn('Image upload exception:', error);
-        return null;
-    }
+    const path = `${userId}/${scanId}_${suffix}.jpg`;
+    return uploadPrivateImage({ base64, userId, path });
 };
 
 export const saveScan = async (scanData, userId = null) => {
     if (isCloudUser(userId)) {
         try {
             const id = crypto.randomUUID();
-            const [imageUrl, leafImageUrl] = await Promise.all([
+            const [mainUpload, leafUpload] = await Promise.all([
                 uploadImageToStorage(scanData.image, userId, id, 'main'),
                 scanData.leafImage ? uploadImageToStorage(scanData.leafImage, userId, id, 'leaf') : null,
             ]);
-            const row = toScanHistoryRow(scanData, userId, id, imageUrl, leafImageUrl);
+            const imageUrl = mainUpload?.signedUrl || null;
+            const leafImageUrl = leafUpload?.signedUrl || null;
+            const imagePath = mainUpload?.path || null;
+            const leafImagePath = leafUpload?.path || null;
+            const row = toScanHistoryRow(scanData, userId, id, imageUrl, leafImageUrl, imagePath, leafImagePath);
             const { error } = await supabase.from('scan_history').insert(row);
             if (error) throw error;
             return {
@@ -455,6 +469,8 @@ export const saveScan = async (scanData, userId = null) => {
                 timestamp: row.created_at,
                 image_url: imageUrl,
                 leaf_image_url: leafImageUrl,
+                image_path: imagePath,
+                leaf_image_path: leafImagePath,
             };
         } catch (error) {
             console.error('Supabase saveScan error:', error);
@@ -484,7 +500,7 @@ export const getScanHistory = (userId = null) => {
                     console.error('getScanHistory error:', error);
                     return [];
                 }
-                return (data || []).map(fromScanHistoryRow);
+                return Promise.all((data || []).map(hydrateScanHistoryRow));
             });
     }
     return safeRead(STORAGE_KEY, []);
@@ -505,7 +521,7 @@ export const getScanById = (id, userId = null) => {
             .single()
             .then(({ data, error }) => {
                 if (error || !data) return getLocalScan();
-                return fromScanHistoryRow(data);
+                return hydrateScanHistoryRow(data);
             })
             .catch(() => getLocalScan());
     }
@@ -668,6 +684,7 @@ export const saveDailyNote = async (entry, userId = null) => {
         inspection_type: entry.inspection_type || null,
         inspection_status: entry.inspection_status || null,
         photo_url: entry.photo_url || null,
+        photo_path: entry.photo_path || null,
         created_at: new Date().toISOString(),
     });
 
@@ -699,7 +716,7 @@ export const getDailyNotes = (userId = null) => {
                     console.error('getDailyNotes error:', error);
                     return [];
                 }
-                return data || [];
+                return Promise.all((data || []).map(hydrateDailyNoteRow));
             });
     }
     return safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);

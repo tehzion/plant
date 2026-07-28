@@ -13,6 +13,7 @@ describe('live product recommendation payloads', () => {
       disease: 'Suspected Papaya Mealybug / Scale Infestation',
       scanResult: {
         status: 'likely',
+        resultState: 'possible_pest',
         confidence: 78,
         confidenceBreakdown: { diagnosisConfidence: 82 },
         needsMoreEvidence: true,
@@ -35,6 +36,7 @@ describe('live product recommendation payloads', () => {
 
     expect(payload).toMatchObject({
       status: 'likely',
+      resultState: 'possible_pest',
       confidence: 78,
       diagnosisConfidence: 82,
       needsMoreEvidence: true,
@@ -51,6 +53,7 @@ describe('live product recommendation payloads', () => {
       plantType: 'Papaya',
       disease: 'Suspected Papaya Mealybug / Scale Infestation',
       status: 'likely',
+      resultState: 'possible_pest',
       confidence: 78,
       needsMoreEvidence: true,
       productSearchTags: ['pest-control'],
@@ -61,6 +64,7 @@ describe('live product recommendation payloads', () => {
       plantType: 'Papaya',
       disease: 'Suspected Papaya Mealybug / Scale Infestation',
       status: 'confirmed',
+      resultState: 'confident_treatment',
       confidence: 92,
       needsMoreEvidence: false,
       productSearchTags: ['pest-control'],
@@ -69,6 +73,7 @@ describe('live product recommendation payloads', () => {
 
     expect(first).not.toBe(second);
     expect(first).toContain('"status":"likely"');
+    expect(first).toContain('"resultState":"possible_pest"');
     expect(first).toContain('"needsMoreEvidence":true');
   });
 
@@ -105,6 +110,11 @@ describe('live product recommendation payloads', () => {
           matchScore: '86',
           matchReason: 'Matched copper.',
           matchedTerms: ['copper', null, 'fungicide'],
+          curatedRuleId: 'fungal_leaf_spot_anthracnose',
+          curatedRuleName: 'Fungal leaf spot / anthracnose',
+          activeIngredients: ['copper', '', 'mancozeb'],
+          matchedActiveIngredients: ['copper'],
+          cautionNote: 'Follow label rate.',
           recommendationRole: 'treatment',
           cautionLevel: 'confirm_before_use',
         },
@@ -124,6 +134,11 @@ describe('live product recommendation payloads', () => {
       matchScore: 86,
       matchReason: 'Matched copper.',
       matchedTerms: ['copper', 'fungicide'],
+      curatedRuleId: 'fungal_leaf_spot_anthracnose',
+      curatedRuleName: 'Fungal leaf spot / anthracnose',
+      activeIngredients: ['copper', 'mancozeb'],
+      matchedActiveIngredients: ['copper'],
+      cautionNote: 'Follow label rate.',
       recommendationRole: 'treatment',
       cautionLevel: 'confirm_before_use',
     });

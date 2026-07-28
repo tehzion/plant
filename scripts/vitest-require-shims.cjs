@@ -7,7 +7,7 @@ const originalReadFileSync = fs.readFileSync;
 const compatResolutions = {
     '@babel/runtime/helpers/interopRequireDefault': resolvePath(process.cwd(), 'scripts/vitest-shims/babel-interop-require-default.cjs'),
     '@babel/runtime/helpers/interopRequireDefault.js': resolvePath(process.cwd(), 'scripts/vitest-shims/babel-interop-require-default.cjs'),
-    '@testing-library/dom': resolvePath(process.cwd(), 'node_modules/@testing-library/dom/dist/index.js'),
+    '@testing-library/dom': resolvePath(process.cwd(), 'node_modules/.pnpm/node_modules/@testing-library/dom/dist/index.js'),
     'react-dom/test-utils': resolvePath(process.cwd(), 'scripts/vitest-shims/react-dom-test-utils.cjs'),
     'ansi-regex': resolvePath(process.cwd(), 'scripts/vitest-shims/ansi-regex.cjs'),
 };

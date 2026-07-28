@@ -532,8 +532,109 @@ describe('aiService helpers', () => {
             cautionLevel: 'standard',
         });
         expect(enriched[0].matchScore).toBeGreaterThan(0);
-        expect(enriched[0].matchReason).toContain('Matched');
+        expect(enriched[0].matchReason).toMatch(/matched/i);
         expect(enriched[0].matchedTerms).toContain('fungicide');
+    });
+
+    it('applies curated disease-product rules to WooCommerce catalog ids', () => {
+        const diagnosis = {
+            plantType: 'Chilli',
+            disease: 'Anthracnose',
+            healthStatus: 'unhealthy',
+            pathogenType: 'fungal',
+            status: 'confirmed',
+            confidence: 91,
+            productSearchTags: [],
+        };
+
+        const recommendation = aiService.applyCuratedProductRulesToRecommendation(
+            {
+                treatmentTagIds: [],
+                treatmentCategoryIds: [],
+                fertilizerTagIds: [],
+                fertilizerCategoryIds: [],
+                supplementTagIds: [],
+                supplementCategoryIds: [],
+                reasoning: 'AI selected no direct tag.',
+            },
+            [
+                { id: 10, name: 'Copper' },
+                { id: 11, name: 'Mancozeb' },
+                { id: 12, name: 'Fungicide' },
+                { id: 13, name: 'NPK' },
+            ],
+            [
+                { id: 20, name: 'Disease Control' },
+                { id: 21, name: 'Fertilizer' },
+            ],
+            diagnosis,
+        );
+
+        expect(recommendation.treatmentTagIds).toEqual(expect.arrayContaining([10, 11, 12]));
+        expect(recommendation.treatmentCategoryIds).toContain(20);
+        expect(recommendation.curatedRules[0]).toMatchObject({
+            id: 'fungal_leaf_spot_anthracnose',
+            displayName: 'Fungal leaf spot / anthracnose',
+        });
+        expect(recommendation.reasoning).toContain('Curated crop-disease rule applied');
+    });
+
+    it('does not add curated treatment ids when diagnosis evidence is weak', () => {
+        const diagnosis = {
+            plantType: 'Papaya',
+            disease: 'Mealybug',
+            healthStatus: 'unhealthy',
+            pathogenType: 'pest',
+            status: 'uncertain',
+            confidence: 62,
+            needsMoreEvidence: true,
+        };
+
+        const recommendation = aiService.applyCuratedProductRulesToRecommendation(
+            {
+                treatmentTagIds: [],
+                treatmentCategoryIds: [],
+                fertilizerTagIds: [],
+                fertilizerCategoryIds: [],
+                supplementTagIds: [],
+                supplementCategoryIds: [],
+            },
+            [{ id: 30, name: 'Neem Oil' }, { id: 31, name: 'Insecticide' }],
+            [{ id: 40, name: 'Pest Control' }],
+            diagnosis,
+        );
+
+        expect(recommendation.treatmentTagIds).toEqual([]);
+        expect(recommendation.treatmentCategoryIds).toEqual([]);
+        expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 3 })).toBe('support_only');
+    });
+
+    it('adds active ingredient and caution metadata from curated rules to enriched products', () => {
+        const diagnosis = {
+            plantType: 'Padi',
+            disease: 'Rice blast',
+            healthStatus: 'unhealthy',
+            pathogenType: 'fungal',
+            status: 'confirmed',
+            confidence: 92,
+        };
+
+        const [product] = aiService.enrichRecommendedProducts([
+            {
+                id: 99,
+                name: 'Tricyclazole Blast Fungicide',
+                description: 'Rice blast disease control',
+                tags: ['fungicide', 'blast'],
+                categories: ['Disease Control'],
+            },
+        ], diagnosis, 'treatment');
+
+        expect(product.curatedRuleId).toBe('rice_blast');
+        expect(product.curatedRuleName).toBe('Rice blast');
+        expect(product.activeIngredients).toContain('tricyclazole');
+        expect(product.matchedActiveIngredients).toContain('tricyclazole');
+        expect(product.cautionNote).toContain('padi label restrictions');
+        expect(product.matchReason).toContain('Curated Rice blast rule');
     });
 
     it('routes uncertain or retake-needed scans to support-only consultation instead of treatment', () => {
@@ -552,6 +653,60 @@ describe('aiService helpers', () => {
         expect(aiService.canRecommendTreatmentProducts(diagnosis)).toBe(false);
         expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 3 })).toBe('support_only');
         expect(aiService.getProductCautionLevel(diagnosis, 'treatment')).toBe('consult_first');
+    });
+
+    it('derives stricter scan states for treatment, photo, nutrient, pest, and expert review paths', () => {
+        expect(aiService.deriveScanResultState({
+            healthStatus: 'unhealthy',
+            status: 'confirmed',
+            confidence: 91,
+            pathogenType: 'Fungal',
+            diseaseCategory: 'fungal',
+            disease: 'Leaf Spot',
+        })).toBe('confident_treatment');
+
+        expect(aiService.deriveScanResultState({
+            status: 'retake_required',
+            requiresRetake: true,
+            captureAssessment: { imageQualityConfidence: 34 },
+        })).toBe('needs_closer_photo');
+
+        expect(aiService.deriveScanResultState({
+            status: 'likely',
+            confidence: 76,
+            diseaseCategory: 'nutrient',
+            nutritionalIssues: { status: 'possible' },
+        })).toBe('possible_nutrient_issue');
+
+        expect(aiService.deriveScanResultState({
+            status: 'likely',
+            confidence: 74,
+            disease: 'Suspected mealybug',
+            pathogenType: 'Pest',
+        })).toBe('possible_pest');
+
+        expect(aiService.deriveScanResultState({
+            status: 'likely',
+            confidence: 63,
+            disease: 'Leaf problem',
+            abstainReason: 'Evidence is conflicting',
+        })).toBe('expert_review_needed');
+    });
+
+    it('keeps possible pest states consultation-first even with matched treatment products', () => {
+        const diagnosis = {
+            plantType: 'Papaya',
+            disease: 'Suspected Mealybug',
+            healthStatus: 'unhealthy',
+            pathogenType: 'pest',
+            status: 'likely',
+            resultState: 'possible_pest',
+            confidence: 76,
+            productSearchTags: ['pest-control'],
+        };
+
+        expect(aiService.canRecommendTreatmentProducts(diagnosis)).toBe(false);
+        expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 2 })).toBe('support_only');
     });
 
     it('uses consultation-needed when a strong disease scan has no direct treatment match', () => {

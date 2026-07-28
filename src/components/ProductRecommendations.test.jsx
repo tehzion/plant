@@ -3,6 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProductRecommendations from './ProductRecommendations.jsx';
 
 const fetchMock = vi.fn();
+const saveConsultationLeadMock = vi.hoisted(() => vi.fn());
+const saveFollowUpDraftMock = vi.hoisted(() => vi.fn());
+const navigateMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../utils/consultationLeads.js', () => ({
+    saveConsultationLead: saveConsultationLeadMock,
+}));
+
+vi.mock('../utils/scanFollowUpDraft.js', () => ({
+    saveFollowUpDraft: saveFollowUpDraftMock,
+}));
+
+vi.mock('react-router-dom', () => ({
+    useNavigate: () => navigateMock,
+}));
 
 vi.mock('../i18n/i18n.jsx', () => ({
     useLanguage: () => ({
@@ -23,7 +38,15 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.labelConfirmBeforeUse': 'Confirm before use',
             'results.labelConsultFirst': 'Consult first',
             'results.labelMaintenanceSupport': 'Maintenance support',
+            'results.activeIngredientToCheck': 'Active ingredient to check',
             'results.checkoutUnavailable': 'Checkout unavailable',
+            'results.recommendedPlanTitle': 'Recommended product plan',
+            'results.recommendedPlanDesc': 'Bridge description',
+            'results.checkoutRecommended': 'Add recommended to checkout',
+            'results.saveProductPlan': 'Save product plan',
+            'results.productPlanSaved': 'Product plan prepared in Daily Log.',
+            'results.productPlanSaveFailed': 'Could not prepare draft',
+            'results.consultationFirstCheckoutHint': 'Consultation first',
             'results.whyTheseProducts': 'Selection note',
             'results.noProductsFound': 'No products found',
             'results.noProductsDesc': 'No products description',
@@ -75,8 +98,15 @@ vi.mock('../data/productRecommendations.js', () => ({
 
 describe('ProductRecommendations', () => {
     beforeEach(() => {
+        vi.restoreAllMocks();
         fetchMock.mockReset();
+        saveConsultationLeadMock.mockReset();
+        saveConsultationLeadMock.mockResolvedValue({ saved: true });
+        saveFollowUpDraftMock.mockReset();
+        saveFollowUpDraftMock.mockReturnValue(true);
+        navigateMock.mockReset();
         global.fetch = fetchMock;
+        vi.spyOn(window, 'open').mockImplementation(() => null);
         window.localStorage.clear();
 
         fetchMock.mockResolvedValue({
@@ -92,6 +122,9 @@ describe('ProductRecommendations', () => {
                         matchScore: 88,
                         matchReason: 'Matched fungicide from the scan result.',
                         matchedTerms: ['fungicide'],
+                        activeIngredients: ['copper', 'mancozeb'],
+                        matchedActiveIngredients: ['copper'],
+                        cautionNote: 'Use only crop-registered fungicides.',
                         recommendationRole: 'treatment',
                         cautionLevel: 'standard',
                     },
@@ -269,9 +302,113 @@ describe('ProductRecommendations', () => {
         expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
         expect(screen.getByText('Match 88%')).toBeInTheDocument();
         expect(screen.getByText('Matched fungicide from the scan result.')).toBeInTheDocument();
+        expect(screen.getByText(/Active ingredient to check: copper/i)).toBeInTheDocument();
+        expect(screen.getByText('Use only crop-registered fungicides.')).toBeInTheDocument();
         expect(screen.getByText('Strong match')).toBeInTheDocument();
         expect(screen.getByText('Need help choosing?')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+    });
+
+    it('opens WooCommerce checkout for recommended products', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-checkout',
+                    status: 'confirmed',
+                    resultState: 'confident_treatment',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'fungal',
+                    confidence: 92,
+                    symptoms: ['Leaf spots'],
+                    productSearchTags: ['fungicide'],
+                }}
+            />,
+        );
+
+        await screen.findByText('Copper Guard');
+        fireEvent.click(screen.getByRole('button', { name: /add recommended to checkout/i }));
+
+        expect(window.open).toHaveBeenCalledWith(
+            'https://example.com/store/checkout/?add-to-cart=1&quantity=1',
+            '_blank',
+            'noopener,noreferrer',
+        );
+    });
+
+    it('saves recommended products as a Daily Log draft', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-plan',
+                    status: 'confirmed',
+                    resultState: 'confident_treatment',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'fungal',
+                    confidence: 92,
+                    symptoms: ['Leaf spots'],
+                    productSearchTags: ['fungicide'],
+                }}
+            />,
+        );
+
+        await screen.findByText('Copper Guard');
+        fireEvent.click(screen.getByRole('button', { name: /save product plan/i }));
+
+        expect(saveFollowUpDraftMock).toHaveBeenCalledWith(expect.objectContaining({
+            activity_type: 'spray',
+            chemical_name: 'Copper Guard',
+            disease_name_observed: 'Leaf Spot',
+        }));
+        expect(saveFollowUpDraftMock.mock.calls[0][0].note).toContain('scan-plan');
+        expect(navigateMock).toHaveBeenCalledWith('/profile?tab=notes&draft=scan-follow-up');
+    });
+
+    it('captures a consultation lead before opening WhatsApp', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-lead-1',
+                    status: 'confirmed',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'fungal',
+                    confidence: 92,
+                    symptoms: ['Leaf spots'],
+                    productSearchTags: ['fungicide'],
+                }}
+            />,
+        );
+
+        const consultationLink = await screen.findByRole('link', { name: /contact us for consultation/i });
+        fireEvent.click(consultationLink);
+
+        await waitFor(() => {
+            expect(saveConsultationLeadMock).toHaveBeenCalledWith(expect.objectContaining({
+                diagnosis: expect.objectContaining({
+                    scanId: 'scan-lead-1',
+                    plantType: 'Durian',
+                    disease: 'Leaf Spot',
+                    confidence: 92,
+                }),
+                recommendationIntent: 'treatment_ready',
+                source: 'product_recommendations',
+            }));
+        });
+        await waitFor(() => {
+            expect(window.open).toHaveBeenCalledWith(
+                expect.stringContaining('wa.me/60136667810'),
+                '_blank',
+                'noopener,noreferrer',
+            );
+        });
     });
 
     it('makes consultation primary when no safe disease-specific product match exists', async () => {

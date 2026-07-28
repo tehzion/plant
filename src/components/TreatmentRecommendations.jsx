@@ -13,8 +13,8 @@ const TreatmentRecommendations = ({ result }) => {
 
   if (!result) return null;
 
-  const diagnosisState = result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
-  const showCautiousNotice = !['confirmed', 'healthy'].includes(diagnosisState) || result.needsMoreEvidence;
+  const diagnosisState = result.resultState || result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
+  const showCautiousNotice = !['confirmed', 'confident_treatment', 'healthy'].includes(diagnosisState) || result.needsMoreEvidence;
 
   const normalizeList = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);

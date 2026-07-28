@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import CameraUpload from './CameraUpload.jsx';
 
 const notifyErrorMock = vi.fn();
+const getImageQualityGuidanceMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../i18n/i18n.jsx', () => ({
     useLanguage: () => ({
@@ -30,10 +31,16 @@ vi.mock('../utils/imageCompressor', () => ({
     compressImage: vi.fn(async (file) => file),
 }));
 
+vi.mock('../utils/diseaseDetection', () => ({
+    getImageQualityGuidance: getImageQualityGuidanceMock,
+}));
+
 describe('CameraUpload', () => {
     beforeEach(() => {
-        notifyErrorMock.mockReset();
         vi.restoreAllMocks();
+        notifyErrorMock.mockReset();
+        getImageQualityGuidanceMock.mockReset();
+        getImageQualityGuidanceMock.mockResolvedValue({ accepted: true });
     });
 
     it('shows a toast error for non-image files', () => {
@@ -77,5 +84,27 @@ describe('CameraUpload', () => {
         });
 
         expect(clickSpy).toHaveBeenCalled();
+    });
+
+    it('blocks low-quality photos before scan setup', async () => {
+        getImageQualityGuidanceMock.mockResolvedValueOnce({
+            accepted: false,
+            code: 'IMAGE_TOO_BLURRY',
+            messageKey: 'home.errorImageTooBlurry',
+        });
+        const onImageCapture = vi.fn();
+        const { container } = render(<CameraUpload onImageCapture={onImageCapture} />);
+        const input = container.querySelector('input[type="file"][accept="image/*"]');
+        const file = new File(['img'], 'leaf.jpg', { type: 'image/jpeg' });
+
+        fireEvent.change(input, { target: { files: [file] } });
+
+        await waitFor(() => {
+            expect(notifyErrorMock).toHaveBeenCalledWith(
+                'home.errorImageTooBlurry',
+                expect.objectContaining({ actionLabel: 'Upload from Gallery' }),
+            );
+        });
+        expect(onImageCapture).not.toHaveBeenCalled();
     });
 });

@@ -4,6 +4,15 @@ import { getGuestId } from '../utils/localStorage';
 
 const AuthContext = createContext(null);
 
+const getAuthEmailRedirectUrl = () => {
+    const configured = import.meta.env.VITE_AUTH_EMAIL_REDIRECT_URL;
+    if (configured) return configured;
+    if (typeof window !== 'undefined' && window.location?.origin) {
+        return `${window.location.origin}/login`;
+    }
+    return undefined;
+};
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(undefined); // undefined = loading, null = guest
     const [guestId, setGuestId] = useState(null);
@@ -83,7 +92,13 @@ export const AuthProvider = ({ children }) => {
         if (!supabase) {
             throw new Error('Cloud sign-up is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env to use this feature.');
         }
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: getAuthEmailRedirectUrl(),
+            },
+        });
         if (error) throw error;
         return data;
     };

@@ -17,6 +17,7 @@ import {
     deletePlot,
 } from '../utils/localStorage';
 import { consumeFollowUpDraft } from '../utils/scanFollowUpDraft.js';
+import { uploadPrivateImage } from '../utils/privateImageStorage.js';
 import {
     BarChart3,
     LayoutDashboard,
@@ -276,26 +277,18 @@ const UserDashboardPanel = () => {
 
         // Photo upload: use Supabase Storage if available, else keep inline base64
         let photoUrl = null;
+        let photoPath = null;
         if (noteForm.photo_base64) {
             if (user?.id && supabase) {
                 try {
-                    const base64 = noteForm.photo_base64.startsWith('data:')
-                        ? noteForm.photo_base64.split(',')[1] : noteForm.photo_base64;
-                    const byteChars = atob(base64);
-                    const blob = new Blob(
-                        [new Uint8Array(Array.from(byteChars, c => c.charCodeAt(0)))],
-                        { type: 'image/jpeg' },
-                    );
                     const path = `${user.id}/note_${Date.now()}.jpg`;
-                    const { error } = await supabase.storage
-                        .from('scan-images')
-                        .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-                    if (!error) {
-                        const { data } = supabase.storage.from('scan-images').getPublicUrl(path);
-                        photoUrl = data.publicUrl;
-                    } else {
-                        photoUrl = noteForm.photo_base64;
-                    }
+                    const upload = await uploadPrivateImage({
+                        base64: noteForm.photo_base64,
+                        userId: user.id,
+                        path,
+                    });
+                    photoUrl = upload.signedUrl || noteForm.photo_base64;
+                    photoPath = upload.path || null;
                 } catch {
                     photoUrl = noteForm.photo_base64;
                 }
@@ -328,6 +321,7 @@ const UserDashboardPanel = () => {
             inspection_type:     noteForm.inspection_type      || null,
             inspection_status:   noteForm.inspection_status    || null,
             photo_url:           photoUrl,
+            photo_path:          photoPath,
         }, user?.id ?? null);
 
         if (saved) {

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { suppliers } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
 import './ProductRecommendations.css';
-import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search, MessageCircle } from 'lucide-react';
+import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search, MessageCircle, ClipboardList } from 'lucide-react';
 import { showToast } from '../utils/toast';
 import {
   buildProductDiagnosisPayload,
@@ -13,6 +14,9 @@ import {
   fetchLiveProductRecommendations,
   PRODUCT_RECOMMENDATION_INTENTS,
 } from '../utils/liveProductRecommendations.js';
+import { saveConsultationLead } from '../utils/consultationLeads.js';
+import { saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
+import { buildProductPlanDraftFromRecommendations } from '../utils/productPlanDraft.js';
 
 const sanitizeProductDescription = (value) => {
   if (!value) return '';
@@ -76,6 +80,7 @@ const getCautionLabel = (t, cautionLevel) => {
 
 const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onRecommendationsLoaded }) => {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [products, setProducts] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState(new Set());
@@ -175,8 +180,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     [selectedProductIds],
   );
 
-  const handleCheckout = () => {
-    if (checkoutEligibleIds.length === 0) return;
+  const openCheckoutForIds = (productIds = []) => {
+    const eligibleIds = productIds.filter((productId) => isWooProductId(productId));
+    if (eligibleIds.length === 0) return;
     if (!storeUrl) {
       showToast(
         t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.',
@@ -187,8 +193,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     
     // WooCommerce Bulk Add-to-Cart format
     // https://your-store.com/cart/?add-to-cart=ID1,ID2&quantity=1,1
-    const ids = checkoutEligibleIds.join(',');
-    const quantities = Array(checkoutEligibleIds.length).fill('1').join(',');
+    const ids = eligibleIds.join(',');
+    const quantities = Array(eligibleIds.length).fill('1').join(',');
     
     // Construct checkout URL using dynamically fetched storeUrl
     const checkoutUrl = `${storeUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`;
@@ -196,9 +202,13 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const handleCheckout = () => {
+    openCheckoutForIds(checkoutEligibleIds);
+  };
+
   const canCheckout = checkoutEligibleIds.length > 0 && Boolean(storeUrl);
   const usingCachedProducts = fallbackMeta?.used && fallbackMeta?.source === 'cache';
-  const diagnosisState = diagnosis.status || (diagnosis.requiresRetake ? 'retake_required' : diagnosis.needsMoreEvidence ? 'uncertain' : 'likely');
+  const diagnosisState = diagnosis.resultState || diagnosis.status || (diagnosis.requiresRetake ? 'retake_required' : diagnosis.needsMoreEvidence ? 'uncertain' : 'likely');
 
   const retryProducts = () => {
     setRequestAttempt((value) => value + 1);
@@ -215,6 +225,24 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     return products;
   }, [products]);
 
+  const recommendedCheckoutIds = useMemo(() => {
+    if (!processedProducts) return [];
+    const seen = new Set();
+    return [
+      ...(processedProducts.diseaseControl || []),
+      ...(processedProducts.fertilizers || []),
+      ...(processedProducts.supplements || []),
+    ]
+      .map((product) => product.id)
+      .filter((productId) => {
+        if (!isWooProductId(productId)) return false;
+        const key = String(productId);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [processedProducts]);
+
   const fallbackConsultation = useMemo(
     () => createProductConsultationFromDiagnosis(
       diagnosis,
@@ -225,6 +253,31 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   );
 
   const activeConsultation = consultation || fallbackConsultation;
+
+  const openConsultationUrl = (url) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleConsultationClick = async (event) => {
+    event.preventDefault();
+    if (!activeConsultation?.url) return;
+
+    const consultationUrl = activeConsultation.url;
+    const activeIntent = recommendationIntent || PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED;
+    const leadCapture = saveConsultationLead({
+      diagnosis,
+      consultation: activeConsultation,
+      recommendationIntent: activeIntent,
+      source: 'product_recommendations',
+    });
+
+    await Promise.race([
+      leadCapture,
+      new Promise((resolve) => setTimeout(resolve, 700)),
+    ]);
+
+    openConsultationUrl(consultationUrl);
+  };
 
   const renderConsultationPanel = ({ primary = false, reason = '', compact = false } = {}) => {
     if (!activeConsultation?.url) return null;
@@ -251,6 +304,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           target="_blank"
           rel="noopener noreferrer"
           className={`consultation-button ${primary ? 'consultation-button--primary' : ''}`}
+          onClick={handleConsultationClick}
         >
           <MessageCircle size={16} />
           <span>{actionLabel}</span>
@@ -269,11 +323,6 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   }
 
   if (error) {
-    const errorConsultation = createProductConsultationFromDiagnosis(
-      diagnosis,
-      PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED,
-      language,
-    );
     return (
       <div className="product-recommendations-container">
         <div className="product-section product-state product-state--error app-surface">
@@ -293,24 +342,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
             </a>
           </div>
         </div>
-        <div className="consultation-panel consultation-panel--primary app-surface">
-          <div className="consultation-icon">
-            <MessageCircle size={22} />
-          </div>
-          <div className="consultation-copy">
-            <strong>{getLabel(t, 'results.consultationRecommendedTitle', 'Consultation recommended')}</strong>
-            <span>{getLabel(t, 'results.productsErrorConsultationDesc', 'The live catalog could not load. Send this scan to our agronomy team for product guidance.')}</span>
-          </div>
-          <a
-            href={errorConsultation.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="consultation-button consultation-button--primary"
-          >
-            <MessageCircle size={16} />
-            <span>{errorConsultation.label}</span>
-          </a>
-        </div>
+        {renderConsultationPanel({
+          primary: true,
+          reason: getLabel(t, 'results.productsErrorConsultationDesc', 'The live catalog could not load. Send this scan to our agronomy team for product guidance.'),
+        })}
       </div>
     );
   }
@@ -327,7 +362,44 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     || activeConsultation?.priority === 'primary';
   const showCautiousProductNotice = !hasNoProducts
     && processedProducts.diseaseControl?.length > 0
-    && !['confirmed', 'healthy'].includes(diagnosisState);
+    && !['confirmed', 'healthy', 'confident_treatment'].includes(diagnosisState);
+  const canCheckoutRecommended = !consultationIsPrimary && recommendedCheckoutIds.length > 0 && Boolean(storeUrl);
+
+  const handleRecommendedCheckout = () => {
+    if (consultationIsPrimary) {
+      showToast(
+        t('results.consultationFirstCheckoutHint') || 'This scan needs consultation before product checkout.',
+        'warning',
+      );
+      return;
+    }
+    openCheckoutForIds(recommendedCheckoutIds);
+  };
+
+  const handleSaveProductPlan = () => {
+    const activeIntent = intent || recommendationIntent || PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED;
+    const draft = buildProductPlanDraftFromRecommendations({
+      diagnosis,
+      products: processedProducts,
+      recommendationIntent: activeIntent,
+      consultation: activeConsultation,
+      selectedProductIds: checkoutEligibleIds,
+    });
+    const saved = saveFollowUpDraft(draft);
+    if (!saved) {
+      showToast(
+        t('results.productPlanSaveFailed') || 'Could not prepare the Daily Log draft on this device.',
+        'warning',
+      );
+      return;
+    }
+
+    showToast(
+      t('results.productPlanSaved') || 'Product plan prepared in Daily Log.',
+      'success',
+    );
+    navigate('/profile?tab=notes&draft=scan-follow-up');
+  };
 
   // Get scale-specific recommendations
   const getScaleRecommendation = () => {
@@ -385,6 +457,14 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     const matchScore = Number(product.matchScore);
     const hasMatchScore = Number.isFinite(matchScore) && matchScore > 0;
     const matchReason = translateIfNeeded(product.matchReason);
+    const activeIngredients = Array.isArray(product.activeIngredients)
+      ? product.activeIngredients.map(translateIfNeeded).filter(Boolean).slice(0, 4)
+      : [];
+    const matchedActiveIngredients = Array.isArray(product.matchedActiveIngredients)
+      ? product.matchedActiveIngredients.map(translateIfNeeded).filter(Boolean).slice(0, 4)
+      : [];
+    const ingredientList = matchedActiveIngredients.length > 0 ? matchedActiveIngredients : activeIngredients;
+    const cautionNote = translateIfNeeded(product.cautionNote);
 
     return (
       <div
@@ -443,6 +523,17 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
               </div>
               {matchReason && (
                 <p className="product-match-reason">{matchReason}</p>
+              )}
+              {ingredientList.length > 0 && (
+                <p className="product-active-ingredients">
+                  <Pill size={13} />
+                  <span>
+                    {getLabel(t, 'results.activeIngredientToCheck', 'Active ingredient to check')}: {ingredientList.join(', ')}
+                  </span>
+                </p>
+              )}
+              {cautionNote && (
+                <p className="product-rule-caution">{cautionNote}</p>
               )}
             </div>
           )}
@@ -524,6 +615,34 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
           <div className="product-note-copy">
             <strong>{t('results.confirmBeforeUseTitle') || 'Confirm before use'}</strong>
             <span>{t('results.confirmBeforeUseDesc') || 'These products match a likely or suspected diagnosis. Confirm the field signs and follow the physical product label before applying treatment.'}</span>
+          </div>
+        </div>
+      )}
+
+      {(recommendedCheckoutIds.length > 0 || consultationIsPrimary) && (
+        <div className="product-bridge-panel app-surface">
+          <div className="product-bridge-copy">
+            <strong>{t('results.recommendedPlanTitle') || 'Recommended product plan'}</strong>
+            <span>{t('results.recommendedPlanDesc') || 'Use the matched products, ask for consultation, or save this plan into your Daily Log.'}</span>
+          </div>
+          <div className="product-bridge-actions">
+            <button
+              type="button"
+              className="product-bridge-button product-bridge-button--primary"
+              onClick={handleRecommendedCheckout}
+              disabled={!canCheckoutRecommended}
+            >
+              <ShoppingCart size={16} />
+              <span>{t('results.checkoutRecommended') || 'Add recommended to checkout'}</span>
+            </button>
+            <button
+              type="button"
+              className="product-bridge-button"
+              onClick={handleSaveProductPlan}
+            >
+              <ClipboardList size={16} />
+              <span>{t('results.saveProductPlan') || 'Save product plan'}</span>
+            </button>
           </div>
         </div>
       )}

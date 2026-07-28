@@ -8,6 +8,7 @@ import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
+import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
 import path from 'path';
@@ -101,6 +102,7 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         message: 'Plant Analysis API',
+        uptimeSeconds: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
         ...(!isProduction && {
             config: {
@@ -371,9 +373,10 @@ app.post('/api/products/search', async (req, res, next) => {
         }
         
         // 1. Fetch all available WooCommerce tags AND categories in parallel
-        const [availableTags, availableCategories] = await Promise.all([
+        const [availableTags, availableCategories, diseaseProductRules] = await Promise.all([
             getAllTags(),
-            getAllCategories()
+            getAllCategories(),
+            getDiseaseProductRules(),
         ]);
         
         if (availableTags.length === 0 && availableCategories.length === 0) {
@@ -389,7 +392,7 @@ app.post('/api/products/search', async (req, res, next) => {
         
         // 2. Ask GPT to pick the best tags & categories
         console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
-        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage);
+        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage, diseaseProductRules);
         const treatmentAllowed = canRecommendTreatmentProducts(diagnosis);
         const safeRecommendation = {
             ...recommendation,
@@ -421,9 +424,9 @@ app.post('/api/products/search', async (req, res, next) => {
         const rawTreatment = finalizeList(treatmentProducts);
         const rawFertilizers = finalizeList(fertilizerProducts);
         const rawSupplements = finalizeList(supplementProducts);
-        const finalTreatment = enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment');
-        const finalFertilizers = enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer');
-        const finalSupplements = enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement');
+        const finalTreatment = enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules);
+        const finalFertilizers = enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules);
+        const finalSupplements = enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules);
         
         // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
         const otherPopular = [];
@@ -468,6 +471,7 @@ app.post('/api/products/search', async (req, res, next) => {
             fallbackMeta,
             recommendationIntent,
             consultation,
+            curatedRules: recommendation.curatedRules || [],
             storeUrl: getStoreUrl()
         });
     } catch (error) {

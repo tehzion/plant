@@ -68,6 +68,19 @@ describe('scan follow-up drafts', () => {
         expect(draft.note).toContain('Need a closer leaf photo');
     });
 
+    it('turns possible pest states into scouting drafts', () => {
+        const draft = buildFollowUpDraftFromScan({
+            id: 'scan-pest',
+            status: 'likely',
+            resultState: 'possible_pest',
+            disease: 'Suspected mealybug',
+            plantType: 'Papaya',
+        });
+
+        expect(draft.activity_type).toBe('scout');
+        expect(draft.disease_name_observed).toBe('Suspected mealybug');
+    });
+
     it('turns a disease scan into a treatment log draft', () => {
         const draft = buildFollowUpDraftFromScan({
             id: 'scan-disease',

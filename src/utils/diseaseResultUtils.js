@@ -1,4 +1,5 @@
-import { isHealthy } from './statusUtils';
+import { getScanResultState, isHealthy } from './statusUtils';
+import { getScanResultStateLabel } from './diagnosisStatusLabels';
 
 const DEMO_TERMS = ['demo', 'simulated', 'fallback'];
 
@@ -57,7 +58,7 @@ const splitDiseaseTitleAndDescription = (initialTitle, initialDescription) => {
 
 export const normalizeDiseaseResult = (result, t) => {
     const healthy = isHealthy(result);
-    const resultState = result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
+    const resultState = getScanResultState(result);
     const differentials = Array.isArray(result.differentialDiagnoses)
         ? result.differentialDiagnoses.filter(Boolean)
         : [];
@@ -128,12 +129,7 @@ export const normalizeDiseaseResult = (result, t) => {
     return {
         healthy,
         resultState,
-        stateLabel: {
-            confirmed: t('results.confirmedDiagnosis') || 'Confirmed diagnosis',
-            likely: t('results.likelyDiagnosis') || 'Likely diagnosis',
-            uncertain: t('results.uncertainDiagnosis') || 'Uncertain diagnosis',
-            retake_required: t('results.retakeRequired') || 'Need a clearer leaf close-up',
-        }[resultState] || (t('results.likelyDiagnosis') || 'Likely diagnosis'),
+        stateLabel: getScanResultStateLabel(t, resultState) || (t('results.likelyDiagnosis') || 'Likely diagnosis'),
         differentials,
         confidenceBreakdown,
         diagnosticEvidence,

@@ -6,6 +6,11 @@ const STATUS_LABEL_KEYS = {
     possible: 'results.possibleBadge',
     retake_required: 'results.retakeRequired',
     healthy: 'results.healthy',
+    confident_treatment: 'results.scanStateConfidentTreatment',
+    needs_closer_photo: 'results.scanStateNeedsCloserPhoto',
+    possible_nutrient_issue: 'results.scanStatePossibleNutrientIssue',
+    possible_pest: 'results.scanStatePossiblePest',
+    expert_review_needed: 'results.scanStateExpertReviewNeeded',
 };
 
 const STATUS_LABEL_FALLBACKS = {
@@ -16,6 +21,11 @@ const STATUS_LABEL_FALLBACKS = {
     possible: 'Possible',
     retake_required: 'Need a clearer leaf close-up',
     healthy: 'Healthy',
+    confident_treatment: 'Confident treatment',
+    needs_closer_photo: 'Need closer photo',
+    possible_nutrient_issue: 'Possible nutrient issue',
+    possible_pest: 'Possible pest',
+    expert_review_needed: 'Expert review needed',
 };
 
 const normalizeDiagnosisStatus = (status) => String(status || '')
@@ -42,3 +52,5 @@ export const getDiagnosisStatusLabel = (t, status) => {
 
     return STATUS_LABEL_FALLBACKS[normalized] || humanizeStatus(status);
 };
+
+export const getScanResultStateLabel = getDiagnosisStatusLabel;

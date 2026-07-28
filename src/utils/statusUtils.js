@@ -85,6 +85,168 @@ const SEVERITY_ALIASES = {
     kritikal: 'critical',
 };
 
+export const SCAN_RESULT_STATES = Object.freeze({
+    CONFIDENT_TREATMENT: 'confident_treatment',
+    NEEDS_CLOSER_PHOTO: 'needs_closer_photo',
+    POSSIBLE_NUTRIENT_ISSUE: 'possible_nutrient_issue',
+    POSSIBLE_PEST: 'possible_pest',
+    EXPERT_REVIEW_NEEDED: 'expert_review_needed',
+    HEALTHY: 'healthy',
+});
+
+const normalizeText = (value) => String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+const toSearchText = (value) => String(value || '').toLowerCase();
+
+const getConfidenceValue = (scan = {}) => {
+    const candidates = [
+        scan.diagnosisConfidence,
+        scan.confidenceBreakdown?.diagnosisConfidence,
+        scan.confidence,
+    ];
+    for (const candidate of candidates) {
+        const number = Number(candidate);
+        if (Number.isFinite(number)) {
+            return number > 1 ? number : number * 100;
+        }
+    }
+    return null;
+};
+
+const includesAny = (value, keywords) => {
+    const text = toSearchText(value);
+    return keywords.some((keyword) => text.includes(keyword));
+};
+
+const hasPestSignal = (scan = {}) => {
+    const evidenceText = [
+        scan.disease,
+        scan.pathogenType,
+        scan.diseaseCategory,
+        scan.diagnosticEvidence?.likelyCauseCategory,
+        ...(Array.isArray(scan.symptoms) ? scan.symptoms : []),
+        ...(Array.isArray(scan.productSearchTags) ? scan.productSearchTags : []),
+    ].join(' ');
+
+    return includesAny(evidenceText, [
+        'pest',
+        'insect',
+        'mealybug',
+        'mealy bug',
+        'scale',
+        'aphid',
+        'mite',
+        'thrip',
+        'whitefly',
+        'infestation',
+        'kutu',
+        'serangga',
+    ]);
+};
+
+const hasNutrientSignal = (scan = {}) => {
+    const nutritionalStatus = normalizeText(scan.nutritionalIssues?.status || scan.nutritionalStatus);
+    const evidenceText = [
+        scan.disease,
+        scan.pathogenType,
+        scan.diseaseCategory,
+        scan.diagnosticEvidence?.likelyCauseCategory,
+        ...(Array.isArray(scan.productSearchTags) ? scan.productSearchTags : []),
+    ].join(' ');
+
+    return ['possible', 'confirmed'].includes(nutritionalStatus)
+        || includesAny(evidenceText, [
+            'nutrient',
+            'nutrition',
+            'nutritional',
+            'deficien',
+            'chlorosis',
+            'nitrogen',
+            'potassium',
+            'magnesium',
+            'calcium',
+            'kalium',
+        ]);
+};
+
+const hasActionableCause = (scan = {}) => {
+    const evidenceText = [
+        scan.disease,
+        scan.pathogenType,
+        scan.diseaseCategory,
+        scan.diagnosticEvidence?.likelyCauseCategory,
+    ].join(' ');
+
+    return includesAny(evidenceText, [
+        'fungal',
+        'fungus',
+        'bacterial',
+        'bacteria',
+        'viral',
+        'virus',
+        'pest',
+        'insect',
+        'oomycete',
+        'nematode',
+        'blight',
+        'spot',
+        'rot',
+        'wilt',
+        'rust',
+        'mildew',
+    ]);
+};
+
+export const getScanResultState = (scan = {}) => {
+    if (!scan || typeof scan !== 'object') return SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
+
+    const status = normalizeText(scan.resultState || scan.status);
+    if (Object.values(SCAN_RESULT_STATES).includes(status)) return status;
+
+    if (isHealthy(scan)) return SCAN_RESULT_STATES.HEALTHY;
+
+    const imageQualityConfidence = Number(scan.captureAssessment?.imageQualityConfidence ?? scan.confidenceBreakdown?.imageQualityConfidence);
+    const needsCloserPhoto = Boolean(
+        scan.requiresRetake
+        || scan.captureAssessment?.requiresRetake
+        || status === 'retake_required'
+        || scan.retakeReason
+        || scan.captureAssessment?.leafDetailSufficient === false
+        || (Number.isFinite(imageQualityConfidence) && imageQualityConfidence < 50)
+    );
+
+    if (needsCloserPhoto) return SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
+
+    const confidence = getConfidenceValue(scan);
+    const weakEvidence = Boolean(
+        scan.needsMoreEvidence
+        || scan.abstainReason
+        || ['uncertain', 'possible', 'inconclusive', 'needs_more_evidence'].includes(status)
+        || (confidence !== null && confidence < 70)
+    );
+    const strongTreatment = hasActionableCause(scan)
+        && !weakEvidence
+        && (
+            (status === 'confirmed' && confidence !== null && confidence >= 80)
+            || (status === 'likely' && confidence !== null && confidence >= 85)
+        );
+
+    if (hasNutrientSignal(scan) && !strongTreatment) {
+        return SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE;
+    }
+
+    if (hasPestSignal(scan) && !strongTreatment) {
+        return SCAN_RESULT_STATES.POSSIBLE_PEST;
+    }
+
+    if (strongTreatment) return SCAN_RESULT_STATES.CONFIDENT_TREATMENT;
+
+    return SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
+};
+
 /**
  * Checks if a scan result indicates a healthy plant.
  * @param {Object|string} scanOrStatus - The scan object or a status string.

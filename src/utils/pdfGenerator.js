@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { isHealthy } from './statusUtils';
+import { getScanResultState, isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
 import { getNutrientNames, normalizeNutritionalIssues } from './nutritionUtils.js';
 import { getDiagnosisStatusLabel } from './diagnosisStatusLabels.js';
@@ -402,7 +402,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     }
 
     const healthy = isHealthy(scanData);
-    const diagnosisState = scanData.status
+    const diagnosisState = scanData.resultState || getScanResultState(scanData) || scanData.status
         || (scanData.requiresRetake ? 'retake_required' : scanData.needsMoreEvidence || scanData.abstainReason ? 'uncertain' : (healthy ? 'healthy' : 'likely'));
     const diagnosisStatusLabel = getDiagnosisStatusLabel(t, diagnosisState);
     const speciesContext = scanData.speciesContext || scanData.speciesAssessment || null;

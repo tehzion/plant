@@ -4,6 +4,11 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import NodeCache from 'node-cache';
 import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
+import {
+    DEFAULT_DISEASE_PRODUCT_RULES,
+    buildDiseaseProductRuleContext,
+    normalizeRuleText,
+} from '../data/diseaseProductRules.js';
 
 dotenv.config();
 
@@ -875,10 +880,15 @@ export function normalizeAnalysisResult(result = {}, language = 'en', malaysiaCr
         });
     }
 
-    return {
+    const normalizedResult = {
         ...result,
         nutritionalIssues: normalizedNutritionalIssues,
         fertilizerRecommendations: normalizedRecommendations,
+    };
+
+    return {
+        ...normalizedResult,
+        resultState: deriveScanResultState(normalizedResult),
     };
 }
 
@@ -1915,6 +1925,144 @@ const deriveStatus = (result) => {
     return 'uncertain';
 };
 
+export const SCAN_RESULT_STATES = Object.freeze({
+    CONFIDENT_TREATMENT: 'confident_treatment',
+    NEEDS_CLOSER_PHOTO: 'needs_closer_photo',
+    POSSIBLE_NUTRIENT_ISSUE: 'possible_nutrient_issue',
+    POSSIBLE_PEST: 'possible_pest',
+    EXPERT_REVIEW_NEEDED: 'expert_review_needed',
+    HEALTHY: 'healthy',
+});
+
+const normalizeScanStateText = (value = '') => String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+const getScanStateConfidence = (result = {}) => {
+    const candidates = [
+        result.diagnosisConfidence,
+        result.confidenceBreakdown?.diagnosisConfidence,
+        result.confidence,
+    ];
+    for (const candidate of candidates) {
+        const number = Number(candidate);
+        if (Number.isFinite(number)) return number > 1 ? number : number * 100;
+    }
+    return null;
+};
+
+const scanTextIncludes = (result = {}, keywords = []) => {
+    const text = [
+        result.disease,
+        result.pathogenType,
+        result.diseaseCategory,
+        result.diagnosticEvidence?.likelyCauseCategory,
+        ...(Array.isArray(result.symptoms) ? result.symptoms : []),
+        ...(Array.isArray(result.productSearchTags) ? result.productSearchTags : []),
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return keywords.some((keyword) => text.includes(keyword));
+};
+
+const hasPestResultSignal = (result = {}) => scanTextIncludes(result, [
+    'pest',
+    'insect',
+    'mealybug',
+    'mealy bug',
+    'scale',
+    'aphid',
+    'mite',
+    'thrip',
+    'whitefly',
+    'infestation',
+    'kutu',
+    'serangga',
+]);
+
+const hasNutrientResultSignal = (result = {}) => {
+    const nutritionalStatus = normalizeScanStateText(result.nutritionalIssues?.status || result.nutritionalStatus);
+    return ['possible', 'confirmed'].includes(nutritionalStatus)
+        || scanTextIncludes(result, [
+            'nutrient',
+            'nutrition',
+            'nutritional',
+            'deficien',
+            'chlorosis',
+            'nitrogen',
+            'potassium',
+            'magnesium',
+            'calcium',
+            'kalium',
+        ]);
+};
+
+const hasActionableTreatmentCause = (result = {}) => scanTextIncludes(result, [
+    'fungal',
+    'fungus',
+    'bacterial',
+    'bacteria',
+    'viral',
+    'virus',
+    'pest',
+    'insect',
+    'oomycete',
+    'nematode',
+    'blight',
+    'spot',
+    'rot',
+    'wilt',
+    'rust',
+    'mildew',
+]);
+
+export function deriveScanResultState(result = {}) {
+    const explicitState = normalizeScanStateText(result.resultState);
+    if (Object.values(SCAN_RESULT_STATES).includes(explicitState)) return explicitState;
+
+    if (String(result.healthStatus || '').toLowerCase() === 'healthy' || normalizeScanStateText(result.status) === 'healthy') {
+        return SCAN_RESULT_STATES.HEALTHY;
+    }
+
+    const status = normalizeScanStateText(result.status);
+    const imageQualityConfidence = Number(result.captureAssessment?.imageQualityConfidence ?? result.confidenceBreakdown?.imageQualityConfidence);
+    const needsCloserPhoto = Boolean(
+        result.requiresRetake
+        || result.captureAssessment?.requiresRetake
+        || status === 'retake_required'
+        || result.retakeReason
+        || result.captureAssessment?.leafDetailSufficient === false
+        || (Number.isFinite(imageQualityConfidence) && imageQualityConfidence < 50)
+    );
+
+    if (needsCloserPhoto) return SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
+
+    const confidence = getScanStateConfidence(result);
+    const weakEvidence = Boolean(
+        result.needsMoreEvidence
+        || result.abstainReason
+        || ['uncertain', 'possible', 'inconclusive', 'needs_more_evidence'].includes(status)
+        || (confidence !== null && confidence < 70)
+    );
+    const strongTreatment = hasActionableTreatmentCause(result)
+        && !weakEvidence
+        && (
+            (status === 'confirmed' && confidence !== null && confidence >= 80)
+            || (status === 'likely' && confidence !== null && confidence >= 85)
+        );
+
+    if (hasNutrientResultSignal(result) && !strongTreatment) {
+        return SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE;
+    }
+
+    if (hasPestResultSignal(result) && !strongTreatment) {
+        return SCAN_RESULT_STATES.POSSIBLE_PEST;
+    }
+
+    if (strongTreatment) return SCAN_RESULT_STATES.CONFIDENT_TREATMENT;
+    return SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
+}
+
 /**
  * Fallback: Identify plant using GPT Vision
  */
@@ -2168,6 +2316,8 @@ Rules:
 - Use ranked differentials when a single diagnosis is not secure.
 - If image quality is weak, set requiresRetake to true and explain why.
 - If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
+- Set resultState conservatively as one of: confident_treatment, needs_closer_photo, possible_nutrient_issue, possible_pest, expert_review_needed, healthy.
+- Never use confident_treatment unless diagnosis confidence is at least 80, image quality is sufficient, and visible evidence supports a named disease or pest.
 - If visible evidence supports a plausible issue, primaryDiagnosis MUST be a named likely/suspected condition, not only a broad category. Avoid generic labels such as "Potential Pest Infestation", "Possible Disease", "Leaf Problem", or "Further Diagnosis Needed" unless the image is genuinely too unclear.
 - needsMoreEvidence may be true for a likely/suspected condition, but it must not erase the named primaryDiagnosis or make additionalNotes only say that more evidence is needed.
 - additionalNotes must briefly state the named likely condition and the visible evidence that supports it.
@@ -2204,6 +2354,7 @@ Return STRICT JSON:
     "pathogenType": "None/Fungal/Bacterial/Viral/Pest/Nutritional/Environmental",
     "symptoms": ["item 1", "item 2"],
     "additionalNotes": "short friendly explanation",
+    "resultState": "confident_treatment | needs_closer_photo | possible_nutrient_issue | possible_pest | expert_review_needed | healthy",
     "needsMoreEvidence": false,
     "abstainReason": "",
     "differentialDiagnoses": [
@@ -2497,6 +2648,7 @@ const mergeDiagnosisResult = ({
     filtered.status = deriveStatus(filtered);
     filtered.requiresRetake = filtered.status === 'retake_required';
     filtered.retakeReason = filtered.requiresRetake ? (filtered.captureAssessment?.retakeReason || retakeReason) : '';
+    filtered.resultState = deriveScanResultState(filtered);
 
     return ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
 };
@@ -3213,6 +3365,7 @@ export const buildProductRecommendationCacheKey = (diagnosisInfo = {}, language 
         normalizeCacheFragment(diagnosisInfo.healthStatus, 'unknown'),
         normalizeCacheFragment(diagnosisInfo.pathogenType, 'none'),
         normalizeCacheFragment(diagnosisInfo.status, 'unknown'),
+        normalizeCacheFragment(diagnosisInfo.resultState, 'unknown-state'),
         normalizeCacheFragment(diagnosisInfo.diseaseCategory, 'unknown'),
         normalizeCacheNumber(diagnosisInfo.confidence),
         normalizeCacheNumber(diagnosisInfo.diagnosisConfidence),
@@ -3292,11 +3445,13 @@ const getDiagnosisConfidenceValue = (diagnosisInfo = {}) => {
 };
 
 export const isHealthyProductDiagnosis = (diagnosisInfo = {}) => {
+    const resultState = normalizeScanStateText(diagnosisInfo.resultState);
     const healthStatus = normalizeRecommendationText(diagnosisInfo.healthStatus);
     const disease = normalizeRecommendationText(diagnosisInfo.disease);
     const status = normalizeRecommendationText(diagnosisInfo.status);
 
-    return healthStatus === 'healthy'
+    return resultState === SCAN_RESULT_STATES.HEALTHY
+        || healthStatus === 'healthy'
         || status === 'healthy'
         || disease === 'healthy'
         || disease === 'normal'
@@ -3305,8 +3460,18 @@ export const isHealthyProductDiagnosis = (diagnosisInfo = {}) => {
 };
 
 export const isWeakProductDiagnosis = (diagnosisInfo = {}) => {
+    const resultState = normalizeScanStateText(diagnosisInfo.resultState);
     const status = normalizeRecommendationText(diagnosisInfo.status);
     const confidence = getDiagnosisConfidenceValue(diagnosisInfo);
+
+    if ([
+        SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
+        SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE,
+        SCAN_RESULT_STATES.POSSIBLE_PEST,
+        SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED,
+    ].includes(resultState)) {
+        return true;
+    }
 
     if (diagnosisInfo.requiresRetake || diagnosisInfo.needsMoreEvidence || diagnosisInfo.abstainReason) {
         return true;
@@ -3321,6 +3486,11 @@ export const isWeakProductDiagnosis = (diagnosisInfo = {}) => {
 
 export const canRecommendTreatmentProducts = (diagnosisInfo = {}) => {
     if (isHealthyProductDiagnosis(diagnosisInfo) || isWeakProductDiagnosis(diagnosisInfo)) {
+        return false;
+    }
+
+    const resultState = normalizeScanStateText(diagnosisInfo.resultState);
+    if (resultState && resultState !== SCAN_RESULT_STATES.CONFIDENT_TREATMENT) {
         return false;
     }
 
@@ -3355,12 +3525,16 @@ export const getProductRecommendationIntent = (diagnosisInfo = {}, counts = {}) 
     return PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED;
 };
 
-const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatment') => {
+const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatment', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) => {
     const weighted = new Map();
+    const curatedContext = buildDiseaseProductRuleContext(diagnosisInfo, recommendationRole, diseaseProductRules);
 
     pushWeightedTerm(weighted, diagnosisInfo.disease, recommendationRole === 'treatment' ? 22 : 10);
     pushWeightedTerm(weighted, diagnosisInfo.pathogenType, recommendationRole === 'treatment' ? 18 : 7);
     pushWeightedTerm(weighted, diagnosisInfo.diseaseCategory, recommendationRole === 'treatment' ? 18 : 7);
+    curatedContext.productTags.forEach((tag) => pushWeightedTerm(weighted, tag, recommendationRole === 'treatment' ? 34 : 22));
+    curatedContext.activeIngredients.forEach((ingredient) => pushWeightedTerm(weighted, ingredient, recommendationRole === 'treatment' ? 30 : 18));
+    curatedContext.matchTerms.forEach((term) => pushWeightedTerm(weighted, term, recommendationRole === 'treatment' ? 24 : 14));
     normalizeArray(diagnosisInfo.productSearchTags).forEach((tag) => pushWeightedTerm(weighted, tag, 30));
     normalizeArray(diagnosisInfo.treatments).forEach((item) => pushWeightedTerm(weighted, item, recommendationRole === 'treatment' ? 16 : 8));
     normalizeArray(diagnosisInfo.immediateActions).forEach((item) => pushWeightedTerm(weighted, item, 10));
@@ -3385,7 +3559,132 @@ const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatme
         .sort((left, right) => right.weight - left.weight);
 };
 
-export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendationRole = 'treatment') => {
+const findCatalogIdsForCuratedTerms = (catalog = [], terms = [], maxCount = 4) => {
+    const normalizedTerms = normalizeArray(terms)
+        .map((term) => normalizeRuleText(term))
+        .filter((term) => term.length >= 3);
+
+    if (normalizedTerms.length === 0) return [];
+
+    return (Array.isArray(catalog) ? catalog : [])
+        .map((item) => {
+            const name = normalizeRuleText(item?.name);
+            const id = Number.parseInt(item?.id, 10);
+            if (!name || !Number.isInteger(id)) return null;
+
+            let score = 0;
+            normalizedTerms.forEach((term) => {
+                if (name === term) score += 8;
+                else if (name.includes(term)) score += 5;
+                else if (term.includes(name) && name.length >= 4) score += 3;
+            });
+
+            return score > 0 ? { id, score } : null;
+        })
+        .filter(Boolean)
+        .sort((left, right) => right.score - left.score)
+        .map((item) => item.id)
+        .slice(0, maxCount);
+};
+
+const mergeCatalogIds = (existing = [], curated = [], maxCount = 4) => {
+    const merged = [];
+    [...curated, ...existing].forEach((id) => {
+        const numeric = Number.parseInt(id, 10);
+        if (!Number.isInteger(numeric) || merged.includes(numeric)) return;
+        merged.push(numeric);
+    });
+    return merged.slice(0, maxCount);
+};
+
+const getUniqueCuratedRules = (contexts = []) => {
+    const seen = new Set();
+    return contexts
+        .flatMap((context) => context.rules || [])
+        .filter((rule) => {
+            if (!rule?.id || seen.has(rule.id)) return false;
+            seen.add(rule.id);
+            return true;
+        });
+};
+
+export const applyCuratedProductRulesToRecommendation = (
+    recommendation = {},
+    availableTags = [],
+    availableCategories = [],
+    diagnosisInfo = {},
+    diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES,
+) => {
+    const output = validateProductRecommendationSelection(recommendation, availableTags, availableCategories);
+    const contexts = [];
+    const roleConfigs = [
+        {
+            role: 'treatment',
+            tagField: 'treatmentTagIds',
+            categoryField: 'treatmentCategoryIds',
+            tagLimit: 4,
+            categoryLimit: 2,
+            allowed: canRecommendTreatmentProducts(diagnosisInfo),
+        },
+        {
+            role: 'fertilizer',
+            tagField: 'fertilizerTagIds',
+            categoryField: 'fertilizerCategoryIds',
+            tagLimit: 3,
+            categoryLimit: 2,
+            allowed: true,
+        },
+        {
+            role: 'supplement',
+            tagField: 'supplementTagIds',
+            categoryField: 'supplementCategoryIds',
+            tagLimit: 3,
+            categoryLimit: 2,
+            allowed: true,
+        },
+    ];
+
+    roleConfigs.forEach((config) => {
+        if (!config.allowed) return;
+
+        const context = buildDiseaseProductRuleContext(diagnosisInfo, config.role, diseaseProductRules);
+        if (!context.matched) return;
+
+        contexts.push(context);
+        const catalogTerms = [
+            ...context.productTags,
+            ...context.activeIngredients,
+            ...context.matchTerms,
+        ];
+
+        output[config.tagField] = mergeCatalogIds(
+            output[config.tagField],
+            findCatalogIdsForCuratedTerms(availableTags, catalogTerms, config.tagLimit),
+            config.tagLimit,
+        );
+        output[config.categoryField] = mergeCatalogIds(
+            output[config.categoryField],
+            findCatalogIdsForCuratedTerms(availableCategories, catalogTerms, config.categoryLimit),
+            config.categoryLimit,
+        );
+    });
+
+    const curatedRules = getUniqueCuratedRules(contexts);
+    if (curatedRules.length > 0) {
+        const ruleNames = curatedRules.map((rule) => rule.displayName).slice(0, 2).join(', ');
+        output.reasoning = [
+            output.reasoning,
+            `Curated crop-disease rule applied: ${ruleNames}.`,
+        ].filter(Boolean).join(' ');
+    }
+
+    return {
+        ...output,
+        curatedRules,
+    };
+};
+
+export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendationRole = 'treatment', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) => {
     const searchable = normalizeRecommendationText([
         product.name,
         product.description,
@@ -3393,7 +3692,8 @@ export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendati
         ...(Array.isArray(product.categories) ? product.categories : []),
     ].filter(Boolean).join(' '));
 
-    const terms = getProductSearchTerms(diagnosisInfo, recommendationRole);
+    const terms = getProductSearchTerms(diagnosisInfo, recommendationRole, diseaseProductRules);
+    const curatedContext = buildDiseaseProductRuleContext(diagnosisInfo, recommendationRole, diseaseProductRules);
     const matchedTerms = [];
     let score = 0;
 
@@ -3415,16 +3715,27 @@ export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendati
         if (searchable.includes(term)) score += 6;
     });
 
+    const matchedActiveIngredients = curatedContext.activeIngredients
+        .filter((ingredient) => searchable.includes(normalizeRecommendationText(ingredient)));
     const uniqueMatchedTerms = matchedTerms.slice(0, 6);
     const matchScore = Math.max(0, Math.min(100, Math.round(score)));
-    const matchReason = uniqueMatchedTerms.length > 0
-        ? `Matched ${uniqueMatchedTerms.slice(0, 3).join(', ')} from the scan result.`
-        : 'Matched the WooCommerce tag or category selected for this scan.';
+    const matchReason = curatedContext.matched
+        ? `Curated ${curatedContext.primaryRule.displayName} rule matched ${uniqueMatchedTerms.slice(0, 3).join(', ') || curatedContext.productTags.slice(0, 2).join(', ')}.`
+        : uniqueMatchedTerms.length > 0
+            ? `Matched ${uniqueMatchedTerms.slice(0, 3).join(', ')} from the scan result.`
+            : 'Matched the WooCommerce tag or category selected for this scan.';
 
     return {
         matchScore,
         matchedTerms: uniqueMatchedTerms,
         matchReason,
+        curatedRuleId: curatedContext.primaryRule?.id || '',
+        curatedRuleName: curatedContext.primaryRule?.displayName || '',
+        activeIngredients: recommendationRole === 'treatment' || recommendationRole === 'fertilizer' || recommendationRole === 'supplement'
+            ? curatedContext.activeIngredients.slice(0, 4)
+            : [],
+        matchedActiveIngredients: matchedActiveIngredients.slice(0, 4),
+        cautionNote: curatedContext.cautionNotes[0] || '',
     };
 };
 
@@ -3438,16 +3749,16 @@ export const getProductCautionLevel = (diagnosisInfo = {}, recommendationRole = 
     return 'confirm_before_use';
 };
 
-export const enrichRecommendedProducts = (products = [], diagnosisInfo = {}, recommendationRole = 'treatment') => (
+export const enrichRecommendedProducts = (products = [], diagnosisInfo = {}, recommendationRole = 'treatment', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) => (
     (Array.isArray(products) ? products : []).map((product) => {
-        const match = scoreProductMatch(product, diagnosisInfo, recommendationRole);
+        const match = scoreProductMatch(product, diagnosisInfo, recommendationRole, diseaseProductRules);
         return {
             ...product,
             ...match,
             recommendationRole,
             cautionLevel: getProductCautionLevel(diagnosisInfo, recommendationRole),
         };
-    })
+    }).sort((left, right) => Number(right.matchScore || 0) - Number(left.matchScore || 0))
 );
 
 const getConsultationReason = (intent, language = 'en') => {
@@ -3511,7 +3822,7 @@ export const buildProductConsultation = (diagnosisInfo = {}, intent = PRODUCT_RE
     };
 };
 
-export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en') {
+export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) {
     if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
         console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');
         return {
@@ -3644,7 +3955,7 @@ Return JSON with three separate recommendation groups:
 
         const result = JSON.parse(jsonMatch[0]);
 
-        const output = validateProductRecommendationSelection({
+        const validatedOutput = validateProductRecommendationSelection({
             treatmentTagIds: result.treatment?.tagIds || [],
             treatmentCategoryIds: result.treatment?.categoryIds || [],
             fertilizerTagIds: result.fertilizer?.tagIds || [],
@@ -3653,6 +3964,13 @@ Return JSON with three separate recommendation groups:
             supplementCategoryIds: result.supplement?.categoryIds || [],
             reasoning: result.reasoning || ''
         }, availableTags, availableCategories);
+        const output = applyCuratedProductRulesToRecommendation(
+            validatedOutput,
+            availableTags,
+            availableCategories,
+            diagnosisInfo,
+            diseaseProductRules,
+        );
 
         console.log(`${OPENAI_PRIMARY_MODEL} recommended Treatment: ${output.treatmentTagIds.length} | Fertilizer: ${output.fertilizerTagIds.length} | Supplement: ${output.supplementTagIds.length}`);
         console.log(`   Reason: ${output.reasoning}`);

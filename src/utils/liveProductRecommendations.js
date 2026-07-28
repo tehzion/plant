@@ -58,6 +58,7 @@ export const createEmptyProductRecommendations = () => ({
     fallbackMeta: null,
     recommendationIntent: '',
     consultation: null,
+    curatedRules: [],
     storeUrl: '',
 });
 
@@ -99,6 +100,7 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     plantType: normalizeText(plantType),
     disease: normalizeText(disease, 'None') || 'None',
     status: normalizeText(scanResult?.status),
+    resultState: normalizeText(scanResult?.resultState),
     confidence: normalizeNumber(scanResult?.confidence),
     diagnosisConfidence: normalizeNumber(scanResult?.confidenceBreakdown?.diagnosisConfidence ?? scanResult?.diagnosisConfidence),
     needsMoreEvidence: Boolean(scanResult?.needsMoreEvidence || scanResult?.abstainReason || scanResult?.requiresRetake),
@@ -122,6 +124,7 @@ export const createProductRecommendationsKey = (payload, language = 'en') => JSO
     plantType: normalizeText(payload?.plantType),
     disease: normalizeText(payload?.disease, 'None') || 'None',
     status: normalizeText(payload?.status),
+    resultState: normalizeText(payload?.resultState),
     confidence: normalizeNumber(payload?.confidence),
     diagnosisConfidence: normalizeNumber(payload?.diagnosisConfidence),
     needsMoreEvidence: Boolean(payload?.needsMoreEvidence),
@@ -188,6 +191,11 @@ const normalizeProductItem = (product = {}) => {
         matchScore: normalizeNumber(product.matchScore) ?? 0,
         matchReason: normalizeText(product.matchReason),
         matchedTerms: normalizeList(product.matchedTerms),
+        curatedRuleId: normalizeText(product.curatedRuleId),
+        curatedRuleName: normalizeText(product.curatedRuleName),
+        activeIngredients: normalizeList(product.activeIngredients),
+        matchedActiveIngredients: normalizeList(product.matchedActiveIngredients),
+        cautionNote: normalizeText(product.cautionNote),
         recommendationRole: normalizeText(product.recommendationRole),
         cautionLevel: normalizeText(product.cautionLevel),
     };
@@ -258,6 +266,7 @@ export const normalizeProductRecommendationsResponse = (data = {}) => ({
     fallbackMeta: data?.fallbackMeta && typeof data.fallbackMeta === 'object' ? data.fallbackMeta : null,
     recommendationIntent: normalizeText(data?.recommendationIntent),
     consultation: normalizeConsultation(data?.consultation),
+    curatedRules: Array.isArray(data?.curatedRules) ? data.curatedRules : [],
     storeUrl: normalizeText(data?.storeUrl),
 });
 

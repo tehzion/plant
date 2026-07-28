@@ -16,6 +16,16 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_AUTH_EMAIL_REDIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
       - key: WOOCOMMERCE_URL
         sync: false
       - key: WOOCOMMERCE_CONSUMER_KEY

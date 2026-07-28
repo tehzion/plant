@@ -31,17 +31,17 @@ async function checkDatabase() {
 
   // 2. Check Database Tables
   // We might get a Row Level Security (RLS) error if we aren't logged in, but that still proves the DB is connected!
-  const tablesToTest = ['profiles', 'scan_history', 'mygap_logs', 'mygap_checklist', 'daily_notes', 'plots', 'order_refs'];
+  const tablesToTest = ['profiles', 'scan_history', 'mygap_logs', 'mygap_checklist', 'daily_notes', 'plots', 'order_refs', 'disease_product_rules', 'consultation_leads'];
   
-  console.log('\nTesting Table Access (RLS might block reads, which is expected and fine, as long as the table exists):');
+  console.log('\nTesting Table Access (RLS or grants might block reads, which is expected for write-only tables):');
   
   for (const table of tablesToTest) {
       const { data, error } = await supabase.from(table).select('*').limit(1);
       if (error) {
           if (error.code === '42P01') {
               console.log(`❌ Table missing: ${table} (Code 42P01)`);
-          } else if (error.code === 'PGRST301' || error.message.includes('RLS') || error.message.includes('row-level security')) {
-              console.log(`🔒 Table exists (RLS blocked read, which is correct for anon): ${table}`);
+          } else if (error.code === 'PGRST301' || error.code === '42501' || error.message.includes('RLS') || error.message.includes('row-level security') || error.message.includes('permission denied')) {
+              console.log(`🔒 Table exists (anon read blocked by RLS/grants, which can be correct): ${table}`);
           } else if (error.code === '22P02') {
              console.log(`✅ Table exists (UUID cast error, normal for empty query): ${table}`);
           } else {

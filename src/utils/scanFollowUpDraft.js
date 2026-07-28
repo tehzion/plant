@@ -1,4 +1,4 @@
-import { getStandardizedSeverity, getStandardizedStatus } from './statusUtils';
+import { SCAN_RESULT_STATES, getStandardizedSeverity, getStandardizedStatus } from './statusUtils';
 
 export const SCAN_FOLLOW_UP_DRAFT_KEY = 'sea_plant_scan_follow_up_draft_v1';
 export const SCAN_FOLLOW_UP_DRAFT_MAX_AGE_MS = 30 * 60 * 1000;
@@ -51,11 +51,18 @@ const formatNumberedSection = (title, items) => {
 
 const isUncertainScan = (scan = {}) => {
     const status = textOrEmpty(scan.status || scan.healthStatus).toLowerCase();
+    const resultState = textOrEmpty(scan.resultState).toLowerCase();
     return Boolean(
         scan.needsMoreEvidence
         || scan.requiresRetake
         || scan.abstainReason
         || scan.retakeReason
+        || [
+            SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
+            SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE,
+            SCAN_RESULT_STATES.POSSIBLE_PEST,
+            SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED,
+        ].includes(resultState)
         || ['uncertain', 'unknown', 'retake_required', 'needs_more_evidence'].some((keyword) => status.includes(keyword))
     );
 };
