@@ -106,6 +106,7 @@ NODE_ENV=production
 OPENAI_API_KEY=your_openai_api_key_here
 PLANTNET_API_KEY=your_plantnet_api_key_here
 FRONTEND_URL=https://your-public-domain
+FRONTEND_URLS=https://www.mojosense.app,https://mojosense.app
 VITE_SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 VITE_AUTH_EMAIL_REDIRECT_URL=https://your-public-domain/login

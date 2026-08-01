@@ -44,11 +44,20 @@ const aiCache = new NodeCache({ stdTTL: 86400 });
 app.use(helmet());
 app.use(compression());
 
+const parseOriginList = (value = '') => String(value || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 // Restricted CORS
 const allowedOrigins = [
-    process.env.FRONTEND_URL,
+    ...parseOriginList(process.env.FRONTEND_URL),
+    ...parseOriginList(process.env.FRONTEND_URLS),
     'http://localhost:3000',
     'http://localhost:5173',
+    'https://plant-2-uvev.onrender.com',
+    'https://mojosense.app',
+    'https://www.mojosense.app',
     'https://tehzion-plant.vercel.app'
 ].filter(Boolean);
 
@@ -60,6 +69,7 @@ const allowedOriginPatterns = [
     /^https:\/\/tehzion-plant(?:-[a-z0-9-]+)?\.vercel\.app$/i,
     /^https:\/\/tehzion-plant-git-[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/i,
     /^https:\/\/tehzion-plant(?:-[a-z0-9-]+)*-tehzions-projects\.vercel\.app$/i,
+    /^https:\/\/[a-z0-9-]+\.onrender\.com$/i,
 ];
 
 app.use(cors({

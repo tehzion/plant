@@ -2,9 +2,80 @@
 
 // In production (Render/Vercel), we want relative paths (e.g. /api/analyze) 
 // so the frontend talks to the backend on the same domain.
-import { fetchJsonWithTimeout, fetchWithTimeout } from './networkRequest.js';
+import {
+  fetchJsonWithTimeout,
+  fetchWithTimeout,
+  isNetworkUnavailableError,
+  isTimeoutError,
+} from './networkRequest.js';
 // In local dev, we might need localhost:3002 if not using a proxy.
 const API_URL = import.meta.env.VITE_API_URL || '';
+const HEALTH_URL = `${API_URL}/api/health`;
+const ANALYZE_URL = `${API_URL}/api/analyze`;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryableAnalysisError = (error) => (
+  isNetworkUnavailableError(error)
+  || isTimeoutError(error)
+  || [502, 503, 504].includes(Number(error?.status))
+);
+
+export const warmAnalysisService = async ({
+  attempts = 2,
+  timeoutMs = 45000,
+  delayMs = 2000,
+} = {}) => {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(
+        HEALTH_URL,
+        { cache: 'no-store' },
+        {
+          timeoutMs,
+          timeoutMessage: 'Analysis service wake-up timed out.',
+          networkMessage: 'Analysis service is not reachable yet.',
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (!data.status || data.status === 'ok') {
+          return { ok: true, data };
+        }
+      }
+
+      lastError = new Error(`Health check failed with status ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < attempts && delayMs > 0) {
+      await sleep(delayMs);
+    }
+  }
+
+  return { ok: false, error: lastError };
+};
+
+const requestPlantAnalysis = (payload) => fetchJsonWithTimeout(
+  ANALYZE_URL,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  },
+  {
+    timeoutMs: 240000,
+    timeoutMessage: 'Plant analysis is still taking longer than expected. Please keep this page open; retry only if it stops progressing.',
+    networkMessage: 'The analysis service is waking up or temporarily unreachable. Please try again in a moment.',
+    unavailableMessage: 'Plant analysis is temporarily unavailable. Please try again shortly.',
+  },
+);
 
 /**
  * Convert image file to base64, resizing it to optimal dimensions for smart analysis
@@ -223,32 +294,28 @@ export const analyzePlantDisease = async (
   location = null,
   imageQuality = null
 ) => {
+  const payload = {
+    treeImage: treeImageBase64,
+    category,
+    leafImage: leafImageBase64,
+    language,
+    location,
+    imageQuality
+  };
+
   try {
-    return await fetchJsonWithTimeout(
-      `${API_URL}/api/analyze`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          treeImage: treeImageBase64,
-          category,
-          leafImage: leafImageBase64,
-          language,
-          location,
-          imageQuality
-        })
-      },
-      {
-        timeoutMs: 240000,
-        timeoutMessage: 'Plant analysis is still taking longer than expected. Please retry only if the connection has stopped or the page is no longer progressing.',
-        networkMessage: 'Could not reach the plant analysis service. Please check your connection and try again.',
-        unavailableMessage: 'Plant analysis is temporarily unavailable. Please try again shortly.',
-      },
-    );
+    // Render Free can need a cold-start wake-up before accepting the image POST.
+    // This prevents the first scan attempt from failing as a false connection error.
+    await warmAnalysisService({ attempts: 1, timeoutMs: 45000, delayMs: 0 });
+    return await requestPlantAnalysis(payload);
 
   } catch (error) {
+    if (isRetryableAnalysisError(error)) {
+      console.warn('Analysis request failed once; warming service and retrying:', error);
+      await warmAnalysisService({ attempts: 2, timeoutMs: 60000, delayMs: 3000 });
+      return requestPlantAnalysis(payload);
+    }
+
     console.warn('Disease detection API failed:', error);
     throw error;
   }
@@ -286,23 +353,9 @@ export const localizeStoredAnalysisResult = async (result, language = 'en') => {
  * @returns {Promise<Object>} Health status
  */
 export const checkServerHealth = async () => {
-  try {
-    const response = await fetchWithTimeout(
-      `${API_URL}/api/health`,
-      {},
-      {
-        timeoutMs: 25000,
-        timeoutMessage: 'Backend health check timed out.',
-        networkMessage: 'Backend server is not reachable',
-      },
-    );
-    if (!response.ok) throw new Error('Network response was not ok');
-
-    const data = await response.json();
-    if (data.status !== 'ok') throw new Error('Server status is not ok');
-
-    return data;
-  } catch (error) {
+  const result = await warmAnalysisService({ attempts: 2, timeoutMs: 45000, delayMs: 1500 });
+  if (!result.ok) {
     throw new Error('Backend server is not reachable');
   }
+  return result.data;
 };
