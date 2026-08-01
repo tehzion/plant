@@ -56,6 +56,7 @@ const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
     'https://plant-2-uvev.onrender.com',
+    'https://ai.kanb.ccop.my',
     'https://mojosense.app',
     'https://www.mojosense.app',
     'https://tehzion-plant.vercel.app'
