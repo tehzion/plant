@@ -19,6 +19,10 @@ const categories = [
 
 const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
   const { t } = useLanguage();
+  const handleSelect = (category) => {
+    if (disabled) return;
+    onSelect?.(category.nameKey);
+  };
 
   return (
     <div className="category-selector">
@@ -27,10 +31,12 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
       <div className="category-grid">
         {categories.map((category) => (
           <button
+            type="button"
             key={category.id}
-            onClick={() => !disabled && onSelect(category.nameKey)}
+            onClick={() => handleSelect(category)}
             className={`category-btn ${selected === category.nameKey ? 'active' : ''}`}
             disabled={disabled}
+            aria-pressed={selected === category.nameKey}
           >
             <div className={`category-icon ${selected === category.nameKey ? 'is-active' : ''}`}>{category.icon}</div>
             <span className="category-name">{t(category.translationKey)}</span>

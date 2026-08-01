@@ -40,6 +40,7 @@ const Home = () => {
   const { state: scanState, actions: scanActions } = useScanContext();
   const { user } = useAuth();
   const isMounted = useRef(true);
+  const selectedCategoryRef = useRef('');
 
   // Track mounted state
   useEffect(() => {
@@ -64,6 +65,10 @@ const Home = () => {
     selectedImage, selectedLeafImage, selectedCategory, selectedScale, scaleQuantity,
     currentStep, loading, error, errorCode, analyzingStep, scanStartTime
   } = scanState;
+
+  useEffect(() => {
+    selectedCategoryRef.current = selectedCategory || '';
+  }, [selectedCategory]);
 
 
   // View State: 'dashboard' | 'scan'
@@ -219,9 +224,17 @@ const Home = () => {
   // Analysis failure: SET_ERROR always sets currentStep to 3, so just check error + not loading.
   const hasAnalysisFailure = !loading && Boolean(error);
 
-  const runAnalysisAndNavigate = async () => {
+  const handleCategorySelect = (category) => {
+    selectedCategoryRef.current = category || '';
+    scanActions.setCategory(category);
+  };
+
+  const runAnalysisAndNavigate = async (categoryOverride = '') => {
     try {
-      const scanId = await scanActions.performAnalyze(location, locationName);
+      const activeCategory = categoryOverride || selectedCategory || selectedCategoryRef.current || '';
+      const scanId = await scanActions.performAnalyze(location, locationName, {
+        selectedCategory: activeCategory,
+      });
       const currentSearch = new URLSearchParams(window.location.search);
       if (isMounted.current && scanId && currentSearch.get('scan') === 'true') {
         navigate(`/results/${scanId}`);
@@ -269,15 +282,19 @@ const Home = () => {
       scanActions.setError(t('home.errorNoImage'));
       return;
     }
-    if (currentStep === 2 && !selectedCategory) {
+    const activeCategory = selectedCategory || selectedCategoryRef.current || '';
+    if (currentStep === 2 && !activeCategory) {
       scanActions.setError(t('home.errorNoCategory'));
       return;
+    }
+    if (currentStep === 2 && activeCategory !== selectedCategory) {
+      scanActions.setCategory(activeCategory);
     }
 
     scanActions.nextStep();
 
     if (currentStep === 2) {
-      await runAnalysisAndNavigate();
+      await runAnalysisAndNavigate(activeCategory);
     }
   };
 
@@ -598,7 +615,7 @@ const Home = () => {
                   </div>
                   <PlantCategorySelector
                     selected={selectedCategory}
-                    onSelect={scanActions.setCategory}
+                    onSelect={handleCategorySelect}
                   />
 
                   <div className="scale-selection-section mt-md">
@@ -627,4 +644,3 @@ const Home = () => {
 };
 
 export default Home;
-

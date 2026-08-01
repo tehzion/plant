@@ -97,8 +97,11 @@ export const useScanLogic = () => {
         const resetScan = () => dispatchAction('RESET_SCAN');
         const setError = (payload) => dispatchAction('SET_ERROR', payload);
 
-        const performAnalyze = async (location, locationName) => {
-            const currentState = stateRef.current;
+        const performAnalyze = async (location, locationName, overrides = {}) => {
+            const currentState = {
+                ...stateRef.current,
+                ...overrides,
+            };
             dispatch({ type: 'START_ANALYSIS' });
 
             const analysisTask = async () => {
