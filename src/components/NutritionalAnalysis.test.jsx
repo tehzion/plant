@@ -14,6 +14,8 @@ vi.mock('../i18n/i18n.jsx', () => ({
       'results.suspectedNutrients': 'Suspected nutrients',
       'results.possibleNutrientOverlap': 'Possible nutrient overlap',
       'results.nutritionMayAlsoBeContributing': 'Nutrition may also be contributing',
+      'results.nutritionNotConfirmed': 'Nutrition not confirmed',
+      'results.nutritionNotConfirmedMessage': 'Retake a closer photo.',
       'results.lackingNutrients': 'Lacking Nutrients',
       'results.sevMild': 'Mild',
       'results.sevModerate': 'Moderate',
@@ -58,5 +60,44 @@ describe('NutritionalAnalysis', () => {
     expect(screen.getByText('Magnesium')).toBeInTheDocument();
     expect(screen.queryByText('Nutrient Deficiency Detected')).not.toBeInTheDocument();
   });
-});
 
+  it('does not show a no-deficiency all-clear when scan alternatives mention nutrition', () => {
+    render(
+      <NutritionalAnalysis
+        nutritionalIssues={{ status: 'none' }}
+        scanResult={{
+          status: 'uncertain',
+          needsMoreEvidence: true,
+          differentialDiagnoses: [
+            {
+              name: 'Kekurangan nutrien',
+              likelihood: 22,
+              reason: 'Symptoms are possible but the image is too far to confirm.',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Possible nutrient issue')).toBeInTheDocument();
+    expect(screen.getByText('Kekurangan Nutrien')).toBeInTheDocument();
+    expect(screen.queryByText('No Nutritional Deficiencies Detected')).not.toBeInTheDocument();
+  });
+
+  it('uses a neutral not-confirmed state when evidence is limited without nutrient clues', () => {
+    render(
+      <NutritionalAnalysis
+        nutritionalIssues={{ status: 'none' }}
+        scanResult={{
+          status: 'retake_required',
+          requiresRetake: true,
+          retakeReason: 'Photo is too far away.',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Nutrition not confirmed')).toBeInTheDocument();
+    expect(screen.queryByText('Possible nutrient issue')).not.toBeInTheDocument();
+    expect(screen.queryByText('No Nutritional Deficiencies Detected')).not.toBeInTheDocument();
+  });
+});

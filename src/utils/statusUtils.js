@@ -94,6 +94,23 @@ export const SCAN_RESULT_STATES = Object.freeze({
     HEALTHY: 'healthy',
 });
 
+const REVIEW_RESULT_STATES = new Set([
+    SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
+    SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE,
+    SCAN_RESULT_STATES.POSSIBLE_PEST,
+    SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED,
+]);
+
+const REVIEW_STATUS_VALUES = new Set([
+    'retake_required',
+    'uncertain',
+    'possible',
+    'inconclusive',
+    'needs_more_evidence',
+    'needs_review',
+    'review_needed',
+]);
+
 const normalizeText = (value) => String(value || '')
     .trim()
     .toLowerCase()
@@ -119,6 +136,36 @@ const getConfidenceValue = (scan = {}) => {
 const includesAny = (value, keywords) => {
     const text = toSearchText(value);
     return keywords.some((keyword) => text.includes(keyword));
+};
+
+const getImageQualityConfidence = (scan = {}) => (
+    Number(scan.captureAssessment?.imageQualityConfidence ?? scan.confidenceBreakdown?.imageQualityConfidence)
+);
+
+const hasNeedsCloserPhotoSignal = (scan = {}, status = normalizeText(scan.status)) => {
+    const imageQualityConfidence = getImageQualityConfidence(scan);
+
+    return Boolean(
+        scan.requiresRetake
+        || scan.captureAssessment?.requiresRetake
+        || status === 'retake_required'
+        || scan.retakeReason
+        || scan.captureAssessment?.leafDetailSufficient === false
+        || (Number.isFinite(imageQualityConfidence) && imageQualityConfidence < 50)
+    );
+};
+
+const hasReviewOrRetakeSignal = (scan = {}) => {
+    const resultState = normalizeText(scan.resultState);
+    const status = normalizeText(scan.status);
+    const confidence = getConfidenceValue(scan);
+
+    return REVIEW_RESULT_STATES.has(resultState)
+        || hasNeedsCloserPhotoSignal(scan, status)
+        || REVIEW_STATUS_VALUES.has(status)
+        || scan.needsMoreEvidence
+        || scan.abstainReason
+        || (confidence !== null && confidence < 70);
 };
 
 const hasPestSignal = (scan = {}) => {
@@ -203,30 +250,28 @@ const hasActionableCause = (scan = {}) => {
 export const getScanResultState = (scan = {}) => {
     if (!scan || typeof scan !== 'object') return SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
 
-    const status = normalizeText(scan.resultState || scan.status);
-    if (Object.values(SCAN_RESULT_STATES).includes(status)) return status;
+    const explicitState = normalizeText(scan.resultState);
+    const status = normalizeText(scan.status);
 
-    if (isHealthy(scan)) return SCAN_RESULT_STATES.HEALTHY;
-
-    const imageQualityConfidence = Number(scan.captureAssessment?.imageQualityConfidence ?? scan.confidenceBreakdown?.imageQualityConfidence);
-    const needsCloserPhoto = Boolean(
-        scan.requiresRetake
-        || scan.captureAssessment?.requiresRetake
-        || status === 'retake_required'
-        || scan.retakeReason
-        || scan.captureAssessment?.leafDetailSufficient === false
-        || (Number.isFinite(imageQualityConfidence) && imageQualityConfidence < 50)
-    );
-
-    if (needsCloserPhoto) return SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
+    if (hasNeedsCloserPhotoSignal(scan, status)) return SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
+    if (Object.values(SCAN_RESULT_STATES).includes(explicitState) && explicitState !== SCAN_RESULT_STATES.HEALTHY) {
+        return explicitState;
+    }
 
     const confidence = getConfidenceValue(scan);
     const weakEvidence = Boolean(
         scan.needsMoreEvidence
         || scan.abstainReason
-        || ['uncertain', 'possible', 'inconclusive', 'needs_more_evidence'].includes(status)
+        || REVIEW_STATUS_VALUES.has(status)
         || (confidence !== null && confidence < 70)
     );
+
+    if (explicitState === SCAN_RESULT_STATES.HEALTHY && !weakEvidence) {
+        return SCAN_RESULT_STATES.HEALTHY;
+    }
+
+    if (isHealthy(scan) && !weakEvidence) return SCAN_RESULT_STATES.HEALTHY;
+
     const strongTreatment = hasActionableCause(scan)
         && !weakEvidence
         && (
@@ -262,6 +307,8 @@ export const isHealthy = (scanOrStatus) => {
         const severity = normalize(scanOrStatus.severity);
         const status = normalize(scanOrStatus.healthStatus || scanOrStatus.status);
 
+        if (hasReviewOrRetakeSignal(scanOrStatus)) return false;
+
         if (disease) {
             if (HEALTHY_DISEASE_KEYWORDS.some(k => disease.includes(k))) return true;
             if (!UNKNOWN_KEYWORDS.some(k => disease.includes(k))) return false;
@@ -276,6 +323,7 @@ export const isHealthy = (scanOrStatus) => {
 
     const lowerStatus = normalize(scanOrStatus);
     if (!lowerStatus) return false;
+    if (['uncertain', 'possible', 'inconclusive', 'retake'].some(keyword => lowerStatus.includes(keyword))) return false;
     if (UNHEALTHY_STATUS_KEYWORDS.some(keyword => lowerStatus.includes(keyword))) return false;
     return HEALTHY_KEYWORDS.some(keyword => lowerStatus.includes(keyword));
 };

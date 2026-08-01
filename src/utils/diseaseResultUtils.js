@@ -1,4 +1,4 @@
-import { getScanResultState, isHealthy } from './statusUtils';
+import { SCAN_RESULT_STATES, getScanResultState, isHealthy } from './statusUtils';
 import { getScanResultStateLabel } from './diagnosisStatusLabels';
 
 const DEMO_TERMS = ['demo', 'simulated', 'fallback'];
@@ -57,8 +57,9 @@ const splitDiseaseTitleAndDescription = (initialTitle, initialDescription) => {
 };
 
 export const normalizeDiseaseResult = (result, t) => {
-    const healthy = isHealthy(result);
     const resultState = getScanResultState(result);
+    const healthy = resultState === SCAN_RESULT_STATES.HEALTHY && isHealthy(result);
+    const stateLabel = getScanResultStateLabel(t, resultState) || (t('results.likelyDiagnosis') || 'Likely diagnosis');
     const differentials = Array.isArray(result.differentialDiagnoses)
         ? result.differentialDiagnoses.filter(Boolean)
         : [];
@@ -129,7 +130,7 @@ export const normalizeDiseaseResult = (result, t) => {
     return {
         healthy,
         resultState,
-        stateLabel: getScanResultStateLabel(t, resultState) || (t('results.likelyDiagnosis') || 'Likely diagnosis'),
+        stateLabel,
         differentials,
         confidenceBreakdown,
         diagnosticEvidence,
@@ -144,7 +145,9 @@ export const normalizeDiseaseResult = (result, t) => {
         showDemoModeWarning: typeof result.additionalNotes === 'string'
             && DEMO_TERMS.some((term) => result.additionalNotes.toLowerCase().includes(term)),
         detailItems,
-        translatedHealthStatus: t(`results.${healthy ? 'healthy' : 'unhealthy'}`),
+        translatedHealthStatus: healthy
+            ? t('results.healthy')
+            : (stateLabel || t('results.unhealthy')),
         translatedSeverity: !healthy && result.severity
             ? t(`results.${(result.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`)
             : '',

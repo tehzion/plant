@@ -7,16 +7,48 @@ import {
 } from './statusUtils';
 
 describe('statusUtils', () => {
-    it('treats a clear no-issue diagnosis as healthy even if severity is low', () => {
+    it('treats a clear high-confidence no-issue diagnosis as healthy', () => {
         const scan = {
             disease: 'Tiada Masalah Dikesan',
-            severity: 'low',
-            healthStatus: 'unhealthy',
-            status: 'uncertain',
+            healthStatus: 'healthy',
+            status: 'confirmed',
+            confidence: 92,
         };
 
         expect(isHealthy(scan)).toBe(true);
         expect(getStandardizedStatus(scan)).toBe('healthy');
+        expect(getScanResultState(scan)).toBe(SCAN_RESULT_STATES.HEALTHY);
+    });
+
+    it('does not mark no-issue retake scans as healthy', () => {
+        const scan = {
+            disease: 'Tiada Masalah Dikesan',
+            healthStatus: 'healthy',
+            status: 'retake_required',
+            requiresRetake: true,
+            retakeReason: 'Photo is too far from the leaf.',
+            captureAssessment: {
+                leafDetailSufficient: false,
+            },
+        };
+
+        expect(isHealthy(scan)).toBe(false);
+        expect(getStandardizedStatus(scan)).toBe('unhealthy');
+        expect(getScanResultState(scan)).toBe(SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO);
+    });
+
+    it('does not mark uncertain no-issue scans as healthy', () => {
+        const scan = {
+            disease: 'No clear disease detected',
+            healthStatus: 'healthy',
+            status: 'uncertain',
+            needsMoreEvidence: true,
+            abstainReason: 'Visible leaf detail is not sufficient.',
+        };
+
+        expect(isHealthy(scan)).toBe(false);
+        expect(getStandardizedStatus(scan)).toBe('unhealthy');
+        expect(getScanResultState(scan)).toBe(SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED);
     });
 
     it('keeps explicit disease findings unhealthy', () => {

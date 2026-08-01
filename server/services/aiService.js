@@ -2018,12 +2018,6 @@ const hasActionableTreatmentCause = (result = {}) => scanTextIncludes(result, [
 
 export function deriveScanResultState(result = {}) {
     const explicitState = normalizeScanStateText(result.resultState);
-    if (Object.values(SCAN_RESULT_STATES).includes(explicitState)) return explicitState;
-
-    if (String(result.healthStatus || '').toLowerCase() === 'healthy' || normalizeScanStateText(result.status) === 'healthy') {
-        return SCAN_RESULT_STATES.HEALTHY;
-    }
-
     const status = normalizeScanStateText(result.status);
     const imageQualityConfidence = Number(result.captureAssessment?.imageQualityConfidence ?? result.confidenceBreakdown?.imageQualityConfidence);
     const needsCloserPhoto = Boolean(
@@ -2036,6 +2030,9 @@ export function deriveScanResultState(result = {}) {
     );
 
     if (needsCloserPhoto) return SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
+    if (Object.values(SCAN_RESULT_STATES).includes(explicitState) && explicitState !== SCAN_RESULT_STATES.HEALTHY) {
+        return explicitState;
+    }
 
     const confidence = getScanStateConfidence(result);
     const weakEvidence = Boolean(
@@ -2044,6 +2041,15 @@ export function deriveScanResultState(result = {}) {
         || ['uncertain', 'possible', 'inconclusive', 'needs_more_evidence'].includes(status)
         || (confidence !== null && confidence < 70)
     );
+
+    const healthyState = explicitState === SCAN_RESULT_STATES.HEALTHY
+        || String(result.healthStatus || '').toLowerCase() === 'healthy'
+        || status === 'healthy';
+
+    if (healthyState && !weakEvidence) {
+        return SCAN_RESULT_STATES.HEALTHY;
+    }
+
     const strongTreatment = hasActionableTreatmentCause(result)
         && !weakEvidence
         && (

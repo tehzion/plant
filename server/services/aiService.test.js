@@ -672,6 +672,22 @@ describe('aiService helpers', () => {
         })).toBe('needs_closer_photo');
 
         expect(aiService.deriveScanResultState({
+            disease: 'Tiada Masalah Dikesan',
+            healthStatus: 'healthy',
+            status: 'retake_required',
+            requiresRetake: true,
+            retakeReason: 'Photo is too far from the leaf.',
+        })).toBe('needs_closer_photo');
+
+        expect(aiService.deriveScanResultState({
+            disease: 'No clear disease detected',
+            healthStatus: 'healthy',
+            status: 'uncertain',
+            needsMoreEvidence: true,
+            abstainReason: 'Visible leaf detail is not sufficient.',
+        })).toBe('expert_review_needed');
+
+        expect(aiService.deriveScanResultState({
             status: 'likely',
             confidence: 76,
             diseaseCategory: 'nutrient',

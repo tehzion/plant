@@ -1,9 +1,78 @@
 import { useLanguage } from '../i18n/i18n.jsx';
 import { CheckCircle, AlertTriangle, Droplet } from 'lucide-react';
 import { normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
+import { SCAN_RESULT_STATES, getScanResultState } from '../utils/statusUtils.js';
 import './NutritionalAnalysis.css';
 
-const NutritionalAnalysis = ({ nutritionalIssues }) => {
+const NUTRIENT_TEXT_KEYWORDS = [
+  'nutrient',
+  'nutrition',
+  'nutrisi',
+  'nutrien',
+  'deficien',
+  'kekurangan',
+  'chlorosis',
+  'yellowing',
+  'magnesium',
+  'nitrogen',
+  'potassium',
+  'calcium',
+  'kalium',
+];
+
+const REVIEW_STATES_WITH_LIMITED_EVIDENCE = new Set([
+  SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
+  SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE,
+  SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED,
+]);
+
+const includesNutrientSignal = (value) => {
+  const text = String(value || '').toLowerCase();
+  return NUTRIENT_TEXT_KEYWORDS.some((keyword) => text.includes(keyword));
+};
+
+const getDifferentialNutrientNames = (scanResult = {}) => {
+  const differentials = Array.isArray(scanResult?.differentialDiagnoses)
+    ? scanResult.differentialDiagnoses
+    : [];
+
+  return differentials
+    .filter((item) => includesNutrientSignal(`${item?.name || ''} ${item?.reason || ''}`))
+    .map((item) => String(item?.name || '').trim())
+    .filter(Boolean);
+};
+
+const getDisplayNutritionalIssues = (nutritionalIssues, scanResult) => {
+  const normalizedIssues = normalizeNutritionalIssues(nutritionalIssues);
+  if (normalizedIssues.status !== 'none') return normalizedIssues;
+
+  const resultState = scanResult ? getScanResultState(scanResult) : '';
+  const differentialNutrients = getDifferentialNutrientNames(scanResult);
+  const hasNutritionContext = resultState === SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE
+    || differentialNutrients.length > 0
+    || includesNutrientSignal(scanResult?.diseaseCategory)
+    || includesNutrientSignal(scanResult?.diagnosticEvidence?.likelyCauseCategory)
+    || includesNutrientSignal(scanResult?.nutritionalStatus);
+  const limitedEvidence = REVIEW_STATES_WITH_LIMITED_EVIDENCE.has(resultState)
+    || scanResult?.needsMoreEvidence
+    || scanResult?.abstainReason
+    || scanResult?.requiresRetake
+    || scanResult?.captureAssessment?.requiresRetake;
+
+  if (!hasNutritionContext && !limitedEvidence) return normalizedIssues;
+
+  return {
+    ...normalizedIssues,
+    status: 'possible',
+    possibleNutrients: differentialNutrients,
+    unconfirmedDueToEvidence: !hasNutritionContext,
+    reasoning: hasNutritionContext
+      ? normalizedIssues.reasoning
+      : (scanResult?.abstainReason || scanResult?.retakeReason || ''),
+  };
+};
+
+const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
   const { t } = useLanguage();
 
   const toTitleCase = (str) => {
@@ -14,9 +83,10 @@ const NutritionalAnalysis = ({ nutritionalIssues }) => {
       .join(' ');
   };
 
-  const normalizedIssues = normalizeNutritionalIssues(nutritionalIssues);
+  const normalizedIssues = getDisplayNutritionalIssues(nutritionalIssues, scanResult);
   const isHealthy = normalizedIssues.status === 'none';
-  const isPossible = normalizedIssues.status === 'possible';
+  const isUnconfirmed = Boolean(normalizedIssues.unconfirmedDueToEvidence);
+  const isPossible = normalizedIssues.status === 'possible' && !isUnconfirmed;
   const isConfirmed = normalizedIssues.status === 'confirmed';
 
   const getSeverityColor = (severity) => {
@@ -52,7 +122,9 @@ const NutritionalAnalysis = ({ nutritionalIssues }) => {
             <div className="na-alert-content">
               <div className="na-alert-header">
                 <strong className="na-alert-title">
-                  {isConfirmed ? t('results.nutrientDeficiencyDetected') : t('results.possibleNutrientIssue')}
+                  {isConfirmed
+                    ? t('results.nutrientDeficiencyDetected')
+                    : (isUnconfirmed ? t('results.nutritionNotConfirmed') : t('results.possibleNutrientIssue'))}
                 </strong>
                 {isPossible ? (
                   <span className="severity-badge possible">{t('results.possibleBadge')}</span>
@@ -69,6 +141,10 @@ const NutritionalAnalysis = ({ nutritionalIssues }) => {
 
               {!normalizedIssues?.reasoning && isPossible && (
                 <p className="na-alert-description">{t('results.nutritionMayAlsoBeContributing')}</p>
+              )}
+
+              {!normalizedIssues?.reasoning && isUnconfirmed && (
+                <p className="na-alert-description">{t('results.nutritionNotConfirmedMessage')}</p>
               )}
 
               {Array.isArray(normalizedIssues?.symptoms) && normalizedIssues.symptoms.length > 0 && (
@@ -107,7 +183,7 @@ const NutritionalAnalysis = ({ nutritionalIssues }) => {
             </div>
           )}
 
-          {isPossible && normalizedIssues.possibleNutrients.length > 0 && (
+          {normalizedIssues.status === 'possible' && normalizedIssues.possibleNutrients.length > 0 && (
             <div className="na-nutrients-section na-possible-nutrients-section app-surface app-surface--soft">
               <div className="na-subsection-header">
                 <Droplet size={18} className="na-subsection-icon" />

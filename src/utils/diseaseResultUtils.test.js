@@ -13,6 +13,8 @@ const t = (key) => ({
     'results.likelyDiagnosis': 'Likely diagnosis',
     'results.uncertainDiagnosis': 'Uncertain diagnosis',
     'results.retakeRequired': 'Retake required',
+    'results.scanStateNeedsCloserPhoto': 'Need closer photo',
+    'results.scanStateExpertReviewNeeded': 'Expert review needed',
     'results.statusHealthy': 'Healthy',
     'results.statusDiseased': 'Diseased',
     'results.estimatedAge': 'Estimated age',
@@ -53,17 +55,33 @@ describe('normalizeDiseaseResult', () => {
         expect(normalized.translatedHealthStatus).toBe('Healthy');
     });
 
-    it('keeps translated health status aligned with normalized healthy state', () => {
+    it('uses the review state label for no-issue scans with weak evidence', () => {
         const normalized = normalizeDiseaseResult({
             disease: 'Tiada Masalah Dikesan',
-            healthStatus: 'unhealthy',
-            severity: 'low',
+            healthStatus: 'healthy',
+            status: 'uncertain',
+            needsMoreEvidence: true,
             abstainReason: 'Image quality is limited.',
         }, t);
 
-        expect(normalized.healthy).toBe(true);
-        expect(normalized.translatedHealthStatus).toBe('Healthy');
+        expect(normalized.healthy).toBe(false);
+        expect(normalized.resultState).toBe('expert_review_needed');
+        expect(normalized.translatedHealthStatus).toBe('Expert review needed');
         expect(normalized.translatedSeverity).toBe('');
+    });
+
+    it('uses a closer-photo status for no-issue scans that require retake', () => {
+        const normalized = normalizeDiseaseResult({
+            disease: 'Tiada Masalah Dikesan',
+            healthStatus: 'healthy',
+            status: 'retake_required',
+            requiresRetake: true,
+            retakeReason: 'Photo is too far from the leaf.',
+        }, t);
+
+        expect(normalized.healthy).toBe(false);
+        expect(normalized.resultState).toBe('needs_closer_photo');
+        expect(normalized.translatedHealthStatus).toBe('Need closer photo');
     });
 
     it('does not show a confirmed species badge when species context was downgraded by conflict', () => {

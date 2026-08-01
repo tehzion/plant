@@ -472,6 +472,7 @@ ${t('pdf.generatedBy')}
           <NutritionalAnalysis
             nutritionalIssues={normalizedNutrition}
             fertilizerRecommendations={scan.fertilizerRecommendations}
+            scanResult={result}
           />
         </Suspense>
       )
