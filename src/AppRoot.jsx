@@ -20,6 +20,7 @@ const Login = lazyWithRetry(() => import('./pages/Login'), 'login');
 const Onboarding = lazyWithRetry(() => import('./pages/Onboarding'), 'onboarding');
 const MyGap = lazyWithRetry(() => import('./pages/MyGap'), 'mygap');
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'), 'guide');
+const AdminReviewDashboard = lazyWithRetry(() => import('./pages/AdminReviewDashboard'), 'admin-review');
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'), 'notfound');
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
                                             <Route path="/encyclopedia" element={<Encyclopedia />} />
                                             <Route path="/profile" element={<Login />} />
                                             <Route path="/mygap" element={<MyGap />} />
+                                            <Route path="/admin" element={<AdminReviewDashboard />} />
                                             <Route path="/onboarding" element={<Onboarding />} />
                                             <Route path="/guide" element={<UserGuide />} />
                                             <Route path="/terms" element={<TermsOfUse />} />

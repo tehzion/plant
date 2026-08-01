@@ -66,6 +66,8 @@ WOOCOMMERCE_CONSUMER_KEY=your_woocommerce_consumer_key
 WOOCOMMERCE_CONSUMER_SECRET=your_woocommerce_consumer_secret
 SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
 SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=server_only_service_role_key_for_admin_dashboard
+ADMIN_EMAILS=admin@example.com,owner@example.com
 PORT=3002
 ```
 
@@ -110,10 +112,17 @@ FRONTEND_URLS=https://ai.kanb.coop.my,https://www.mojosense.app,https://mojosens
 VITE_SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 VITE_AUTH_EMAIL_REDIRECT_URL=https://your-public-domain/login
+SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=server_only_service_role_key_for_admin_dashboard
+ADMIN_EMAILS=admin@example.com,owner@example.com
 WOOCOMMERCE_URL=https://your-store-domain
 WOOCOMMERCE_CONSUMER_KEY=your_woocommerce_consumer_key
 WOOCOMMERCE_CONSUMER_SECRET=your_woocommerce_consumer_secret
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` must stay server-only. It powers the protected
+`/admin` review dashboard and should never be added as a `VITE_` variable.
 
 Use the included [render.yaml](./render.yaml) as the deployment source of truth.
 The included GitHub Actions keep-warm workflow pings `/api/health` every 10

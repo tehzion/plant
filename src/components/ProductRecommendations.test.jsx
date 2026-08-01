@@ -4,11 +4,21 @@ import ProductRecommendations from './ProductRecommendations.jsx';
 
 const fetchMock = vi.fn();
 const saveConsultationLeadMock = vi.hoisted(() => vi.fn());
+const saveProductEventMock = vi.hoisted(() => vi.fn());
 const saveFollowUpDraftMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../utils/consultationLeads.js', () => ({
     saveConsultationLead: saveConsultationLeadMock,
+}));
+
+vi.mock('../utils/productEvents.js', () => ({
+    PRODUCT_EVENT_TYPES: {
+        PRODUCT_CLICK: 'product_click',
+        CHECKOUT_CLICK: 'checkout_click',
+        RECOMMENDED_CHECKOUT_CLICK: 'recommended_checkout_click',
+    },
+    saveProductEvent: saveProductEventMock,
 }));
 
 vi.mock('../utils/scanFollowUpDraft.js', () => ({
@@ -102,6 +112,8 @@ describe('ProductRecommendations', () => {
         fetchMock.mockReset();
         saveConsultationLeadMock.mockReset();
         saveConsultationLeadMock.mockResolvedValue({ saved: true });
+        saveProductEventMock.mockReset();
+        saveProductEventMock.mockResolvedValue({ saved: true });
         saveFollowUpDraftMock.mockReset();
         saveFollowUpDraftMock.mockReturnValue(true);
         navigateMock.mockReset();
@@ -336,6 +348,49 @@ describe('ProductRecommendations', () => {
             '_blank',
             'noopener,noreferrer',
         );
+        expect(saveProductEventMock).toHaveBeenCalledWith(expect.objectContaining({
+            eventType: 'recommended_checkout_click',
+            recommendationIntent: 'treatment_ready',
+            metadata: expect.objectContaining({
+                selectedProductIds: [1],
+                productCount: 1,
+            }),
+        }));
+    });
+
+    it('tracks product link clicks for admin analytics', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                farmScale="tree"
+                scanResult={{
+                    id: 'scan-product-click',
+                    status: 'confirmed',
+                    resultState: 'confident_treatment',
+                    healthStatus: 'unhealthy',
+                    pathogenType: 'fungal',
+                    confidence: 92,
+                    symptoms: ['Leaf spots'],
+                    productSearchTags: ['fungicide'],
+                }}
+            />,
+        );
+
+        await screen.findByText('Copper Guard');
+        const productLink = screen
+            .getAllByRole('link', { name: /view product/i })
+            .find((link) => link.getAttribute('href') === 'https://example.com/products/copper-guard');
+        fireEvent.click(productLink);
+
+        expect(saveProductEventMock).toHaveBeenCalledWith(expect.objectContaining({
+            eventType: 'product_click',
+            recommendationIntent: 'treatment_ready',
+            product: expect.objectContaining({
+                id: 1,
+                name: 'Copper Guard',
+            }),
+        }));
     });
 
     it('saves recommended products as a Daily Log draft', async () => {

@@ -114,6 +114,24 @@ create table if not exists public.consultation_leads (
     created_at timestamptz not null default now()
 );
 
+create table if not exists public.product_events (
+    id uuid primary key default gen_random_uuid(),
+    scan_id text,
+    user_id uuid references auth.users(id) on delete set null,
+    guest_id text,
+    event_type text not null default 'product_click',
+    product_id text,
+    product_name text not null default '',
+    product_url text,
+    recommendation_intent text,
+    recommendation_role text,
+    disease text not null default '',
+    crop text not null default '',
+    confidence numeric,
+    metadata jsonb not null default '{}'::jsonb,
+    created_at timestamptz not null default now()
+);
+
 create table if not exists public.disease_product_rules (
     id text primary key,
     display_name text not null,
@@ -140,6 +158,10 @@ create index if not exists consultation_leads_created_at_idx on public.consultat
 create index if not exists consultation_leads_user_id_created_at_idx on public.consultation_leads(user_id, created_at desc);
 create index if not exists consultation_leads_scan_id_idx on public.consultation_leads(scan_id);
 create index if not exists consultation_leads_guest_id_created_at_idx on public.consultation_leads(guest_id, created_at desc);
+create index if not exists product_events_created_at_idx on public.product_events(created_at desc);
+create index if not exists product_events_user_id_created_at_idx on public.product_events(user_id, created_at desc);
+create index if not exists product_events_scan_id_idx on public.product_events(scan_id);
+create index if not exists product_events_event_type_created_at_idx on public.product_events(event_type, created_at desc);
 drop index if exists public.profiles_user_id_idx;
 drop index if exists public.scan_history_user_created_idx;
 drop index if exists public.mygap_logs_user_created_idx;
@@ -157,6 +179,7 @@ alter table public.daily_notes enable row level security;
 alter table public.plots enable row level security;
 alter table public.order_refs enable row level security;
 alter table public.consultation_leads enable row level security;
+alter table public.product_events enable row level security;
 alter table public.disease_product_rules enable row level security;
 
 alter table public.scan_history add column if not exists image_path text;
@@ -174,6 +197,9 @@ grant select, insert, update, delete on public.order_refs to authenticated;
 revoke all on public.consultation_leads from anon, authenticated;
 grant insert on public.consultation_leads to anon, authenticated;
 grant select, insert, update, delete on public.consultation_leads to service_role;
+revoke all on public.product_events from anon, authenticated;
+grant insert on public.product_events to anon, authenticated;
+grant select, insert, update, delete on public.product_events to service_role;
 grant select on public.disease_product_rules to anon, authenticated;
 grant select, insert, update, delete on public.disease_product_rules to service_role;
 
@@ -339,6 +365,23 @@ create policy "consultation_leads_insert_contact_intent" on public.consultation_
         and char_length(coalesce(recommendation_intent, '')) <= 80
     );
 
+drop policy if exists "product_events_insert_tracking" on public.product_events;
+create policy "product_events_insert_tracking" on public.product_events
+    for insert to anon, authenticated
+    with check (
+        (user_id is null or (select auth.uid()) = user_id)
+        and event_type in ('product_click', 'checkout_click', 'recommended_checkout_click')
+        and char_length(coalesce(scan_id, '')) <= 240
+        and char_length(coalesce(guest_id, '')) <= 240
+        and char_length(coalesce(product_id, '')) <= 120
+        and char_length(product_name) <= 240
+        and char_length(coalesce(product_url, '')) <= 600
+        and char_length(coalesce(recommendation_intent, '')) <= 80
+        and char_length(coalesce(recommendation_role, '')) <= 80
+        and char_length(disease) <= 240
+        and char_length(crop) <= 240
+    );
+
 drop policy if exists "disease_product_rules_public_read_enabled" on public.disease_product_rules;
 create policy "disease_product_rules_public_read_enabled" on public.disease_product_rules
     for select to anon, authenticated
@@ -384,6 +427,58 @@ insert into public.disease_product_rules (
     true
 ),
 (
+    'coconut_leaf_spot_blight',
+    'Coconut leaf spot / blight',
+    array['coconut', 'kelapa'],
+    array['leaf spot', 'leaf blight', 'grey leaf spot', 'gray leaf spot', 'pestalotiopsis', 'helminthosporium'],
+    array['fungal', 'fungus'],
+    array['fungicide', 'disease-control', 'coconut', 'kelapa', 'leaf-spot', 'copper', 'mancozeb'],
+    array['copper', 'mancozeb'],
+    array['treatment'],
+    'Confirm close-up leaf lesions before spraying; remove badly affected fronds and follow coconut label restrictions.',
+    22,
+    true
+),
+(
+    'banana_sigatoka_leaf_spot',
+    'Banana Sigatoka / leaf spot',
+    array['banana', 'pisang'],
+    array['sigatoka', 'yellow sigatoka', 'black sigatoka', 'banana leaf spot', 'leaf streak'],
+    array['fungal', 'fungus'],
+    array['fungicide', 'disease-control', 'banana', 'pisang', 'sigatoka', 'leaf-spot', 'mancozeb', 'copper'],
+    array['mancozeb', 'copper', 'propiconazole'],
+    array['treatment'],
+    'Use crop-registered products only and rotate fungicide groups; remove heavily infected leaves to reduce pressure.',
+    24,
+    true
+),
+(
+    'chilli_anthracnose_fruit_rot',
+    'Chilli anthracnose / fruit rot',
+    array['chilli', 'chili', 'cili'],
+    array['anthracnose', 'fruit rot', 'ripe fruit rot', 'colletotrichum', 'black sunken lesion'],
+    array['fungal', 'fungus'],
+    array['fungicide', 'disease-control', 'chilli', 'cili', 'anthracnose', 'fruit-rot', 'copper', 'mancozeb', 'chlorothalonil'],
+    array['copper', 'mancozeb', 'chlorothalonil'],
+    array['treatment'],
+    'Confirm fruit lesions and check pre-harvest intervals carefully before any chilli treatment.',
+    26,
+    true
+),
+(
+    'durian_phytophthora_canker',
+    'Durian Phytophthora canker',
+    array['durian'],
+    array['stem canker', 'trunk canker', 'phytophthora', 'gummosis', 'root rot', 'patch canker'],
+    array['fungal', 'fungus', 'oomycete'],
+    array['fungicide', 'disease-control', 'durian', 'phytophthora', 'phosphite', 'copper', 'soil-treatment'],
+    array['potassium phosphite', 'phosphorous acid', 'copper'],
+    array['treatment'],
+    'Durian canker needs urgent field inspection, drainage correction, and label-verified treatment; do not rely on spray alone.',
+    28,
+    true
+),
+(
     'mealybug_scale_soft_pests',
     'Mealybug / scale insect',
     array['papaya', 'betik', 'citrus', 'limau', 'durian', 'chilli', 'chili', 'cili', 'mango', 'mangga'],
@@ -423,6 +518,19 @@ insert into public.disease_product_rules (
     true
 ),
 (
+    'padi_bacterial_leaf_blight',
+    'Padi bacterial leaf blight',
+    array['padi', 'rice'],
+    array['bacterial leaf blight', 'kresek', 'xanthomonas', 'leaf blight'],
+    array['bacterial', 'bacteria'],
+    array['bactericide', 'disease-control', 'padi', 'rice', 'copper', 'biofungicide', 'sanitation'],
+    array['copper', 'bacillus subtilis'],
+    array['treatment'],
+    'Bacterial blight management depends on resistant varieties, clean water flow, and sanitation; products are preventive support only.',
+    55,
+    true
+),
+(
     'bacterial_leaf_spot_blight',
     'Bacterial leaf spot / blight',
     array['chilli', 'chili', 'cili', 'rice', 'padi', 'mango', 'mangga', 'papaya', 'betik'],
@@ -433,6 +541,19 @@ insert into public.disease_product_rules (
     array['treatment'],
     'Bacterial problems need sanitation and spread control; copper products are preventive, not a cure for advanced infection.',
     60,
+    true
+),
+(
+    'fruit_fly_trap_support',
+    'Fruit fly trap support',
+    array['mango', 'mangga', 'papaya', 'betik', 'chilli', 'chili', 'cili', 'guava', 'jambu'],
+    array['fruit fly', 'buah busuk berulat', 'maggot', 'puncture mark', 'fruit drop'],
+    array['pest', 'insect'],
+    array['pest-control', 'fruit-fly', 'trap', 'pheromone', 'methyl-eugenol', 'protein-bait', 'spinosad'],
+    array['methyl eugenol', 'protein bait', 'spinosad'],
+    array['treatment'],
+    'Use traps and sanitation first; confirm fruit fly damage before applying bait or insecticide products.',
+    65,
     true
 ),
 (

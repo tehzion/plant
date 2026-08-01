@@ -8,6 +8,7 @@ import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
+import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
@@ -596,6 +597,25 @@ app.post('/api/farm/predict', async (req, res, next) => {
         const { plots, logs, alerts, location, language = 'en' } = req.body;
         const risk = await generatePredictiveRisk(plots, logs, alerts, location, language);
         res.json(risk);
+    } catch (error) {
+        next(error);
+    }
+});
+
+app.get('/api/admin/review-summary', async (req, res, next) => {
+    try {
+        const adminUser = await verifyAdminRequest(req);
+        const summary = await getAdminReviewSummary({
+            days: req.query.days,
+            limit: req.query.limit,
+        });
+
+        res.json({
+            ...summary,
+            admin: {
+                email: adminUser.email,
+            },
+        });
     } catch (error) {
         next(error);
     }

@@ -15,6 +15,7 @@ import {
   PRODUCT_RECOMMENDATION_INTENTS,
 } from '../utils/liveProductRecommendations.js';
 import { saveConsultationLead } from '../utils/consultationLeads.js';
+import { PRODUCT_EVENT_TYPES, saveProductEvent } from '../utils/productEvents.js';
 import { saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { buildProductPlanDraftFromRecommendations } from '../utils/productPlanDraft.js';
 
@@ -202,7 +203,28 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const trackProductEvent = ({ product = {}, eventType = PRODUCT_EVENT_TYPES.PRODUCT_CLICK, metadata = {} } = {}) => {
+    saveProductEvent({
+      diagnosis,
+      product,
+      eventType,
+      recommendationIntent: products?.recommendationIntent || recommendationIntent,
+      metadata,
+    });
+  };
+
   const handleCheckout = () => {
+    trackProductEvent({
+      product: {
+        id: checkoutEligibleIds.join(','),
+        name: `${checkoutEligibleIds.length} selected products`,
+      },
+      eventType: PRODUCT_EVENT_TYPES.CHECKOUT_CLICK,
+      metadata: {
+        selectedProductIds: checkoutEligibleIds,
+        productCount: checkoutEligibleIds.length,
+      },
+    });
     openCheckoutForIds(checkoutEligibleIds);
   };
 
@@ -373,6 +395,17 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
       );
       return;
     }
+    trackProductEvent({
+      product: {
+        id: recommendedCheckoutIds.join(','),
+        name: `${recommendedCheckoutIds.length} recommended products`,
+      },
+      eventType: PRODUCT_EVENT_TYPES.RECOMMENDED_CHECKOUT_CLICK,
+      metadata: {
+        selectedProductIds: recommendedCheckoutIds,
+        productCount: recommendedCheckoutIds.length,
+      },
+    });
     openCheckoutForIds(recommendedCheckoutIds);
   };
 
@@ -545,7 +578,10 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
                 target="_blank"
                 rel="noopener noreferrer"
                 className="add-to-cart-button"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackProductEvent({ product });
+                }}
               >
                 <ShoppingCart size={14} />
                 <span>{product.cartUrl ? (t('results.addToCart') || 'Add to Cart') : (t('results.viewProduct') || 'View Product')}</span>
