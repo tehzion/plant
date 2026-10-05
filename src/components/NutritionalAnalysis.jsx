@@ -1,76 +1,8 @@
 import { useLanguage } from '../i18n/i18n.jsx';
 import { CheckCircle, AlertTriangle, Droplet } from 'lucide-react';
-import { normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
+import { resolveScanNutrition } from '../utils/nutritionUtils.js';
 import { SCAN_RESULT_STATES, getScanResultState } from '../utils/statusUtils.js';
 import './NutritionalAnalysis.css';
-
-const NUTRIENT_TEXT_KEYWORDS = [
-  'nutrient',
-  'nutrition',
-  'nutrisi',
-  'nutrien',
-  'deficien',
-  'kekurangan',
-  'chlorosis',
-  'yellowing',
-  'magnesium',
-  'nitrogen',
-  'potassium',
-  'calcium',
-  'kalium',
-];
-
-const REVIEW_STATES_WITH_LIMITED_EVIDENCE = new Set([
-  SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
-  SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE,
-  SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED,
-]);
-
-const includesNutrientSignal = (value) => {
-  const text = String(value || '').toLowerCase();
-  return NUTRIENT_TEXT_KEYWORDS.some((keyword) => text.includes(keyword));
-};
-
-const getDifferentialNutrientNames = (scanResult = {}) => {
-  const differentials = Array.isArray(scanResult?.differentialDiagnoses)
-    ? scanResult.differentialDiagnoses
-    : [];
-
-  return differentials
-    .filter((item) => includesNutrientSignal(`${item?.name || ''} ${item?.reason || ''}`))
-    .map((item) => String(item?.name || '').trim())
-    .filter(Boolean);
-};
-
-const getDisplayNutritionalIssues = (nutritionalIssues, scanResult) => {
-  const normalizedIssues = normalizeNutritionalIssues(nutritionalIssues);
-  if (normalizedIssues.status !== 'none') return normalizedIssues;
-
-  const resultState = scanResult ? getScanResultState(scanResult) : '';
-  const differentialNutrients = getDifferentialNutrientNames(scanResult);
-  const hasNutritionContext = resultState === SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE
-    || differentialNutrients.length > 0
-    || includesNutrientSignal(scanResult?.diseaseCategory)
-    || includesNutrientSignal(scanResult?.diagnosticEvidence?.likelyCauseCategory)
-    || includesNutrientSignal(scanResult?.nutritionalStatus);
-  const limitedEvidence = REVIEW_STATES_WITH_LIMITED_EVIDENCE.has(resultState)
-    || scanResult?.needsMoreEvidence
-    || scanResult?.abstainReason
-    || scanResult?.requiresRetake
-    || scanResult?.captureAssessment?.requiresRetake;
-
-  if (!hasNutritionContext && !limitedEvidence) return normalizedIssues;
-
-  return {
-    ...normalizedIssues,
-    status: 'possible',
-    possibleNutrients: differentialNutrients,
-    unconfirmedDueToEvidence: !hasNutritionContext,
-    reasoning: hasNutritionContext
-      ? normalizedIssues.reasoning
-      : (scanResult?.abstainReason || scanResult?.retakeReason || ''),
-  };
-};
 
 const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
   const { t } = useLanguage();
@@ -83,7 +15,7 @@ const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
       .join(' ');
   };
 
-  const normalizedIssues = getDisplayNutritionalIssues(nutritionalIssues, scanResult);
+  const normalizedIssues = resolveScanNutrition(nutritionalIssues, scanResult);
   const isHealthy = normalizedIssues.status === 'none';
   const isUnconfirmed = Boolean(normalizedIssues.unconfirmedDueToEvidence);
   const isPossible = normalizedIssues.status === 'possible' && !isUnconfirmed;

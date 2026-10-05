@@ -26,8 +26,10 @@ import RecentScans from '../components/home/RecentScans';
 import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
+import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
 
 const Home = () => {
+  const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
@@ -234,6 +236,7 @@ const Home = () => {
       const activeCategory = categoryOverride || selectedCategory || selectedCategoryRef.current || '';
       const scanId = await scanActions.performAnalyze(location, locationName, {
         selectedCategory: activeCategory,
+        captureContext,
       });
       const currentSearch = new URLSearchParams(window.location.search);
       if (isMounted.current && scanId && currentSearch.get('scan') === 'true') {
@@ -574,6 +577,7 @@ const Home = () => {
                   </div>
 
                   {/* Main Image Upload */}
+                  <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
                   <div className="mb-lg">
                     <CameraUpload
                       onImageCapture={scanActions.handleImageCapture}

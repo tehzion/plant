@@ -164,7 +164,7 @@ export const getImageQualityGuidanceFromMetrics = (metrics = {}) => {
   };
 };
 
-const estimateImageQuality = (imageData) => {
+export const estimateImageQuality = (imageData) => {
   const { data, width, height } = imageData;
   let totalBrightness = 0;
   let greenishPixels = 0;
@@ -203,9 +203,8 @@ const estimateImageQuality = (imageData) => {
     Math.min(
       100,
       Math.round(
-        (Math.min(brightness, 160) / 160) * 40
-        + (Math.min(blurScore, 35) / 35) * 40
-        + (Math.min(greenRatio, 0.25) / 0.25) * 20
+        (Math.min(brightness, 160) / 160) * 50
+        + (Math.min(blurScore, 35) / 35) * 50
       ),
     ),
   );
@@ -213,8 +212,6 @@ const estimateImageQuality = (imageData) => {
   const flags = [];
   if (brightness < 38) flags.push('too_dark');
   if (blurScore < 10) flags.push('too_blurry');
-  if (greenRatio < 0.04) flags.push('too_little_leaf');
-  if (greenRatio < 0.02 && brightness < 55 && blurScore < 9) flags.push('not_plant_like');
 
   return {
     brightness,

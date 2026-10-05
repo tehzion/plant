@@ -1,3 +1,5 @@
+import { buildScanResultModel } from './scanResultModel.js';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { SCAN_RESULT_STATES, getStandardizedSeverity, getStandardizedStatus } from './statusUtils';
 
 export const SCAN_FOLLOW_UP_DRAFT_KEY = 'sea_plant_scan_follow_up_draft_v1';
@@ -5,6 +7,7 @@ export const SCAN_FOLLOW_UP_DRAFT_MAX_AGE_MS = 30 * 60 * 1000;
 
 const ACTIVITY_DRAFT_FIELDS = [
     'activity_type',
+    'plot_id',
     'chemical_name',
     'chemical_qty',
     'disease_name_observed',
@@ -127,53 +130,33 @@ const sanitizeDraft = (draft) => ACTIVITY_DRAFT_FIELDS.reduce((cleaned, key) => 
     return cleaned;
 }, {});
 
-export const buildFollowUpDraftFromScan = (scan = {}) => {
-    const explicitStatus = textOrEmpty(scan.healthStatus || scan.status);
-    const healthy = explicitStatus
-        ? getStandardizedStatus(explicitStatus) === 'healthy'
-        : getStandardizedStatus(scan) === 'healthy';
-    const uncertain = isUncertainScan(scan);
-    const diseaseName = getDiseaseName(scan);
-    const scoutSeverity = normalizeSeverityForForm(scan.severity);
-
-    if (uncertain) {
-        return sanitizeDraft({
-            activity_type: 'scout',
-            chemical_name: '',
-            chemical_qty: '',
-            disease_name_observed: diseaseName,
-            scout_severity: scoutSeverity,
-            inspection_type: 'Pest/Disease',
-            inspection_status: 'Action Required',
-            expense_category: 'Labor',
-            note: buildScoutNote(scan, diseaseName),
-        });
-    }
-
-    if (healthy) {
-        return sanitizeDraft({
-            activity_type: 'inspect',
-            chemical_name: '',
-            chemical_qty: '',
-            disease_name_observed: '',
-            scout_severity: 'Low',
-            inspection_type: 'Pest/Disease',
-            inspection_status: 'Good',
-            expense_category: 'Labor',
-            note: buildHealthyNote(scan),
-        });
-    }
-
+export const buildFollowUpDraftFromScan = (scan = {}, language = 'en') => {
+    const result = buildScanResultModel(scan);
+    const copy = getScanQualityCopy(language);
+    const next = result.requiresRetake ? copy.nextRetake : result.healthy ? copy.nextHealthy
+        : result.treatmentEligible ? copy.nextTreat : copy.nextScout;
+    const items = result.symptoms || [];
     return sanitizeDraft({
-        activity_type: 'spray',
-        chemical_name: '',
-        chemical_qty: '',
-        disease_name_observed: diseaseName,
-        scout_severity: scoutSeverity,
+        activity_type: result.followUpActivity,
+        plot_id: scan.plot_id || '',
+        chemical_name: '', chemical_qty: '',
+        disease_name_observed: result.healthy ? '' : getDiseaseName(result),
+        scout_severity: normalizeSeverityForForm(result.severity),
         inspection_type: 'Pest/Disease',
-        inspection_status: scoutSeverity === 'High' ? 'Urgent' : 'Action Required',
-        expense_category: 'Pesticide',
-        note: buildTreatmentNote(scan, diseaseName),
+        inspection_status: result.healthy ? 'Good' : result.severity === 'severe' || result.severity === 'critical' ? 'Urgent' : 'Action Required',
+        expense_category: 'Labor',
+        note: compactLines([
+            `${copy.linkedScan}: ${scan.id || ''}`,
+            `${copy.crop}: ${getCropName(result)}`,
+            `${copy.status}: ${result.healthy ? copy.healthy : result.disease || ''}`,
+            result.severity ? `${copy.severity}: ${copy[result.severity] || result.severity}` : '',
+            scan.locationName ? `${copy.location}: ${scan.locationName}` : '',
+            result.retakeReason || result.abstainReason,
+            items.length ? `${copy.symptoms}: ${normalizeList(items).join('; ')}` : '',
+            formatNumberedSection(copy.actions, result.immediateActions),
+            result.requiresRetake ? copy.nextScout : '',
+            next,
+        ]).join('\n\n'),
     });
 };
 

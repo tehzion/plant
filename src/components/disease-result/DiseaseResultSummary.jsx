@@ -86,7 +86,7 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
             </div>
 
             {result.healthStatus && (
-                <div className={`status-banner ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
+                <div className={`status-banner ${healthy ? 'status-healthy' : result.needsReview ? 'status-review' : 'status-unhealthy'}`}>
                     <div className="status-icon-wrapper">
                         {healthy ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
                     </div>

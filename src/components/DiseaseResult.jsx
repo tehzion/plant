@@ -3,11 +3,13 @@ import DiseaseResultMedia from './disease-result/DiseaseResultMedia';
 import DiseaseResultSummary from './disease-result/DiseaseResultSummary';
 import DiseaseResultSections from './disease-result/DiseaseResultSections';
 import { normalizeDiseaseResult } from '../utils/diseaseResultUtils';
+import { buildScanResultModel } from '../utils/scanResultModel.js';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
   const { t } = useLanguage();
 
   if (!result) return null;
+  result = buildScanResultModel(result);
 
   const normalized = normalizeDiseaseResult(result, t);
 
@@ -260,6 +262,12 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .status-banner.status-unhealthy {
           background: #fef2f2;
           border-color: #fca5a5;
+        }
+
+        .status-banner.status-review {
+          background: #fffbeb;
+          border-color: #fcd34d;
+          color: #92400e;
         }
 
         .status-icon-wrapper {

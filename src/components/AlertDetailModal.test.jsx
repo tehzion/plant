@@ -101,6 +101,7 @@ describe('AlertDetailModal', () => {
         );
 
         fireEvent.click(screen.getByRole('button', { name: /resolved/i }));
+        fireEvent.change(screen.getByRole('combobox', { name: 'Activity type' }), { target: { value: 'spray' } });
         fireEvent.change(screen.getByRole('textbox'), {
             target: { value: 'Applied copper spray to affected rows.' },
         });
@@ -113,7 +114,7 @@ describe('AlertDetailModal', () => {
                     disease_name_observed: 'Leaf Spot',
                     scout_severity: 'Moderate',
                     expense_category: 'Pesticide',
-                    note: expect.stringContaining('Treatment status: Resolved'),
+                    note: expect.stringContaining('Current outcome: Resolved'),
                 }),
                 'user-1',
             );

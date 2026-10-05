@@ -1,3 +1,4 @@
+import { isExpertLabel } from '../utils/scanQualityEvaluation.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -45,7 +46,7 @@ const readJsonFile = (filePath) => {
 };
 
 const feedbackLogs = readJsonlFiles('feedback_log_');
-const verifiedHoldout = readJsonFile(VERIFIED_HOLDOUT_FILE);
+const verifiedHoldout = readJsonFile(VERIFIED_HOLDOUT_FILE).filter(isExpertLabel);
 
 let verifiedCount = 0;
 let top1Correct = 0;
@@ -112,12 +113,10 @@ for (const entry of verifiedHoldout) {
     correctedDisease: normalize(entry.correctDisease),
     differentials: Array.isArray(entry.differentialDiagnoses) ? entry.differentialDiagnoses : [],
     predictedHealthy: normalize(entry.predictedHealthStatus) === 'healthy',
-    correctedHealthy: entry.wasCorrect
-      ? normalize(entry.predictedHealthStatus) === 'healthy'
-      : normalize(entry.correctDisease).includes('healthy') || normalize(entry.correctDisease).includes('no issue'),
+    correctedHealthy: entry.correctHealthy,
     speciesConfidence: Number(entry.confidenceBreakdown?.speciesConfidence || 0),
     predictedBucket: bucketFor(entry.predictedPathogenType || entry.predictedDisease),
-    actualBucket: bucketFor(entry.correctDisease || entry.issueType),
+    actualBucket: bucketFor(entry.correctCauseCategory),
     wasCorrect: entry.wasCorrect,
     issueType: entry.issueType,
   });

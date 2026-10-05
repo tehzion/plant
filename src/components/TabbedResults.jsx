@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import './TabbedResults.css';
 
 const TabbedResults = ({ tabs }) => {
@@ -7,6 +7,19 @@ const TabbedResults = ({ tabs }) => {
   const [hasScrolled, setHasScrolled] = useState(false);
   const tabsRef = useRef(null);
   const containerRef = useRef(null);
+  const tabId = useId();
+
+  const handleKeyDown = (event, index) => {
+    let next;
+    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveTab(next);
+    tabsRef.current.children[next]?.focus();
+  };
 
   const checkScroll = () => {
     if (!tabsRef.current) return;
@@ -19,10 +32,9 @@ const TabbedResults = ({ tabs }) => {
     if (!tabsRef.current) return;
     const activeElement = tabsRef.current.children[activeTab];
     if (activeElement) {
-      activeElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
+      tabsRef.current.scrollTo?.({
+        left: Math.max(0, activeElement.offsetLeft - tabsRef.current.clientWidth / 2 + activeElement.offsetWidth / 2),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       });
     }
   }, [activeTab]);
@@ -43,10 +55,17 @@ const TabbedResults = ({ tabs }) => {
         ref={containerRef}
         className={`tab-headers-container app-surface ${canScrollLeft ? 'can-scroll-left' : ''} ${hasScrolled ? 'scrolled' : ''}`}
       >
-        <div className="tab-headers" ref={tabsRef}>
+        <div className="tab-headers" ref={tabsRef} role="tablist">
           {tabs.map((tab, index) => (
             <button
               key={index}
+              type="button"
+              role="tab"
+              id={`${tabId}-tab-${index}`}
+              aria-controls={`${tabId}-panel-${index}`}
+              aria-selected={activeTab === index}
+              tabIndex={activeTab === index ? 0 : -1}
+              onKeyDown={(event) => handleKeyDown(event, index)}
               onClick={() => setActiveTab(index)}
               className={`tab-header ${activeTab === index ? 'active' : ''}`}
             >
@@ -61,7 +80,7 @@ const TabbedResults = ({ tabs }) => {
         </div>
       </div>
 
-      <div className="tab-content">
+      <div className="tab-content" role="tabpanel" id={`${tabId}-panel-${activeTab}`} aria-labelledby={`${tabId}-tab-${activeTab}`} tabIndex={0}>
         {tabs[activeTab]?.content}
       </div>
     </div>

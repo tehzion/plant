@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { AlertCircle, Zap, Pill, Shield } from 'lucide-react';
 import './TreatmentRecommendations.css';
+import { buildScanResultModel } from '../utils/scanResultModel.js';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const TreatmentRecommendations = ({ result }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const copy = getScanQualityCopy(language);
   const [expandedSections, setExpandedSections] = useState({
     immediate: true,
     treatments: false,
@@ -12,9 +15,10 @@ const TreatmentRecommendations = ({ result }) => {
   });
 
   if (!result) return null;
+  result = buildScanResultModel(result);
 
   const diagnosisState = result.resultState || result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
-  const showCautiousNotice = !['confirmed', 'confident_treatment', 'healthy'].includes(diagnosisState) || result.needsMoreEvidence;
+  const showCautiousNotice = result.needsReview;
 
   const normalizeList = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -62,7 +66,7 @@ const TreatmentRecommendations = ({ result }) => {
     <div className="treatment-recommendations">
       <div className="tr-header">
         <h3 className="tr-title">
-          {t('results.treatment')} & {t('results.prevention')}
+          {result.needsReview ? copy.nextChecks : `${t('results.treatment')} & ${t('results.prevention')}`}
         </h3>
       </div>
 

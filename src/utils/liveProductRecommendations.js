@@ -1,6 +1,7 @@
+import { buildScanResultModel } from './scanResultModel.js';
 import { fetchJsonWithTimeout } from './networkRequest.js';
 
-const PRODUCT_RECOMMENDATIONS_CACHE_PREFIX = 'kanb.productRecommendations.v1';
+const PRODUCT_RECOMMENDATIONS_CACHE_PREFIX = 'kanb.productRecommendations.v2';
 const PRODUCT_RECOMMENDATIONS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const PRODUCT_CONSULTATION_WHATSAPP = '+60136667810';
 
@@ -76,6 +77,7 @@ const normalizeList = (value) => {
 };
 
 const normalizeNumber = (value) => {
+    if (value == null || value === '') return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
 };
@@ -95,7 +97,12 @@ const normalizeDiagnosticEvidence = (value) => {
     };
 };
 
-export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', scanResult = {} } = {}) => ({
+export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', scanResult = {} } = {}) => {
+    scanResult = buildScanResultModel({ ...scanResult, plantType: scanResult?.plantType || plantType, disease: scanResult?.disease || disease });
+    return ({
+    schemaVersion: scanResult.schemaVersion,
+    validationIssues: scanResult.validationIssues || [],
+    captureAssessment: scanResult.captureAssessment || null,
     scanId: normalizeText(scanResult?.id || scanResult?.scanId),
     plantType: normalizeText(plantType),
     disease: normalizeText(disease, 'None') || 'None',
@@ -103,7 +110,7 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     resultState: normalizeText(scanResult?.resultState),
     confidence: normalizeNumber(scanResult?.confidence),
     diagnosisConfidence: normalizeNumber(scanResult?.confidenceBreakdown?.diagnosisConfidence ?? scanResult?.diagnosisConfidence),
-    needsMoreEvidence: Boolean(scanResult?.needsMoreEvidence || scanResult?.abstainReason || scanResult?.requiresRetake),
+    needsMoreEvidence: Boolean(scanResult?.needsReview || scanResult?.needsMoreEvidence || scanResult?.abstainReason || scanResult?.requiresRetake),
     requiresRetake: Boolean(scanResult?.requiresRetake),
     healthStatus: normalizeText(scanResult?.healthStatus, 'unknown') || 'unknown',
     pathogenType: normalizeText(scanResult?.pathogenType, 'None') || 'None',
@@ -118,8 +125,11 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     diagnosticEvidence: normalizeDiagnosticEvidence(scanResult?.diagnosticEvidence),
     nutritionalStatus: normalizeText(scanResult?.nutritionalIssues?.status),
 });
+};
 
 export const createProductRecommendationsKey = (payload, language = 'en') => JSON.stringify({
+    policyVersion: 3,
+    captureAssessment: payload?.captureAssessment || null,
     language: normalizeLanguage(language),
     plantType: normalizeText(payload?.plantType),
     disease: normalizeText(payload?.disease, 'None') || 'None',

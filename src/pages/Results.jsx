@@ -23,6 +23,11 @@ import {
 import { buildFollowUpDraftFromScan, saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
+import { buildScanResultModel } from '../utils/scanResultModel.js';
+import ScanDecisionSummary, { nextScanStep } from '../components/ScanDecisionSummary.jsx';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
+import { confidencePercent } from '../../shared/scanResultPolicy.js';
+import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
 
 const TreatmentRecommendations = lazyWithRetry(
   () => import('../components/TreatmentRecommendations'),
@@ -108,52 +113,13 @@ const Results = () => {
     };
   }, [scan, scanLoading, language]);
 
-  const normalizedNutrition = useMemo(
-    () => normalizeNutritionalIssues(scan?.nutritionalIssues),
-    [scan?.nutritionalIssues],
-  );
-
-  const result = useMemo(() => {
-    const normalizedResult = {
-      id: scan?.id,
-      healthStatus: getStandardizedStatus(scan),
-      status: scan?.status || null,
-      resultState: scan?.resultState || null,
-      plantType: scan?.plantType,
-      disease: scan?.disease,
-      fungusType: scan?.fungusType,
-      pathogenType: scan?.pathogenType,
-      diseaseCategory: scan?.diseaseCategory,
-      estimatedAge: scan?.estimatedAge,
-      confidence: scan?.confidence,
-      confidenceBreakdown: scan?.confidenceBreakdown,
-      severity: scan?.severity,
-      locationName: scan?.locationName,
-      plantPart: scan?.plantPart,
-      symptoms: scan?.symptoms,
-      immediateActions: scan?.immediateActions,
-      treatments: scan?.treatments,
-      prevention: scan?.prevention,
-      healthyCarePlan: scan?.healthyCarePlan,
-      additionalNotes: scan?.additionalNotes,
-      needsMoreEvidence: scan?.needsMoreEvidence,
-      requiresRetake: scan?.requiresRetake,
-      retakeReason: scan?.retakeReason,
-      abstainReason: scan?.abstainReason,
-      differentialDiagnoses: scan?.differentialDiagnoses,
-      diagnosticEvidence: scan?.diagnosticEvidence,
-      identification: scan?.identification,
-      identificationSource: scan?.identificationSource,
-      speciesAssessment: scan?.speciesAssessment,
-      speciesContext: scan?.speciesContext,
-      nutritionalIssues: normalizedNutrition,
-      productSearchTags: scan?.productSearchTags || [],
-    };
-    return {
-      ...normalizedResult,
-      resultState: getScanResultState(normalizedResult),
-    };
-  }, [scan, normalizedNutrition]);
+  const result = useMemo(() => buildScanResultModel(scan || {}, language), [scan, language]);
+  const normalizedNutrition = result.nutritionalIssues;
+  const scanCopy = getScanQualityCopy(language);
+  const scoreText = value => {
+    const score = confidencePercent(value);
+    return score === null ? t('results.notRecorded') : `${Math.round(score)}%`;
+  };
 
   const handleRecommendationsLoaded = useCallback((data) => {
     setLiveProductRecommendations(data);
@@ -212,12 +178,10 @@ const Results = () => {
   );
 
   const standardizedStatus = result.healthStatus;
-  const healthy = standardizedStatus === 'healthy';
+  const healthy = result.healthy;
   const followUpDraft = buildFollowUpDraftFromScan({
-    ...scan,
-    healthStatus: standardizedStatus,
-    nutritionalIssues: normalizedNutrition,
-  });
+    ...result,
+  }, language);
   const followUpActionLabel = followUpDraft.activity_type === 'inspect'
     ? label('results.logRoutineCheck', 'Log routine check')
     : followUpDraft.activity_type === 'scout'
@@ -245,8 +209,7 @@ const Results = () => {
 
     try {
       const scanForExport = {
-        ...scan,
-        nutritionalIssues: normalizedNutrition,
+        ...result,
       };
       let productRecommendations = liveProductRecommendations;
       if (!productRecommendations && (scanForExport.plantType || scanForExport.disease)) {
@@ -292,7 +255,7 @@ const Results = () => {
 
     const nutrientNames = getNutrientNames(normalizedNutrition);
     const nutrientSymptoms = normalizeList(normalizedNutrition?.symptoms);
-    const nutritionBlock = normalizedNutrition.status === 'confirmed'
+    const nutritionBlock = normalizedNutrition.unconfirmedDueToEvidence ? `${t('results.nutritionalIssues')}: ${t('results.nutritionNotConfirmed')}` : normalizedNutrition.status === 'confirmed'
       ? `
 ${t('results.nutritionalIssues')}:
 ${t('results.nutritionStatusConfirmed')}: ${t('results.confirmedDeficiency')}
@@ -314,57 +277,57 @@ ${t('results.nutritionStatusPossible')}: ${t('results.possibleNutrientOverlap')}
 
     const report = `
 ${t('pdf.title')}
+${scanCopy.scoreNote}
 ============================================
 
 ${t('common.date')}: ${reportDate}
-${t('results.plantType')}: ${scan.plantType}
+${t('results.plantType')}: ${result.plantType}
 ${t('results.category')}: ${categoryLabel}
-${t('results.scale')}: ${scan.farmScale || t('results.notSpecified')}
-${scan.estimatedAge ? `${t('results.estimatedAge')}: ${scan.estimatedAge}` : ''}
+${t('results.scale')}: ${result.farmScale || t('results.notSpecified')}
+${result.estimatedAge ? `${t('results.estimatedAge')}: ${result.estimatedAge}` : ''}
 
-${t('results.status')}: ${t(`results.${standardizedStatus}`)}
-${t('results.disease')}: ${scan.disease}
-${scan.fungusType ? `${t('results.fungusSpecies')}: ${scan.fungusType}` : ''}
-${scan.pathogenType ? `${t('results.pathogenType')}: ${scan.pathogenType}` : ''}
-${t('results.confidence')}: ${scan.confidence}%
-${scan.confidenceBreakdown ? `${t('results.diagnosisConfidence') || 'Diagnosis confidence'}: ${scan.confidenceBreakdown.diagnosisConfidence}%` : ''}
-${scan.confidenceBreakdown ? `${t('results.imageQualityConfidence') || 'Image quality confidence'}: ${scan.confidenceBreakdown.imageQualityConfidence}%` : ''}
-${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}
+${t('results.status')}: ${getDiagnosisStatusLabel(t, result.resultState)}
+${t('results.disease')}: ${result.disease}
+${result.fungusType ? `${t('results.fungusSpecies')}: ${result.fungusType}` : ''}
+${result.pathogenType ? `${t('results.pathogenType')}: ${result.pathogenType}` : ''}
+${t('results.confidence')}: ${scoreText(result.confidence)}
+${result.confidenceBreakdown ? `${t('results.diagnosisConfidence') || 'Diagnosis confidence'}: ${scoreText(result.confidenceBreakdown.diagnosisConfidence)}` : ''}
+${result.confidenceBreakdown ? `${t('results.imageQualityConfidence') || 'Image quality confidence'}: ${scoreText(result.confidenceBreakdown.imageQualityConfidence)}` : ''}
+${t('results.severity')}: ${t(`results.${result.severity?.toLowerCase()}`) || result.severity}
 ${result.resultState ? `${t('results.diagnosisStatus') || 'Diagnosis status'}: ${getDiagnosisStatusLabel(t, result.resultState)}` : ''}
-${scan.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${scan.diagnosticEvidence.likelyCauseCategory}` : ''}
+${result.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${result.diagnosticEvidence.likelyCauseCategory}` : ''}
 
 ${t('results.symptoms')}:
-${normalizeList(scan.symptoms).map((symptom, i) => `${i + 1}. ${symptom}`).join('\n')}
+${normalizeList(result.symptoms).map((symptom, i) => `${i + 1}. ${symptom}`).join('\n')}
 
 ${!healthy ? `
 ${t('results.immediateActions')}:
-${normalizeList(scan.immediateActions).map((action, i) => `${i + 1}. ${action}`).join('\n')}
+${normalizeList(result.immediateActions).map((action, i) => `${i + 1}. ${action}`).join('\n')}
 
-${t('results.treatments')}:
-${normalizeList(scan.treatments).map((treatment, i) => `${i + 1}. ${treatment}`).join('\n')}
+${result.treatmentEligible ? `${t('results.treatments')}:\n${normalizeList(result.treatments).map((treatment, i) => `${i + 1}. ${treatment}`).join('\n')}` : `${scanCopy.next}: ${nextScanStep(result, scanCopy)}`}
 ` : ''}
 
-${scan.healthyCarePlan ? `
+${result.healthyCarePlan ? `
 ${t('results.dailyCare')}:
-${normalizeList(scan.healthyCarePlan.dailyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
+${normalizeList(result.healthyCarePlan.dailyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
 
 ${t('results.weeklyCare')}:
-${normalizeList(scan.healthyCarePlan.weeklyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
+${normalizeList(result.healthyCarePlan.weeklyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
 
 ${t('results.monthlyCare')}:
-${normalizeList(scan.healthyCarePlan.monthlyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
+${normalizeList(result.healthyCarePlan.monthlyCare).map((care, i) => `${i + 1}. ${care}`).join('\n')}
 
 ${t('results.bestPractices')}:
-${normalizeList(scan.healthyCarePlan.bestPractices).map((practice, i) => `${i + 1}. ${practice}`).join('\n')}
+${normalizeList(result.healthyCarePlan.bestPractices).map((practice, i) => `${i + 1}. ${practice}`).join('\n')}
 ` : ''}
 
 ${t('results.prevention')}:
-${normalizeList(scan.prevention).map((prev, i) => `${i + 1}. ${prev}`).join('\n')}
+${normalizeList(result.prevention).map((prev, i) => `${i + 1}. ${prev}`).join('\n')}
 
 ${nutritionBlock}
 
 ${t('common.note')}:
-${scan.additionalNotes}
+${result.additionalNotes}
 
 ---
 ${t('pdf.generatedBy')}
@@ -383,7 +346,7 @@ ${t('pdf.generatedBy')}
 
   const handleShare = async () => {
     const nutrientNames = getNutrientNames(normalizedNutrition);
-    const nutritionSummary = normalizedNutrition.status === 'confirmed'
+    const nutritionSummary = normalizedNutrition.unconfirmedDueToEvidence ? `${t('results.nutritionalIssues')}: ${t('results.nutritionNotConfirmed')}` : normalizedNutrition.status === 'confirmed'
       ? `${t('results.nutritionalIssues')}: ${t('results.confirmedDeficiency')}${nutrientNames.length ? ` (${nutrientNames.join(', ')})` : ''}`
       : normalizedNutrition.status === 'possible'
         ? `${t('results.nutritionalIssues')}: ${t('results.possibleNutrientOverlap')}${nutrientNames.length ? ` (${nutrientNames.join(', ')})` : ''}`
@@ -391,15 +354,17 @@ ${t('pdf.generatedBy')}
 
     const shareText = [
       `${t('pdf.title') || 'Plant Analysis Report'}`,
-      `${t('results.plantType')}: ${scan.plantType || t('common.unknown')}`,
-      `${t('results.disease')}: ${scan.disease || t('results.unknownDisease')}`,
-      `${t('results.status')}: ${t(`results.${standardizedStatus}`)}`,
-      scan.severity ? `${t('results.severity')}: ${t(`results.${scan.severity?.toLowerCase()}`) || scan.severity}` : '',
-      scan.confidence ? `${t('results.confidence')}: ${scan.confidence}%` : '',
+      `${t('results.plantType')}: ${result.plantType || t('common.unknown')}`,
+      `${t('results.disease')}: ${result.disease || t('results.unknownDisease')}`,
+      `${t('results.status')}: ${getDiagnosisStatusLabel(t, result.resultState)}`,
+      result.severity ? `${t('results.severity')}: ${t(`results.${result.severity?.toLowerCase()}`) || result.severity}` : '',
+      result.confidence !== null ? `${t('results.confidence')}: ${scoreText(result.confidence)}` : '',
       result.resultState ? `${t('results.diagnosisStatus') || 'Diagnosis status'}: ${getDiagnosisStatusLabel(t, result.resultState)}` : '',
-      scan.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${scan.diagnosticEvidence.likelyCauseCategory}` : '',
+      result.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${result.diagnosticEvidence.likelyCauseCategory}` : '',
       nutritionSummary,
-      scan.additionalNotes || '',
+      `${scanCopy.next}: ${nextScanStep(result, scanCopy)}`,
+      scanCopy.scoreNote,
+      result.additionalNotes || '',
     ].filter(Boolean).join('\n');
 
     // Try Native Share API first (Mobile)
@@ -438,7 +403,7 @@ ${t('pdf.generatedBy')}
   };
 
   const handleSaveHistory = () => {
-    showToast(t('results.savedSuccess'), 'success');
+    navigate('/history');
   };
 
   // Prepare tabs for TabbedResults
@@ -450,7 +415,7 @@ ${t('pdf.generatedBy')}
     },
     {
       icon: <Pill size={20} />,
-      title: healthy ? t('results.care') || 'Care' : t('results.treatment'),
+      title: healthy ? t('results.care') : result.needsReview ? label('results.nextChecks', 'Next checks') : t('results.treatment'),
       content: (
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>
           <div>
@@ -499,6 +464,7 @@ ${t('pdf.generatedBy')}
   return (
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
+        <ScanDecisionSummary result={result} />
         {/* Quick Actions Bar */}
         <QuickActions
           onScanAgain={handleScanAgain}
@@ -509,7 +475,7 @@ ${t('pdf.generatedBy')}
 
         {/* Scan Metadata Card - Modern Design */}
         <div className="scan-metadata-card app-surface app-surface--soft">
-          <div className="results-section-kicker">{t('results.plantDetails') || 'Scan details'}</div>
+          <div className="results-section-kicker">{scanCopy.scanDetails}</div>
           <div className="metadata-grid">
             {/* Category */}
             <div className="metadata-item">
@@ -625,6 +591,7 @@ ${t('pdf.generatedBy')}
           </div>
         </div>
 
+        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
         <div className="follow-up-card app-surface app-surface--soft">
           <div className="follow-up-icon">
             <ClipboardList size={22} />

@@ -1,3 +1,4 @@
+vi.mock('../components/ScanFollowUpTracker.jsx', () => ({ default: () => null }));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Results from './Results.jsx';
@@ -140,6 +141,8 @@ describe('Results', () => {
       analysisLanguage: 'en',
       severity: 'moderate',
       confidence: 88,
+      status: 'high_confidence',
+      pathogenType: 'Fungal',
       immediateActions: ['Remove infected leaves'],
       treatments: ['Apply labeled fungicide'],
     });
@@ -150,12 +153,12 @@ describe('Results', () => {
 
     const stored = JSON.parse(sessionStorage.getItem(SCAN_FOLLOW_UP_DRAFT_KEY));
     expect(stored.draft).toMatchObject({
-      activity_type: 'spray',
+      activity_type: 'note',
       disease_name_observed: 'Leaf Blight',
       scout_severity: 'Moderate',
-      expense_category: 'Pesticide',
+      expense_category: 'Labor',
     });
-    expect(stored.draft.note).toContain('Apply labeled fungicide');
+    expect(stored.draft.note).toContain('Select the actual activity');
     expect(navigateMock).toHaveBeenCalledWith('/profile?tab=notes&draft=scan-follow-up');
   });
 });

@@ -1,3 +1,4 @@
+import { assessScanDecision } from '../../shared/scanResultPolicy.js';
 const VALID_NUTRITION_STATUSES = new Set(['none', 'possible', 'confirmed']);
 
 const normalizeList = (value) => {
@@ -117,6 +118,7 @@ export const normalizeNutritionalIssues = (nutritionalIssues = null) => {
       deficientNutrients: [],
       possibleNutrients,
       reasoning,
+      ...(source.unconfirmedDueToEvidence ? { unconfirmedDueToEvidence: true } : {}),
     };
   }
 
@@ -144,4 +146,23 @@ export const getNutrientNames = (nutritionalIssues = null) => {
   }
 
   return [];
+};
+
+export const resolveScanNutrition = (issues, scan, decision = assessScanDecision(scan)) => {
+  const normalized = normalizeNutritionalIssues(issues);
+  if (!scan) return normalized;
+  const nutrientPattern = /nutrient|nutrition|nutrisi|nutrien|deficien|kekurangan|chlorosis|magnesium|nitrogen|potassium|calcium|kalium|缺素|缺钾/iu;
+  const names = (Array.isArray(scan.differentialDiagnoses) ? scan.differentialDiagnoses : [])
+    .filter((item) => nutrientPattern.test(`${item?.name || ''} ${item?.reason || ''}`))
+    .map((item) => item.name).filter(Boolean);
+  const clues = names.length > 0 || decision.resultState === 'possible_nutrient_issue'
+    || nutrientPattern.test(`${scan.diseaseCategory || ''} ${scan.diagnosticEvidence?.likelyCauseCategory || ''}`);
+  if (normalized.status === 'confirmed' && decision.needsReview) {
+    return { ...normalized, status: 'possible', hasDeficiency: false,
+      possibleNutrients: normalized.deficientNutrients.map((item) => item.nutrient), deficientNutrients: [],
+      reasoning: scan.abstainReason || scan.retakeReason || '' };
+  }
+  if (normalized.status !== 'none' || (!clues && !decision.needsReview)) return normalized;
+  return { ...normalized, status: 'possible', possibleNutrients: names,
+    ...(!clues ? { unconfirmedDueToEvidence: true } : {}), reasoning: scan.abstainReason || scan.retakeReason || '' };
 };

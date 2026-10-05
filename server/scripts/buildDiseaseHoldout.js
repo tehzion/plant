@@ -1,3 +1,4 @@
+import { isExpertLabel } from '../utils/scanQualityEvaluation.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -36,6 +37,11 @@ const normalize = (value) => String(value || '').trim().toLowerCase();
 const dataLogs = readJsonlFiles('data_log_');
 const feedbackLogs = readJsonlFiles('feedback_log_');
 const feedbackByScanId = new Map(feedbackLogs.map((entry) => [entry.scanId, entry]));
+const expertFile = path.join(HOLDOUT_DIR, 'expert_labels.json');
+const expertLabels = fs.existsSync(expertFile) ? JSON.parse(fs.readFileSync(expertFile, 'utf8')) : [];
+if (!Array.isArray(expertLabels)) throw new Error('expert_labels.json must contain an array');
+const expertByScanId = new Map(expertLabels.filter(isExpertLabel).map(entry => [entry.scanId, entry]));
+
 
 fs.mkdirSync(HOLDOUT_DIR, { recursive: true });
 
@@ -60,25 +66,11 @@ for (const log of dataLogs) {
     identification: log.raw_result?.identification || null,
   };
 
-  const hasStructuredCorrection = Boolean(
-    feedback
-    && (typeof feedback.wasCorrect !== 'undefined'
-      || feedback.correctDisease
-      || feedback.correctCrop
-      || feedback.issueType)
-  );
-
-  if (hasStructuredCorrection) {
-    verified.push({
-      ...baseRecord,
-      reviewedBy: feedback.reviewedBy || feedback.reviewer || 'unknown',
-      reviewSource: 'feedback_log',
-      wasCorrect: feedback.wasCorrect,
-      correctCrop: feedback.correctCrop || null,
-      correctDisease: feedback.correctDisease || null,
-      issueType: feedback.issueType || null,
-      note: feedback.note || feedback.comment || null,
-    });
+  const expert = expertByScanId.get(log.id);
+  if (expert) {
+    verified.push({ ...baseRecord, ...expert, result: log.raw_result,
+        reviewSource: 'expert_labels',
+        wasCorrect: String(log.prediction?.disease || '').trim().toLowerCase() === expert.correctDisease.trim().toLowerCase() });
     continue;
   }
 
@@ -92,7 +84,12 @@ for (const log of dataLogs) {
       issueType: null,
       note: null,
       reviewedBy: null,
+      reviewedAt: null,
+      reviewStatus: 'pending_expert_review',
+      correctHealthy: null,
+      correctCauseCategory: null,
     },
+    userFeedback: feedback || null,
     hasLegacyHelpfulFeedback: Boolean(feedback && typeof feedback.rating !== 'undefined' && typeof feedback.wasCorrect === 'undefined'),
     legacyFeedbackSummary: feedback
       ? {

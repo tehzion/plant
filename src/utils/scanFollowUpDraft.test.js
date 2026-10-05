@@ -81,7 +81,7 @@ describe('scan follow-up drafts', () => {
         expect(draft.disease_name_observed).toBe('Suspected mealybug');
     });
 
-    it('turns a disease scan into a treatment log draft', () => {
+    it('keeps disease scans without verified confidence in a scouting draft', () => {
         const draft = buildFollowUpDraftFromScan({
             id: 'scan-disease',
             healthStatus: 'unhealthy',
@@ -93,16 +93,16 @@ describe('scan follow-up drafts', () => {
         });
 
         expect(draft).toMatchObject({
-            activity_type: 'spray',
+            activity_type: 'scout',
             chemical_name: '',
             chemical_qty: '',
             disease_name_observed: 'Leaf Rust',
             scout_severity: 'High',
             inspection_status: 'Urgent',
-            expense_category: 'Pesticide',
+            expense_category: 'Labor',
         });
         expect(draft.note).toContain('Linked scan: scan-disease');
-        expect(draft.note).toContain('Apply labeled fungicide');
+        expect(draft.note).not.toContain('Apply labeled fungicide');
     });
 
     it('stores and consumes a draft once from sessionStorage', () => {

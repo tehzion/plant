@@ -412,7 +412,8 @@ describe('aiService helpers', () => {
 
         expect(filtered.disease).toBe('Suspected Papaya Mealybug / Scale Infestation');
         expect(filtered.status).toBe('likely');
-        expect(filtered.needsMoreEvidence).toBe(false);
+        // A named suspected pest still needs field confirmation before treatment.
+        expect(filtered.needsMoreEvidence).toBe(true);
         expect(filtered.additionalNotes).toContain('mealybug or scale-type pests');
         expect(filtered.additionalNotes).not.toContain('further evidence is needed');
         expect(filtered.productSearchTags).toContain('mealybug-control');

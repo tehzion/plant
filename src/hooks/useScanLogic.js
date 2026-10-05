@@ -146,7 +146,7 @@ export const useScanLogic = () => {
                     leafImageBase64,
                     language,
                     locationName || 'Malaysia',
-                    { tree: treeQuality, leaf: leafQuality }
+                    { tree: treeQuality, leaf: leafQuality, ...(currentState.captureContext ? { context: currentState.captureContext } : {}) }
                 );
 
                 dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
@@ -157,6 +157,8 @@ export const useScanLogic = () => {
                     leafImage: leafImageThumbnail,
                     ...result,
                     analysisLanguage: language,
+                    plantPart: currentState.captureContext?.plantPart || 'leaf',
+                    captureContext: currentState.captureContext || null,
                     healthStatus: standardizedHealthStatus,
                     disease: result.disease,
                     plantType: result.plantType || currentState.selectedCategory,

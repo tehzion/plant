@@ -1,8 +1,11 @@
+import { buildScanResultModel } from './scanResultModel.js';
 import jsPDF from 'jspdf';
 import { getScanResultState, isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
 import { getNutrientNames, normalizeNutritionalIssues } from './nutritionUtils.js';
 import { getDiagnosisStatusLabel } from './diagnosisStatusLabels.js';
+import { confidencePercent } from '../../shared/scanResultPolicy.js';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const PT_TO_MM = 25.4 / 72;
 
@@ -91,8 +94,8 @@ const normalizeList = (value) => {
 };
 
 const formatConfidenceValue = (value) => {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return '';
+    const numericValue = confidencePercent(value);
+    if (numericValue === null) return '';
     return `${Math.round(numericValue)}%`;
 };
 
@@ -401,6 +404,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         console.error('Error adding image to PDF:', error);
     }
 
+    scanData = buildScanResultModel(scanData);
     const healthy = isHealthy(scanData);
     const diagnosisState = scanData.resultState || getScanResultState(scanData) || scanData.status
         || (scanData.requiresRetake ? 'retake_required' : scanData.needsMoreEvidence || scanData.abstainReason ? 'uncertain' : (healthy ? 'healthy' : 'likely'));
@@ -415,16 +419,16 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     const speciesName = speciesContext?.scientificName
         || topSpeciesCandidate?.scientificName
         || topSpeciesCandidate?.scientific_name
-        || scanData.identification;
+        || scanData.identification?.scientificName || scanData.plantType || '';
     const speciesContextText = speciesName
         ? `${speciesName}${speciesConfidence ? ` (${speciesConfidence})` : ''}${speciesContext?.confirmed === false ? ` - ${label('results.unconfirmed', 'unconfirmed')}` : ''}`
         : '';
-    const needsConfirmation = !['confirmed', 'healthy'].includes(diagnosisState);
+    const needsConfirmation = scanData.needsReview;
     const statusColor = healthy ? primaryColor : unhealthyColor;
     doc.setFillColor(...statusColor);
     doc.roundedRect(14, yPos, pageWidth - 28, 18, 3, 3, 'F');
     await renderer.drawText(
-        healthy ? t('results.healthy').toUpperCase() : t('results.unhealthy').toUpperCase(),
+        getDiagnosisStatusLabel(t, diagnosisState).toUpperCase(),
         18,
         yPos + 4,
         {
@@ -521,7 +525,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
 
     await writeCallout({
         title: label('pdf.fieldDecisionSummary', 'Field Decision Summary'),
-        body: summaryBody,
+        body: `${summaryBody} ${getScanQualityCopy(language).scoreNote}`,
         rows: summaryRows,
         fillColor: needsConfirmation ? warningFill : secondaryColor,
         borderColor: needsConfirmation ? warningColor : primaryColor,
@@ -747,7 +751,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             });
         } else {
             const possibleNutrients = getNutrientNames(normalizedNutrition);
-            await writeParagraph(t('results.possibleNutrientOverlap'), {
+            await writeParagraph(normalizedNutrition.unconfirmedDueToEvidence ? t('results.nutritionNotConfirmed') : t('results.possibleNutrientOverlap'), {
                 x: 14,
                 width: pageWidth - 28,
                 fontSize: 10,

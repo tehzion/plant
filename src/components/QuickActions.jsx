@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { RotateCcw, Download, Share2, Save, Loader2 } from 'lucide-react';
 import './QuickActions.css';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -40,7 +41,7 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
 
         <button onClick={onSaveHistory} className="action-btn">
           <span className="icon"><Save size={20} /></span>
-          <span className="label">{t('results.saveHistory')}</span>
+          <span className="label">{getScanQualityCopy(language).viewHistory}</span>
         </button>
       </div>
     </div>

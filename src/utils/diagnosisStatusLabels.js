@@ -1,4 +1,5 @@
 const STATUS_LABEL_KEYS = {
+    high_confidence: 'results.higherConfidence',
     confirmed: 'results.confirmedDiagnosis',
     likely: 'results.likelyDiagnosis',
     suspected: 'results.likelyDiagnosis',
@@ -6,7 +7,7 @@ const STATUS_LABEL_KEYS = {
     possible: 'results.possibleBadge',
     retake_required: 'results.retakeRequired',
     healthy: 'results.healthy',
-    confident_treatment: 'results.scanStateConfidentTreatment',
+    confident_treatment: 'results.higherConfidence',
     needs_closer_photo: 'results.scanStateNeedsCloserPhoto',
     possible_nutrient_issue: 'results.scanStatePossibleNutrientIssue',
     possible_pest: 'results.scanStatePossiblePest',
@@ -14,6 +15,7 @@ const STATUS_LABEL_KEYS = {
 };
 
 const STATUS_LABEL_FALLBACKS = {
+    high_confidence: 'Higher-confidence finding',
     confirmed: 'Confirmed diagnosis',
     likely: 'Likely diagnosis',
     suspected: 'Likely diagnosis',
@@ -21,7 +23,7 @@ const STATUS_LABEL_FALLBACKS = {
     possible: 'Possible',
     retake_required: 'Need a clearer leaf close-up',
     healthy: 'Healthy',
-    confident_treatment: 'Confident treatment',
+    confident_treatment: 'Higher-confidence finding',
     needs_closer_photo: 'Need closer photo',
     possible_nutrient_issue: 'Possible nutrient issue',
     possible_pest: 'Possible pest',

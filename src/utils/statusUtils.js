@@ -1,3 +1,5 @@
+import { assessScanDecision, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+export { SCAN_RESULT_STATES };
 /**
  * Common utility for handling plant health status across the application.
  * Prevents fragile string-based checks in multiple components.
@@ -85,14 +87,6 @@ const SEVERITY_ALIASES = {
     kritikal: 'critical',
 };
 
-export const SCAN_RESULT_STATES = Object.freeze({
-    CONFIDENT_TREATMENT: 'confident_treatment',
-    NEEDS_CLOSER_PHOTO: 'needs_closer_photo',
-    POSSIBLE_NUTRIENT_ISSUE: 'possible_nutrient_issue',
-    POSSIBLE_PEST: 'possible_pest',
-    EXPERT_REVIEW_NEEDED: 'expert_review_needed',
-    HEALTHY: 'healthy',
-});
 
 const REVIEW_RESULT_STATES = new Set([
     SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
@@ -247,50 +241,7 @@ const hasActionableCause = (scan = {}) => {
     ]);
 };
 
-export const getScanResultState = (scan = {}) => {
-    if (!scan || typeof scan !== 'object') return SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
-
-    const explicitState = normalizeText(scan.resultState);
-    const status = normalizeText(scan.status);
-
-    if (hasNeedsCloserPhotoSignal(scan, status)) return SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
-    if (Object.values(SCAN_RESULT_STATES).includes(explicitState) && explicitState !== SCAN_RESULT_STATES.HEALTHY) {
-        return explicitState;
-    }
-
-    const confidence = getConfidenceValue(scan);
-    const weakEvidence = Boolean(
-        scan.needsMoreEvidence
-        || scan.abstainReason
-        || REVIEW_STATUS_VALUES.has(status)
-        || (confidence !== null && confidence < 70)
-    );
-
-    if (explicitState === SCAN_RESULT_STATES.HEALTHY && !weakEvidence) {
-        return SCAN_RESULT_STATES.HEALTHY;
-    }
-
-    if (isHealthy(scan) && !weakEvidence) return SCAN_RESULT_STATES.HEALTHY;
-
-    const strongTreatment = hasActionableCause(scan)
-        && !weakEvidence
-        && (
-            (status === 'confirmed' && confidence !== null && confidence >= 80)
-            || (status === 'likely' && confidence !== null && confidence >= 85)
-        );
-
-    if (hasNutrientSignal(scan) && !strongTreatment) {
-        return SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE;
-    }
-
-    if (hasPestSignal(scan) && !strongTreatment) {
-        return SCAN_RESULT_STATES.POSSIBLE_PEST;
-    }
-
-    if (strongTreatment) return SCAN_RESULT_STATES.CONFIDENT_TREATMENT;
-
-    return SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
-};
+export const getScanResultState = (scan = {}) => assessScanDecision(scan).resultState;
 
 /**
  * Checks if a scan result indicates a healthy plant.
@@ -302,24 +253,7 @@ export const isHealthy = (scanOrStatus) => {
 
     const normalize = (value) => (value || '').toString().trim().toLowerCase();
 
-    if (typeof scanOrStatus !== 'string') {
-        const disease = normalize(scanOrStatus.disease);
-        const severity = normalize(scanOrStatus.severity);
-        const status = normalize(scanOrStatus.healthStatus || scanOrStatus.status);
-
-        if (hasReviewOrRetakeSignal(scanOrStatus)) return false;
-
-        if (disease) {
-            if (HEALTHY_DISEASE_KEYWORDS.some(k => disease.includes(k))) return true;
-            if (!UNKNOWN_KEYWORDS.some(k => disease.includes(k))) return false;
-        }
-
-        if (severity && UNHEALTHY_SEVERITY_KEYWORDS.some(k => severity.includes(k))) return false;
-
-        if (!status) return false;
-        if (UNHEALTHY_STATUS_KEYWORDS.some(keyword => status.includes(keyword))) return false;
-        return HEALTHY_KEYWORDS.some(keyword => status.includes(keyword));
-    }
+    if (typeof scanOrStatus !== 'string') return assessScanDecision(scanOrStatus).healthy;
 
     const lowerStatus = normalize(scanOrStatus);
     if (!lowerStatus) return false;

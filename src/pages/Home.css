@@ -975,3 +975,7 @@
     margin-left: auto;
   }
 }
+
+.scan-capture-context { display: grid; gap: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 16px; }
+.scan-capture-context label { display: grid; gap: 6px; font-size: .95rem; }
+.scan-capture-context input, .scan-capture-context select { min-height: 44px; width: 100%; padding: 8px 12px; border: 1px solid #94a3b8; border-radius: 8px; background: #fff; color: #0f172a; font: inherit; }

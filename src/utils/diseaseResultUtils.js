@@ -64,7 +64,7 @@ export const normalizeDiseaseResult = (result, t) => {
         ? result.differentialDiagnoses.filter(Boolean)
         : [];
     const confidenceBreakdown = result.confidenceBreakdown || null;
-    const diagnosticEvidence = result.diagnosticEvidence || null;
+    const diagnosticEvidence = result.diagnosticEvidence && ['leafAgeAffected', 'lesionShape', 'lesionBorderHalo', 'distributionPattern', 'colorPattern', 'likelyCauseCategory'].some(key => result.diagnosticEvidence[key]) ? result.diagnosticEvidence : null;
     const showIdentification = Boolean(
         result.identification
         && (result.speciesContext?.confirmed ?? result.speciesAssessment?.confirmed ?? (Number(result.identification?.confidence) >= 60))
@@ -103,21 +103,17 @@ export const normalizeDiseaseResult = (result, t) => {
         ? result.pathogenType
         : (result.pathogenType ? String(result.pathogenType) : '');
 
-    if (!healthy && (pathogenTypeRaw || result.nutritionalIssues?.hasDeficiency) && pathogenTypeRaw !== 'unknown') {
+    if (!healthy && pathogenTypeRaw && !['unknown', 'none'].includes(pathogenTypeRaw.toLowerCase())) {
         detailItems.push({
             key: 'pathogen',
             icon: 'bug',
             iconClassName: 'pathogen-icon',
-            label: result.nutritionalIssues?.hasDeficiency
-                ? t('results.primaryCause')
-                : t('results.pathogenType'),
-            value: result.nutritionalIssues?.hasDeficiency
-                ? t('results.nutrientDeficiencyType')
-                : pathogenTypeRaw.charAt(0).toUpperCase() + pathogenTypeRaw.slice(1).toLowerCase(),
+            label: t('results.primaryCause'),
+            value: pathogenTypeRaw.charAt(0).toUpperCase() + pathogenTypeRaw.slice(1).toLowerCase(),
         });
     }
 
-    if (!healthy && !result.nutritionalIssues?.hasDeficiency && result.fungusType) {
+    if (!healthy && result.fungusType) {
         detailItems.push({
             key: 'fungus',
             icon: 'alert-circle',

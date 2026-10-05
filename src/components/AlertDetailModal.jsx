@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { generateSOP } from '../utils/aiFarmService';
 import './AlertDetailModal.css';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const SEV = (t) => ({
     critical: { color: '#dc2626', bg: '#fef2f2', label: t('profile.severityCritical') || 'Critical' },
@@ -50,7 +51,10 @@ const extractSteps = (scan) => {
 };
 
 const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+    const copy = getScanQualityCopy(language);
+    const activityLabel = t('profile.activityType') === 'profile.activityType' ? 'Activity type' : t('profile.activityType');
+    const [activityType, setActivityType] = useState(() => buildFollowUpDraftFromScan(scan, language).activity_type);
     const { user } = useAuth();
     const { notifyError, notifyWarning } = useNotifications();
     const [showSteps, setShowSteps] = useState(true);
@@ -95,17 +99,19 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
 
     const handleLog = async () => {
         setSubmitting(true);
-        const followUpDraft = buildFollowUpDraftFromScan(scan);
-        const statusLabel = status === 'resolved' ? 'Resolved' : 'In Progress';
-        const resolutionNotes = resolution.trim() ? `Resolution notes: ${resolution.trim()}` : '';
+        const followUpDraft = buildFollowUpDraftFromScan(scan, language);
+        const statusLabel = status === 'resolved' ? copy.resolved : t('profile.inProgress');
+        const resolutionNotes = resolution.trim();
         const note = [
             followUpDraft.note,
-            `Treatment status: ${statusLabel}`,
+            `${copy.outcome}: ${statusLabel}`,
             resolutionNotes,
         ].filter(Boolean).join('\n\n');
 
         const saved = await Promise.resolve(saveDailyNote({
             ...followUpDraft,
+            activity_type: activityType,
+            expense_category: activityType === 'spray' ? 'Pesticide' : activityType === 'fertilize' ? 'Fertilizer' : 'Labor',
             note,
         }, user?.id ?? null));
 
@@ -242,6 +248,13 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                                 </button>
                             </div>
 
+                            <label>{activityLabel}
+                                <select value={activityType} onChange={event => setActivityType(event.target.value)}>
+                                    {['scout', 'inspect', 'note', 'fertilize', 'spray'].map(type => <option key={type} value={type}>
+                                        {t(`profile.act${type[0].toUpperCase()}${type.slice(1)}`)}
+                                    </option>)}
+                                </select>
+                            </label>
                             <textarea
                                 className="adm-textarea"
                                 placeholder={t('profile.resolutionPlaceholder') || 'Describe what was done (pesticide used, quantity, date applied)...'}

@@ -16,6 +16,7 @@ import onboardingTranslations from './translations/onboarding.js';
 import termsTranslations from './translations/terms.js';
 import feedbackTranslations from './translations/feedback.js';
 import privacyTranslations from './translations/privacy.js';
+import { scanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const translationSections = [
     commonTranslations,
@@ -26,7 +27,13 @@ const translationSections = [
     settingsTranslations,
     userGuideTranslations,
     homeTranslations,
-    resultsTranslations,
+    Object.fromEntries(Object.entries(resultsTranslations).map(([language, section]) => [language, {
+        ...section, results: { ...section.results,
+            higherConfidence: scanQualityCopy[language]?.higherConfidence,
+            nextChecks: scanQualityCopy[language]?.nextChecks,
+            critical: scanQualityCopy[language]?.critical,
+        },
+    }])),
     mygapTranslations,
     encyclopediaTranslations,
     historyTranslations,
