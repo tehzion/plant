@@ -87,6 +87,28 @@ export const AuthProvider = ({ children }) => {
         return () => subscription.unsubscribe();
     }, []);
 
+    useEffect(() => {
+        if (!user?.id || user.id === DEMO_USER_ID || typeof window === 'undefined') return undefined;
+        let cancelled = false;
+        const flush = async () => {
+            if (cancelled || !navigator.onLine) return;
+            try {
+                const { flushAuthenticatedSyncQueue } = await import('../utils/cloudSync.js');
+                await flushAuthenticatedSyncQueue(user.id);
+            } catch (error) {
+                console.warn('Sync queue flush deferred:', error.message);
+            }
+        };
+        window.addEventListener('online', flush);
+        document.addEventListener('visibilitychange', flush);
+        flush();
+        return () => {
+            cancelled = true;
+            window.removeEventListener('online', flush);
+            document.removeEventListener('visibilitychange', flush);
+        };
+    }, [user?.id]);
+
     // ── Auth actions ──────────────────────────────────────────────────────────
 
     const signIn = async (email, password) => {
