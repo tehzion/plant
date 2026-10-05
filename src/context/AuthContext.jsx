@@ -50,10 +50,11 @@ export const AuthProvider = ({ children }) => {
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
+            (_event, session) => {
                 const currentUser = session?.user ?? null;
                 setUser(currentUser);
-                await migrateForUser(currentUser);
+                // Run cloud requests after Supabase releases its auth lock.
+                setTimeout(() => migrateForUser(currentUser), 0);
             }
         );
 

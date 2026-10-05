@@ -1,6 +1,8 @@
 const profileTranslations = {
     "en": {
         "profile": {
+            "orderHistoryRecovery": "Some older orders need store verification. Contact the store with your order number to recover access.",
+            "dataLoadFailed": "Farm records could not be loaded. Please retry before viewing reports.",
             "title": "Your Farm Dashboard",
             "subtitle": "Real-time analytics & intelligence",
             "allClear": "All Plots Healthy",
@@ -277,6 +279,8 @@ const profileTranslations = {
     },
     "ms": {
         "profile": {
+            "orderHistoryRecovery": "Sesetengah pesanan lama memerlukan pengesahan kedai. Hubungi kedai dengan nombor pesanan anda untuk memulihkan akses.",
+            "dataLoadFailed": "Rekod ladang tidak dapat dimuatkan. Sila cuba lagi sebelum melihat laporan.",
             "title": "Papan Pemuka Ladang",
             "subtitle": "Analitik & kecerdasan masa nyata",
             "allClear": "Semua Petak Sihat",
@@ -553,6 +557,8 @@ const profileTranslations = {
     },
     "zh": {
         "profile": {
+            "orderHistoryRecovery": "部分旧订单需要商店核实。请提供订单号联系商店，以恢复访问权限。",
+            "dataLoadFailed": "无法加载农场记录。请重试后再查看报告。",
             "title": "您的农场仪表板",
             "subtitle": "实时分析与智能",
             "allClear": "所有地块健康",

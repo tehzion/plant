@@ -11,10 +11,6 @@ const GUEST_ID_KEY = 'sea_plant_guest_id';
 const ORDERS_KEY = 'sea_plant_orders';
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
-const MAX_SCANS = 50;
-const MAX_NOTES = 60;
-const MAX_LOGS = 100;
-const MAX_PLOTS = 30;
 
 export const STORAGE_COLLECTION_KEYS = {
     STORAGE_KEY,
@@ -25,12 +21,6 @@ export const STORAGE_COLLECTION_KEYS = {
     GUEST_ID_KEY,
     ORDERS_KEY,
 };
-
-const QUOTA_CLEANUP_ORDER = [
-    { key: STORAGE_KEY, label: 'scanHistory', batchSize: 10 },
-    { key: LOGBOOK_KEY, label: 'logbook', batchSize: 10 },
-    { key: NOTES_KEY, label: 'dailyNotes', batchSize: 5 },
-];
 
 let lastStorageCleanupNotice = null;
 
@@ -89,21 +79,6 @@ const writeEncryptedPayload = (key, payload) => {
     }
 };
 
-const trimOldestItems = (items, batchSize) => {
-    if (!Array.isArray(items) || items.length === 0) return items;
-    const nextLength = Math.max(0, items.length - Math.max(1, batchSize));
-    return items.slice(0, nextLength);
-};
-
-const recordCleanupNotice = (targetKey, cleanedCollections) => {
-    if (!cleanedCollections.length) return;
-    lastStorageCleanupNotice = {
-        targetKey,
-        cleanedCollections,
-        timestamp: Date.now(),
-    };
-};
-
 export const consumeStorageCleanupNotice = () => {
     const notice = lastStorageCleanupNotice;
     lastStorageCleanupNotice = null;
@@ -112,57 +87,9 @@ export const consumeStorageCleanupNotice = () => {
 
 const safeWrite = (key, data) => {
     lastStorageCleanupNotice = null;
-    let pendingPayload = data;
-    const firstAttempt = writeEncryptedPayload(key, pendingPayload);
-
-    if (firstAttempt === true) {
-        return { ok: true, storedData: pendingPayload, cleanedCollections: [] };
-    }
-    if (firstAttempt === false) {
-        return { ok: false, storedData: pendingPayload, cleanedCollections: [] };
-    }
-
-    const cleanedCollections = [];
-
-    for (const descriptor of QUOTA_CLEANUP_ORDER) {
-        while (true) {
-            if (descriptor.key === key) {
-                if (!Array.isArray(pendingPayload) || pendingPayload.length === 0) break;
-                const trimmedPayload = trimOldestItems(pendingPayload, descriptor.batchSize);
-                if (trimmedPayload.length === pendingPayload.length) break;
-                cleanedCollections.push({
-                    key: descriptor.key,
-                    label: descriptor.label,
-                    removedCount: pendingPayload.length - trimmedPayload.length,
-                });
-                pendingPayload = trimmedPayload;
-            } else {
-                const existing = safeRead(descriptor.key, null);
-                if (!Array.isArray(existing) || existing.length === 0) break;
-                const trimmedExisting = trimOldestItems(existing, descriptor.batchSize);
-                if (trimmedExisting.length === existing.length) break;
-                const cleanupWrite = writeEncryptedPayload(descriptor.key, trimmedExisting);
-                if (cleanupWrite !== true) break;
-                cleanedCollections.push({
-                    key: descriptor.key,
-                    label: descriptor.label,
-                    removedCount: existing.length - trimmedExisting.length,
-                });
-            }
-
-            const retry = writeEncryptedPayload(key, pendingPayload);
-            if (retry === true) {
-                recordCleanupNotice(key, cleanedCollections);
-                return { ok: true, storedData: pendingPayload, cleanedCollections };
-            }
-            if (retry === false) {
-                return { ok: false, storedData: pendingPayload, cleanedCollections };
-            }
-        }
-    }
-
-    console.error(`[localStorage] Failed to write "${key}" after quota cleanup. Storage may be full.`);
-    return { ok: false, storedData: pendingPayload, cleanedCollections };
+    const ok = writeEncryptedPayload(key, data) === true;
+    // Farm evidence must never be discarded to make room for another write.
+    return { ok, storedData: data, cleanedCollections: [] };
 };
 
 export const writeStorageCollection = (key, data) => safeWrite(key, data);
@@ -378,9 +305,7 @@ export const getProfileInfo = async (userId = null) => {
 
 export const saveProfileInfo = async (profileInfo = {}, userId = null) => {
     const normalized = normalizeProfileInfo(profileInfo);
-    if (userId) {
-        safeWrite(`profile_info_${userId}`, normalized);
-    }
+    const localSaved = userId ? safeWrite(`profile_info_${userId}`, normalized).ok : false;
 
     if (isCloudUser(userId)) {
         const { error } = await supabase
@@ -399,7 +324,7 @@ export const saveProfileInfo = async (profileInfo = {}, userId = null) => {
         }
     }
 
-    return true;
+    return isCloudUser(userId) || localSaved;
 };
 
 export const migrateLocalSchema = (key, version, migrateFn) => {
@@ -420,7 +345,7 @@ export const migrateLocalSchema = (key, version, migrateFn) => {
                 return item;
             }
         });
-        safeWrite(key, migrated);
+        if (!safeWrite(key, migrated).ok) return;
         localStorage.setItem(flagKey, '1');
         console.log(`[schema] Migrated "${key}" to v${version}`);
     } catch (err) {
@@ -451,11 +376,14 @@ const uploadImageToStorage = async (base64, userId, scanId, suffix = 'main') => 
 export const saveScan = async (scanData, userId = null) => {
     if (isCloudUser(userId)) {
         try {
-            const id = crypto.randomUUID();
+            const id = scanData.id || crypto.randomUUID();
             const [mainUpload, leafUpload] = await Promise.all([
                 uploadImageToStorage(scanData.image, userId, id, 'main'),
                 scanData.leafImage ? uploadImageToStorage(scanData.leafImage, userId, id, 'leaf') : null,
             ]);
+            if ((scanData.image && !mainUpload?.path) || (scanData.leafImage && !leafUpload?.path)) {
+                throw new Error('Photo upload failed. Your scan has not been saved; please retry.');
+            }
             const imageUrl = mainUpload?.signedUrl || null;
             const leafImageUrl = leafUpload?.signedUrl || null;
             const imagePath = mainUpload?.path || null;
@@ -481,27 +409,32 @@ export const saveScan = async (scanData, userId = null) => {
     const history = getScanHistory();
     const newScan = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...scanData };
     history.unshift(newScan);
-    const writeResult = safeWrite(STORAGE_KEY, history.slice(0, MAX_SCANS));
+    const writeResult = safeWrite(STORAGE_KEY, history);
     if (!writeResult.ok) {
-        console.warn('saveScan: could not persist scan. Storage may be full');
+        const error = new Error('Device storage is full or unavailable. Export or delete old records, then retry saving.');
+        error.code = 'STORAGE_SAVE_FAILED';
+        throw error;
     }
     return newScan;
 };
 
+export const fetchAllUserRows = async (table, userId) => {
+    const rows = [];
+    const pageSize = 500;
+    for (let offset = 0; ;) {
+        const { data, error, count } = await supabase.from(table).select('*', { count: 'exact' })
+            .eq('user_id', userId).order('created_at', { ascending: false })
+            .order('id', { ascending: false }).range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        rows.push(...(data || []));
+        offset += data?.length || 0;
+        if (!data?.length || (count != null ? offset >= count : data.length < pageSize)) return rows;
+    }
+};
+
 export const getScanHistory = (userId = null) => {
     if (isCloudUser(userId)) {
-        return supabase
-            .from('scan_history')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('getScanHistory error:', error);
-                    return [];
-                }
-                return Promise.all((data || []).map(hydrateScanHistoryRow));
-            });
+        return fetchAllUserRows('scan_history', userId).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
     }
     return safeRead(STORAGE_KEY, []);
 };
@@ -597,24 +530,12 @@ export const saveLogEntry = async (logEntry, userId = null) => {
     const logs = getLogbook();
     const newLog = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...logEntry };
     logs.unshift(newLog);
-    safeWrite(LOGBOOK_KEY, logs.slice(0, MAX_LOGS));
-    return newLog;
+    return safeWrite(LOGBOOK_KEY, logs).ok ? newLog : null;
 };
 
 export const getLogbook = (userId = null) => {
     if (isCloudUser(userId)) {
-        return supabase
-            .from('mygap_logs')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('getLogbook error:', error);
-                    return [];
-                }
-                return (data || []).map(fromLogbookRow);
-            });
+        return fetchAllUserRows('mygap_logs', userId).then((rows) => rows.map(fromLogbookRow));
     }
     return safeRead(LOGBOOK_KEY, []);
 };
@@ -699,25 +620,13 @@ export const saveDailyNote = async (entry, userId = null) => {
 
     const existing = safeRead(NOTES_KEY, []);
     existing.unshift(newNote);
-    const writeResult = safeWrite(NOTES_KEY, existing.slice(0, MAX_NOTES));
+    const writeResult = safeWrite(NOTES_KEY, existing);
     return writeResult.ok ? newNote : null;
 };
 
 export const getDailyNotes = (userId = null) => {
     if (isCloudUser(userId)) {
-        return supabase
-            .from('daily_notes')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(20)
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('getDailyNotes error:', error);
-                    return [];
-                }
-                return Promise.all((data || []).map(hydrateDailyNoteRow));
-            });
+        return fetchAllUserRows('daily_notes', userId).then((rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
     }
     return safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);
 };
@@ -747,24 +656,13 @@ export const savePlot = async (plot, userId = null) => {
 
     const existing = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
     existing.unshift(newPlot);
-    const writeResult = safeWrite(PLOTS_KEY, existing.slice(0, MAX_PLOTS));
+    const writeResult = safeWrite(PLOTS_KEY, existing);
     return writeResult.ok ? newPlot : null;
 };
 
 export const getPlots = (userId = null) => {
     if (isCloudUser(userId)) {
-        return supabase
-            .from('plots')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('getPlots error:', error);
-                    return [];
-                }
-                return (data || []).map(normalizeStoredPlot);
-            });
+        return fetchAllUserRows('plots', userId).then((rows) => rows.map(normalizeStoredPlot));
     }
     return safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
 };
@@ -817,17 +715,17 @@ export const seedDemoData = (userId, data) => {
     if (userId !== 'demo-user-123') return;
     const { scans, notes, plots, logbook } = data;
 
-    const seedKey = (key, items, maxItems, normalizeFn = null) => {
+    const seedKey = (key, items, normalizeFn = null) => {
         if (!items?.length) return;
         const existing = safeRead(key, []);
         if (existing.length === 0) {
             const normalized = normalizeFn ? items.map(normalizeFn) : items;
-            safeWrite(key, normalized.slice(0, maxItems));
+            safeWrite(key, normalized);
         }
     };
 
-    seedKey(STORAGE_KEY, scans, MAX_SCANS);
-    seedKey(NOTES_KEY, notes, MAX_NOTES, normalizeLegacyDailyNote);
-    seedKey(PLOTS_KEY, plots, MAX_PLOTS, normalizeStoredPlot);
-    seedKey(LOGBOOK_KEY, logbook, MAX_LOGS);
+    seedKey(STORAGE_KEY, scans);
+    seedKey(NOTES_KEY, notes, normalizeLegacyDailyNote);
+    seedKey(PLOTS_KEY, plots, normalizeStoredPlot);
+    seedKey(LOGBOOK_KEY, logbook);
 };

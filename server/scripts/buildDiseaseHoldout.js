@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATASET_DIR = path.join(__dirname, '../dataset');
+const DATASET_DIR = process.env.DIAGNOSIS_DATA_DIR || path.join(__dirname, '../dataset');
 const HOLDOUT_DIR = path.join(DATASET_DIR, 'holdout');
 const VERIFIED_FILE = path.join(HOLDOUT_DIR, 'holdout_verified.json');
 const REVIEW_FILE = path.join(HOLDOUT_DIR, 'holdout_review_candidates.json');

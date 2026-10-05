@@ -23,13 +23,14 @@ const MyGapPage = () => {
     const { getLocation } = useLocation();
 
     const {
+        dataLoading, dataError, reloadData,
         logs, setLogbook: setLogs,
         checklistState: checklist, setChecklistState: setChecklist,
         derivedChecklist,
         autoCheckedItems,
         checklistPct,
         allEvents
-    } = useFarmStats({ userId: user?.id, getLocation, notify });
+    } = useFarmStats({ userId: user?.id, getLocation, notify, t });
 
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
     const [isAddingLog, setIsAddingLog] = useState(false);
@@ -42,8 +43,9 @@ const MyGapPage = () => {
 
     const handleCheckToggle = async (id) => {
         const newState = { ...checklist, [id]: !checklist[id] };
-        setChecklist(newState);
-        await saveChecklistState(newState, user?.id ?? null);
+        const saved = await saveChecklistState(newState, user?.id ?? null);
+        if (saved) setChecklist(newState);
+        else notify({ type: 'error', title: t('common.error'), message: t('common.error') });
     };
 
     const handleAddLog = async (e) => {
@@ -53,6 +55,8 @@ const MyGapPage = () => {
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
             setNewLog({ type: 'pesticide', notes: '' });
+        } else {
+            notify({ type: 'error', title: t('common.error'), message: t('common.error') });
         }
     };
 
@@ -319,6 +323,11 @@ const MyGapPage = () => {
         doc.save('myGAP_Compliance_Report.pdf');
     };
 
+    if (dataLoading) return <div role="status">{t('common.loading')}</div>;
+    if (dataError) return <div role="alert">
+        <p>{t('profile.dataLoadFailed')}</p>
+        <button type="button" onClick={reloadData}>{t('common.retry')}</button>
+    </div>;
     return (
         <div className="mygap-page-container">
             <div className="page-header">

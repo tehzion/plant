@@ -1,6 +1,7 @@
 // Farm Intelligence AI - Backend API Integration
 
 import { fetchJsonWithTimeout } from './networkRequest.js';
+import { prepareAiFarmContext } from './aiFarmContext.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -23,7 +24,11 @@ export const generateInsights = async (logs, alerts, harvestData, plots, checkli
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ logs, alerts, harvestData, plots, checklistPct, language })
+        body: JSON.stringify({
+          logs: prepareAiFarmContext(logs, 12), alerts: prepareAiFarmContext(alerts, 6),
+          harvestData: prepareAiFarmContext(harvestData, 8), plots: prepareAiFarmContext(plots, 8),
+          checklistPct, language,
+        })
       },
       {
         timeoutMs: 20000,
@@ -117,7 +122,10 @@ export const predictFarmRisk = async (plots, logs, alerts, location, language = 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ plots, logs, alerts, location, language })
+        body: JSON.stringify({
+          plots: prepareAiFarmContext(plots, 8), logs: prepareAiFarmContext(logs, 12),
+          alerts: prepareAiFarmContext(alerts, 6), location, language,
+        })
       },
       {
         timeoutMs: 18000,
@@ -157,8 +165,8 @@ export const askFarmQuestion = async (
         body: JSON.stringify({
           question,
           language,
-          recentNotes,
-          recentAlerts,
+          recentNotes: prepareAiFarmContext(recentNotes, 5),
+          recentAlerts: prepareAiFarmContext(recentAlerts, 3),
         }),
       },
       {

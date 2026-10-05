@@ -11,10 +11,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+server/dataset/
 *.local
 
 # Environment variables
 .env
+.env.production
 .env.local
 .env.*.local
 

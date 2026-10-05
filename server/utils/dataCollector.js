@@ -1,4 +1,7 @@
 import fs from 'fs';
+import 'dotenv/config';
+import crypto from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -6,13 +9,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define dataset directory: server/dataset
-const DATASET_DIR = path.join(__dirname, '../dataset');
+const DATASET_DIR = process.env.DIAGNOSIS_DATA_DIR || path.join(__dirname, '../dataset');
 const IMAGES_DIR = path.join(DATASET_DIR, 'images');
 // Log File Rotates Daily (Calculated inside function)
 
-// Ensure directories exist
-if (!fs.existsSync(DATASET_DIR)) fs.mkdirSync(DATASET_DIR, { recursive: true });
-if (!fs.existsSync(IMAGES_DIR)) fs.mkdirSync(IMAGES_DIR, { recursive: true });
+let auditClient;
+const useCloudAudit = () => process.env.DIAGNOSIS_DATA_BACKEND === 'supabase'
+    || (process.env.NODE_ENV === 'production' && process.env.DIAGNOSIS_DATA_BACKEND !== 'local');
+
+export const getAuditClient = () => {
+    if (!auditClient) {
+        const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+        if (!url || !key) throw new Error('Durable diagnosis storage requires server-side Supabase configuration');
+        auditClient = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    }
+    return auditClient;
+};
+
+const ensureLocalDataset = async () => {
+    if (process.env.NODE_ENV === 'production' && !process.env.DIAGNOSIS_DATA_DIR) {
+        throw new Error('Production local diagnosis storage requires DIAGNOSIS_DATA_DIR on a persistent volume');
+    }
+    await fs.promises.mkdir(IMAGES_DIR, { recursive: true });
+};
+
+const uploadAuditImage = async (value, scanId, suffix) => {
+    if (!value) return null;
+    const mime = value.match(/^data:(image\/(?:jpeg|png|webp));base64,/)?.[1] || 'image/jpeg';
+    const extension = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+    const objectPath = `training/${scanId}_${suffix}.${extension}`;
+    const { error } = await getAuditClient().storage.from('scan-images').upload(
+        objectPath, Buffer.from(value.replace(/^data:image\/\w+;base64,/, ''), 'base64'),
+        { upsert: true, contentType: mime },
+    );
+    if (error) throw error;
+    return objectPath;
+};
 
 /**
  * Save analysis data for model training
@@ -32,7 +65,22 @@ export const logTrainingData = async (data) => {
 
         const timestamp = now.toISOString();
         const { id, treeImage, leafImage, category, result, metadata = {} } = data;
-        const scanId = id || `scan_${Date.now()}`;
+        const scanId = id || crypto.randomUUID();
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) throw new Error('Invalid scan ID');
+
+        if (useCloudAudit()) {
+            const [tree, leaf] = await Promise.all([
+                uploadAuditImage(treeImage, scanId, 'tree'),
+                uploadAuditImage(leafImage, scanId, 'leaf'),
+            ]);
+            const { error } = await getAuditClient().from('diagnosis_training_logs').upsert({
+                id: scanId, created_at: timestamp, category,
+                images: { tree, leaf }, raw_result: result, metadata,
+            }, { onConflict: 'id' });
+            if (error) throw error;
+            return true;
+        }
+        await ensureLocalDataset();
 
         // 1. Save Images to Disk (Convert Base64 to File)
         let treeImagePath = null;
@@ -113,6 +161,14 @@ export const logTrainingData = async (data) => {
 export const logFeedback = async (feedbackData) => {
     try {
         const now = new Date();
+        if (useCloudAudit()) {
+            const { error } = await getAuditClient().from('diagnosis_feedback').insert({
+                scan_id: feedbackData.scanId, feedback: feedbackData, created_at: now.toISOString(),
+            });
+            if (error) throw error;
+            return true;
+        }
+        await ensureLocalDataset();
         const dateStr = now.toISOString().split('T')[0];
         const FEEDBACK_FILE = path.join(DATASET_DIR, `feedback_log_${dateStr}.jsonl`);
 

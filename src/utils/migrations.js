@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { uploadPrivateImage } from './privateImageStorage.js';
 import {
     getScanHistory,
     getLogbook,
@@ -25,12 +26,31 @@ const LOGBOOK_KEY     = 'sea_plant_mygap_logbook';
 const CHECKLIST_KEY   = 'sea_plant_mygap_checklist';
 const DAILY_NOTES_KEY = 'sea_plant_daily_notes';
 const PLOTS_KEY       = 'sea_plant_plots';
+const inFlight = new Map();
 
-export const migrateLocalStorageToSupabase = async (userId) => {
+const migrateScanImages = async (scan, userId) => {
+    const migrateImage = async (value, suffix, existingPath, existingUrl) => {
+        if (existingPath) return { path: existingPath, signedUrl: existingUrl || '' };
+        if (!value) return { path: '', signedUrl: existingUrl || '' };
+        if (/^https?:\/\//.test(value)) return { path: '', signedUrl: value };
+        const uploaded = await uploadPrivateImage({ base64: value, userId, path: `${userId}/${scan.id}_${suffix}.jpg` });
+        if (!uploaded.path) throw new Error('Scan photo upload failed; local originals have been retained');
+        return uploaded;
+    };
+    const [main, leaf] = await Promise.all([
+        migrateImage(scan.image, 'main', scan.image_path, scan.image_url),
+        migrateImage(scan.leafImage, 'leaf', scan.leaf_image_path, scan.leaf_image_url),
+    ]);
+    return toScanHistoryRow(scan, userId, scan.id, main.signedUrl, leaf.signedUrl, main.path, leaf.path);
+};
+
+const migrateLocalData = async (userId) => {
     if (!userId || !supabase) return;
 
     const migrationFlag = `plant_migrated_${userId}`;
     if (localStorage.getItem(migrationFlag)) return; // already done
+    const snapshots = new Map([STORAGE_KEY, LOGBOOK_KEY, CHECKLIST_KEY, DAILY_NOTES_KEY, PLOTS_KEY]
+        .map((key) => [key, localStorage.getItem(key)]));
 
     console.log('🌱 Running one-time localStorage → Supabase migration...');
 
@@ -46,7 +66,7 @@ export const migrateLocalStorageToSupabase = async (userId) => {
         // ── 1. Scan history ───────────────────────────────────────────────────
         const localScans = getScanHistory(); // synchronous, no userId
         if (localScans.length > 0) {
-            const rows = localScans.map(scan => toScanHistoryRow(scan, userId, scan.id, null, null));
+            const rows = await Promise.all(localScans.map(scan => migrateScanImages(scan, userId)));
 
             // Use upsert so duplicates are silently ignored
             const { error: scanErr } = await supabase
@@ -116,11 +136,10 @@ export const migrateLocalStorageToSupabase = async (userId) => {
         }
 
         // ── 7. Clear localStorage keys so data is not duplicated ──────────────
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(LOGBOOK_KEY);
-        localStorage.removeItem(CHECKLIST_KEY);
-        localStorage.removeItem(DAILY_NOTES_KEY);
-        localStorage.removeItem(PLOTS_KEY);
+        // Do not remove records created while cloud uploads were in progress.
+        const changed = [...snapshots].some(([key, value]) => localStorage.getItem(key) !== value);
+        if (changed) return;
+        for (const [key] of snapshots) localStorage.removeItem(key);
 
         // Mark as done
         localStorage.setItem(migrationFlag, '1');
@@ -129,4 +148,11 @@ export const migrateLocalStorageToSupabase = async (userId) => {
         // Non-fatal — guest data is still intact if migration fails partway
         console.error('Migration error (non-fatal):', err);
     }
+};
+
+export const migrateLocalStorageToSupabase = (userId) => {
+    if (inFlight.has(userId)) return inFlight.get(userId);
+    const task = migrateLocalData(userId).finally(() => inFlight.delete(userId));
+    inFlight.set(userId, task);
+    return task;
 };

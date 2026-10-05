@@ -132,6 +132,8 @@ upgrade the Render service for production-grade no-sleep reliability.
 
 ## Notes
 
+- See [security and data fixes](docs/security-and-data-fixes.md) for the new order access secret, durable audit schema, retention job, and guest order migration requirements.
+
 - Do not put OpenAI keys in `VITE_*` frontend variables.
 - Revoke any token pasted into chat, terminals, or logs. Create fresh fine-grained GitHub tokens only when needed, with a short expiration and minimum repo permissions.
 - The app no longer uses simulated diagnosis fallback when the backend fails.

@@ -6,6 +6,9 @@ import helmet from 'helmet';
 import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
+import { buildAnalysisCacheKey } from './utils/analysisCache.js';
+import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
+import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
@@ -22,6 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || false);
 const PORT = process.env.PORT || 3002;
 
 const withStageTimeout = async (promise, timeoutMs, fallbackValue = null) => {
@@ -39,7 +43,10 @@ const withStageTimeout = async (promise, timeoutMs, fallbackValue = null) => {
 };
 
 // Initialize Cache (Default TTL: 7 days for Questions, 24h for images)
-const aiCache = new NodeCache({ stdTTL: 86400 });
+const aiCache = new NodeCache({ stdTTL: 86400, maxKeys: 2000 });
+const cacheResult = (key, value, ttl) => {
+    try { aiCache.set(key, value, ttl); } catch (error) { console.warn('AI cache write skipped:', error.message); }
+};
 
 // Security Headers & Middlewares
 app.use(helmet());
@@ -71,7 +78,6 @@ const allowedOriginPatterns = [
     /^https:\/\/tehzion-plant(?:-[a-z0-9-]+)?\.vercel\.app$/i,
     /^https:\/\/tehzion-plant-git-[a-z0-9-]+-[a-z0-9-]+\.vercel\.app$/i,
     /^https:\/\/tehzion-plant(?:-[a-z0-9-]+)*-tehzions-projects\.vercel\.app$/i,
-    /^https:\/\/[a-z0-9-]+\.onrender\.com$/i,
 ];
 
 app.use(cors({
@@ -88,8 +94,13 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Body parser (50mb for images)
-app.use(express.json({ limit: '50mb' }));
+// Reject excessive traffic before buffering image payloads.
+app.use('/api/', rateLimit({
+    windowMs: 60 * 1000, max: 60,
+    standardHeaders: true, legacyHeaders: false,
+    skip: (req) => req.path === '/health',
+}));
+app.use(express.json({ limit: '17mb' }));
 
 // Debug logging
 app.use((req, res, next) => {
@@ -126,6 +137,37 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/', limiter);
+app.use('/api/', validateApiRequest);
+
+const aiRoutes = ['/api/analyze', '/api/ask', '/api/results/localize', '/api/products/search', '/api/farm'];
+app.use(aiRoutes, rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50,
+    standardHeaders: true, legacyHeaders: false,
+    skip: (req) => req.method !== 'POST',
+    message: { error: 'Daily AI usage limit reached. Please try again tomorrow.' },
+}));
+app.use(aiRoutes, rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000,
+    keyGenerator: () => 'server',
+    standardHeaders: false, legacyHeaders: false,
+    skip: (req) => req.method !== 'POST',
+    message: { error: 'AI service daily capacity reached. Please try again tomorrow.' },
+}));
+let activeAiRequests = 0;
+app.use(aiRoutes, (req, res, next) => {
+    if (req.method !== 'POST') return next();
+    if (activeAiRequests >= (Number(process.env.AI_MAX_CONCURRENT_REQUESTS) || 4)) {
+        return res.status(503).json({ error: 'AI service is busy. Please try again shortly.' });
+    }
+    activeAiRequests += 1;
+    let released = false;
+    const release = () => { if (!released) { released = true; activeAiRequests -= 1; } };
+    res.once('finish', release);
+    res.once('close', release);
+    next();
+});
 
 // General AI Question Endpoint (Cached)
 app.post('/api/ask', async (req, res, next) => {
@@ -146,7 +188,7 @@ app.post('/api/ask', async (req, res, next) => {
         }
 
         // 1. Normalize Cache Key
-        const normalizedQuestion = question.toLowerCase().trim().replace(/[^\w\s]/gi, '');
+        const normalizedQuestion = crypto.createHash('sha256').update(question.normalize('NFC').trim()).digest('hex');
         const contextHash = crypto
             .createHash('md5')
             .update(JSON.stringify({
@@ -171,7 +213,7 @@ app.post('/api/ask', async (req, res, next) => {
 
         // 4. Save to Cache (7 Days = 604800 seconds)
         const result = { answer, timestamp: Date.now() };
-        aiCache.set(cacheKey, result, 604800);
+        cacheResult(cacheKey, result, 604800);
 
         res.json({ ...result, cached: false });
 
@@ -246,14 +288,17 @@ app.post('/api/analyze', async (req, res, next) => {
         console.log(`📸 New Analysis Request - Category: ${category}, Location: ${location || 'Not provided'}`);
 
         // 1. Generate Image Hash for Caching
-        const imageHash = crypto.createHash('md5').update(mainImage).digest('hex');
-        const cacheKey = `analyze_${imageHash}_${language}`;
+        const cacheKey = buildAnalysisCacheKey(req.body);
+        const scanId = req.body.scanId || crypto.randomUUID();
 
         // 2. Check Cache
         const cachedResult = aiCache.get(cacheKey);
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
-            return res.json({ ...cachedResult, cached: true });
+            logTrainingData({ id: scanId, treeImage: mainImage, leafImage, category,
+                result: cachedResult, metadata: { language, location, imageQuality, cached: true } })
+                .catch(err => console.error('Data logging failed:', err.message));
+            return res.json({ ...cachedResult, id: scanId, cached: true });
         }
         console.log('🧠 Image Analysis Cache MISS - Processing...');
 
@@ -315,12 +360,12 @@ app.post('/api/analyze', async (req, res, next) => {
         };
 
         // 6. Cache Result (24 Hours)
-        aiCache.set(cacheKey, finalResult, 86400);
+        cacheResult(cacheKey, finalResult, 86400);
 
         // 7. Log Data for Training (Fire & Forget)
         // Fix: Pass single object as expected by dataCollector.js
         logTrainingData({
-            id: Date.now().toString(),
+            id: scanId,
             treeImage: mainImage,
             leafImage: leafImage,
             category,
@@ -337,7 +382,7 @@ app.post('/api/analyze', async (req, res, next) => {
             }
         }).catch(err => console.error('Data logging failed:', err));
 
-        res.json(finalResult);
+        res.json({ ...finalResult, id: scanId });
 
         // ... (previous code)
 
@@ -497,19 +542,31 @@ app.post('/api/products/search', async (req, res, next) => {
 // ----------------------------------------------------------------------------------
 
 // Create guest order
+app.post('/api/orders/session', (req, res, next) => {
+    try {
+        const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+        const existing = token ? verifyOrderSession(token) : null;
+        res.json(createOrderSession(existing?.guestId));
+    } catch (error) { next(error); }
+});
+
+app.use('/api/orders', requireOrderSession);
+
 app.post('/api/orders', async (req, res, next) => {
     try {
-        const { items, billing, shipping, guestId } = req.body;
+        const { items, billing, shipping } = req.body;
+        const { guestId } = req.orderSession;
 
         if (!items || !items.length || !guestId) {
             return res.status(400).json({ error: 'Items and guestId are required' });
         }
 
         const order = await createOrder({ items, billing, shipping, guestId });
-        res.status(201).json(order);
+        if (!order) return res.status(503).json({ error: 'Order service unavailable' });
+        res.status(201).json(summarizeOrder(order));
     } catch (error) {
         console.error('❌ Order creation endpoint failed:', error.message);
-        res.status(500).json({ error: 'Failed to create order', message: error.message });
+        res.status(500).json({ error: 'Failed to create order' });
     }
 });
 
@@ -517,16 +574,20 @@ app.post('/api/orders', async (req, res, next) => {
 app.get('/api/orders/user/:appId', async (req, res, next) => {
     try {
         const { appId } = req.params;
+        if (appId !== req.orderSession.guestId) return res.status(403).json({ error: 'Order access denied' });
         const { ids } = req.query; // Optional comma-separated IDs from frontend
 
         if (ids) {
-            const idArray = ids.split(',').filter(id => id.trim());
+            if (typeof ids !== 'string' || !/^\d+(,\d+)*$/.test(ids) || ids.split(',').length > 50) {
+                return res.status(400).json({ error: 'Provide at most 50 numeric order IDs' });
+            }
+            const idArray = ids.split(',');
             const orders = await getOrdersByIds(idArray);
-            return res.json(orders);
+            return res.json(orders.filter(order => ownsOrder(order, req.orderSession.guestId)).map(summarizeOrder));
         }
 
         const orders = await getOrdersByAppId(appId);
-        res.json(orders);
+        res.json(orders.filter(order => ownsOrder(order, req.orderSession.guestId)).map(summarizeOrder));
     } catch (error) {
         console.error('❌ Orders fetch endpoint failed:', error.message);
         res.status(500).json({ error: 'Failed to fetch orders' });
@@ -537,9 +598,10 @@ app.get('/api/orders/user/:appId', async (req, res, next) => {
 app.get('/api/orders/:orderId', async (req, res, next) => {
     try {
         const { orderId } = req.params;
+        if (!/^\d+$/.test(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
         const order = await getOrderStatus(orderId);
-        if (!order) return res.status(404).json({ error: 'Order not found' });
-        res.json(order);
+        if (!order || !ownsOrder(order, req.orderSession.guestId)) return res.status(404).json({ error: 'Order not found' });
+        res.json(summarizeOrder(order));
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch order details' });
     }
@@ -627,8 +689,8 @@ app.use((err, req, res, next) => {
     console.error(`🔥 [${req.method} ${req.url}] Error:`, isProduction ? err.message : err.stack);
 
     res.status(err.status || 500).json({
-        error: isProduction ? 'Internal Server Error' : (err.name || 'Internal Server Error'),
-        message: isProduction ? 'An unexpected error occurred. Please try again later.' : err.message,
+        error: isProduction && (!err.status || err.status >= 500) ? 'Internal Server Error' : (err.name || 'Request Error'),
+        message: isProduction && (!err.status || err.status >= 500) ? 'An unexpected error occurred. Please try again later.' : err.message,
         ...(isProduction ? {} : { stack: err.stack })
     });
 });

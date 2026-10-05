@@ -20,6 +20,19 @@ describe('localStorage utilities', () => {
         vi.restoreAllMocks();
     });
 
+    it('seeds demo records without overwriting existing evidence', () => {
+        localStorageUtils.seedDemoData('demo-user-123', {
+            scans: [{ id: 'demo-scan' }], notes: [{ id: 'demo-note' }],
+            plots: [{ id: 'demo-plot', cropType: 'Durian' }], logbook: [{ id: 'demo-log' }],
+        });
+        expect(localStorageUtils.getScanHistory()[0].id).toBe('demo-scan');
+        expect(localStorageUtils.getDailyNotes()[0].id).toBe('demo-note');
+        expect(localStorageUtils.getPlots()[0].cropType).toBe('Durian');
+        expect(localStorageUtils.getLogbook()[0].id).toBe('demo-log');
+        localStorageUtils.seedDemoData('demo-user-123', { scans: [{ id: 'replacement' }] });
+        expect(localStorageUtils.getScanHistory()[0].id).toBe('demo-scan');
+    });
+
     it('fills missing legacy daily-note fields without overwriting populated values', () => {
         const normalized = localStorageUtils.normalizeLegacyDailyNote({
             id: 'note-1',
@@ -126,7 +139,7 @@ describe('localStorage utilities', () => {
         });
     });
 
-    it('cleans up the oldest eligible collections in priority order when quota is exceeded', () => {
+    it('preserves existing evidence and rejects the write when quota is exceeded', () => {
         const store = new Map();
         const scanItems = makeItems(25, 'scan');
         const logItems = makeItems(25, 'log');
@@ -173,8 +186,30 @@ describe('localStorage utilities', () => {
         const cleanupNotice = localStorageUtils.consumeStorageCleanupNotice();
         const trimmedScans = JSON.parse(store.get(STORAGE_KEY));
 
-        expect(result.ok).toBe(true);
-        expect(cleanupNotice.cleanedCollections[0].key).toBe(STORAGE_KEY);
-        expect(trimmedScans.length).toBeLessThan(25);
+        expect(result.ok).toBe(false);
+        expect(cleanupNotice).toBeNull();
+        expect(trimmedScans).toEqual(scanItems);
+        expect(JSON.parse(store.get(LOGBOOK_KEY))).toEqual(logItems);
+        expect(JSON.parse(store.get(NOTES_KEY))).toEqual(currentNotes);
+    });
+
+    it('does not claim a scan was saved when persistence fails', async () => {
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new DOMException('Quota exceeded', 'QuotaExceededError');
+        });
+        await expect(localStorageUtils.saveScan({ disease: 'Leaf spot' })).rejects.toMatchObject({ code: 'STORAGE_SAVE_FAILED' });
+    });
+
+    it('preserves the diagnosis ID through local saving', async () => {
+        const scan = await localStorageUtils.saveScan({ id: 'diagnosis-123', disease: 'Leaf spot' });
+        expect(scan.id).toBe('diagnosis-123');
+        expect(localStorageUtils.getScanById('diagnosis-123').disease).toBe('Leaf spot');
+    });
+
+    it('keeps older scans instead of silently dropping them at the former cap', async () => {
+        const { STORAGE_KEY } = localStorageUtils.STORAGE_COLLECTION_KEYS;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(makeItems(50, 'scan')));
+        await localStorageUtils.saveScan({ id: 'latest-scan' });
+        expect(localStorageUtils.getScanHistory()).toHaveLength(51);
     });
 });

@@ -3,13 +3,19 @@ services:
     name: kanb-plant
     runtime: node
     rootDir: .
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ORDER_ACCESS_SECRET
+        generateValue: true
+      - key: DIAGNOSIS_DATA_BACKEND
+        value: supabase
+      - key: TRUST_PROXY_HOPS
+        value: '1'
       - key: OPENAI_API_KEY
         sync: false
       - key: PLANTNET_API_KEY

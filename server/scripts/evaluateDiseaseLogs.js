@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATASET_DIR = path.join(__dirname, '../dataset');
+const DATASET_DIR = process.env.DIAGNOSIS_DATA_DIR || path.join(__dirname, '../dataset');
 const HOLDOUT_DIR = path.join(DATASET_DIR, 'holdout');
 const VERIFIED_HOLDOUT_FILE = path.join(HOLDOUT_DIR, 'holdout_verified.json');
 const MIN_VERIFIED_HOLDOUT = Number(process.env.MIN_VERIFIED_HOLDOUT || 20);

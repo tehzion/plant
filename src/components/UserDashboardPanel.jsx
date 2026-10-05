@@ -85,6 +85,7 @@ const UserDashboardPanel = () => {
 
     // ── Custom hooks: all farm data + AI logic ────────────────────────────────
     const {
+        dataLoading, dataError, reloadData,
         stats, scanHistory, checklistPct,
         hasLoggedToday, streak, complianceNudges,
         alerts, notes, setNotes,
@@ -379,6 +380,11 @@ const UserDashboardPanel = () => {
     }, [notify, t, user?.id, setPlots]);
 
     // ─────────────────────────────────────────────────────────────────────────
+    if (dataLoading) return <div role="status">{t('common.loading')}</div>;
+    if (dataError) return <div role="alert">
+        <p>{label('profile.dataLoadFailed', 'Farm records could not be loaded. Please retry before viewing reports.')}</p>
+        <button type="button" onClick={reloadData}>{t('common.retry')}</button>
+    </div>;
     return (
         <div className="udp-container">
 

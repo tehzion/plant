@@ -295,6 +295,7 @@ export const analyzePlantDisease = async (
   imageQuality = null
 ) => {
   const payload = {
+    scanId: crypto.randomUUID(),
     treeImage: treeImageBase64,
     category,
     leafImage: leafImageBase64,

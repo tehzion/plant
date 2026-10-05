@@ -61,14 +61,18 @@ const History = () => {
     const [pendingAction, setPendingAction] = useState(null);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyLoadedOnce, setHistoryLoadedOnce] = useState(false);
+    const [historyError, setHistoryError] = useState(null);
 
     const refreshHistory = async ({ showSkeleton = false } = {}) => {
         if (showSkeleton) {
             setHistoryLoading(true);
         }
         try {
+            setHistoryError(null);
             const grouped = await getGroupedScans(user?.id ?? null);
             setGroupedScans(grouped);
+        } catch (error) {
+            setHistoryError(error);
         } finally {
             setHistoryLoading(false);
             setHistoryLoadedOnce(true);
@@ -145,6 +149,11 @@ const History = () => {
                 {/* Empty State */}
                 {showSkeleton ? (
                     <HistorySkeleton />
+                ) : historyError ? (
+                    <div role="alert" className="empty-state app-surface">
+                        <p>{t('profile.dataLoadFailed')}</p>
+                        <button type="button" onClick={() => refreshHistory({ showSkeleton: true })}>{t('common.retry')}</button>
+                    </div>
                 ) : !hasScans ? (
                     <div className="empty-state app-surface app-empty-state">
                         <div className="empty-icon-wrapper">

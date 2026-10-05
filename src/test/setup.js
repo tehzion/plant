@@ -112,7 +112,7 @@ vi.mock('lucide-react', () => {
     return module;
 });
 
-if (!window.matchMedia) {
+if (typeof window !== 'undefined' && !window.matchMedia) {
     window.matchMedia = (query) => ({
         matches: false,
         media: query,
@@ -125,7 +125,7 @@ if (!window.matchMedia) {
     });
 }
 
-if (!window.ResizeObserver) {
+if (typeof window !== 'undefined' && !window.ResizeObserver) {
     window.ResizeObserver = class ResizeObserver {
         observe() {}
         unobserve() {}
@@ -133,6 +133,6 @@ if (!window.ResizeObserver) {
     };
 }
 
-if (!window.scrollTo) {
+if (typeof window !== 'undefined' && !window.scrollTo) {
     window.scrollTo = () => {};
 }

@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Package, Clock, CheckCircle2, ChevronRight, ShoppingBag, Loader2 } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { getLocalOrders } from '../utils/localStorage.js';
+import { getOrderSession } from '../utils/orderSession.js';
 
 const OrderHistory = ({ guestId }) => {
     const { t, label } = useLanguage();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [needsRecovery, setNeedsRecovery] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
         const fetchOrders = async () => {
             if (!guestId) {
                 setLoading(false);
@@ -17,24 +20,32 @@ const OrderHistory = ({ guestId }) => {
             }
 
             try {
+                setLoading(true);
+                setError(null);
+                const session = await getOrderSession();
+                const apiUrl = import.meta.env.VITE_API_URL || '';
                 const localIds = getLocalOrders();
                 const fetchUrl = localIds.length > 0 
-                  ? `/api/orders/user/${guestId}?ids=${localIds.join(',')}`
-                  : `/api/orders/user/${guestId}`;
+                  ? `${apiUrl}/api/orders/user/${session.guestId}?ids=${localIds.slice(0, 50).join(',')}`
+                  : `${apiUrl}/api/orders/user/${session.guestId}`;
 
-                const response = await fetch(fetchUrl);
+                const response = await fetch(fetchUrl, { headers: { Authorization: `Bearer ${session.accessToken}` } });
                 if (!response.ok) throw new Error('Failed to fetch orders');
                 const data = await response.json();
-                setOrders(data);
+                if (!cancelled) {
+                    setOrders(data);
+                    setNeedsRecovery(localIds.some((id) => !data.some((order) => String(order.id) === String(id))));
+                }
             } catch (err) {
                 console.error('❌ Order history fetch failed:', err);
-                setError(err.message);
+                if (!cancelled) setError(err.message);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchOrders();
+        return () => { cancelled = true; };
     }, [guestId]);
 
     const getStatusIcon = (status) => {
@@ -53,6 +64,8 @@ const OrderHistory = ({ guestId }) => {
         );
     }
 
+    if (error) return <div role="alert">{label('common.error', 'Error')}: {error}</div>;
+
     if (orders.length === 0) {
         return (
             <div className="text-center p-8 border-2 border-dashed border-gray-100 rounded-3xl">
@@ -63,7 +76,9 @@ const OrderHistory = ({ guestId }) => {
                     {label('profile.noOrdersYet', 'No orders yet')}
                 </h4>
                 <p className="text-gray-500 text-sm">
-                    {label('profile.ordersWillShowHere', 'Your recent purchases will appear here.')}
+                    {needsRecovery
+                        ? label('profile.orderHistoryRecovery', 'Some older orders need store verification. Contact the store with your order number to recover access.')
+                        : label('profile.ordersWillShowHere', 'Your recent purchases will appear here.')}
                 </p>
             </div>
         );
@@ -71,6 +86,7 @@ const OrderHistory = ({ guestId }) => {
 
     return (
         <div className="space-y-3">
+            {needsRecovery && <p role="status">{label('profile.orderHistoryRecovery', 'Some older orders need store verification. Contact the store with your order number to recover access.')}</p>}
             <h4 className="text-sm font-semibold text-gray-900 px-1 mb-2 flex items-center gap-2">
                 <ShoppingBag size={14} />
                 {label('profile.recentOrders', 'Recent Orders')}

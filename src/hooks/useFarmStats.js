@@ -40,7 +40,10 @@ const createScoutAlert = (note) => ({
     },
 });
 
-export const useFarmStats = ({ userId, getLocation, notify, t }) => {
+export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key }) => {
+    const [dataLoading, setDataLoading] = useState(true);
+    const [dataError, setDataError] = useState(null);
+    const [loadVersion, setLoadVersion] = useState(0);
     const [scanHistory,    setScanHistory]    = useState([]);
     const [checklistState, setChecklistState] = useState({});
     const [logbook,        setLogbook]        = useState([]);
@@ -62,6 +65,8 @@ export const useFarmStats = ({ userId, getLocation, notify, t }) => {
     // ── Initial data load ─────────────────────────────────────────────────────
     useEffect(() => {
         let cancelled = false;
+        setDataLoading(true);
+        setDataError(null);
 
         const load = async () => {
             // Seed demo data if this is the test/demo account and localStorage is empty
@@ -91,9 +96,13 @@ export const useFarmStats = ({ userId, getLocation, notify, t }) => {
             setPlots(farmPlots);
         };
 
-        load();
+        load().catch((error) => {
+            if (!cancelled) setDataError(error);
+        }).finally(() => {
+            if (!cancelled) setDataLoading(false);
+        });
         return () => { cancelled = true; };
-    }, [userId]);
+    }, [userId, loadVersion]);
 
     // ── Derived stats ─────────────────────────────────────────────────────────
     const stats = useMemo(() => {
@@ -326,6 +335,9 @@ export const useFarmStats = ({ userId, getLocation, notify, t }) => {
     }, []);
 
     return {
+        dataLoading,
+        dataError,
+        reloadData: () => setLoadVersion((version) => version + 1),
         stats,
         scanHistory,
         checklistPct,
