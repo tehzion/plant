@@ -60,6 +60,8 @@ export const AuthProvider = ({ children }) => {
             try {
                 const { migrateLocalStorageToSupabase } = await import('../utils/migrations');
                 await migrateLocalStorageToSupabase(currentUser.id);
+                const { flushAuthenticatedSyncQueue } = await import('../utils/cloudSync.js');
+                await flushAuthenticatedSyncQueue(currentUser.id);
             } catch (e) {
                 console.warn('Migration skipped:', e.message);
             }

@@ -15,6 +15,7 @@ import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnaly
 import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary } from './services/reportService.js';
+import { syncOperation } from './services/syncService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
@@ -171,6 +172,14 @@ app.get('/api/reports/summary', async (req, res, next) => {
             plotId: req.query.plotId,
         });
         res.json(summary);
+    } catch (error) { next(error); }
+});
+
+app.post('/api/sync', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        const result = await syncOperation(user.id, req.body);
+        res.status(result.conflict ? 409 : 200).json(result);
     } catch (error) { next(error); }
 });
 
