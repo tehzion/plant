@@ -22,15 +22,32 @@ export const AuthProvider = ({ children }) => {
     const [guestId, setGuestId] = useState(null);
 
     useEffect(() => {
-        // Initialize persistent guest identity
-        setGuestId(getGuestId());
         // ── Demo / test account bypass ────────────────────────────────────────
         if (DEMO_AUTH_ENABLED && localStorage.getItem('plant_demo_session') === 'true') {
             setLocalStorageNamespace('demo');
+            setGuestId(null);
             setUser({ id: DEMO_USER_ID, email: DEMO_EMAIL });
             return;
         }
         setLocalStorageNamespace('guest');
+        // Initialize persistent guest identity and begin a verified, reversible
+        // IndexedDB migration. Legacy localStorage is retained until the
+        // adapter verifies every collection.
+        const currentGuestId = getGuestId();
+        setGuestId(currentGuestId);
+        import('../utils/indexedDbStorage.js').then(async ({ migrateLegacyCollection }) => {
+            const owner = `guest:${currentGuestId}`;
+            const collections = [
+                ['scans', 'sea_plant_scan_history'],
+                ['logbook', 'sea_plant_mygap_logbook'],
+                ['checklist', 'sea_plant_mygap_checklist'],
+                ['notes', 'sea_plant_daily_notes'],
+                ['plots', 'sea_plant_plots'],
+            ];
+            for (const [collection, legacyKey] of collections) {
+                try { await migrateLegacyCollection({ owner, collection, legacyKey }); } catch (error) { console.warn('IndexedDB migration deferred:', error.message); }
+            }
+        }).catch(() => {});
 
         // ── Supabase not configured → run in guest/localStorage mode ──────────
         if (!supabase) {

@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
+import { enqueueOperation, isIndexedDbAvailable, putRecord } from './indexedDbStorage.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -22,6 +23,19 @@ export const setLocalStorageNamespace = (namespace = 'guest') => {
 };
 
 export const getLocalStorageNamespace = () => storageNamespace;
+
+const persistIndexedGuestRecord = async (collection, value, revision = 0) => {
+    if (!isIndexedDbAvailable() || storageNamespace === 'demo') return true;
+    const owner = `guest:${getGuestId()}`;
+    try {
+        await putRecord({ owner, collection, id: value.id, value, revision });
+        await enqueueOperation({ owner, collection, recordId: value.id, type: 'create', expectedRevision: revision, payload: value });
+        return true;
+    } catch (error) {
+        console.error('IndexedDB guest write failed:', error);
+        return false;
+    }
+};
 
 
 export const STORAGE_COLLECTION_KEYS = {
@@ -422,6 +436,11 @@ export const saveScan = async (scanData, userId = null) => {
 
     const history = getScanHistory();
     const newScan = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...scanData };
+    if (!await persistIndexedGuestRecord('scans', newScan, Number(newScan.revision || 0))) {
+        const error = new Error('Device storage is full or unavailable. Export or delete old records, then retry saving.');
+        error.code = 'STORAGE_SAVE_FAILED';
+        throw error;
+    }
     history.unshift(newScan);
     const writeResult = safeWrite(STORAGE_KEY, history);
     if (!writeResult.ok) {
@@ -484,6 +503,15 @@ export const deleteScan = async (id, userId = null) => {
         }
         return true;
     }
+    if (isIndexedDbAvailable() && storageNamespace !== 'demo') {
+        const owner = `guest:${getGuestId()}`;
+        try {
+            await enqueueOperation({ owner, collection: 'scans', recordId: id, type: 'delete', payload: null });
+        } catch (error) {
+            console.error('IndexedDB scan delete queue failed:', error);
+            return false;
+        }
+    }
     const filtered = getScanHistory().filter((scan) => scan.id !== id);
     return safeWrite(STORAGE_KEY, filtered).ok;
 };
@@ -543,6 +571,7 @@ export const saveLogEntry = async (logEntry, userId = null) => {
 
     const logs = getLogbook();
     const newLog = { id: crypto.randomUUID(), timestamp: new Date().toISOString(), ...logEntry };
+    if (!await persistIndexedGuestRecord('logbook', newLog)) return null;
     logs.unshift(newLog);
     return safeWrite(LOGBOOK_KEY, logs).ok ? newLog : null;
 };
@@ -567,6 +596,11 @@ export const saveChecklistState = async (state, userId = null) => {
     }
 
     try {
+        if (isIndexedDbAvailable() && storageNamespace !== 'demo') {
+            const owner = `guest:${getGuestId()}`;
+            await putRecord({ owner, collection: 'checklist', id: 'current', value: state });
+            await enqueueOperation({ owner, collection: 'checklist', recordId: 'current', type: 'update', payload: state });
+        }
         localStorage.setItem(namespacedKey(CHECKLIST_KEY), encryptData(JSON.stringify(state)));
         return true;
     } catch {
@@ -633,6 +667,7 @@ export const saveDailyNote = async (entry, userId = null) => {
     }
 
     const existing = safeRead(NOTES_KEY, []);
+    if (!await persistIndexedGuestRecord('notes', newNote)) return null;
     existing.unshift(newNote);
     const writeResult = safeWrite(NOTES_KEY, existing);
     return writeResult.ok ? newNote : null;
@@ -669,6 +704,7 @@ export const savePlot = async (plot, userId = null) => {
     }
 
     const existing = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
+    if (!await persistIndexedGuestRecord('plots', newPlot)) return null;
     existing.unshift(newPlot);
     const writeResult = safeWrite(PLOTS_KEY, existing);
     return writeResult.ok ? newPlot : null;
@@ -720,6 +756,11 @@ export const deletePlot = async (id, userId = null) => {
             return false;
         }
         return true;
+    }
+    if (isIndexedDbAvailable() && storageNamespace !== 'demo') {
+        const owner = `guest:${getGuestId()}`;
+        try { await enqueueOperation({ owner, collection: 'plots', recordId: id, type: 'delete', payload: null }); }
+        catch (error) { console.error('IndexedDB plot delete queue failed:', error); return false; }
     }
     const filtered = safeRead(PLOTS_KEY, []).filter((plot) => plot.id !== id);
     return safeWrite(PLOTS_KEY, filtered).ok;

@@ -12,7 +12,8 @@ import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
-import { getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
+import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
+import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary } from './services/reportService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
@@ -181,6 +182,52 @@ app.use(aiRoutes, rateLimit({
     skip: (req) => req.method !== 'POST',
     message: { error: 'Daily AI usage limit reached. Please try again tomorrow.' },
 }));
+
+app.post('/api/session', (req, res, next) => {
+    try {
+        const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+        const existing = token ? verifyOrderSession(token) : null;
+        res.json(createOrderSession(existing?.guestId));
+    } catch (error) { next(error); }
+});
+
+const resolveAiIdentity = async (req) => {
+    const token = getBearerToken(req);
+    if (token) {
+        const guest = verifyOrderSession(token);
+        if (guest) return `guest:${guest.guestId}`;
+        try {
+            const user = await verifyAuthenticatedUser(req);
+            return `user:${user.id}`;
+        } catch { /* IP remains the fallback for unauthenticated callers. */ }
+    }
+    return `ip:${req.ip || 'unknown'}`;
+};
+
+app.use(aiRoutes, async (req, res, next) => {
+    if (req.method !== 'POST') return next();
+    try {
+        req.aiIdentity = await resolveAiIdentity(req);
+        const quota = await consumeAiQuota({ identity: req.aiIdentity, limit: Number(process.env.AI_IDENTITY_DAILY_LIMIT) || 50 });
+        if (!quota.allowed) {
+            console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId, identity: req.aiIdentity }));
+            return res.status(429).json({ error: 'Daily AI usage limit reached. Please try again tomorrow.', requestId: req.requestId });
+        }
+        next();
+    } catch (error) { next(error); }
+});
+
+const activeAnalyses = new Map();
+app.use('/api/analyze', (req, res, next) => {
+    if (req.method !== 'POST' || !req.body?.scanId) return next();
+    const key = `${req.aiIdentity || `ip:${req.ip || 'unknown'}`}:${req.body.scanId}`;
+    if (activeAnalyses.has(key)) return res.status(202).json({ id: req.body.scanId, status: 'processing' });
+    activeAnalyses.set(key, true);
+    const release = () => activeAnalyses.delete(key);
+    res.once('finish', release);
+    res.once('close', release);
+    next();
+});
 app.use(aiRoutes, rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000,
@@ -375,15 +422,24 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // 5. Analyze Health (configured OpenAI primary model)
 
-        const analysisResult = await analyzeWithGPT4Mini(
-            plantNetResult,
-            mainImage,
-            leafImage,
-            category,
-            language,
-            location,
-            imageQuality,
+        const analysisResult = await withStageTimeout(
+            analyzeWithGPT4Mini(
+                plantNetResult,
+                mainImage,
+                leafImage,
+                category,
+                language,
+                location,
+                imageQuality,
+            ),
+            Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
+            null,
         );
+        if (!analysisResult) {
+            const timeoutError = new Error('Analysis timed out. Please try again with a clearer photo.');
+            timeoutError.status = 504;
+            throw timeoutError;
+        }
 
         const finalResult = {
             ...analysisResult,
@@ -413,6 +469,9 @@ app.post('/api/analyze', async (req, res, next) => {
                 confidenceBreakdown: finalResult.confidenceBreakdown || null,
                 status: finalResult.status || null,
                 differentialDiagnoses: finalResult.differentialDiagnoses || [],
+                requestId: req.requestId,
+                model: finalResult.analysisMetadata?.model || null,
+                policyVersion: finalResult.analysisMetadata?.policyVersion || null,
             }
         }).catch(err => console.error('Data logging failed:', err));
 
