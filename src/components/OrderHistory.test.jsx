@@ -13,7 +13,7 @@ it('uses signed order access and explains references that require verified recov
         id: 12, status: 'processing', date_created: '2026-01-01', total: '10', currency: 'MYR',
     }] });
     vi.stubGlobal('fetch', fetch);
-    render(<OrderHistory guestId="old-browser-id" />);
+    render(<OrderHistory guestId="old-browser-id" user={{ id: 'user-a' }} />);
     await screen.findByText('#12');
     expect(fetch).toHaveBeenCalledWith('/api/orders/user/verified-owner?ids=12,13', {
         headers: { Authorization: 'Bearer signed-token' },

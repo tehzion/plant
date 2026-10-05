@@ -3,13 +3,19 @@ import { Package, Clock, CheckCircle2, ChevronRight, ShoppingBag, Loader2 } from
 import { useLanguage } from '../i18n/i18n.jsx';
 import { getLocalOrders } from '../utils/localStorage.js';
 import { getOrderSession } from '../utils/orderSession.js';
+import { supabase } from '../lib/supabase.js';
 
-const OrderHistory = ({ guestId }) => {
+const OrderHistory = ({ guestId, user = null }) => {
     const { t, label } = useLanguage();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [needsRecovery, setNeedsRecovery] = useState(false);
+    const [showRecoveryForm, setShowRecoveryForm] = useState(false);
+    const [recoveryOrderNumber, setRecoveryOrderNumber] = useState('');
+    const [recoveryExplanation, setRecoveryExplanation] = useState('');
+    const [recoveryMessage, setRecoveryMessage] = useState('');
+    const [recoverySubmitting, setRecoverySubmitting] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -48,6 +54,32 @@ const OrderHistory = ({ guestId }) => {
         return () => { cancelled = true; };
     }, [guestId]);
 
+    const submitRecoveryRequest = async (event) => {
+        event.preventDefault();
+        if (!user || recoverySubmitting) return;
+        setRecoverySubmitting(true);
+        setRecoveryMessage('');
+        try {
+            const { data } = await supabase?.auth?.getSession?.() || { data: {} };
+            const token = data?.session?.access_token;
+            if (!token) throw new Error('Please sign in again before requesting store verification.');
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/orders/recovery-requests`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ orderNumber: recoveryOrderNumber, explanation: recoveryExplanation }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || payload.error || 'Could not send the recovery request.');
+            setRecoveryMessage('Your request was sent to the store team for verification.');
+            setRecoveryOrderNumber('');
+            setRecoveryExplanation('');
+        } catch (error) {
+            setRecoveryMessage(error.message || 'Could not send the recovery request.');
+        } finally {
+            setRecoverySubmitting(false);
+        }
+    };
+
     const getStatusIcon = (status) => {
         switch (status) {
             case 'completed': return <CheckCircle2 size={16} className="text-green-500" />;
@@ -80,6 +112,24 @@ const OrderHistory = ({ guestId }) => {
                         ? label('profile.orderHistoryRecovery', 'Some older orders need store verification. Contact the store with your order number to recover access.')
                         : label('profile.ordersWillShowHere', 'Your recent purchases will appear here.')}
                 </p>
+                {needsRecovery && user && (
+                    <div className="mt-4 text-left">
+                        {!showRecoveryForm ? (
+                            <button type="button" className="udp-btn udp-btn-secondary" onClick={() => setShowRecoveryForm(true)}>
+                                Request store verification
+                            </button>
+                        ) : (
+                            <form onSubmit={submitRecoveryRequest} className="space-y-2" aria-label="Request store verification">
+                                <label className="block text-sm font-medium" htmlFor="recovery-order-number">Order number</label>
+                                <input id="recovery-order-number" inputMode="numeric" pattern="[0-9]+" required value={recoveryOrderNumber} onChange={(event) => setRecoveryOrderNumber(event.target.value)} className="form-input" />
+                                <label className="block text-sm font-medium" htmlFor="recovery-explanation">Short explanation</label>
+                                <textarea id="recovery-explanation" maxLength={500} required value={recoveryExplanation} onChange={(event) => setRecoveryExplanation(event.target.value)} className="form-input" rows={3} />
+                                <button type="submit" className="udp-btn udp-btn-primary" disabled={recoverySubmitting}>{recoverySubmitting ? 'Sending…' : 'Send request'}</button>
+                                {recoveryMessage && <p role="status" className="text-sm">{recoveryMessage}</p>}
+                            </form>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }

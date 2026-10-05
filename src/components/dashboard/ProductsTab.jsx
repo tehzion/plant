@@ -8,7 +8,7 @@ const SHOP_CATALOG_URL = 'https://www.mojosense.app/kanb/products/';
 
 const ProductsTab = ({ label: labelProp }) => {
     const { t, label: i18nLabel } = useLanguage();
-    const { guestId } = useAuth();
+    const { guestId, user } = useAuth();
     const label = (key, fallback) => {
         if (typeof labelProp === 'function') return labelProp(key, fallback);
         if (typeof i18nLabel === 'function') return i18nLabel(key, fallback);
@@ -90,7 +90,7 @@ const ProductsTab = ({ label: labelProp }) => {
             </div>
 
             <div className="udp-order-history-section">
-                <OrderHistory guestId={guestId} />
+                <OrderHistory guestId={guestId} user={user} />
             </div>
         </section>
     );
