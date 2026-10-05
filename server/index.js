@@ -16,6 +16,7 @@ import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './uti
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary } from './services/reportService.js';
 import { syncOperation } from './services/syncService.js';
+import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
@@ -180,6 +181,21 @@ app.post('/api/sync', async (req, res, next) => {
         const user = await verifyAuthenticatedUser(req);
         const result = await syncOperation(user.id, req.body);
         res.status(result.conflict ? 409 : 200).json(result);
+    } catch (error) { next(error); }
+});
+
+app.post('/api/followups', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        const result = await createFollowUpEvent(user.id, req.body);
+        res.status(201).json(result);
+    } catch (error) { next(error); }
+});
+
+app.get('/api/followups/:scanId', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        res.json(await listFollowUpEvents(user.id, req.params.scanId));
     } catch (error) { next(error); }
 });
 
@@ -773,12 +789,18 @@ app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, r
             if (existing?.user_id && existing.user_id !== request.requester_user_id) {
                 return res.status(409).json({ error: 'This order already belongs to another account.' });
             }
-            const { error: refError } = await client.from('order_refs').upsert({
-                id: `recovered-${request.order_id}`,
-                order_id: request.order_id,
-                user_id: request.requester_user_id,
-                guest_id: null,
-            }, { onConflict: 'id' });
+            let refResult;
+            if (existing?.id) {
+                refResult = await client.from('order_refs').update({ user_id: request.requester_user_id, guest_id: null }).eq('id', existing.id);
+            } else {
+                refResult = await client.from('order_refs').insert({
+                    id: `recovered-${request.order_id}`,
+                    order_id: request.order_id,
+                    user_id: request.requester_user_id,
+                    guest_id: null,
+                });
+            }
+            const { error: refError } = refResult;
             if (refError) throw refError;
         }
         const { error } = await client.from('order_recovery_requests').update({

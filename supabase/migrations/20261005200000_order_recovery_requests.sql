@@ -19,3 +19,4 @@ create unique index if not exists order_refs_order_id_unique_idx
 alter table public.order_recovery_requests enable row level security;
 revoke all on public.order_recovery_requests from anon, authenticated;
 revoke insert, update, delete on public.order_refs from authenticated;
+grant select, insert, update, delete on public.order_refs to service_role;

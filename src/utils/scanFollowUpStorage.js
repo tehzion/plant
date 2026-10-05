@@ -36,12 +36,32 @@ export const saveScanFollowUp = async (scanId, changes, userId = null) => {
         followUp: { nextCheckDate: changes.nextCheckDate || '',
             history: [...(source.followUp?.history || []), event] } };
     if (cloud) {
-        const { __revision, ...sourceResult } = source;
-        const { data, error } = await supabase.from('scan_history').update({
-            result_json: { ...sourceResult, ...metadata }, revision: revision + 1,
-        }).eq('id', scanId).eq('user_id', userId).eq('revision', revision).select('id,revision');
-        if (error) throw error;
-        if (!data?.length) throw new Error('The scan changed in another session. Reload and retry.');
+        // Compatibility path for an older embedded client that has no auth
+        // session helper yet. RLS and the revision predicate still protect it.
+        if (!supabase.auth?.getSession) {
+            const { __revision, ...sourceResult } = source;
+            const { data, error } = await supabase.from('scan_history').update({
+                result_json: { ...sourceResult, ...metadata }, revision: revision + 1,
+            }).eq('id', scanId).eq('user_id', userId).eq('revision', revision).select('id,revision');
+            if (error) throw error;
+            if (!data?.length) throw new Error('The scan changed in another session. Reload and retry.');
+            return metadata;
+        }
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) throw new Error('Your session has expired. Sign in again and retry.');
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/followups`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ scanId, eventId: event.id, plotId: changes.plotId || null, nextCheckDate: changes.nextCheckDate || '', outcome: event.outcome, severity: event.severity, note: event.note, photoPath: event.photoPath || null }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const error = new Error(payload.message || payload.error || 'Follow-up could not be saved.');
+            error.status = response.status;
+            throw error;
+        }
+        return { plot_id: changes.plotId || null, revision: payload.revision, followUp: payload.followUp };
     } else {
         const result = writeStorageCollection(STORAGE_COLLECTION_KEYS.STORAGE_KEY,
             localHistory.map(scan => scan.id === scanId ? { ...scan, ...metadata } : scan));
