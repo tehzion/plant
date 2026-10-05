@@ -29,13 +29,16 @@ export const evaluateScanQuality = (entries, minimum = 20) => {
         const decision = assessScanDecision(scan);
         const acceptedNames = [entry.correctDisease, ...(entry.diseaseAliases || [])].map(normalize);
         const hit = acceptedNames.includes(normalize(scan.disease));
-        const alternatives = (scan.differentialDiagnoses || []).slice(0, 3).map(item => normalize(item.name));
+        const candidates = [...new Set([normalize(scan.disease), ...(scan.differentialDiagnoses || [])
+            .map(item => normalize(item.name))].filter(Boolean))].slice(0, 3);
         correct += Number(hit);
-        top3 += Number(hit || alternatives.some(name => acceptedNames.includes(name)));
-        healthyCorrect += Number(decision.healthy === entry.correctHealthy);
+        top3 += Number(candidates.some(name => acceptedNames.includes(name)));
         retakes += Number(decision.requiresRetake);
         reviews += Number(decision.needsReview);
-        if (!decision.needsReview) { confident++; confidentlyWrong += Number(!hit); }
+        if (!decision.needsReview) {
+            confident++; confidentlyWrong += Number(!hit);
+            healthyCorrect += Number(decision.healthy === entry.correctHealthy);
+        }
         const crop = entry.correctCrop;
         byCrop[crop] ||= { cases: 0, correct: 0, confidentlyWrong: 0 };
         byCrop[crop].cases++; byCrop[crop].correct += Number(hit);
@@ -49,7 +52,7 @@ export const evaluateScanQuality = (entries, minimum = 20) => {
     }
     const rate = count => count / cases.length;
     return { status: 'evaluated', verifiedCases: cases.length, top1Accuracy: rate(correct),
-        top3HitRate: rate(top3), healthyAccuracy: rate(healthyCorrect),
+        top3HitRate: rate(top3), healthyAccuracy: confident ? healthyCorrect / confident : null,
         confidentCases: confident, confidentlyWrongCases: confidentlyWrong,
         confidentlyWrongRate: confident ? confidentlyWrong / confident : null,
         retakeRate: rate(retakes), reviewRate: rate(reviews), byCrop, calibration,

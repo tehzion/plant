@@ -15,7 +15,7 @@ const TreatmentRecommendations = ({ result }) => {
   });
 
   if (!result) return null;
-  result = buildScanResultModel(result);
+  result = buildScanResultModel(result, language);
 
   const diagnosisState = result.resultState || result.status || (result.requiresRetake ? 'retake_required' : result.abstainReason ? 'uncertain' : 'likely');
   const showCautiousNotice = result.needsReview;

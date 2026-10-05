@@ -465,6 +465,7 @@ ${t('pdf.generatedBy')}
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
         <ScanDecisionSummary result={result} />
+        {scan.analysisLanguage && scan.analysisLanguage !== language && <p role="status">{scanCopy.sourceLanguageNotice}</p>}
         {/* Quick Actions Bar */}
         <QuickActions
           onScanAgain={handleScanAgain}

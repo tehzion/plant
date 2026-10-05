@@ -1,6 +1,6 @@
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
-import { assessScanDecision, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, isNoIssueDiagnosis, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
 export { SCAN_RESULT_STATES };
 import OpenAI from 'openai';
 import FormData from 'form-data';
@@ -2611,6 +2611,10 @@ export const mergeDiagnosisResult = ({
     if (!filtered.treatmentEligible) filtered.treatments = [];
     if (assessScanDecision(filtered).needsReview) {
         const copy = getScanQualityCopy(language);
+        if (isNoIssueDiagnosis(filtered.disease)) {
+            filtered.disease = copy.inconclusive;
+            filtered.healthStatus = 'unknown';
+        }
         filtered.immediateActions = [filtered.captureAssessment?.requiresRetake ? copy.nextRetake : copy.nextScout];
         filtered.prevention = [];
     }

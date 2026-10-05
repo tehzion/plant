@@ -9,6 +9,11 @@ const strong = { disease: 'Leaf Spot', pathogenType: 'Fungal', diseaseCategory: 
     treatments: ['Use the verified field plan'] };
 
 describe('shared scan result decisions', () => {
+    it('does not display an all-clear title for a no-issues scan that needs a retake', () => {
+        const model = buildScanResultModel({ disease: 'No Issues', healthStatus: 'healthy', requiresRetake: true });
+        expect(model.disease).toBe('No clear diagnosis yet');
+        expect(model.healthy).toBe(false);
+    });
     it('preserves retake assessments in the product request payload', () => {
         const payload = buildProductDiagnosisPayload({ plantType: 'Durian', disease: 'Leaf Spot',
             scanResult: { ...strong, captureAssessment: { detailSufficient: false } } });
@@ -19,6 +24,11 @@ describe('shared scan result decisions', () => {
     it('does not convert absent confidence into zero or null into an assessment', () => {
         expect(confidencePercent(null)).toBeNull(); expect(confidencePercent('')).toBeNull();
         expect(confidencePercent(0)).toBe(0); expect(confidencePercent(.91)).toBe(91);
+    });
+    it('keeps overall and diagnosis scores separate and respects a weak overall score', () => {
+        const model = buildScanResultModel({ ...strong, confidence: 50 });
+        expect(model.confidence).toBe(50); expect(model.diagnosisConfidence).toBe(91);
+        expect(model.treatmentEligible).toBe(false);
     });
     it('rejects an explicit confident state when evidence is weak', () => {
         const model = buildScanResultModel({ ...strong, resultState: 'confident_treatment', needsMoreEvidence: true });

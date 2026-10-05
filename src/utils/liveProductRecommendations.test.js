@@ -43,7 +43,7 @@ describe('live product recommendation payloads', () => {
       diseaseCategory: 'pest',
       nutritionalStatus: 'possible',
     });
-    expect(payload.immediateActions).toContain('Inspect fruit clusters');
+    expect(payload.immediateActions.join(' ')).toContain('Field scouting');
     expect(payload.diagnosticEvidence.evidenceFor).toContain('white cottony residue');
     expect(payload.productSearchTags).toContain('mealybug-control');
   });

@@ -20,6 +20,7 @@ const reviewStates = new Set([
 ]);
 const reviewStatuses = new Set(['uncertain', 'possible', 'inconclusive', 'needs_more_evidence', 'needs_review', 'review_needed']);
 const firstScore = (...values) => values.map(confidencePercent).find((value) => value !== null) ?? null;
+export const isNoIssueDiagnosis = (value) => /^(healthy(?: plant)?|normal|none|no (?:major )?(?:issues?|disease)(?: detected)?|tiada (?:masalah|penyakit)(?: dikesan)?|sihat|pokok elok|未检测到问题|无问题)$/.test(String(value || '').trim().toLowerCase());
 
 export const assessScanDecision = (scan = {}) => {
     if (!scan || typeof scan !== 'object') scan = {};
@@ -32,7 +33,7 @@ export const assessScanDecision = (scan = {}) => {
         || scan.captureAssessment?.leafDetailSufficient === false || scan.retakeReason
         || status === 'retake_required' || (imageQuality !== null && imageQuality < 50));
     const disease = String(scan.disease || '').trim().toLowerCase();
-    const noIssue = /^(healthy(?: plant)?|normal|none|no (?:major )?(?:issues?|disease)(?: detected)?|tiada (?:masalah|penyakit)(?: dikesan)?|sihat|pokok elok|未检测到问题|无问题)$/.test(disease);
+    const noIssue = isNoIssueDiagnosis(disease);
     const unknownDisease = !disease || /^(unknown|n\/a|unknown disease|tidak diketahui)$/.test(disease);
     const healthySignal = (noIssue || unknownDisease)
         && (noIssue || ['healthy', 'sihat', 'normal', '健康'].includes(normalized(scan.healthStatus || status)) || explicit === 'healthy');
@@ -44,6 +45,7 @@ export const assessScanDecision = (scan = {}) => {
     const weak = Boolean(scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
         || reviewStatuses.has(status) || reviewStates.has(explicit)
         || (confidence !== null && confidence < 70)
+        || (confidencePercent(scan.confidence) !== null && confidencePercent(scan.confidence) < 70)
         || (scan.schemaVersion >= 2 && (confidence === null || imageQuality === null)));
     let resultState;
     if (retake || explicit === 'needs_closer_photo') resultState = SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;

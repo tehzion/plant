@@ -47,4 +47,6 @@ The evaluator is read-only. Below 20 expert-reviewed cases it reports that evalu
 
 Build a 300–500 case pilot with healthy cases, common diseases, pests, nutrient/environmental stress, poor photos, and multiple crop/organ types. Separate plants and farms between prompt examples and holdout cases. Generate fresh predictions with a recorded model/policy version before comparing releases; historical predictions do not measure a changed pipeline. Tune thresholds from that evaluation rather than claiming the current scores are calibrated probabilities.
 
+Apply `supabase/migrations/20261005201000_scan_followup_revision.sql` to an existing project before using cloud follow-up saves. The source schema also includes the revision column. Cloud writes compare and increment that revision to detect concurrent changes.
+
 Cloud follow-up reads/writes and private photo uploads should also be checked against the deployed Supabase project with an authenticated test account. Unit tests exercise owner scoping, failed writes, and concurrent-update handling; they do not validate deployed RLS configuration.

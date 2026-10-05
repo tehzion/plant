@@ -6,10 +6,10 @@ import { normalizeDiseaseResult } from '../utils/diseaseResultUtils';
 import { buildScanResultModel } from '../utils/scanResultModel.js';
 
 const DiseaseResult = ({ result, image, leafImage }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   if (!result) return null;
-  result = buildScanResultModel(result);
+  result = buildScanResultModel(result, language);
 
   const normalized = normalizeDiseaseResult(result, t);
 

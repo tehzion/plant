@@ -1,4 +1,4 @@
-import { assessScanDecision } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, confidencePercent, isNoIssueDiagnosis } from '../../shared/scanResultPolicy.js';
 import { normalizeNutritionalIssues, resolveScanNutrition } from './nutritionUtils.js';
 import { getStandardizedSeverity } from './statusUtils.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
@@ -12,6 +12,9 @@ export const buildScanResultModel = (scan = {}, language = scan.analysisLanguage
     return {
         ...scan,
         ...decision,
+        confidence: confidencePercent(scan.confidence) ?? decision.confidence,
+        diagnosisConfidence: decision.confidence,
+        disease: decision.needsReview && isNoIssueDiagnosis(scan.disease) ? copy.inconclusive : scan.disease,
         additionalNotes: scan.additionalNotes || scan.abstainReason || scan.retakeReason
             || (decision.healthy ? copy.nextHealthy : decision.treatmentEligible ? copy.nextTreat : copy.nextScout),
         symptoms: list(scan.symptoms),

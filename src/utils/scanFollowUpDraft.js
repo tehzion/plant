@@ -131,7 +131,7 @@ const sanitizeDraft = (draft) => ACTIVITY_DRAFT_FIELDS.reduce((cleaned, key) => 
 }, {});
 
 export const buildFollowUpDraftFromScan = (scan = {}, language = 'en') => {
-    const result = buildScanResultModel(scan);
+    const result = buildScanResultModel(scan, language);
     const copy = getScanQualityCopy(language);
     const next = result.requiresRetake ? copy.nextRetake : result.healthy ? copy.nextHealthy
         : result.treatmentEligible ? copy.nextTreat : copy.nextScout;

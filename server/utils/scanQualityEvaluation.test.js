@@ -20,4 +20,11 @@ describe('expert evaluation', () => {
         const report = evaluateScanQuality([item, item], 1);
         expect(report.verifiedCases).toBe(1); expect(report.top3HitRate).toBe(0);
     });
+    it('counts the primary diagnosis within the top-three budget', () => {
+        const report = evaluateScanQuality([{ ...expert, result: { disease: 'Rust',
+            differentialDiagnoses: ['a', 'b', 'Leaf Spot'].map(name => ({ name })) } }], 1);
+        expect(report.top3HitRate).toBe(0);
+        expect(report.healthyAccuracy).toBeNull();
+        expect(report.reviewRate).toBe(1);
+    });
 });
