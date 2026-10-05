@@ -13,6 +13,7 @@ import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
+import { getReportSummary } from './services/reportService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
@@ -159,6 +160,18 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/', limiter);
 app.use('/api/', validateApiRequest);
+
+app.get('/api/reports/summary', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        const summary = await getReportSummary(user.id, {
+            from: req.query.from,
+            to: req.query.to,
+            plotId: req.query.plotId,
+        });
+        res.json(summary);
+    } catch (error) { next(error); }
+});
 
 const aiRoutes = ['/api/analyze', '/api/ask', '/api/results/localize', '/api/products/search', '/api/farm'];
 app.use(aiRoutes, rateLimit({

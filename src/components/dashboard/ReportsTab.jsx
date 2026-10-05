@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import {
     AlertTriangle,
     BarChart3,
@@ -12,6 +12,7 @@ import {
 import LoadingSpinner from '../LoadingSpinner';
 import SectionHeader from './SectionHeader';
 import { lazyWithRetry } from '../../utils/lazyWithRetry.js';
+import { fetchReportSummary } from '../../utils/reportSummary.js';
 import {
     QUALITY_COLORS,
     EXPENSE_COLORS,
@@ -48,6 +49,7 @@ const ReportsTab = ({
     onSelectAlert,
     relDate,
     label: labelProp,
+    userId,
 }) => {
     const label = (key, fallback) => {
         if (typeof labelProp === 'function') return labelProp(key, fallback);
@@ -55,7 +57,22 @@ const ReportsTab = ({
         return value && value !== key ? value : fallback;
     };
     const [selectedPlotId, setSelectedPlotId] = useState('all');
+    const [serverSummary, setServerSummary] = useState(null);
+    const [serverReportError, setServerReportError] = useState('');
     const locale = label('common.dateLocale', 'en-MY');
+
+    useEffect(() => {
+        if (!userId) {
+            setServerSummary(null);
+            return undefined;
+        }
+        let cancelled = false;
+        setServerReportError('');
+        fetchReportSummary({ from: '2000-01-01', to: new Date().toISOString().slice(0, 10), plotId: selectedPlotId })
+            .then((summary) => { if (!cancelled) setServerSummary(summary); })
+            .catch((error) => { if (!cancelled) setServerReportError(error.message || 'Could not load the complete report.'); });
+        return () => { cancelled = true; };
+    }, [selectedPlotId, userId]);
 
     const selectedPlot = useMemo(
         () => plots.find((plot) => plot.id === selectedPlotId) || null,
@@ -72,7 +89,10 @@ const ReportsTab = ({
         return item ? label(item.key, category) : category;
     };
 
-    const healthRate = stats.total > 0 ? Math.round((stats.healthy / stats.total) * 100) : 0;
+    const reportStats = serverSummary?.scanStates
+        ? { total: Object.values(serverSummary.scanStates).reduce((sum, value) => sum + Number(value || 0), 0), healthy: Number(serverSummary.scanStates.healthy || 0), diseases: Number(serverSummary.scanStates.diseased || 0) }
+        : stats;
+    const healthRate = reportStats.total > 0 ? Math.round((reportStats.healthy / reportStats.total) * 100) : 0;
 
     const activeAlerts = useMemo(
         () => alerts.filter((scan) => !acknowledgedIds.includes(scan.id)),
@@ -121,9 +141,9 @@ const ReportsTab = ({
     const scopedAiInsights = aiInsights?.scopeKey === reportScopeKey ? aiInsights : null;
     const isGeneratingScopedInsights = generatingInsights && generatingInsightsScopeKey === reportScopeKey;
 
-    const totalKg = harvestLogs.reduce((sum, note) => sum + (Number(note.kg_harvested) || 0), 0);
-    const totalRevenue = harvestLogs.reduce((sum, note) => sum + ((Number(note.kg_harvested) || 0) * (Number(note.price_per_kg) || 0)), 0);
-    const totalExpenses = filteredNotes.reduce((sum, note) => sum + (Number(note.expense_amount) || 0), 0);
+    const totalKg = serverSummary ? Number(serverSummary.totals.harvestKg || 0) : harvestLogs.reduce((sum, note) => sum + (Number(note.kg_harvested) || 0), 0);
+    const totalRevenue = serverSummary ? Number(serverSummary.totals.revenue || 0) : harvestLogs.reduce((sum, note) => sum + ((Number(note.kg_harvested) || 0) * (Number(note.price_per_kg) || 0)), 0);
+    const totalExpenses = serverSummary ? Number(serverSummary.totals.expenses || 0) : filteredNotes.reduce((sum, note) => sum + (Number(note.expense_amount) || 0), 0);
     const netProfit = totalRevenue - totalExpenses;
     const netProfitSign = netProfit > 0 ? '+' : netProfit < 0 ? '-' : '';
 
@@ -232,12 +252,12 @@ const ReportsTab = ({
                 </div>
                 <div className="rep-summary-card rep-summary-card--warning">
                     <span className="rep-summary-icon"><AlertTriangle size={18} /></span>
-                    <span className="rep-summary-value udp-stat-warn">{stats.diseases}</span>
+                    <span className="rep-summary-value udp-stat-warn">{reportStats.diseases}</span>
                     <span className="rep-summary-label">{label('profile.diseasesFound', 'Diseases')}</span>
                 </div>
                 <div className="rep-summary-card rep-summary-card--neutral">
                     <span className="rep-summary-icon"><Sprout size={18} /></span>
-                    <span className="rep-summary-value">{stats.total}</span>
+                    <span className="rep-summary-value">{reportStats.total}</span>
                     <span className="rep-summary-label">{label('profile.totalScans', 'Total Scans')}</span>
                 </div>
                 <div className="rep-summary-card rep-summary-card--accent">
@@ -248,6 +268,8 @@ const ReportsTab = ({
                     <span className="rep-summary-label">{label('profile.netProfit', 'Net Profit (ROI)')}</span>
                 </div>
             </div>
+
+            {serverReportError && <p className="rep-inline-error" role="status">{serverReportError}</p>}
 
             <Suspense fallback={REPORTS_CHARTS_FALLBACK}>
                 <ReportsCharts

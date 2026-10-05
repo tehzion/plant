@@ -503,6 +503,7 @@ const UserDashboardPanel = () => {
                             aiInsights={aiInsights}
                             onSelectAlert={setSelectedAlert}
                             relDate={relDate}
+                            userId={user?.id}
                         />
                     </Suspense>
                 )}
