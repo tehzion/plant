@@ -95,6 +95,21 @@ create table if not exists public.order_refs (
     created_at timestamptz not null default now()
 );
 
+-- Store-verified recovery for legacy guest orders. Requests and ownership
+-- changes are written by the server; browser roles can only read their own
+-- already-approved references.
+create table if not exists public.order_recovery_requests (
+    id uuid primary key default gen_random_uuid(),
+    order_id text not null,
+    requester_user_id uuid not null references auth.users(id) on delete cascade,
+    explanation text not null default '',
+    status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+    reviewer_user_id uuid references auth.users(id) on delete set null,
+    reviewed_at timestamptz,
+    verification_note text,
+    created_at timestamptz not null default now()
+);
+
 create table if not exists public.consultation_leads (
     id uuid primary key default gen_random_uuid(),
     scan_id text,
@@ -154,6 +169,8 @@ create index if not exists daily_notes_user_id_created_at_idx on public.daily_no
 create index if not exists plots_user_id_created_at_idx on public.plots(user_id, created_at desc);
 create index if not exists order_refs_user_id_created_at_idx on public.order_refs(user_id, created_at desc);
 create index if not exists order_refs_guest_id_created_at_idx on public.order_refs(guest_id, created_at desc);
+create unique index if not exists order_refs_order_id_unique_idx on public.order_refs(order_id);
+create index if not exists order_recovery_requests_status_created_idx on public.order_recovery_requests(status, created_at desc);
 create index if not exists consultation_leads_created_at_idx on public.consultation_leads(created_at desc);
 create index if not exists consultation_leads_user_id_created_at_idx on public.consultation_leads(user_id, created_at desc);
 create index if not exists consultation_leads_scan_id_idx on public.consultation_leads(scan_id);
@@ -178,12 +195,14 @@ alter table public.mygap_checklist enable row level security;
 alter table public.daily_notes enable row level security;
 alter table public.plots enable row level security;
 alter table public.order_refs enable row level security;
+alter table public.order_recovery_requests enable row level security;
 alter table public.consultation_leads enable row level security;
 alter table public.product_events enable row level security;
 alter table public.disease_product_rules enable row level security;
 
 alter table public.scan_history add column if not exists image_path text;
 alter table public.scan_history add column if not exists leaf_image_path text;
+alter table public.scan_history add column if not exists revision integer not null default 0;
 alter table public.daily_notes add column if not exists photo_path text;
 
 grant usage on schema public to anon, authenticated;
@@ -218,6 +237,8 @@ grant select, insert, update, delete on public.mygap_checklist to authenticated;
 grant select, insert, update, delete on public.daily_notes to authenticated;
 grant select, insert, update, delete on public.plots to authenticated;
 grant select, insert, update, delete on public.order_refs to authenticated;
+revoke all on public.order_recovery_requests from anon, authenticated;
+revoke insert, update, delete on public.order_refs from authenticated;
 revoke all on public.consultation_leads from anon, authenticated;
 grant insert on public.consultation_leads to anon, authenticated;
 grant select, insert, update, delete on public.consultation_leads to service_role;

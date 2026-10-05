@@ -1,4 +1,10 @@
 import 'dotenv/config';
 import { pruneDiagnosisAudit } from '../services/diagnosisAuditService.js';
-const result = await pruneDiagnosisAudit();
-console.log(`Removed ${result.deletedScans} diagnosis audit records older than ${result.cutoff}`);
+
+try {
+    const result = await pruneDiagnosisAudit();
+    console.log(JSON.stringify({ event: 'diagnosis_audit_prune_succeeded', ...result }));
+} catch (error) {
+    console.error(JSON.stringify({ event: 'diagnosis_audit_prune_failed', message: error.message }));
+    process.exitCode = 1;
+}

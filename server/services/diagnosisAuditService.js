@@ -23,7 +23,11 @@ export const pruneDiagnosisAudit = async (days = Number(process.env.DIAGNOSIS_RE
         if (deleteError) throw deleteError;
         deletedScans += data.length;
     }
-    const { error } = await client.from('diagnosis_feedback').delete().lt('created_at', cutoff);
+    const feedbackDelete = client.from('diagnosis_feedback').delete().lt('created_at', cutoff);
+    const feedbackResult = typeof feedbackDelete.select === 'function'
+        ? await feedbackDelete.select('id')
+        : await feedbackDelete;
+    const { data: feedbackRows, error } = feedbackResult;
     if (error) throw error;
-    return { deletedScans, cutoff };
+    return { deletedScans, deletedFeedback: feedbackRows?.length || 0, cutoff };
 };

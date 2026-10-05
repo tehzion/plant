@@ -11,6 +11,18 @@ const GUEST_ID_KEY = 'sea_plant_guest_id';
 const ORDERS_KEY = 'sea_plant_orders';
 const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
+// Keep demo data in its own namespace so it can never be imported into a real
+// account's guest migration. Guest mode keeps the historical keys for
+// backwards compatibility; authenticated data is stored in Supabase.
+let storageNamespace = 'guest';
+const namespacedKey = (key) => storageNamespace === 'guest' ? key : `${storageNamespace}::${key}`;
+
+export const setLocalStorageNamespace = (namespace = 'guest') => {
+    storageNamespace = namespace === 'demo' ? 'demo' : 'guest';
+};
+
+export const getLocalStorageNamespace = () => storageNamespace;
+
 
 export const STORAGE_COLLECTION_KEYS = {
     STORAGE_KEY,
@@ -47,7 +59,7 @@ const decryptData = (ciphertext) => {
 
 const safeRead = (key, fallback = []) => {
     try {
-        const raw = localStorage.getItem(key);
+        const raw = localStorage.getItem(namespacedKey(key));
         if (!raw) return fallback;
         try {
             return JSON.parse(decryptData(raw));
@@ -55,7 +67,7 @@ const safeRead = (key, fallback = []) => {
             try {
                 return JSON.parse(raw);
             } catch {
-                localStorage.removeItem(key);
+                localStorage.removeItem(namespacedKey(key));
                 return fallback;
             }
         }
@@ -70,7 +82,7 @@ const isQuotaError = (error) =>
 
 const writeEncryptedPayload = (key, payload) => {
     try {
-        localStorage.setItem(key, encryptData(JSON.stringify(payload)));
+        localStorage.setItem(namespacedKey(key), encryptData(JSON.stringify(payload)));
         return true;
     } catch (err) {
         if (isQuotaError(err)) return 'quota';
@@ -176,6 +188,7 @@ export const toScanHistoryRow = (
     leaf_image_url: leafImageUrl || scanData.leaf_image_url || null,
     image_path: imagePath || scanData.image_path || null,
     leaf_image_path: leafImagePath || scanData.leaf_image_path || null,
+    revision: Number.isInteger(scanData.revision) ? scanData.revision : 0,
     created_at: scanData.timestamp || scanData.created_at || new Date().toISOString(),
 });
 
@@ -193,6 +206,7 @@ export const fromScanHistoryRow = (row = {}, signedUrls = {}) => ({
     image_path: row.image_path || row.result_json?.image_path || null,
     leaf_image_path: row.leaf_image_path || row.result_json?.leaf_image_path || null,
     locationName: row.location_name,
+    revision: Number.isInteger(row.revision) ? row.revision : Number.isInteger(row.result_json?.revision) ? row.result_json.revision : 0,
 });
 
 const hydrateScanHistoryRow = async (row = {}) => {
@@ -333,7 +347,7 @@ export const migrateLocalSchema = (key, version, migrateFn) => {
 
     const data = safeRead(key, null);
     if (!Array.isArray(data)) {
-        localStorage.setItem(flagKey, '1');
+        localStorage.setItem(namespacedKey(flagKey), '1');
         return;
     }
 
@@ -346,7 +360,7 @@ export const migrateLocalSchema = (key, version, migrateFn) => {
             }
         });
         if (!safeWrite(key, migrated).ok) return;
-        localStorage.setItem(flagKey, '1');
+        localStorage.setItem(namespacedKey(flagKey), '1');
         console.log(`[schema] Migrated "${key}" to v${version}`);
     } catch (err) {
         console.warn(`[schema] Migration failed for "${key}" v${version}:`, err);
@@ -484,7 +498,7 @@ export const clearAllScans = async (userId = null) => {
         return true;
     }
     try {
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(namespacedKey(STORAGE_KEY));
         return true;
     } catch {
         return false;
@@ -553,7 +567,7 @@ export const saveChecklistState = async (state, userId = null) => {
     }
 
     try {
-        localStorage.setItem(CHECKLIST_KEY, encryptData(JSON.stringify(state)));
+        localStorage.setItem(namespacedKey(CHECKLIST_KEY), encryptData(JSON.stringify(state)));
         return true;
     } catch {
         return false;
@@ -673,10 +687,10 @@ export const getPlots = (userId = null) => {
  * Get or create a persistent Guest ID for this browser session
  */
 export const getGuestId = () => {
-    let guestId = localStorage.getItem(GUEST_ID_KEY);
+    let guestId = localStorage.getItem(namespacedKey(GUEST_ID_KEY));
     if (!guestId) {
         guestId = `guest_${crypto.randomUUID()}`;
-        localStorage.setItem(GUEST_ID_KEY, guestId);
+        localStorage.setItem(namespacedKey(GUEST_ID_KEY), guestId);
     }
     return guestId;
 };

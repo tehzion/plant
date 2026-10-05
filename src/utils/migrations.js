@@ -19,6 +19,7 @@ import {
     toLogbookRow,
     toPlotRow,
     toScanHistoryRow,
+    getLocalStorageNamespace,
 } from './localStorage';
 
 const STORAGE_KEY     = 'sea_plant_scan_history';
@@ -46,6 +47,10 @@ const migrateScanImages = async (scan, userId) => {
 
 const migrateLocalData = async (userId) => {
     if (!userId || !supabase) return;
+
+    // Demo data is deliberately isolated and must never be copied into an
+    // authenticated account during the guest migration.
+    if (getLocalStorageNamespace() === 'demo' || userId === 'demo-user-123') return;
 
     const migrationFlag = `plant_migrated_${userId}`;
     if (localStorage.getItem(migrationFlag)) return; // already done

@@ -13,13 +13,14 @@ const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboa
 const Login = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
-    const { user, signIn, signUp } = useAuth();
+    const { user, signIn, signUp, resetPasswordForEmail, demoAuthEnabled } = useAuth();
     const label = (key, fallback) => {
         const translated = t(key);
         return translated && translated !== key ? translated : fallback;
     };
 
     const [isLogin, setIsLogin] = useState(true);
+    const [isRecovery, setIsRecovery] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -48,6 +49,21 @@ const Login = () => {
         setLoading(true);
 
         try {
+            if (isRecovery) {
+                try {
+                    await resetPasswordForEmail(email);
+                } catch (recoveryError) {
+                    // Do not disclose whether an address exists.
+                    if (!String(recoveryError?.message || '').includes('not configured')) {
+                        // The same neutral message is shown for provider errors.
+                    } else {
+                        throw recoveryError;
+                    }
+                }
+                setSuccessMsg('If an account exists for that email, we sent a password reset link.');
+                setError('');
+                return;
+            }
             if (isLogin) {
                 await signIn(email, password);
                 navigate('/profile');
@@ -80,9 +96,9 @@ const Login = () => {
                     <div className="login-header">
                         <span className="login-kicker">KANB</span>
                         <h2 className="login-title">
-                            {isLogin ? (t('login.welcomeBack') || 'Welcome Back') : (t('login.register') || 'Create Account')}
+                            {isRecovery ? 'Reset your password' : isLogin ? (t('login.welcomeBack') || 'Welcome Back') : (t('login.register') || 'Create Account')}
                         </h2>
-                        <p className="login-subtitle">{t('login.subtitle') || 'KANB Agropreneur Nasional'}</p>
+                        <p className="login-subtitle">{isRecovery ? 'We will email you a secure reset link.' : t('login.subtitle') || 'KANB Agropreneur Nasional'}</p>
                     </div>
 
                     {hasPendingFollowUp && (
@@ -136,7 +152,8 @@ const Login = () => {
                                     placeholder={t('login.placeholderPassword') || 'Enter your password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    required
+                                    required={!isRecovery}
+                                    hidden={isRecovery}
                                     disabled={loading}
                                     minLength={4}
                                 />
@@ -148,27 +165,33 @@ const Login = () => {
                                 <span className="btn-spinner" />
                             ) : (
                                 <>
-                                    <span>{isLogin ? (t('login.signIn') || 'Sign In') : (t('login.register') || 'Register')}</span>
+                                    <span>{isRecovery ? 'Send reset link' : isLogin ? (t('login.signIn') || 'Sign In') : (t('login.register') || 'Register')}</span>
                                     <ArrowRight size={20} />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <div className="auth-alert auth-alert--info auth-alert--compact">
+                    {isLogin && (
+                        <button type="button" className="toggle-btn" onClick={() => { setIsRecovery(true); setError(''); setSuccessMsg(''); }}>
+                            {t('login.forgotPassword') || 'Forgot Password?'}
+                        </button>
+                    )}
+
+                    {demoAuthEnabled && <div className="auth-alert auth-alert--info auth-alert--compact">
                         <span>
                             {label(
                                 'login.demoAccountHint',
                                 'Development demo: sign in with test@test.com and Test321@.',
                             )}
                         </span>
-                    </div>
+                    </div>}
 
                     <div className="login-footer">
                         <p>
-                            {isLogin ? (t('login.noAccount') || "Don't have an account?") : (t('common.alreadyHaveAccount') || 'Already have an account?')}
-                            <button onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMsg(''); }} className="toggle-btn">
-                                {isLogin ? (t('login.register') || 'Register') : (t('login.signIn') || 'Sign In')}
+                            {isRecovery ? 'Remembered your password?' : isLogin ? (t('login.noAccount') || "Don't have an account?") : (t('common.alreadyHaveAccount') || 'Already have an account?')}
+                            <button onClick={() => { setIsRecovery(false); setIsLogin(isRecovery ? true : !isLogin); setError(''); setSuccessMsg(''); }} className="toggle-btn">
+                                {isRecovery ? 'Sign In' : isLogin ? (t('login.register') || 'Register') : (t('login.signIn') || 'Sign In')}
                             </button>
                         </p>
                     </div>

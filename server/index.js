@@ -12,6 +12,7 @@ import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
+import { getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 
@@ -27,6 +28,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || false);
 const PORT = process.env.PORT || 3002;
+
+// Correlate failures without ever logging request bodies, credentials, or
+// image payloads. The same ID is returned to clients for support diagnostics.
+app.use((req, res, next) => {
+    const requestId = req.get('x-request-id')?.slice(0, 80) || crypto.randomUUID();
+    const startedAt = process.hrtime.bigint();
+    req.requestId = requestId;
+    res.setHeader('x-request-id', requestId);
+    res.on('finish', () => {
+        const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+        console.log(JSON.stringify({
+            event: 'http_request', requestId, method: req.method,
+            path: req.path, status: res.statusCode,
+            durationMs: Math.round(durationMs * 100) / 100,
+        }));
+    });
+    next();
+});
 
 const withStageTimeout = async (promise, timeoutMs, fallbackValue = null) => {
     let timeoutId = null;
@@ -99,14 +118,12 @@ app.use('/api/', rateLimit({
     windowMs: 60 * 1000, max: 60,
     standardHeaders: true, legacyHeaders: false,
     skip: (req) => req.path === '/health',
+    handler: (req, res) => {
+        console.warn(JSON.stringify({ event: 'rate_limit', requestId: req.requestId, path: req.path, ip: req.ip }));
+        res.status(429).json({ error: 'Too many requests. Please try again later.', requestId: req.requestId });
+    },
 }));
 app.use(express.json({ limit: '17mb' }));
-
-// Debug logging
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    next();
-});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -115,6 +132,10 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (req, res) => {
+        console.warn(JSON.stringify({ event: 'rate_limit', requestId: req.requestId, path: req.path, ip: req.ip }));
+        res.status(429).json({ error: 'Too many requests from this IP, please try again later.', requestId: req.requestId });
+    },
 });
 
 // Health Check — also used as a keep-alive ping after Render cold starts.
@@ -541,6 +562,31 @@ app.post('/api/products/search', async (req, res, next) => {
 // WOOCOMMERCE GUEST ORDER ENDPOINTS
 // ----------------------------------------------------------------------------------
 
+// A signed-in user can ask store staff to recover an older guest order. The
+// response is intentionally generic so order numbers cannot be used for
+// account enumeration.
+app.post('/api/orders/recovery-requests', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        const orderNumber = String(req.body?.orderNumber || '').trim();
+        const explanation = String(req.body?.explanation || '').trim().slice(0, 500);
+        if (!/^\d{1,20}$/.test(orderNumber)) {
+            return res.status(400).json({ error: 'Enter a valid order number.' });
+        }
+        if (!explanation) return res.status(400).json({ error: 'A short explanation is required.' });
+        const client = getServiceClient();
+        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
+        const { error } = await client.from('order_recovery_requests').insert({
+            order_id: orderNumber,
+            requester_user_id: user.id,
+            explanation,
+            status: 'pending',
+        });
+        if (error) throw error;
+        res.status(202).json({ message: 'Your request was received and will be reviewed by the store team.' });
+    } catch (error) { next(error); }
+});
+
 // Create guest order
 app.post('/api/orders/session', (req, res, next) => {
     try {
@@ -605,6 +651,64 @@ app.get('/api/orders/:orderId', async (req, res, next) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch order details' });
     }
+});
+
+// Admin-only recovery queue. Ownership is written by the server using the
+// service role after staff has verified the purchase through the support flow.
+app.get('/api/admin/order-recovery-requests', async (req, res, next) => {
+    try {
+        await verifyAdminRequest(req);
+        const client = getServiceClient();
+        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
+        const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : null;
+        let query = client.from('order_recovery_requests')
+            .select('id,order_id,requester_user_id,explanation,status,reviewer_user_id,reviewed_at,verification_note,created_at')
+            .order('created_at', { ascending: false }).limit(100);
+        if (status) query = query.eq('status', status);
+        const { data, error } = await query;
+        if (error) throw error;
+        res.json(Array.isArray(data) ? data : []);
+    } catch (error) { next(error); }
+});
+
+app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, res, next) => {
+    try {
+        const reviewer = await verifyAdminRequest(req);
+        const client = getServiceClient();
+        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
+        const decision = String(req.body?.decision || '').toLowerCase();
+        const note = String(req.body?.verificationNote || '').trim().slice(0, 1000);
+        if (!['approved', 'rejected'].includes(decision) || !note) {
+            return res.status(400).json({ error: 'A decision and verification note are required.' });
+        }
+        const { data: request, error: requestError } = await client.from('order_recovery_requests')
+            .select('id,order_id,requester_user_id,status').eq('id', req.params.requestId).maybeSingle();
+        if (requestError) throw requestError;
+        if (!request || request.status !== 'pending') return res.status(404).json({ error: 'Recovery request not found.' });
+        if (decision === 'approved') {
+            const { data: existing, error: existingError } = await client.from('order_refs')
+                .select('id,user_id').eq('order_id', request.order_id).maybeSingle();
+            if (existingError) throw existingError;
+            if (existing?.user_id && existing.user_id !== request.requester_user_id) {
+                return res.status(409).json({ error: 'This order already belongs to another account.' });
+            }
+            const { error: refError } = await client.from('order_refs').upsert({
+                id: `recovered-${request.order_id}`,
+                order_id: request.order_id,
+                user_id: request.requester_user_id,
+                guest_id: null,
+            }, { onConflict: 'id' });
+            if (refError) throw refError;
+        }
+        const { error } = await client.from('order_recovery_requests').update({
+            status: decision,
+            reviewer_user_id: reviewer.id,
+            reviewed_at: new Date().toISOString(),
+            verification_note: note,
+        }).eq('id', request.id).eq('status', 'pending');
+        if (error) throw error;
+        res.json({ status: decision });
+    } catch (error) { next(error); }
 });
 
 // ----------------------------------------------------------------------------------
@@ -686,11 +790,12 @@ app.get('/api/admin/review-summary', async (req, res, next) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
     const isProduction = process.env.NODE_ENV === 'production';
-    console.error(`🔥 [${req.method} ${req.url}] Error:`, isProduction ? err.message : err.stack);
+    console.error(JSON.stringify({ event: 'api_error', requestId: req.requestId, method: req.method, path: req.path, status: err.status || 500, message: err.message }));
 
     res.status(err.status || 500).json({
         error: isProduction && (!err.status || err.status >= 500) ? 'Internal Server Error' : (err.name || 'Request Error'),
         message: isProduction && (!err.status || err.status >= 500) ? 'An unexpected error occurred. Please try again later.' : err.message,
+        requestId: req.requestId,
         ...(isProduction ? {} : { stack: err.stack })
     });
 });

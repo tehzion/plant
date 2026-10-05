@@ -44,3 +44,21 @@ services:
         sync: false
       - key: WOOCOMMERCE_CONSUMER_SECRET
         sync: false
+  - type: cron
+    name: kanb-plant-audit-prune
+    runtime: node
+    rootDir: .
+    schedule: '0 20 * * *'
+    buildCommand: npm ci
+    startCommand: npm run audit:prune
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DIAGNOSIS_DATA_BACKEND
+        value: supabase
+      - key: DIAGNOSIS_RETENTION_DAYS
+        value: '90'
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

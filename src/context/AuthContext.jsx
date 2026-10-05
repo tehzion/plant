@@ -1,8 +1,12 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
-import { getGuestId } from '../utils/localStorage';
+import { getGuestId, setLocalStorageNamespace } from '../utils/localStorage';
 
 const AuthContext = createContext(null);
+
+const DEMO_USER_ID = 'demo-user-123';
+const DEMO_EMAIL = 'test@test.com';
+const DEMO_AUTH_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_AUTH === 'true';
 
 const getAuthEmailRedirectUrl = () => {
     const configured = import.meta.env.VITE_AUTH_EMAIL_REDIRECT_URL;
@@ -21,10 +25,12 @@ export const AuthProvider = ({ children }) => {
         // Initialize persistent guest identity
         setGuestId(getGuestId());
         // ── Demo / test account bypass ────────────────────────────────────────
-        if (localStorage.getItem('plant_demo_session') === 'true') {
-            setUser({ id: 'demo-user-123', email: 'test@test.com' });
+        if (DEMO_AUTH_ENABLED && localStorage.getItem('plant_demo_session') === 'true') {
+            setLocalStorageNamespace('demo');
+            setUser({ id: DEMO_USER_ID, email: DEMO_EMAIL });
             return;
         }
+        setLocalStorageNamespace('guest');
 
         // ── Supabase not configured → run in guest/localStorage mode ──────────
         if (!supabase) {
@@ -50,9 +56,10 @@ export const AuthProvider = ({ children }) => {
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
+            (event, session) => {
                 const currentUser = session?.user ?? null;
                 setUser(currentUser);
+                setLocalStorageNamespace('guest');
                 // Run cloud requests after Supabase releases its auth lock.
                 setTimeout(() => migrateForUser(currentUser), 0);
             }
@@ -67,12 +74,13 @@ export const AuthProvider = ({ children }) => {
         const cleanEmail = email?.trim();
         const cleanPassword = password?.trim();
 
-        // Demo bypass — works even when Supabase is disabled
-        if (cleanEmail === 'test@test.com') {
+        // Demo bypass is development-only and must be explicitly enabled.
+        if (cleanEmail === DEMO_EMAIL && DEMO_AUTH_ENABLED) {
             const isCorrectPassword = cleanPassword === 'Test321@' || cleanPassword === 'test';
             if (isCorrectPassword) {
-                const demoUser = { id: 'demo-user-123', email: 'test@test.com' };
+                const demoUser = { id: DEMO_USER_ID, email: DEMO_EMAIL };
                 localStorage.setItem('plant_demo_session', 'true');
+                setLocalStorageNamespace('demo');
                 setUser(demoUser);
                 return { user: demoUser };
             } else {
@@ -81,7 +89,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (!supabase) {
-            throw new Error('Cloud login is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env, or use the demo account (test@test.com / Test321@).');
+            throw new Error('Cloud login is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env.');
         }
 
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -104,10 +112,32 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
+    const resetPasswordForEmail = async (email) => {
+        const cleanEmail = email?.trim();
+        if (!cleanEmail) throw new Error('Enter your email address.');
+        if (!supabase) {
+            // Keep the UI neutral while making it clear that recovery needs a
+            // configured auth provider in local development.
+            throw new Error('Password recovery is not configured yet.');
+        }
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+    };
+
+    const updatePassword = async (password) => {
+        if (!supabase) throw new Error('Password recovery is not configured yet.');
+        const { data, error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        return data;
+    };
+
     const signOut = async () => {
         // Clear demo session
         if (localStorage.getItem('plant_demo_session')) {
             localStorage.removeItem('plant_demo_session');
+            setLocalStorageNamespace('guest');
             setUser(null);
             return;
         }
@@ -128,7 +158,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, guestId, signIn, signUp, signOut, signInWithGoogle, isGoogleAuthEnabled: false }}>
+        <AuthContext.Provider value={{ user, guestId, signIn, signUp, signOut, resetPasswordForEmail, updatePassword, signInWithGoogle, isGoogleAuthEnabled: false, demoAuthEnabled: DEMO_AUTH_ENABLED }}>
             {children}
         </AuthContext.Provider>
     );

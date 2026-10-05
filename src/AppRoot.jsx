@@ -17,6 +17,7 @@ const Results = lazyWithRetry(() => import('./pages/Results'), 'results');
 const History = lazyWithRetry(() => import('./pages/History'), 'history');
 const Encyclopedia = lazyWithRetry(() => import('./pages/Encyclopedia'), 'encyclopedia');
 const Login = lazyWithRetry(() => import('./pages/Login'), 'login');
+const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'), 'reset-password');
 const Onboarding = lazyWithRetry(() => import('./pages/Onboarding'), 'onboarding');
 const MyGap = lazyWithRetry(() => import('./pages/MyGap'), 'mygap');
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'), 'guide');
@@ -39,6 +40,8 @@ function App() {
                                             <Route path="/history" element={<History />} />
                                             <Route path="/encyclopedia" element={<Encyclopedia />} />
                                             <Route path="/profile" element={<Login />} />
+                                            <Route path="/login" element={<Login />} />
+                                            <Route path="/reset-password" element={<ResetPassword />} />
                                             <Route path="/mygap" element={<MyGap />} />
                                             <Route path="/admin" element={<AdminReviewDashboard />} />
                                             <Route path="/onboarding" element={<Onboarding />} />
