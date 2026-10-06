@@ -4,9 +4,10 @@ import DiseaseCard from '../components/DiseaseCard';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Search } from 'lucide-react';
 import './Encyclopedia.css';
+import { getUiCopy } from '../utils/uiCopy.js';
 
 const Encyclopedia = () => {
-  const { t, label } = useLanguage();
+  const { t, label, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -66,12 +67,15 @@ const Encyclopedia = () => {
         </header>
 
         <section className="controls-card">
+          <label className="library-search-label" htmlFor="library-search">{getUiCopy(language).searchLibrary}</label>
           <div className="search-section">
             <div className="search-icon-wrapper">
               <Search size={22} className="search-icon" strokeWidth={2} />
             </div>
             <input
-              type="text"
+              id="library-search"
+              type="search"
+              aria-label={t('encyclopedia.searchPlaceholder')}
               placeholder={t('encyclopedia.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -89,6 +93,7 @@ const Encyclopedia = () => {
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
+                    aria-pressed={isActive}
                     className={`filter-btn ${isActive ? 'active' : ''}`}
                   >
                     {labelText}
@@ -99,7 +104,7 @@ const Encyclopedia = () => {
           </div>
         </section>
 
-        <div className="results-info">
+        <div className="results-info" role="status" aria-live="polite">
           <span className="superapp-stat-pill encyclopedia-results-pill">
             {filteredDiseases.length} {filteredDiseases.length === 1 ? t('encyclopedia.disease') : t('encyclopedia.diseases')} {t('encyclopedia.found')}
           </span>
@@ -108,7 +113,7 @@ const Encyclopedia = () => {
         <div className="diseases-grid">
           {filteredDiseases.length > 0 ? (
             filteredDiseases.map(disease => (
-              <DiseaseCard key={disease.id} disease={disease} />
+              <DiseaseCard key={disease.id || `${disease.category}-${disease.name?.en || disease.name}`} disease={disease} />
             ))
           ) : (
             <div className="no-results app-surface app-empty-state">

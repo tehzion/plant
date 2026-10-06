@@ -6,9 +6,10 @@ import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { checkServerHealth } from '../utils/diseaseDetection';
 import './AppHeader.css';
+import { getUiCopy } from '../utils/uiCopy.js';
 
 const AppHeader = ({ isHome }) => {
-    const { t, label: labelFn } = useLanguage();
+    const { t, language, label: labelFn } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
     const { user } = useAuth();
     const location = useLocation();
@@ -32,7 +33,7 @@ const AppHeader = ({ isHome }) => {
             await checkServerHealth();
             setSystemStatus('online');
         } catch {
-            setSystemStatus('offline');
+            setSystemStatus(navigator.onLine ? 'unavailable' : 'offline');
         }
     }, []);
 
@@ -73,7 +74,7 @@ const AppHeader = ({ isHome }) => {
 
     const statusLabel = systemStatus === 'online'
         ? label('home.onlineStatus', 'Live')
-        : systemStatus === 'offline'
+        : systemStatus === 'unavailable' ? getUiCopy(language).service : systemStatus === 'offline'
             ? label('common.offline', 'Offline')
             : label('common.loading', 'Checking');
 
@@ -92,16 +93,16 @@ const AppHeader = ({ isHome }) => {
                     </Link>
 
                     <nav className="app-header__nav" aria-label={label('nav.primary', 'Primary navigation')}>
-                        <Link to="/" className={`app-header__nav-link ${isActive('/') ? 'active' : ''}`}>
+                        <Link to="/" className={`app-header__nav-link ${isActive('/') ? 'active' : ''}`} aria-current={isActive('/') ? 'page' : undefined}>
                             {label('nav.home', 'Home')}
                         </Link>
-                        <Link to="/history" className={`app-header__nav-link ${isActive('/history') ? 'active' : ''}`}>
+                        <Link to="/history" className={`app-header__nav-link ${isActive('/history') ? 'active' : ''}`} aria-current={isActive('/history') ? 'page' : undefined}>
                             {label('nav.history', 'History')}
                         </Link>
-                        <Link to="/encyclopedia" className={`app-header__nav-link ${isActive('/encyclopedia') ? 'active' : ''}`}>
+                        <Link to="/encyclopedia" className={`app-header__nav-link ${isActive('/encyclopedia') ? 'active' : ''}`} aria-current={isActive('/encyclopedia') ? 'page' : undefined}>
                             {label('nav.encyclopedia', 'Encyclopedia')}
                         </Link>
-                        <Link to="/profile" className={`app-header__nav-link ${isActive('/profile') ? 'active' : ''}`}>
+                        <Link to="/profile" className={`app-header__nav-link ${isActive('/profile') ? 'active' : ''}`} aria-current={isActive('/profile') ? 'page' : undefined} aria-label={label('nav.profile', 'Profile')}>
                             {initials ? (
                                 <span className="app-header__avatar-badge">{initials}</span>
                             ) : (

@@ -11,7 +11,7 @@ function Layout({ children }) {
     const isScanFlow = location.pathname === '/' && location.search.includes('scan=true');
 
     return (
-        <div className="app">
+        <div className={`app ${isLegalPage || isScanFlow ? 'app--without-bottom-nav' : ''}`}>
             <a href="#main-content" className="skip-link">Skip to content</a>
             {!isLegalPage && <AppHeader isHome={isHome} />}
             <main className="main-content" id="main-content">

@@ -223,12 +223,11 @@
         height: 56px;
     }
 
-    .app-header__nav {
-        display: none;
-    }
+    .app-header__nav { gap: 4px; }
 }
 
 @media (max-width: 768px) {
+    .app-header__nav { display: none; }
     .app-header__shell {
         padding: 10px 10px;
     }

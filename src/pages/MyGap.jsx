@@ -335,8 +335,11 @@ const MyGapPage = () => {
                 <p className="page-subtitle">{t('mygap.subtitle')}</p>
             </div>
 
-            <div className="tabs-container">
+            <div className="tabs-container" role="tablist">
                 <button
+                    role="tab" aria-selected={activeTab === 'guide'} aria-controls="mygap-panel" id="mygap-tab-guide"
+                    tabIndex={activeTab === 'guide' ? 0 : -1}
+                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
                     className={`tab-btn ${activeTab === 'guide' ? 'active' : ''}`}
                     onClick={() => setActiveTab('guide')}
                 >
@@ -344,6 +347,9 @@ const MyGapPage = () => {
                     <span>{t('nav.about')}</span>
                 </button>
                 <button
+                    role="tab" aria-selected={activeTab === 'checklist'} aria-controls="mygap-panel" id="mygap-tab-checklist"
+                    tabIndex={activeTab === 'checklist' ? 0 : -1}
+                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
                     className={`tab-btn ${activeTab === 'checklist' ? 'active' : ''}`}
                     onClick={() => setActiveTab('checklist')}
                 >
@@ -351,6 +357,9 @@ const MyGapPage = () => {
                     <span>{t('mygap.tabChecklist')}</span>
                 </button>
                 <button
+                    role="tab" aria-selected={activeTab === 'logbook'} aria-controls="mygap-panel" id="mygap-tab-logbook"
+                    tabIndex={activeTab === 'logbook' ? 0 : -1}
+                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
                     className={`tab-btn ${activeTab === 'logbook' ? 'active' : ''}`}
                     onClick={() => setActiveTab('logbook')}
                 >
@@ -358,6 +367,9 @@ const MyGapPage = () => {
                     <span>{t('mygap.tabLogbook')}</span>
                 </button>
                 <button
+                    role="tab" aria-selected={activeTab === 'calendar'} aria-controls="mygap-panel" id="mygap-tab-calendar"
+                    tabIndex={activeTab === 'calendar' ? 0 : -1}
+                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
                     className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
                     onClick={() => setActiveTab('calendar')}
                 >
@@ -365,6 +377,9 @@ const MyGapPage = () => {
                     <span>{t('mygap.tabCalendar')}</span>
                 </button>
                 <button
+                    role="tab" aria-selected={activeTab === 'phi'} aria-controls="mygap-panel" id="mygap-tab-phi"
+                    tabIndex={activeTab === 'phi' ? 0 : -1}
+                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
                     className={`tab-btn ${activeTab === 'phi' ? 'active' : ''}`}
                     onClick={() => setActiveTab('phi')}
                 >
@@ -373,6 +388,7 @@ const MyGapPage = () => {
                 </button>
             </div>
 
+            <div id="mygap-panel" role="tabpanel" aria-labelledby={`mygap-tab-${activeTab}`} tabIndex={0}>
             {activeTab === 'guide' && (
                 <div className="fade-in">
                     <div className="disclaimer-card">
@@ -438,14 +454,12 @@ const MyGapPage = () => {
                                 const isAuto = autoCheckedItems[item.id];
                                 
                                 return (
-                                    <div
+                                    <label
                                         key={item.id}
                                         className={`checklist-item ${isCompleted ? 'completed' : ''} ${isAuto ? 'is-auto-derived' : ''}`}
-                                        onClick={() => {
-                                            if (!isAuto) handleCheckToggle(item.id);
-                                        }}
                                     >
-                                        <div className="check-icon">
+                                        <input type="checkbox" checked={Boolean(isCompleted)} disabled={Boolean(isAuto)} onChange={() => handleCheckToggle(item.id)} />
+                                        <div className="check-icon" aria-hidden="true">
                                             {isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
                                         </div>
                                         <div className="checklist-item-content">
@@ -457,7 +471,7 @@ const MyGapPage = () => {
                                                 </span>
                                             )}
                                         </div>
-                                    </div>
+                                    </label>
                                 );
                             })}
                         </div>
@@ -602,6 +616,7 @@ const MyGapPage = () => {
                 </div>
             )}
 
+        </div>
         </div>
     );
 };

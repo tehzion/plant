@@ -9,6 +9,9 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { ClipboardList, ScanLine, Trash2, History as HistoryIcon } from 'lucide-react';
 import './History.css';
+import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
+import { assessScanDecision } from '../../shared/scanResultPolicy.js';
+import { getStandardizedStatus } from '../utils/statusUtils.js';
 
 const HistorySkeleton = () => {
     const skeletonCards = Array.from({ length: 3 }, (_, index) => (
@@ -52,7 +55,9 @@ const HistorySkeleton = () => {
 };
 
 const History = () => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+    const copy = getUiCopy(language);
+    const [filters, setFilters] = useState({ search: '', crop: '', status: '', date: '', sort: 'newest' });
     const navigate = useNavigate();
     const { state: scanState } = useScanContext();
     const { user } = useAuth();
@@ -117,6 +122,19 @@ const History = () => {
 
     const hasScans = useMemo(() => Object.values(groupedScans).some(group => group.length > 0), [groupedScans]);
     const showSkeleton = historyLoading && !historyLoadedOnce;
+    const scans = Object.values(groupedScans).flat();
+    const crops = [...new Set(scans.map(scan => scan.plantType).filter(Boolean))].sort();
+    const filteredGroups = Object.fromEntries(Object.entries(groupedScans).map(([key, group]) => [key, group.filter(scan => {
+        const stamp = new Date(scan.timestamp || scan.created_at).getTime();
+        const days = filters.date === 'week' ? 7 : filters.date === 'month' ? 30 : 0;
+        return (!filters.search || `${scan.disease || ''} ${scan.plantType || ''} ${scan.locationName || ''}`.toLowerCase().includes(filters.search.toLowerCase()))
+            && (!filters.crop || scan.plantType === filters.crop)
+            && (!filters.status || (filters.status === 'due' ? isFollowUpDue(scan) : (filters.status === 'review' ? assessScanDecision(scan).needsReview : !assessScanDecision(scan).needsReview && getStandardizedStatus(scan) === filters.status)))
+            && (!days || (Number.isFinite(stamp) && stamp <= Date.now() && stamp >= Date.now() - days * 86400000));
+    }).sort((a,b) => (new Date(b.timestamp || b.created_at).getTime() - new Date(a.timestamp || a.created_at).getTime()) * (filters.sort === 'oldest' ? -1 : 1))]));
+    const visibleCount = Object.values(filteredGroups).flat().length;
+    const changeFilter = (key, value) => setFilters(current => ({ ...current, [key]: value }));
+
 
     return (
         <div className="page history-page">
@@ -132,7 +150,7 @@ const History = () => {
                             <p className="history-page-subtitle">
                                 {hasScans
                                     ? (t('history.reviewScansHint') === 'history.reviewScansHint'
-                                        ? 'Review recent scans, revisit diagnoses, and keep your field timeline organized.'
+                                        ? copy.historyHint
                                         : t('history.reviewScansHint'))
                                     : t('history.noHistoryMessage')}
                             </p>
@@ -146,6 +164,15 @@ const History = () => {
                     )}
                 </div>
 
+                {hasScans && <section className="history-filters app-surface">
+                    <label>{copy.search}<input type="search" value={filters.search} onChange={e => changeFilter('search', e.target.value)} /></label>
+                    <label>{copy.crop}<select value={filters.crop} onChange={e => changeFilter('crop', e.target.value)}><option value="">{copy.all}</option>{crops.map(crop => <option key={crop}>{crop}</option>)}</select></label>
+                    <label>{copy.status}<select value={filters.status} onChange={e => changeFilter('status', e.target.value)}><option value="">{copy.all}</option>{['healthy','unhealthy'].map(status => <option key={status} value={status}>{t(`results.${status}`)}</option>)}<option value="review">{copy.inspect}</option><option value="due">{copy.due}</option></select></label>
+                    <label>{copy.date}<select value={filters.date} onChange={e => changeFilter('date', e.target.value)}><option value="">{copy.all}</option><option value="week">{copy.week}</option><option value="month">{copy.month}</option></select></label>
+                    <label>{copy.sort}<select value={filters.sort} onChange={e => changeFilter('sort', e.target.value)}><option value="newest">{copy.newest}</option><option value="oldest">{copy.oldest}</option></select></label>
+                    <button className="btn btn-secondary" onClick={() => setFilters({search:'',crop:'',status:'',date:'',sort:'newest'})}>{copy.reset}</button>
+                    <p role="status" aria-live="polite">{visibleCount} / {scans.length}</p>
+                </section>}
                 {/* Empty State */}
                 {showSkeleton ? (
                     <HistorySkeleton />
@@ -170,15 +197,16 @@ const History = () => {
                         </button>
                     </div>
                 ) : (
-                    <div className="history-content">
+                    <div className={`history-content ${filters.sort === 'oldest' ? 'history-content--oldest' : ''}`}>
+                        {visibleCount === 0 && <p className="app-empty-state">{copy.none}</p>}
                         {/* Today */}
-                        {groupedScans.today && groupedScans.today.length > 0 && (
+                        {filteredGroups.today && filteredGroups.today.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.today')}</h3>
-                                    <span className="app-pill">{groupedScans.today.length}</span>
+                                    <span className="app-pill">{filteredGroups.today.length}</span>
                                 </div>
-                                {groupedScans.today.map(scan => (
+                                {filteredGroups.today.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -189,13 +217,13 @@ const History = () => {
                         )}
 
                         {/* Yesterday */}
-                        {groupedScans.yesterday && groupedScans.yesterday.length > 0 && (
+                        {filteredGroups.yesterday && filteredGroups.yesterday.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.yesterday')}</h3>
-                                    <span className="app-pill">{groupedScans.yesterday.length}</span>
+                                    <span className="app-pill">{filteredGroups.yesterday.length}</span>
                                 </div>
-                                {groupedScans.yesterday.map(scan => (
+                                {filteredGroups.yesterday.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -206,13 +234,13 @@ const History = () => {
                         )}
 
                         {/* This Week */}
-                        {groupedScans.thisWeek && groupedScans.thisWeek.length > 0 && (
+                        {filteredGroups.thisWeek && filteredGroups.thisWeek.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.thisWeek')}</h3>
-                                    <span className="app-pill">{groupedScans.thisWeek.length}</span>
+                                    <span className="app-pill">{filteredGroups.thisWeek.length}</span>
                                 </div>
-                                {groupedScans.thisWeek.map(scan => (
+                                {filteredGroups.thisWeek.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -223,13 +251,13 @@ const History = () => {
                         )}
 
                         {/* Last Week */}
-                        {groupedScans.lastWeek && groupedScans.lastWeek.length > 0 && (
+                        {filteredGroups.lastWeek && filteredGroups.lastWeek.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.lastWeek')}</h3>
-                                    <span className="app-pill">{groupedScans.lastWeek.length}</span>
+                                    <span className="app-pill">{filteredGroups.lastWeek.length}</span>
                                 </div>
-                                {groupedScans.lastWeek.map(scan => (
+                                {filteredGroups.lastWeek.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}
@@ -240,13 +268,13 @@ const History = () => {
                         )}
 
                         {/* Older */}
-                        {groupedScans.older && groupedScans.older.length > 0 && (
+                        {filteredGroups.older && filteredGroups.older.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
                                     <h3 className="group-title">{t('history.older')}</h3>
-                                    <span className="app-pill">{groupedScans.older.length}</span>
+                                    <span className="app-pill">{filteredGroups.older.length}</span>
                                 </div>
-                                {groupedScans.older.map(scan => (
+                                {filteredGroups.older.map(scan => (
                                     <ScanHistoryCard
                                         key={scan.id}
                                         scan={scan}

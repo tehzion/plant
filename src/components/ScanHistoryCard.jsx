@@ -1,12 +1,14 @@
-import { useNavigate } from 'react-router-dom';
+import { assessScanDecision } from '../../shared/scanResultPolicy.js';
+import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { MapPin, Trash2, CheckCircle, AlertTriangle, Leaf } from 'lucide-react';
 import { getStandardizedStatus } from '../utils/statusUtils';
 import './ScanHistoryCard.css';
+import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
 
 const ScanHistoryCard = ({ scan, onDelete }) => {
-  const navigate = useNavigate();
-  const { t, label } = useLanguage();
+  const { t, label, language } = useLanguage();
   const safeLabel = typeof label === 'function'
     ? label
     : (key, fallback) => {
@@ -15,6 +17,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
     };
 
   const standardizedStatus = getStandardizedStatus(scan);
+  const decision = assessScanDecision(scan);
   const healthy = standardizedStatus === 'healthy';
 
   const getSeverityBadgeClass = (severity) => {
@@ -52,17 +55,13 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
     : '';
   const previewSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url;
 
-  const handleClick = () => {
-    navigate(`/results/${scan.id}`);
-  };
-
   const handleDelete = (e) => {
     e.stopPropagation();
     onDelete(scan.id);
   };
 
   return (
-    <div className="scan-history-card" onClick={handleClick}>
+    <article className="scan-history-card">
       <div className="card-content">
         <div className="scan-thumbnail-shell">
           {previewSrc ? (
@@ -78,7 +77,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
           )}
         </div>
         <div className="scan-info">
-          <h4 className="scan-disease">{scan.disease}</h4>
+          <h4 className="scan-disease"><Link className="scan-card-link" to={`/results/${scan.id}`}>{scan.disease}</Link></h4>
           <div className="scan-meta-group">
             <p className="scan-meta-text">
               {(() => {
@@ -91,12 +90,13 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
             </p>
 
             <div className="scan-badge-row">
-              <span className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'}`}>
+              {isFollowUpDue(scan) && <span className="status-badge-mini status-review">{getUiCopy(language).due}</span> }
+              <span className={`status-badge-mini ${decision.needsReview ? 'status-review' : healthy ? 'status-healthy' : 'status-unhealthy'}`}>
                 {healthy ?
                   <CheckCircle size={10} strokeWidth={3} /> :
                   <AlertTriangle size={10} strokeWidth={3} />
                 }
-                {t(`results.${standardizedStatus}`)}
+                {decision.needsReview ? getDiagnosisStatusLabel(t, decision.resultState) : t(`results.${standardizedStatus}`)}
               </span>
 
               {scan.severity && (
@@ -121,7 +121,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
           <Trash2 size={18} />
         </button>
       </div>
-    </div>
+    </article>
   );
 };
 

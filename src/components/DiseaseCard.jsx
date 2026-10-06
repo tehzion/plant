@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Microscope, Search, Pill, Shield, X } from 'lucide-react';
@@ -8,17 +8,20 @@ const DiseaseCard = ({ disease }) => {
   const { t, language } = useLanguage();
   const [showModal, setShowModal] = useState(false);
 
-  // Lock scroll when modal is open (Mobile only)
+  const dialogRef = useRef(null);
+  const titleId = useId();
   useEffect(() => {
-    // Only lock scroll if showModal is true AND viewport is mobile/tablet (< 1024px)
-    if (showModal && window.innerWidth < 1024) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
+    if (!showModal || window.innerWidth >= 1024) return;
+    const previous = document.activeElement;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector('button')?.focus();
+    const key = event => {
+      if (event.key === 'Escape') { event.preventDefault(); setShowModal(false); }
+      if (event.key === 'Tab') { event.preventDefault(); dialogRef.current?.querySelector('button')?.focus(); }
     };
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('keydown', key); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
   }, [showModal]);
 
   // Helper to get localized content if available, otherwise fallback to string
@@ -109,7 +112,7 @@ const DiseaseCard = ({ disease }) => {
       </div>
 
       <button
-        className="expand-btn btn btn-secondary"
+        className="expand-btn btn btn-secondary" aria-expanded={showModal}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -129,7 +132,7 @@ const DiseaseCard = ({ disease }) => {
             }}
           >
             <div
-              className="modal-content fade-in"
+              className="modal-content fade-in" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId}
               onClick={e => e.stopPropagation()}
             >
               <button
@@ -142,7 +145,7 @@ const DiseaseCard = ({ disease }) => {
               ><X size={20} /></button>
 
               <div className="modal-header">
-                <h3 className="modal-title">{name}</h3>
+                <h3 className="modal-title" id={titleId}>{name}</h3>
                 <span className="disease-category">{translatedCategory}</span>
               </div>
 

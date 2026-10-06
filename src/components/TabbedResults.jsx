@@ -1,8 +1,10 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import './TabbedResults.css';
 
-const TabbedResults = ({ tabs }) => {
-  const [activeTab, setActiveTab] = useState(0);
+const TabbedResults = ({ tabs, activeIndex, onTabChange }) => {
+  const [internalTab, setInternalTab] = useState(0);
+  const activeTab = activeIndex ?? internalTab;
+  const setActiveTab = index => { setInternalTab(index); onTabChange?.(index); };
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const tabsRef = useRef(null);

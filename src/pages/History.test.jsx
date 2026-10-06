@@ -123,4 +123,14 @@ describe('History', () => {
 
         expect(notifySuccessMock).toHaveBeenCalledWith('Scan history cleared.');
     });
+    it('filters saved scans and restores them with reset', async () => {
+        getGroupedScansMock.mockResolvedValue({ today: [{ id: 'scan-1', disease: 'Leaf spot', plantType: 'Durian' }], yesterday: [], thisWeek: [], lastWeek: [], older: [] });
+        render(<History />);
+        await screen.findByText('Trigger delete scan-1');
+        fireEvent.change(screen.getByRole('searchbox', { name: 'Search scans' }), { target: { value: 'missing crop' } });
+        expect(screen.queryByText('Trigger delete scan-1')).not.toBeInTheDocument();
+        expect(screen.getByText('No scans match these filters.')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+        expect(screen.getByText('Trigger delete scan-1')).toBeInTheDocument();
+    });
 });

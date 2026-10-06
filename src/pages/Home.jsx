@@ -27,6 +27,7 @@ import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
+import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
   const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
@@ -78,6 +79,7 @@ const Home = () => {
 
   // UI States
   const [recentScans, setRecentScans] = useState([]);
+  const [dueScans, setDueScans] = useState([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [weatherResolved, setWeatherResolved] = useState(false);
 
@@ -110,6 +112,7 @@ const Home = () => {
         const history = await Promise.resolve(getScanHistory(user?.id ?? null));
         if (!isMounted.current) return;
         setRecentScans(history.slice(0, 4));
+        setDueScans(history.filter(scan => isFollowUpDue(scan)));
         setHistoryLoaded(true);
       };
       fetchHistory();
@@ -439,6 +442,11 @@ const Home = () => {
 
           <div className="home-dashboard-stack">
             <ActionGrid onScan={handleStartScan} />
+            {dueScans.length > 0 && <section className="app-surface home-followups">
+              <h3>{getUiCopy(language).due}</h3>
+              {dueScans.slice(0, 5).map(scan => <button className="btn btn-secondary" key={scan.id} onClick={() => navigate(`/results/${scan.id}`)}>{scan.disease} · {scan.followUp.nextCheckDate}</button>)}
+              <button className="home-section-link" onClick={() => navigate('/history')}>{t('home.seeAll')}</button>
+            </section>}
           <RecentScans
             scans={recentScans}
             onSeeAll={() => navigate('/history')}

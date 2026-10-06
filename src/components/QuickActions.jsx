@@ -20,7 +20,7 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
   return (
     <div className="quick-actions app-surface app-surface--soft">
       <div className="actions-container">
-        <button onClick={onScanAgain} className="action-btn primary">
+        <button onClick={onScanAgain} className="action-btn">
           <span className="icon"><RotateCcw size={20} /></span>
           <span className="label">{t('results.scanAgain')}</span>
         </button>

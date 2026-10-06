@@ -52,7 +52,7 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: end;
     gap: 6px;
-    padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 10px);
+    padding: 10px 10px;
     border-radius: 30px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(250, 253, 250, 0.98) 100%);
     border: 1px solid rgba(21, 128, 61, 0.12);
@@ -92,7 +92,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    min-height: 80px;
+    min-height: 64px;
     padding: 8px 6px 6px;
     text-decoration: none;
     color: #64748b;
@@ -290,7 +290,7 @@
     }
 
     .bottom-nav .nav-item {
-        min-height: 80px;
+        min-height: 64px;
         gap: 8px;
         padding-left: 4px;
         padding-right: 4px;

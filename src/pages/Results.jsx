@@ -1,3 +1,4 @@
+import { getUiCopy } from '../utils/uiCopy.js';
 ﻿import { useNavigate, useParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
@@ -57,6 +58,7 @@ const RESULTS_SECTION_FALLBACK = (
 );
 
 const Results = () => {
+  const [activeResultTab, setActiveResultTab] = useState(0);
   const { id } = useParams();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
@@ -466,17 +468,19 @@ ${t('pdf.generatedBy')}
       <div className="container results-layout fade-slide-up">
         <ScanDecisionSummary result={result} />
         {scan.analysisLanguage && scan.analysisLanguage !== language && <p role="status">{scanCopy.sourceLanguageNotice}</p>}
-        {/* Quick Actions Bar */}
-        <QuickActions
-          onScanAgain={handleScanAgain}
-          onDownload={handleDownload}
-          onShare={handleShare}
-          onSaveHistory={handleSaveHistory}
-        />
+        <div className="results-next-action">
+          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { setActiveResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
+            {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
+          </button>
+        </div>
+        {/* Tabbed Results */}
+        <div id="results-diagnostics" className="results-diagnostics fade-slide-up" style={{ animationDelay: '0.1s' }}>
+          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={setActiveResultTab} />
+        </div>
 
         {/* Scan Metadata Card - Modern Design */}
-        <div className="scan-metadata-card app-surface app-surface--soft">
-          <div className="results-section-kicker">{scanCopy.scanDetails}</div>
+        <details className="scan-metadata-card app-surface app-surface--soft results-secondary">
+          <summary className="results-section-kicker">{scanCopy.scanDetails}</summary>
           <div className="metadata-grid">
             {/* Category */}
             <div className="metadata-item">
@@ -590,8 +594,9 @@ ${t('pdf.generatedBy')}
               </div>
             </div>
           </div>
-        </div>
+        </details>
 
+        <section className="results-followup-group">
         <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
         <div className="follow-up-card app-surface app-surface--soft">
           <div className="follow-up-icon">
@@ -618,10 +623,14 @@ ${t('pdf.generatedBy')}
           </button>
         </div>
 
-        {/* Tabbed Results */}
-        <div className="fade-slide-up" style={{ animationDelay: '0.1s' }}>
-          <TabbedResults tabs={tabs} />
-        </div>
+        </section>
+        {/* Quick Actions Bar */}
+        <QuickActions
+          onScanAgain={handleScanAgain}
+          onDownload={handleDownload}
+          onShare={handleShare}
+          onSaveHistory={handleSaveHistory}
+        />
 
         {/* Feedback Widget */}
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>

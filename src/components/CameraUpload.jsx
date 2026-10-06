@@ -16,6 +16,24 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const videoRef = useRef(null);
     const streamRef = useRef(null);
+    const cameraDialogRef = useRef(null);
+    useEffect(() => {
+        if (!isCameraOpen) return;
+        const previous = document.activeElement;
+        const overflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        cameraDialogRef.current?.querySelector('button')?.focus();
+        const key = event => {
+            if (event.key === 'Escape') { event.preventDefault(); stopCamera(); }
+            if (event.key !== 'Tab') return;
+            const buttons = [...cameraDialogRef.current.querySelectorAll('button')];
+            const first = buttons[0], last = buttons.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        };
+        document.addEventListener('keydown', key);
+        return () => { document.removeEventListener('keydown', key); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
+    }, [isCameraOpen]);
 
     const openFilePicker = (inputRef) => {
         if (inputRef.current) {
@@ -207,7 +225,7 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
     return (
         <div className="camera-upload">
             {isCameraOpen ? (
-                <div className="camera-modal">
+                <div className="camera-modal" ref={cameraDialogRef} role="dialog" aria-modal="true" aria-label={t('common.takePhoto')}>
                     <div className="video-container">
                         <video
                             ref={videoRef}
@@ -218,16 +236,16 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
                         />
                     </div>
                     <div className="camera-controls">
-                        <button onClick={stopCamera} className="btn-circle cancel">
+                        <button onClick={stopCamera} aria-label={t('common.close')} className="btn-circle cancel">
                             <X size={24} />
                         </button>
-                        <button onClick={capturePhoto} className="btn-circle large capture"></button>
+                        <button onClick={capturePhoto} aria-label={t('common.takePhoto')} className="btn-circle large capture"></button>
                         <div className="camera-controls-spacer" aria-hidden="true"></div>
                     </div>
                 </div>
             ) : preview ? (
                 <div className="preview-container fade-in">
-                    <img src={preview} alt="Preview" className="preview-image" />
+                    <img src={preview} alt={t('common.takePhoto')} className="preview-image" />
                     <button
                         onClick={clearPreview}
                         className="btn btn-secondary mt-md display-flex-center gap-sm"

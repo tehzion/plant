@@ -6,6 +6,7 @@ const navigateMock = vi.fn();
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
+    Link: ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>,
 }));
 
 vi.mock('../i18n/i18n.jsx', () => ({

@@ -1,3 +1,5 @@
+import { assessScanDecision } from '../../../shared/scanResultPolicy.js';
+import { getDiagnosisStatusLabel } from '../../utils/diagnosisStatusLabels.js';
 import React from 'react';
 import { AlertTriangle, CheckCircle, MapPin, Leaf } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
@@ -77,6 +79,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                 ) : hasScans ? (
                     scanList.map((scan) => {
                         const standardizedStatus = getStandardizedStatus(scan);
+                        const decision = assessScanDecision(scan);
                         const healthy = standardizedStatus === 'healthy';
                         const imageSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url || '';
                         const scanTimestamp = scan.timestamp || scan.created_at;
@@ -87,6 +90,9 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                             <div
                                 key={scan.id}
                                 className="superapp-activity-card"
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); onScanClick(scan.id); } }}
                                 onClick={() => onScanClick(scan.id)}
                             >
                                 <div className="superapp-activity-img-wrapper home-scan-card-media">
@@ -116,13 +122,13 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                         )}
                                     </p>
                                     <div className="scan-badge-row mt-xs home-scan-card-badges">
-                                        <div className={`status-badge-mini ${healthy ? 'status-healthy' : 'status-unhealthy'} home-scan-status-badge`}>
+                                        <div className={`status-badge-mini ${decision.needsReview ? 'status-review' : healthy ? 'status-healthy' : 'status-unhealthy'} home-scan-status-badge`}>
                                             <span className="status-icon home-scan-status-icon">
                                                 {healthy
                                                     ? <CheckCircle size={8} strokeWidth={3} />
                                                     : <AlertTriangle size={8} strokeWidth={3} />}
                                             </span>
-                                            <span className="status-text">{t(`results.${standardizedStatus}`)}</span>
+                                            <span className="status-text">{decision.needsReview ? getDiagnosisStatusLabel(t, decision.resultState) : t(`results.${standardizedStatus}`)}</span>
                                         </div>
                                     </div>
                                     {locationLabel && (
