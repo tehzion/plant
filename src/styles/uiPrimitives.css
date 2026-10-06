@@ -101,3 +101,11 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
 .results-content-grid .scan-metadata-card { margin: 0; }
 
 .scan-photo-guidance__dismiss { min-width: 44px; min-height: 44px; }
+
+/* Preserve visible keyboard focus when component styles suppress outlines. */
+.language-dropdown:focus-visible,
+.btn:focus-visible,
+.app-header__refresh-btn:focus-visible {
+ outline: 3px solid var(--color-action);
+ outline-offset: 3px;
+}
