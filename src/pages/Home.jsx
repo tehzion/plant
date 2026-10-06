@@ -27,6 +27,7 @@ import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
+import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
 import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
@@ -97,6 +98,7 @@ const Home = () => {
     onConfirm: null
   });
   const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
+  const [photoQualityIssue, setPhotoQualityIssue] = useState(null);
 
   const steps = [
     { label: t('home.step1') },
@@ -252,6 +254,7 @@ const Home = () => {
 
   // Handlers
   const handleStartScan = () => {
+    setPhotoQualityIssue(null);
     setSearchParams({ scan: 'true' });
   };
 
@@ -263,6 +266,7 @@ const Home = () => {
   const handleResetAndClose = () => {
     const exit = () => {
       scanActions.resetScan();
+      setPhotoQualityIssue(null);
       setSearchParams({});
     };
 
@@ -586,9 +590,17 @@ const Home = () => {
 
                   {/* Main Image Upload */}
                   <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
+                  <ScanPhotoGuidance
+                    plantPart={captureContext.plantPart}
+                    captureRole={photoQualityIssue?.role || 'whole'}
+                    qualityIssue={photoQualityIssue?.code || ''}
+                    onDismissIssue={() => setPhotoQualityIssue(null)}
+                  />
                   <div className="mb-lg">
                     <CameraUpload
-                      onImageCapture={scanActions.handleImageCapture}
+                      onImageCapture={file => { setPhotoQualityIssue(null); scanActions.handleImageCapture(file); }}
+                      captureRole="whole"
+                      onQualityIssue={(code, role) => setPhotoQualityIssue({ code, role })}
                       currentImage={selectedImage}
                     />
                   </div>
@@ -605,7 +617,9 @@ const Home = () => {
                       </div>
                     </div>
                     <CameraUpload
-                      onImageCapture={scanActions.handleLeafImageCapture}
+                      onImageCapture={file => { setPhotoQualityIssue(null); scanActions.handleLeafImageCapture(file); }}
+                      captureRole="closeup"
+                      onQualityIssue={(code, role) => setPhotoQualityIssue({ code, role })}
                       currentImage={selectedLeafImage}
                     />
                   </div>

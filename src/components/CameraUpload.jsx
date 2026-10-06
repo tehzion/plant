@@ -6,7 +6,7 @@ import { compressImage } from '../utils/imageCompressor';
 import { getImageQualityGuidance } from '../utils/diseaseDetection';
 import './CameraUpload.css';
 
-const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
+const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, captureRole = 'whole' }) => {
     const { t } = useLanguage();
     const { notifyError } = useNotifications();
     const [preview, setPreview] = useState(null);
@@ -109,6 +109,8 @@ const CameraUpload = ({ onImageCapture, disabled, currentImage }) => {
         try {
             const guidance = await getImageQualityGuidance(file);
             if (guidance.accepted) return true;
+
+            onQualityIssue?.(guidance.code || guidance.messageKey || 'IMAGE_QUALITY', captureRole);
 
             notifyError(t(guidance.messageKey), {
                 actionLabel: t('common.uploadGallery'),

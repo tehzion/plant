@@ -107,4 +107,18 @@ describe('CameraUpload', () => {
         });
         expect(onImageCapture).not.toHaveBeenCalled();
     });
+
+    it('reports the quality issue so the parent can show retake guidance', async () => {
+        getImageQualityGuidanceMock.mockResolvedValueOnce({
+            accepted: false,
+            code: 'IMAGE_TOO_DARK',
+            messageKey: 'home.errorImageTooDark',
+        });
+        const onQualityIssue = vi.fn();
+        const { container } = render(<CameraUpload onImageCapture={vi.fn()} onQualityIssue={onQualityIssue} />);
+        const input = container.querySelector('input[type="file"][accept="image/*"]');
+        fireEvent.change(input, { target: { files: [new File(['img'], 'dark.jpg', { type: 'image/jpeg' })] } });
+
+        await waitFor(() => expect(onQualityIssue).toHaveBeenCalledWith('IMAGE_TOO_DARK', 'whole'));
+    });
 });
