@@ -1,7 +1,8 @@
+import StatusBadge from '../StatusBadge.jsx';
 import { assessScanDecision } from '../../../shared/scanResultPolicy.js';
 import { getDiagnosisStatusLabel } from '../../utils/diagnosisStatusLabels.js';
 import React from 'react';
-import { AlertTriangle, CheckCircle, MapPin, Leaf } from 'lucide-react';
+import { MapPin, Leaf } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { getStandardizedStatus } from '../../utils/statusUtils';
 
@@ -122,14 +123,9 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                         )}
                                     </p>
                                     <div className="scan-badge-row mt-xs home-scan-card-badges">
-                                        <div className={`status-badge-mini ${decision.needsReview ? 'status-review' : healthy ? 'status-healthy' : 'status-unhealthy'} home-scan-status-badge`}>
-                                            <span className="status-icon home-scan-status-icon">
-                                                {healthy
-                                                    ? <CheckCircle size={8} strokeWidth={3} />
-                                                    : <AlertTriangle size={8} strokeWidth={3} />}
-                                            </span>
-                                            <span className="status-text">{decision.needsReview ? getDiagnosisStatusLabel(t, decision.resultState) : t(`results.${standardizedStatus}`)}</span>
-                                        </div>
+                                        <StatusBadge tone={decision.needsReview ? 'review' : healthy ? 'healthy' : 'unhealthy'}>
+                                            {decision.needsReview ? getDiagnosisStatusLabel(t, decision.resultState) : t(`results.${standardizedStatus}`)}
+                                        </StatusBadge>
                                     </div>
                                     {locationLabel && (
                                         <p className="scan-location home-scan-card-location">

@@ -1,3 +1,4 @@
+import FarmOverview from './dashboard/FarmOverview.jsx';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -455,6 +456,8 @@ const UserDashboardPanel = () => {
             {/* ── Tab content ──────────────────────────────────────────────── */}
             <div className="udp-tab-content fade-slide-up udp-tab-content--delayed">
                 {tab === 'overview' && (
+                    <>
+                    <FarmOverview scans={scanHistory} plots={plots} />
                     <OverviewTab
                         t={t}
                         label={label}
@@ -484,6 +487,7 @@ const UserDashboardPanel = () => {
                         aiInsights={aiInsights}
                         onPrefillRecommendedTreatment={handlePrefillRecommendedTreatment}
                     />
+                    </>
                 )}
 
                 {tab === 'reports' && (
@@ -511,6 +515,7 @@ const UserDashboardPanel = () => {
                 {tab === 'plots' && (
                     <Suspense fallback={TAB_FALLBACK}>
                         <PlotsTab
+                            scanHistory={scanHistory}
                             t={t}
                             label={label}
                             addingPlot={addingPlot}

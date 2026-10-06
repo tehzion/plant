@@ -4,7 +4,7 @@ import { getScanResultState, isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
 import { getNutrientNames, normalizeNutritionalIssues } from './nutritionUtils.js';
 import { getDiagnosisStatusLabel } from './diagnosisStatusLabels.js';
-import { confidencePercent } from '../../shared/scanResultPolicy.js';
+import { confidencePercent, getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const PT_TO_MM = 25.4 / 72;
@@ -450,6 +450,15 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         width: pageWidth - 28,
     });
 
+    const sectionPolicy = scanData.sectionPolicy || getScanSectionPolicy(scanData);
+    const diagnosisDisplayLabel = healthy
+        ? t('results.healthy')
+        : sectionPolicy.nutritionPrimary
+            ? (scanData.nutritionalIssues?.status === 'confirmed'
+                ? label('results.nutrientDeficiencyDetected', 'Nutrient deficiency')
+                : label('results.possibleNutrientIssue', 'Possible nutrient issue'))
+            : scanData.disease;
+
     const metadataRows = [
         [t('results.plantType'), scanData.plantType],
         [t('results.category'), localizeField(scanData.category, 'home.category')],
@@ -466,7 +475,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         metadataRows.push([t('common.location'), formatLocationValue(scanData, t)]);
     }
     if (!healthy && scanData.disease) {
-        metadataRows.push([t('results.diagnosis') || t('results.disease'), scanData.disease]);
+        metadataRows.push([t('results.diagnosis') || t('results.disease'), diagnosisDisplayLabel]);
     }
     if (diagnosisState && diagnosisState !== 'healthy') {
         metadataRows.push([label('results.diagnosisStatus', 'Diagnosis status'), diagnosisStatusLabel]);
@@ -474,10 +483,10 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
     if (scanData.diagnosticEvidence?.likelyCauseCategory) {
         metadataRows.push([label('results.likelyCauseCategory', 'Likely cause'), scanData.diagnosticEvidence.likelyCauseCategory]);
     }
-    if (scanData.fungusType) {
+    if (!sectionPolicy.nutritionPrimary && scanData.fungusType) {
         metadataRows.push([t('results.fungusSpecies'), scanData.fungusType]);
     }
-    if (scanData.pathogenType) {
+    if (!sectionPolicy.nutritionPrimary && scanData.pathogenType) {
         metadataRows.push([t('results.pathogen'), scanData.pathogenType]);
     }
 
@@ -514,7 +523,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
 
     const summaryRows = [
         [label('results.diagnosisStatus', 'Diagnosis status'), diagnosisStatusLabel],
-        [label('results.diagnosis', 'Diagnosis'), healthy ? t('results.healthy') : scanData.disease],
+        [label('results.diagnosis', 'Diagnosis'), diagnosisDisplayLabel],
         [label('results.plantType', 'Plant type'), speciesContextText],
     ];
     const summaryBody = healthy
@@ -718,8 +727,55 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         });
     }
 
+    const products = options.productRecommendations || null;
+    const fertilizerProducts = sectionPolicy.showNutritionProducts
+        ? (products?.fertilizers || products?.nutrition || [])
+        : [];
+    const supplementProducts = sectionPolicy.showNutritionProducts
+        ? (products?.supplements || [])
+        : [];
+    // General store suggestions do not belong in the disease-control section.
+    const fallbackProducts = [];
+    const fertilizerRecommendations = sectionPolicy.showNutritionProducts && !scanData.nutritionalIssues?.unconfirmedDueToEvidence && Array.isArray(scanData.fertilizerRecommendations)
+        ? scanData.fertilizerRecommendations.filter((recommendation) => recommendation && typeof recommendation === 'object')
+        : [];
+
+    const renderProductList = async (productList, categoryTitle) => {
+        if (!Array.isArray(productList) || productList.length === 0) return;
+
+        await writeSectionTitle(categoryTitle, {
+            textColor: darkColor,
+            fontSize: 11,
+            paddingY: 0,
+            marginBottom: 6,
+        });
+
+        for (const product of productList) {
+            const detailLabel = product.count || (product.price ? `RM ${product.price}` : '');
+            const name = detailLabel ? `${t(product.name)} (${detailLabel})` : t(product.name);
+            await writeParagraph(name, {
+                x: 20,
+                width: pageWidth - 34,
+                fontSize: 10,
+                fontStyle: 'bold',
+                color: darkColor,
+                gapAfter: 2,
+            });
+            const description = sanitizeProductText(product.shortDescription || product.description);
+            if (description) {
+                await writeParagraph(t(description), {
+                    x: 20,
+                    width: pageWidth - 34,
+                    fontSize: 10,
+                    color: lightText,
+                    gapAfter: 6,
+                });
+            }
+        }
+    };
+
     const normalizedNutrition = normalizeNutritionalIssues(scanData.nutritionalIssues);
-    if (normalizedNutrition.status !== 'none') {
+    if (normalizedNutrition.status !== 'none' || fertilizerRecommendations.length > 0 || fertilizerProducts.length > 0 || supplementProducts.length > 0) {
         await writeSectionTitle(t('results.nutritionalIssues'), {
             textColor: [217, 119, 6],
             fontSize: 14,
@@ -790,19 +846,44 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
                 });
             }
         }
+
+        if (fertilizerRecommendations.length > 0) {
+            await writeSectionTitle(t('results.fertilizerRecommendations'), {
+                textColor: darkColor,
+                fontSize: 11,
+                paddingY: 0,
+                marginBottom: 6,
+            });
+            for (const recommendation of fertilizerRecommendations) {
+                const name = recommendation.fertilizerName || recommendation.product || recommendation.name || t('results.generalFertilizer');
+                const details = [
+                    recommendation.applicationMethod || recommendation.application,
+                    recommendation.frequency,
+                    recommendation.amount || recommendation.dosage,
+                ].filter(Boolean).join(' · ');
+                await writeParagraph(details ? `${name}: ${details}` : name, {
+                    x: 18,
+                    width: pageWidth - 32,
+                    fontSize: 10,
+                    color: darkColor,
+                    gapAfter: 4,
+                });
+            }
+        }
+
+        await renderProductList(
+            fertilizerProducts,
+            (!scanData.disease || healthy)
+                ? t('results.growthAndMaintenance')
+                : t('results.fertilizersAndNutrition'),
+        );
+        await renderProductList(supplementProducts, t('results.recommendedSupplements'));
     }
 
-    const products = options.productRecommendations || null;
-    const fertilizerProducts = products?.fertilizers || products?.nutrition || [];
-    const supplementProducts = products?.supplements || [];
-    const fallbackProducts = products?.otherPopular || [];
-
-    if (products && (
-        products.diseaseControl?.length > 0
-        || fertilizerProducts.length > 0
-        || supplementProducts.length > 0
-        || fallbackProducts.length > 0
-    )) {
+    const diseaseControlProducts = sectionPolicy.showDiseaseProducts
+        ? (products?.diseaseControl || [])
+        : [];
+    if (products && (diseaseControlProducts.length > 0 || fallbackProducts.length > 0)) {
         await writeSectionTitle(t('pdf.productRecommendations'), {
             textColor: primaryColor,
             fontSize: 14,
@@ -812,7 +893,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         doc.setDrawColor(...primaryColor);
         doc.line(14, yPos - 6, pageWidth - 14, yPos - 6);
 
-        if (products.diseaseControl?.length > 0 && needsConfirmation) {
+        if (diseaseControlProducts.length > 0 && needsConfirmation) {
             await writeCallout({
                 title: label('results.confirmBeforeUseTitle', 'Confirm before use'),
                 body: label('results.confirmBeforeUseDesc', 'These products are cautious matches for the likely issue. Confirm field signs and follow the physical product label before applying treatment.'),
@@ -824,48 +905,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             });
         }
 
-        const renderProductList = async (productList, categoryTitle) => {
-            if (!Array.isArray(productList) || productList.length === 0) return;
-
-            await writeSectionTitle(categoryTitle, {
-                textColor: darkColor,
-                fontSize: 11,
-                paddingY: 0,
-                marginBottom: 6,
-            });
-
-            for (const product of productList) {
-                const detailLabel = product.count || (product.price ? `RM ${product.price}` : '');
-                const name = detailLabel ? `${t(product.name)} (${detailLabel})` : t(product.name);
-                await writeParagraph(name, {
-                    x: 20,
-                    width: pageWidth - 34,
-                    fontSize: 10,
-                    fontStyle: 'bold',
-                    color: darkColor,
-                    gapAfter: 2,
-                });
-                const description = sanitizeProductText(product.shortDescription || product.description);
-                if (description) {
-                    await writeParagraph(t(description), {
-                        x: 20,
-                        width: pageWidth - 34,
-                        fontSize: 10,
-                        color: lightText,
-                        gapAfter: 6,
-                    });
-                }
-            }
-        };
-
-        await renderProductList(products.diseaseControl, t('results.diseaseControlProducts'));
-        await renderProductList(
-            fertilizerProducts,
-            (!scanData.disease || healthy)
-                ? t('results.growthAndMaintenance')
-                : t('results.fertilizersAndNutrition'),
-        );
-        await renderProductList(supplementProducts, t('results.recommendedSupplements'));
+        await renderProductList(diseaseControlProducts, t('results.diseaseControlProducts'));
 
         if (fallbackProducts.length > 0) {
             if (products?.fallbackMeta?.used) {

@@ -76,6 +76,17 @@ const normalizeList = (value) => {
         .filter(Boolean);
 };
 
+const normalizeNutrientNames = (value) => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => normalizeText(
+            item && typeof item === 'object'
+                ? item.nutrient || item.name || item.label
+                : item,
+        ))
+        .filter(Boolean);
+};
+
 const normalizeNumber = (value) => {
     if (value == null || value === '') return null;
     const number = Number(value);
@@ -124,6 +135,16 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     productSearchTags: normalizeList(scanResult?.productSearchTags),
     diagnosticEvidence: normalizeDiagnosticEvidence(scanResult?.diagnosticEvidence),
     nutritionalStatus: normalizeText(scanResult?.nutritionalIssues?.status),
+    sectionPolicy: scanResult?.sectionPolicy || null,
+    nutritionalIssues: scanResult?.nutritionalIssues && typeof scanResult.nutritionalIssues === 'object'
+      ? {
+        status: normalizeText(scanResult.nutritionalIssues.status),
+        hasDeficiency: Boolean(scanResult.nutritionalIssues.hasDeficiency),
+        deficientNutrients: normalizeNutrientNames(scanResult.nutritionalIssues.deficientNutrients),
+        possibleNutrients: normalizeNutrientNames(scanResult.nutritionalIssues.possibleNutrients),
+        unconfirmedDueToEvidence: Boolean(scanResult.nutritionalIssues.unconfirmedDueToEvidence),
+      }
+      : null,
 });
 };
 
@@ -152,6 +173,8 @@ export const createProductRecommendationsKey = (payload, language = 'en') => JSO
     productSearchTags: normalizeList(payload?.productSearchTags),
     diagnosticEvidence: normalizeDiagnosticEvidence(payload?.diagnosticEvidence),
     nutritionalStatus: normalizeText(payload?.nutritionalStatus),
+    nutritionalIssues: payload?.nutritionalIssues || null,
+    sectionPolicy: payload?.sectionPolicy || null,
 });
 
 const buildProductRecommendationsCacheKey = (payload, language = 'en') => (

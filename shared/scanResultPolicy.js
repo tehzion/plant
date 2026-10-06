@@ -22,6 +22,83 @@ const reviewStatuses = new Set(['uncertain', 'possible', 'inconclusive', 'needs_
 const firstScore = (...values) => values.map(confidencePercent).find((value) => value !== null) ?? null;
 export const isNoIssueDiagnosis = (value) => /^(healthy(?: plant)?|normal|none|no (?:major )?(?:issues?|disease)(?: detected)?|tiada (?:masalah|penyakit)(?: dikesan)?|sihat|pokok elok|未检测到问题|无问题)$/.test(String(value || '').trim().toLowerCase());
 
+const nutritionPattern = /nutrient|nutrition|nutritional|nutrisi|deficien|kekurangan|nutrien|chlorosis|nitrogen|potassium|magnesium|calcium|kalium|营养|缺素|缺钾/i;
+const actionableDiseasePattern = /fungal|fungus|bacter|viral|virus|pest|insect|mealybug|aphid|mite|thrip|whitefly|infestation|oomycete|nematode|blight|spot|rot|wilt|rust|mildew|kulat|病/i;
+
+const normalizeNutritionStatus = (scan = {}) => {
+    const source = scan.nutritionalIssues && typeof scan.nutritionalIssues === 'object'
+        ? scan.nutritionalIssues
+        : {};
+    const explicit = normalized(source.status || scan.nutritionalStatus);
+    if (explicit === 'confirmed' || source.hasDeficiency || Array.isArray(source.deficientNutrients) && source.deficientNutrients.length > 0) {
+        return 'confirmed';
+    }
+    if (explicit === 'possible'
+        || Array.isArray(source.possibleNutrients) && source.possibleNutrients.length > 0
+        || source.reasoning || source.notes) {
+        return 'possible';
+    }
+    return 'none';
+};
+
+const hasNutrientEvidence = (scan = {}) => {
+    const source = scan.nutritionalIssues && typeof scan.nutritionalIssues === 'object'
+        ? scan.nutritionalIssues
+        : {};
+    const differentialText = Array.isArray(scan.differentialDiagnoses)
+        ? scan.differentialDiagnoses.map((item) => `${item?.name || ''} ${item?.reason || ''}`).join(' ')
+        : '';
+    const text = [
+        scan.disease,
+        scan.diseaseCategory,
+        scan.pathogenType,
+        scan.diagnosticEvidence?.likelyCauseCategory,
+        differentialText,
+        ...(Array.isArray(scan.productSearchTags) ? scan.productSearchTags : []),
+    ].filter(Boolean).join(' ');
+    const explicitStatus = normalized(source.status || scan.nutritionalStatus);
+    const namedNutrient = (Array.isArray(source.deficientNutrients) && source.deficientNutrients.length > 0)
+        || (Array.isArray(source.possibleNutrients) && source.possibleNutrients.length > 0);
+    return nutritionPattern.test(text)
+        || namedNutrient
+        || explicitStatus === 'confirmed'
+        || scan.resultState === SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE;
+};
+
+/**
+ * Determines where diagnosis and product content belongs on the result page.
+ * This is shared by the browser and server so a product cannot be rendered in
+ * a different section from the decision that produced it.
+ */
+export const getScanSectionPolicy = (scan = {}) => {
+    const decision = assessScanDecision(scan);
+    const nutritionStatus = normalizeNutritionStatus(scan);
+    const text = [
+        scan.disease,
+        scan.diseaseCategory,
+        scan.pathogenType,
+        scan.diagnosticEvidence?.likelyCauseCategory,
+    ].filter(Boolean).join(' ');
+    const diseaseCategory = normalized(scan.diseaseCategory);
+    const actionableDisease = actionableDiseasePattern.test(text)
+        && !['environmental', 'nutrient', 'healthy', 'unknown', 'physiological'].includes(diseaseCategory);
+    const nutritionPrimary = !decision.healthy && (
+        normalized(scan.resultState) === SCAN_RESULT_STATES.POSSIBLE_NUTRIENT_ISSUE
+        || (nutritionStatus !== 'none' && !actionableDisease)
+        || (nutritionPattern.test(text) && !actionableDisease)
+    );
+    const nutritionEvidence = hasNutrientEvidence(scan);
+    const nutritionUnconfirmed = Boolean(scan.nutritionalIssues?.unconfirmedDueToEvidence);
+
+    return {
+        nutritionStatus,
+        nutritionPrimary,
+        diseasePrimary: !decision.healthy && actionableDisease,
+        showNutritionProducts: decision.healthy || (nutritionEvidence && nutritionStatus !== 'none' && !nutritionUnconfirmed),
+        showDiseaseProducts: decision.treatmentEligible && actionableDisease,
+    };
+};
+
 export const assessScanDecision = (scan = {}) => {
     if (!scan || typeof scan !== 'object') scan = {};
     const status = normalized(scan.status);

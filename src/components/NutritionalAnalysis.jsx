@@ -1,10 +1,10 @@
 import { useLanguage } from '../i18n/i18n.jsx';
-import { CheckCircle, AlertTriangle, Droplet } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Droplet, Pill } from 'lucide-react';
 import { resolveScanNutrition } from '../utils/nutritionUtils.js';
 import { SCAN_RESULT_STATES, getScanResultState } from '../utils/statusUtils.js';
 import './NutritionalAnalysis.css';
 
-const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
+const NutritionalAnalysis = ({ nutritionalIssues, fertilizerRecommendations = [], scanResult }) => {
   const { t } = useLanguage();
 
   const toTitleCase = (str) => {
@@ -20,6 +20,13 @@ const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
   const isUnconfirmed = Boolean(normalizedIssues.unconfirmedDueToEvidence);
   const isPossible = normalizedIssues.status === 'possible' && !isUnconfirmed;
   const isConfirmed = normalizedIssues.status === 'confirmed';
+  const validRecommendations = Array.isArray(fertilizerRecommendations)
+    ? fertilizerRecommendations.filter((recommendation) => (
+      recommendation && typeof recommendation === 'object'
+      && String(recommendation.fertilizerName || recommendation.product || recommendation.name || '').trim()
+    ))
+    : [];
+  const showRecommendations = validRecommendations.length > 0 && !isUnconfirmed;
 
   const getSeverityColor = (severity) => {
     if (!severity) return 'moderate';
@@ -79,6 +86,12 @@ const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
                 <p className="na-alert-description">{t('results.nutritionNotConfirmedMessage')}</p>
               )}
 
+              {(isPossible || isUnconfirmed) && (
+                <p className="na-nutrition-caution">
+                  {t('results.nutritionRecommendationsCaution') || 'Confirm the nutrient cause with field signs or soil/leaf testing before applying products.'}
+                </p>
+              )}
+
               {Array.isArray(normalizedIssues?.symptoms) && normalizedIssues.symptoms.length > 0 && (
                 <ul className="na-symptoms-list">
                   {normalizedIssues.symptoms.map((symptom, idx) => (
@@ -132,6 +145,38 @@ const NutritionalAnalysis = ({ nutritionalIssues, scanResult }) => {
             </div>
           )}
         </>
+      )}
+
+      {showRecommendations && (
+        <div className="na-recommendations-section app-surface app-surface--soft">
+          <div className="na-subsection-header">
+            <Pill size={18} className="na-subsection-icon" />
+            <h4 className="na-subsection-title">{t('results.fertilizerRecommendations')}</h4>
+          </div>
+          <p className="na-recommendations-note">
+            {isPossible
+              ? (t('results.nutritionRecommendationsCaution') || 'Confirm the nutrient cause with field signs or soil/leaf testing before applying products.')
+              : (t('results.fertilizerDesc') || 'Use the crop label and farm nutrient plan when applying fertilizer or supplements.')}
+          </p>
+          <div className="na-recommendations-list">
+            {validRecommendations.map((recommendation, index) => {
+              const name = String(recommendation.fertilizerName || recommendation.product || recommendation.name).trim();
+              return (
+                <div className="na-recommendation-card" key={`${name}-${index}`}>
+                  <div className="na-recommendation-heading">
+                    <strong>{name}</strong>
+                    {recommendation.type && <span>{recommendation.type}</span>}
+                  </div>
+                  <dl className="na-recommendation-details">
+                    <div><dt>{t('results.application')}</dt><dd>{recommendation.applicationMethod || recommendation.application || t('results.asDirected')}</dd></div>
+                    <div><dt>{t('results.frequency')}</dt><dd>{recommendation.frequency || t('results.asNeeded')}</dd></div>
+                    <div><dt>{t('results.amount')}</dt><dd>{recommendation.amount || recommendation.dosage || t('results.followInstructions')}</dd></div>
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );

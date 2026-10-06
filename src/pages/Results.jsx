@@ -1,6 +1,7 @@
+import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
 ﻿import { useNavigate, useParams } from 'react-router-dom';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
@@ -17,10 +18,6 @@ import { getScanResultState, getStandardizedStatus } from '../utils/statusUtils'
 import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
 import { getNutrientNames, normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
 import { localizeStoredAnalysisResult as refreshStoredAnalysisLanguage } from '../utils/diseaseDetection.js';
-import {
-  createEmptyProductRecommendations,
-  fetchLiveProductRecommendations,
-} from '../utils/liveProductRecommendations.js';
 import { buildFollowUpDraftFromScan, saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
@@ -29,6 +26,7 @@ import ScanDecisionSummary, { nextScanStep } from '../components/ScanDecisionSum
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { confidencePercent } from '../../shared/scanResultPolicy.js';
 import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
+import { useProductRecommendations } from '../hooks/useProductRecommendations.js';
 
 const TreatmentRecommendations = lazyWithRetry(
   () => import('../components/TreatmentRecommendations'),
@@ -64,8 +62,13 @@ const Results = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [scan, setScan] = useState(null);
+  const [originalScan, setOriginalScan] = useState(null);
+  const translationRequest = useRef(0);
+  useEffect(() => { translationRequest.current++; setTranslating(false); setTranslationError(false); return () => { translationRequest.current++; }; }, [id, language]);
+  const [translating, setTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState(false);
+  const enhancementCopy = getEnhancementCopy(language);
   const [scanLoading, setScanLoading] = useState(true);
-  const [liveProductRecommendations, setLiveProductRecommendations] = useState(null);
   const label = useCallback((key, fallback) => {
     const translated = t(key);
     return translated && translated !== key ? translated : fallback;
@@ -73,10 +76,11 @@ const Results = () => {
 
   useEffect(() => {
     setScanLoading(true);
-    setLiveProductRecommendations(null);
     Promise.resolve(getScanById(id, user?.id ?? null))
       .then(result => {
         setScan(result);
+        setOriginalScan(result);
+        setTranslationError(false);
         setScanLoading(false);
       })
       .catch(() => {
@@ -85,47 +89,33 @@ const Results = () => {
       });
   }, [id, user?.id]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const refreshLanguage = async () => {
-      if (!scan || scanLoading) return;
-
-      const sourceLanguage = scan.analysisLanguage || scan.language || null;
-      if (sourceLanguage === language) return;
-
-      try {
-        const localizedScan = await refreshStoredAnalysisLanguage(scan, language);
-        if (!cancelled && localizedScan?.analysisLanguage === language) {
-          setScan((current) => {
-            if (!current || current.id !== localizedScan.id) return current;
-            if (current === localizedScan) return current;
-            return localizedScan;
-          });
-        }
-      } catch {
-        // Keep showing the stored result language if refresh is unavailable.
-      }
-    };
-
-    refreshLanguage();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [scan, scanLoading, language]);
+  const translateAnalysis = async () => {
+    if (!originalScan || translating) return;
+    const request = ++translationRequest.current;
+    setTranslating(true); setTranslationError(false);
+    try {
+      const localized = await refreshStoredAnalysisLanguage(originalScan, language);
+      if (request !== translationRequest.current) return;
+      if (localized?.analysisLanguage !== language) throw new Error('Translation unavailable');
+      setScan(current => current?.id === localized.id ? { ...current, ...localized, followUp: current.followUp, plot_id: current.plot_id } : current);
+    } catch { if (request === translationRequest.current) setTranslationError(true); }
+    finally { if (request === translationRequest.current) setTranslating(false); }
+  };
 
   const result = useMemo(() => buildScanResultModel(scan || {}, language), [scan, language]);
+  const productRecommendationState = useProductRecommendations({
+    plantType: result.plantType || '',
+    disease: result.disease || '',
+    scanResult: result,
+    language,
+    enabled: Boolean(scan && !scanLoading),
+  });
   const normalizedNutrition = result.nutritionalIssues;
   const scanCopy = getScanQualityCopy(language);
   const scoreText = value => {
     const score = confidencePercent(value);
     return score === null ? t('results.notRecorded') : `${Math.round(score)}%`;
   };
-
-  const handleRecommendationsLoaded = useCallback((data) => {
-    setLiveProductRecommendations(data);
-  }, []);
 
   if (scanLoading) {
     return (
@@ -213,18 +203,13 @@ const Results = () => {
       const scanForExport = {
         ...result,
       };
-      let productRecommendations = liveProductRecommendations;
+      let productRecommendations = productRecommendationState.data;
       if (!productRecommendations && (scanForExport.plantType || scanForExport.disease)) {
         try {
-          productRecommendations = await fetchLiveProductRecommendations({
-            plantType: scanForExport.plantType,
-            disease: scanForExport.disease,
-            scanResult: result,
-            language,
-          });
+          productRecommendations = await productRecommendationState.load();
         } catch (productError) {
           console.warn('Unable to preload live product recommendations for PDF export:', productError);
-          productRecommendations = createEmptyProductRecommendations();
+          productRecommendations = null;
         }
       }
 
@@ -257,6 +242,25 @@ const Results = () => {
 
     const nutrientNames = getNutrientNames(normalizedNutrition);
     const nutrientSymptoms = normalizeList(normalizedNutrition?.symptoms);
+    const nutritionRecommendations = result.sectionPolicy?.showNutritionProducts && !normalizedNutrition.unconfirmedDueToEvidence && Array.isArray(scan.fertilizerRecommendations)
+      ? scan.fertilizerRecommendations.map((recommendation) => {
+        const name = recommendation?.fertilizerName || recommendation?.product || recommendation?.name;
+        if (!name) return '';
+        const details = [recommendation.applicationMethod || recommendation.application, recommendation.frequency, recommendation.amount || recommendation.dosage]
+          .filter(Boolean)
+          .join(' · ');
+        return details ? `${name}: ${details}` : name;
+      }).filter(Boolean)
+      : [];
+    const nutritionStoreProducts = result.sectionPolicy?.showNutritionProducts
+      ? [
+        ...(productRecommendationState.data?.fertilizers || []),
+        ...(productRecommendationState.data?.supplements || []),
+      ].map((product) => product?.name).filter(Boolean)
+      : [];
+    const resultIssueLabel = result.sectionPolicy?.nutritionPrimary
+      ? (normalizedNutrition.status === 'confirmed' ? t('results.nutrientDeficiencyDetected') : t('results.possibleNutrientIssue'))
+      : (result.disease || t('results.unknownDisease'));
     const nutritionBlock = normalizedNutrition.unconfirmedDueToEvidence ? `${t('results.nutritionalIssues')}: ${t('results.nutritionNotConfirmed')}` : normalizedNutrition.status === 'confirmed'
       ? `
 ${t('results.nutritionalIssues')}:
@@ -264,6 +268,8 @@ ${t('results.nutritionStatusConfirmed')}: ${t('results.confirmedDeficiency')}
 ${t('results.lackingNutrients')}: ${nutrientNames.join(', ')}
 ${t('results.symptoms')}: ${nutrientSymptoms.join(', ')}
 ${t('results.severity')}: ${normalizedNutrition.severity}
+${nutritionRecommendations.length > 0 ? `${t('results.fertilizerRecommendations')}:\n${nutritionRecommendations.map((item, i) => `${i + 1}. ${item}`).join('\n')}` : ''}
+${nutritionStoreProducts.length > 0 ? `${t('results.recommendedProducts')}: ${nutritionStoreProducts.join(', ')}` : ''}
 `
       : normalizedNutrition.status === 'possible'
         ? [
@@ -274,8 +280,16 @@ ${t('results.nutritionStatusPossible')}: ${t('results.possibleNutrientOverlap')}
           nutrientNames.length > 0 ? `${t('results.suspectedNutrients')}: ${nutrientNames.join(', ')}` : '',
           normalizedNutrition.reasoning ? `${t('results.nutritionMayAlsoBeContributing')}: ${normalizedNutrition.reasoning}` : '',
           nutrientSymptoms.length > 0 ? `${t('results.symptoms')}: ${nutrientSymptoms.join(', ')}` : '',
+          nutritionRecommendations.length > 0 ? `${t('results.fertilizerRecommendations')}: ${nutritionRecommendations.join('; ')}` : '',
+          nutritionStoreProducts.length > 0 ? `${t('results.recommendedProducts')}: ${nutritionStoreProducts.join(', ')}` : '',
         ].filter(Boolean).join('\n')
-        : '';
+        : (nutritionRecommendations.length > 0 || nutritionStoreProducts.length > 0)
+          ? [
+              `${t('results.nutritionalIssues')}:`,
+              nutritionRecommendations.length > 0 ? `${t('results.fertilizerRecommendations')}: ${nutritionRecommendations.join('; ')}` : '',
+              nutritionStoreProducts.length > 0 ? `${t('results.recommendedProducts')}: ${nutritionStoreProducts.join(', ')}` : '',
+            ].filter(Boolean).join('\n')
+          : '';
 
     const report = `
 ${t('pdf.title')}
@@ -289,9 +303,9 @@ ${t('results.scale')}: ${result.farmScale || t('results.notSpecified')}
 ${result.estimatedAge ? `${t('results.estimatedAge')}: ${result.estimatedAge}` : ''}
 
 ${t('results.status')}: ${getDiagnosisStatusLabel(t, result.resultState)}
-${t('results.disease')}: ${result.disease}
-${result.fungusType ? `${t('results.fungusSpecies')}: ${result.fungusType}` : ''}
-${result.pathogenType ? `${t('results.pathogenType')}: ${result.pathogenType}` : ''}
+${t('results.disease')}: ${resultIssueLabel}
+${!result.sectionPolicy?.nutritionPrimary && result.fungusType ? `${t('results.fungusSpecies')}: ${result.fungusType}` : ''}
+${!result.sectionPolicy?.nutritionPrimary && result.pathogenType ? `${t('results.pathogenType')}: ${result.pathogenType}` : ''}
 ${t('results.confidence')}: ${scoreText(result.confidence)}
 ${result.confidenceBreakdown ? `${t('results.diagnosisConfidence') || 'Diagnosis confidence'}: ${scoreText(result.confidenceBreakdown.diagnosisConfidence)}` : ''}
 ${result.confidenceBreakdown ? `${t('results.imageQualityConfidence') || 'Image quality confidence'}: ${scoreText(result.confidenceBreakdown.imageQualityConfidence)}` : ''}
@@ -348,22 +362,41 @@ ${t('pdf.generatedBy')}
 
   const handleShare = async () => {
     const nutrientNames = getNutrientNames(normalizedNutrition);
+    const nutritionRecommendations = result.sectionPolicy?.showNutritionProducts && !normalizedNutrition.unconfirmedDueToEvidence
+      ? (Array.isArray(scan.fertilizerRecommendations) ? scan.fertilizerRecommendations : [])
+      .map((recommendation) => recommendation?.fertilizerName || recommendation?.product || recommendation?.name)
+      .filter(Boolean)
+      : [];
+    const nutritionStoreProducts = result.sectionPolicy?.showNutritionProducts
+      ? [
+        ...(productRecommendationState.data?.fertilizers || []),
+        ...(productRecommendationState.data?.supplements || []),
+      ].map((product) => product?.name).filter(Boolean)
+      : [];
     const nutritionSummary = normalizedNutrition.unconfirmedDueToEvidence ? `${t('results.nutritionalIssues')}: ${t('results.nutritionNotConfirmed')}` : normalizedNutrition.status === 'confirmed'
       ? `${t('results.nutritionalIssues')}: ${t('results.confirmedDeficiency')}${nutrientNames.length ? ` (${nutrientNames.join(', ')})` : ''}`
       : normalizedNutrition.status === 'possible'
         ? `${t('results.nutritionalIssues')}: ${t('results.possibleNutrientOverlap')}${nutrientNames.length ? ` (${nutrientNames.join(', ')})` : ''}`
         : '';
+    const nutritionRecommendationsSummary = [
+      nutritionRecommendations.length ? `${t('results.fertilizerRecommendations')}: ${nutritionRecommendations.join(', ')}` : '',
+      nutritionStoreProducts.length ? `${t('results.recommendedProducts')}: ${nutritionStoreProducts.join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+    const resultIssueLabel = result.sectionPolicy?.nutritionPrimary
+      ? (normalizedNutrition.status === 'confirmed' ? t('results.nutrientDeficiencyDetected') : t('results.possibleNutrientIssue'))
+      : (result.disease || t('results.unknownDisease'));
 
     const shareText = [
       `${t('pdf.title') || 'Plant Analysis Report'}`,
       `${t('results.plantType')}: ${result.plantType || t('common.unknown')}`,
-      `${t('results.disease')}: ${result.disease || t('results.unknownDisease')}`,
+      `${t('results.disease')}: ${resultIssueLabel}`,
       `${t('results.status')}: ${getDiagnosisStatusLabel(t, result.resultState)}`,
       result.severity ? `${t('results.severity')}: ${t(`results.${result.severity?.toLowerCase()}`) || result.severity}` : '',
       result.confidence !== null ? `${t('results.confidence')}: ${scoreText(result.confidence)}` : '',
       result.resultState ? `${t('results.diagnosisStatus') || 'Diagnosis status'}: ${getDiagnosisStatusLabel(t, result.resultState)}` : '',
       result.diagnosticEvidence?.likelyCauseCategory ? `${t('results.likelyCauseCategory') || 'Likely cause'}: ${result.diagnosticEvidence.likelyCauseCategory}` : '',
       nutritionSummary,
+      nutritionRecommendationsSummary,
       `${scanCopy.next}: ${nextScanStep(result, scanCopy)}`,
       scanCopy.scoreNote,
       result.additionalNotes || '',
@@ -441,6 +474,14 @@ ${t('pdf.generatedBy')}
             fertilizerRecommendations={scan.fertilizerRecommendations}
             scanResult={result}
           />
+          <ProductRecommendations
+            plantType={result.plantType}
+            disease={result.disease}
+            farmScale={result.farmScale}
+            scanResult={result}
+            displayMode="nutrition"
+            recommendationState={productRecommendationState}
+          />
         </Suspense>
       )
     },
@@ -452,10 +493,11 @@ ${t('pdf.generatedBy')}
           <div>
             <ProductRecommendations
               plantType={scan.plantType}
-              disease={scan.disease}
-              farmScale={scan.farmScale}
+              disease={result.disease}
+              farmScale={result.farmScale}
               scanResult={result}
-              onRecommendationsLoaded={handleRecommendationsLoaded}
+              displayMode="disease"
+              recommendationState={productRecommendationState}
             />
           </div>
         </Suspense>
@@ -467,7 +509,15 @@ ${t('pdf.generatedBy')}
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
         <ScanDecisionSummary result={result} />
-        {scan.analysisLanguage && scan.analysisLanguage !== language && <p role="status">{scanCopy.sourceLanguageNotice}</p>}
+        {(originalScan?.analysisLanguage || originalScan?.language) !== language && <section className="analysis-language ui-card" aria-busy={translating}>
+          <p>{enhancementCopy.source}: {enhancementCopy.languages[originalScan?.analysisLanguage || originalScan?.language] || originalScan?.analysisLanguage || originalScan?.language || enhancementCopy.unknown}</p>
+          {scan.analysisLanguage === language && <p role="status">{enhancementCopy.translated}</p>}
+          <div className="ui-action-row">
+            <button className="btn btn-secondary" disabled={translating || scan.analysisLanguage === language} onClick={translateAnalysis}>{translating ? enhancementCopy.translating : enhancementCopy.translate}</button>
+            {scan.analysisLanguage !== (originalScan?.analysisLanguage || originalScan?.language) && <button className="btn btn-secondary" disabled={translating} onClick={() => setScan(current => ({ ...originalScan, followUp: current.followUp, plot_id: current.plot_id }))}>{enhancementCopy.original}</button>}
+          </div>
+          {translationError && <p role="alert">{enhancementCopy.failed}</p>}
+        </section>}
         <div className="results-next-action">
           <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { setActiveResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
             {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}

@@ -1,8 +1,9 @@
+import StatusBadge from './StatusBadge.jsx';
 import { assessScanDecision } from '../../shared/scanResultPolicy.js';
 import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { MapPin, Trash2, CheckCircle, AlertTriangle, Leaf } from 'lucide-react';
+import { MapPin, Trash2, Leaf } from 'lucide-react';
 import { getStandardizedStatus } from '../utils/statusUtils';
 import './ScanHistoryCard.css';
 import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
@@ -91,13 +92,9 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
 
             <div className="scan-badge-row">
               {isFollowUpDue(scan) && <span className="status-badge-mini status-review">{getUiCopy(language).due}</span> }
-              <span className={`status-badge-mini ${decision.needsReview ? 'status-review' : healthy ? 'status-healthy' : 'status-unhealthy'}`}>
-                {healthy ?
-                  <CheckCircle size={10} strokeWidth={3} /> :
-                  <AlertTriangle size={10} strokeWidth={3} />
-                }
+              <StatusBadge tone={decision.needsReview ? 'review' : healthy ? 'healthy' : 'unhealthy'}>
                 {decision.needsReview ? getDiagnosisStatusLabel(t, decision.resultState) : t(`results.${standardizedStatus}`)}
-              </span>
+              </StatusBadge>
 
               {scan.severity && (
                 <span className={`badge-severity ${getSeverityBadgeClass(scan.severity)}`}>

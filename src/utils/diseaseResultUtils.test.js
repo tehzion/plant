@@ -105,4 +105,48 @@ describe('normalizeDiseaseResult', () => {
 
         expect(normalized.showIdentification).toBe(false);
     });
+
+    it('uses a nutrition-first title and hides pathogen details for nutrition-only scans', () => {
+        const normalized = normalizeDiseaseResult({
+            disease: 'Potassium deficiency',
+            diseaseCategory: 'nutrient',
+            resultState: 'possible_nutrient_issue',
+            healthStatus: 'unhealthy',
+            nutritionalIssues: {
+                status: 'confirmed',
+                deficientNutrients: ['Potassium'],
+            },
+            pathogenType: 'fungal',
+            fungusType: 'Alternaria',
+        }, (key) => ({
+            'results.nutrientDeficiencyDetected': 'Nutrient deficiency',
+            'results.possibleNutrientIssue': 'Possible nutrient issue',
+        }[key] || t(key)));
+
+        expect(normalized.nutritionPrimary).toBe(true);
+        expect(normalized.displayTitle).toBe('Nutrient deficiency');
+        expect(normalized.detailItems).toEqual([]);
+    });
+
+    it('keeps the disease title and pathogen evidence primary for mixed scans', () => {
+        const normalized = normalizeDiseaseResult({
+            disease: 'Fungal leaf spot',
+            diseaseCategory: 'fungal',
+            resultState: 'confident_treatment',
+            status: 'confirmed',
+            confidence: 92,
+            healthStatus: 'unhealthy',
+            pathogenType: 'fungal',
+            nutritionalIssues: {
+                status: 'possible',
+                possibleNutrients: ['Magnesium'],
+            },
+        }, t);
+
+        expect(normalized.nutritionPrimary).toBe(false);
+        expect(normalized.displayTitle).toBe('Fungal leaf spot');
+        expect(normalized.detailItems).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'pathogen', value: 'Fungal' }),
+        ]));
+    });
 });

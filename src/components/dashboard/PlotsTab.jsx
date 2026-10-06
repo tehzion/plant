@@ -1,3 +1,4 @@
+import FarmOverview from './FarmOverview.jsx';
 import { X, Plus, MapPin, Leaf, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { PLOT_UNITS_CFG } from '../../data/config';
 
@@ -12,6 +13,7 @@ const PlotsTab = ({
     showSoilFields,
     savingPlot,
     plots,
+    scanHistory = [],
     handleDeletePlot,
     label: labelProp,
 }) => {
@@ -80,6 +82,7 @@ const PlotsTab = ({
                 </form>
             )}
 
+            <FarmOverview scans={scanHistory} plots={plots} />
             <div className="udp-plot-list">
                 {plots.length === 0 && !addingPlot && <div className="udp-empty"><MapPin size={32} /><p>{label('profile.noPlots', 'No plots mapped.')}</p></div>}
                 {plots.map((plot) => (

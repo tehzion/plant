@@ -6,6 +6,8 @@ import { SCAN_FOLLOW_UP_DRAFT_KEY } from '../utils/scanFollowUpDraft.js';
 
 const navigateMock = vi.fn();
 const getScanByIdMock = vi.fn();
+const productRecommendationProps = vi.hoisted(() => []);
+const fetchLiveProductRecommendationsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ id: 'scan-123' }),
@@ -48,23 +50,29 @@ vi.mock('../utils/toast', () => ({
   showToast: vi.fn(),
 }));
 
-vi.mock('../utils/liveProductRecommendations.js', () => ({
-  createEmptyProductRecommendations: vi.fn(() => ({
-    treatmentProducts: [],
-    fertilizers: [],
-    supplements: [],
-    otherPopular: [],
-    fallbackMeta: null,
-  })),
-  fetchLiveProductRecommendations: vi.fn(),
-}));
+vi.mock('../utils/liveProductRecommendations.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    fetchLiveProductRecommendations: fetchLiveProductRecommendationsMock.mockImplementation(async () => ({
+      diseaseControl: [],
+      fertilizers: [],
+      supplements: [],
+      otherPopular: [],
+      fallbackMeta: null,
+      recommendationIntent: '',
+      consultation: null,
+      storeUrl: '',
+    })),
+  };
+});
 
 vi.mock('../components/QuickActions', () => ({
   default: () => <div data-testid="quick-actions" />,
 }));
 
 vi.mock('../components/TabbedResults', () => ({
-  default: ({ tabs }) => <div data-testid="tabbed-results">{tabs[0]?.content}</div>,
+  default: ({ tabs }) => <div data-testid="tabbed-results">{tabs.map((tab) => <div key={tab.id}>{tab.content}</div>)}</div>,
 }));
 
 vi.mock('../components/DiseaseResult', () => ({
@@ -85,7 +93,10 @@ vi.mock('../components/NutritionalAnalysis', () => ({
 }));
 
 vi.mock('../components/ProductRecommendations', () => ({
-  default: () => <div />,
+  default: (props) => {
+    productRecommendationProps.push(props);
+    return <div data-testid={`product-${props.displayMode || 'all'}`} data-has-shared-state={String(Boolean(props.recommendationState))} />;
+  },
 }));
 
 vi.mock('../components/HealthyCarePlan', () => ({
@@ -101,6 +112,18 @@ describe('Results', () => {
     navigateMock.mockReset();
     getScanByIdMock.mockReset();
     sessionStorage.clear();
+    productRecommendationProps.length = 0;
+    fetchLiveProductRecommendationsMock.mockReset();
+    fetchLiveProductRecommendationsMock.mockResolvedValue({
+      diseaseControl: [],
+      fertilizers: [],
+      supplements: [],
+      otherPopular: [],
+      fallbackMeta: null,
+      recommendationIntent: '',
+      consultation: null,
+      storeUrl: '',
+    });
   });
 
   it('passes persisted image URLs into the disease result view', async () => {
@@ -160,5 +183,36 @@ describe('Results', () => {
     });
     expect(stored.draft.note).toContain('Select the actual activity');
     expect(navigateMock).toHaveBeenCalledWith('/profile?tab=notes&draft=scan-follow-up');
+  });
+
+  it('passes one shared recommendation state to disease and nutrition product views', async () => {
+    getScanByIdMock.mockResolvedValue({
+      id: 'scan-shared-products',
+      disease: 'Fungal leaf spot',
+      plantType: 'Durian',
+      healthStatus: 'unhealthy',
+      status: 'confirmed',
+      resultState: 'confident_treatment',
+      confidence: 92,
+      pathogenType: 'fungal',
+      nutritionalIssues: {
+        status: 'possible',
+        possibleNutrients: ['Magnesium'],
+      },
+    });
+
+    render(<Results />);
+
+    await waitFor(() => {
+      const diseaseView = productRecommendationProps.find((props) => props.displayMode === 'disease');
+      const nutritionView = productRecommendationProps.find((props) => props.displayMode === 'nutrition');
+      expect(diseaseView).toBeTruthy();
+      expect(nutritionView).toBeTruthy();
+      expect(diseaseView.recommendationState).toBe(nutritionView.recommendationState);
+    });
+
+    expect(fetchLiveProductRecommendationsMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('product-disease')).toHaveAttribute('data-has-shared-state', 'true');
+    expect(screen.getByTestId('product-nutrition')).toHaveAttribute('data-has-shared-state', 'true');
   });
 });

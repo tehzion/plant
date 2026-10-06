@@ -16,6 +16,15 @@ vi.mock('../i18n/i18n.jsx', () => ({
       'results.nutritionMayAlsoBeContributing': 'Nutrition may also be contributing',
       'results.nutritionNotConfirmed': 'Nutrition not confirmed',
       'results.nutritionNotConfirmedMessage': 'Retake a closer photo.',
+      'results.fertilizerRecommendations': 'Fertilizer recommendations',
+      'results.nutritionRecommendationsCaution': 'Confirm before applying nutrition support.',
+      'results.fertilizerDesc': 'Use the crop label.',
+      'results.application': 'Application',
+      'results.frequency': 'Frequency',
+      'results.amount': 'Amount',
+      'results.asDirected': 'As directed',
+      'results.asNeeded': 'As needed',
+      'results.followInstructions': 'Follow instructions',
       'results.lackingNutrients': 'Lacking Nutrients',
       'results.sevMild': 'Mild',
       'results.sevModerate': 'Moderate',
@@ -58,6 +67,7 @@ describe('NutritionalAnalysis', () => {
     expect(screen.getByText('Possible nutrient issue')).toBeInTheDocument();
     expect(screen.getByText('Possible')).toBeInTheDocument();
     expect(screen.getByText('Magnesium')).toBeInTheDocument();
+    expect(screen.getByText('Confirm before applying nutrition support.')).toBeInTheDocument();
     expect(screen.queryByText('Nutrient Deficiency Detected')).not.toBeInTheDocument();
   });
 
@@ -99,5 +109,45 @@ describe('NutritionalAnalysis', () => {
     expect(screen.getByText('Nutrition not confirmed')).toBeInTheDocument();
     expect(screen.queryByText('Possible nutrient issue')).not.toBeInTheDocument();
     expect(screen.queryByText('No Nutritional Deficiencies Detected')).not.toBeInTheDocument();
+  });
+
+  it('renders legacy fertilizer guidance inside the nutrition section', () => {
+    render(
+      <NutritionalAnalysis
+        nutritionalIssues={{
+          status: 'confirmed',
+          deficientNutrients: ['Potassium'],
+        }}
+        fertilizerRecommendations={[{
+          fertilizerName: 'MOP (Muriate of Potash)',
+          applicationMethod: 'Soil application',
+          frequency: 'Every 4 weeks',
+          amount: '20 g/tree',
+        }]}
+      />,
+    );
+
+    expect(screen.getByText('Fertilizer recommendations')).toBeInTheDocument();
+    expect(screen.getByText('MOP (Muriate of Potash)')).toBeInTheDocument();
+    expect(screen.getByText('Soil application')).toBeInTheDocument();
+    expect(screen.getByText('Every 4 weeks')).toBeInTheDocument();
+    expect(screen.getByText('20 g/tree')).toBeInTheDocument();
+  });
+
+  it('does not render fertilizer guidance for an unconfirmed nutrition finding', () => {
+    render(
+      <NutritionalAnalysis
+        nutritionalIssues={{
+          status: 'possible',
+          unconfirmedDueToEvidence: true,
+          possibleNutrients: ['Nitrogen'],
+        }}
+        fertilizerRecommendations={[{ fertilizerName: 'NPK 15-15-15' }]}
+      />,
+    );
+
+    expect(screen.getByText('Nutrition not confirmed')).toBeInTheDocument();
+    expect(screen.queryByText('Fertilizer recommendations')).not.toBeInTheDocument();
+    expect(screen.queryByText('NPK 15-15-15')).not.toBeInTheDocument();
   });
 });

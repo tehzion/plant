@@ -245,6 +245,7 @@ const resultsTranslations = {
             "frequency": "Frequency",
             "amount": "Amount",
             "fertilizerDesc": "Fertilizers and supplements specially formulated to restore your plant's health",
+            "nutritionRecommendationsCaution": "Confirm the nutrient cause with field signs or soil/leaf testing before applying products.",
             "asDirected": "As directed",
             "asNeeded": "As needed",
             "followInstructions": "Follow package instructions",
@@ -273,6 +274,9 @@ const resultsTranslations = {
             "whyTheseProducts": "Selection note",
             "addToCart": "Add to Cart",
             "noProductsFound": "No specific products found",
+            "noDiseaseControlProducts": "No disease-control products recommended",
+            "noDiseaseControlProductsDesc": "This result does not support a disease-control product. Review the diagnosis or use Nutrition for nutrient guidance.",
+            "noNutritionProducts": "No nutrition products found",
             "noProductsDesc": "We couldn't find specific products in our store matching this condition right now. You can still contact our suppliers directly."
         }
     },
@@ -522,6 +526,7 @@ const resultsTranslations = {
             "frequency": "Kekerapan",
             "amount": "Jumlah",
             "fertilizerDesc": "Baja dan suplemen yang dirumus khas untuk memulihkan kesihatan tanaman anda",
+            "nutritionRecommendationsCaution": "Sahkan punca nutrien melalui tanda di lapangan atau ujian tanah/daun sebelum menggunakan produk.",
             "asDirected": "Seperti yang diarahkan",
             "asNeeded": "Mengikut keperluan",
             "followInstructions": "Ikut arahan pakej",
@@ -550,6 +555,9 @@ const resultsTranslations = {
             "whyTheseProducts": "Nota pemilihan",
             "addToCart": "Tambah ke Troli",
             "noProductsFound": "Tiada produk khusus dijumpai",
+            "noDiseaseControlProducts": "Tiada produk kawalan penyakit disyorkan",
+            "noDiseaseControlProductsDesc": "Keputusan ini tidak menyokong penggunaan produk kawalan penyakit. Semak diagnosis atau gunakan tab Pemakanan untuk panduan nutrien.",
+            "noNutritionProducts": "Tiada produk nutrisi dijumpai",
             "noProductsDesc": "Kami tidak menemui produk khusus dalam kedai kami yang sepadan dengan keadaan ini sekarang. Anda masih boleh menghubungi pembekal kami secara terus."
         }
     },
@@ -724,6 +732,7 @@ const resultsTranslations = {
             "frequency": "频率",
             "amount": "用量",
             "fertilizerDesc": "专为恢复植物健康而配制的肥料与补充剂",
+            "nutritionRecommendationsCaution": "使用产品前，请结合田间症状或土壤/叶片检测确认营养原因。",
             "asDirected": "按说明使用",
             "asNeeded": "按需使用",
             "followInstructions": "请遵循包装说明",
@@ -745,6 +754,9 @@ const resultsTranslations = {
             "whyTheseProducts": "推荐说明",
             "addToCart": "加入购物车",
             "noProductsFound": "未找到特定产品",
+            "noDiseaseControlProducts": "未建议病害防治产品",
+            "noDiseaseControlProductsDesc": "此结果不支持使用病害防治产品。请复核诊断，或前往营养标签查看营养指导。",
+            "noNutritionProducts": "未找到营养产品",
             "noProductsDesc": "当前商店中暂无与此情况直接匹配的产品，您仍可直接联系供应商。",
             "prodNPKName": "N-P-K 15-15-15 平衡肥",
             "prodNPKDesc": "适用于多种植物日常生长与维护的均衡肥料。",

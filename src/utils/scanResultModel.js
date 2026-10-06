@@ -1,4 +1,4 @@
-import { assessScanDecision, confidencePercent, isNoIssueDiagnosis } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, confidencePercent, getScanSectionPolicy, isNoIssueDiagnosis } from '../../shared/scanResultPolicy.js';
 import { normalizeNutritionalIssues, resolveScanNutrition } from './nutritionUtils.js';
 import { getStandardizedSeverity } from './statusUtils.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
@@ -9,9 +9,12 @@ const list = (value) => Array.isArray(value) ? value.filter(item => typeof item 
 export const buildScanResultModel = (scan = {}, language = scan.analysisLanguage || 'en') => {
     const decision = assessScanDecision(scan);
     const copy = getScanQualityCopy(language);
+    const nutritionalIssues = resolveScanNutrition(normalizeNutritionalIssues(scan.nutritionalIssues), scan, decision);
+    const sectionPolicy = getScanSectionPolicy({ ...scan, nutritionalIssues });
     return {
         ...scan,
         ...decision,
+        sectionPolicy,
         confidence: confidencePercent(scan.confidence) ?? decision.confidence,
         diagnosisConfidence: decision.confidence,
         disease: decision.needsReview && isNoIssueDiagnosis(scan.disease) ? copy.inconclusive : scan.disease,
@@ -26,7 +29,7 @@ export const buildScanResultModel = (scan = {}, language = scan.analysisLanguage
         },
         healthStatus: decision.healthy ? 'healthy' : 'unhealthy',
         severity: getStandardizedSeverity(scan.severity),
-        nutritionalIssues: resolveScanNutrition(normalizeNutritionalIssues(scan.nutritionalIssues), scan, decision),
+        nutritionalIssues,
         // Uncertain records may contain old or speculative treatment text.
         treatments: decision.treatmentEligible ? list(scan.treatments) : [],
     };

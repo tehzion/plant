@@ -1,5 +1,6 @@
 import { SCAN_RESULT_STATES, getScanResultState, isHealthy } from './statusUtils';
 import { getScanResultStateLabel } from './diagnosisStatusLabels';
+import { getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
 
 const DEMO_TERMS = ['demo', 'simulated', 'fallback'];
 
@@ -59,6 +60,8 @@ const splitDiseaseTitleAndDescription = (initialTitle, initialDescription) => {
 export const normalizeDiseaseResult = (result, t) => {
     const resultState = getScanResultState(result);
     const healthy = resultState === SCAN_RESULT_STATES.HEALTHY && isHealthy(result);
+    const sectionPolicy = result.sectionPolicy || getScanSectionPolicy(result);
+    const nutritionPrimary = Boolean(sectionPolicy.nutritionPrimary);
     const stateLabel = getScanResultStateLabel(t, resultState) || (t('results.likelyDiagnosis') || 'Likely diagnosis');
     const differentials = Array.isArray(result.differentialDiagnoses)
         ? result.differentialDiagnoses.filter(Boolean)
@@ -75,7 +78,10 @@ export const normalizeDiseaseResult = (result, t) => {
             ? result.symptoms.split(/\r?\n|•|â€¢/g).map((value) => value.trim()).filter(Boolean)
             : []);
 
-    let displayTitle = result.disease || t('results.unknownDisease');
+    const nutritionTitle = result.nutritionalIssues?.status === 'confirmed'
+        ? (t('results.nutrientDeficiencyDetected') || 'Nutrient deficiency')
+        : (t('results.possibleNutrientIssue') || 'Possible nutrient issue');
+    let displayTitle = nutritionPrimary ? nutritionTitle : (result.disease || t('results.unknownDisease'));
     if (displayTitle === 'Tiada Masalah') {
         displayTitle = t('results.noIssues');
     }
@@ -103,7 +109,7 @@ export const normalizeDiseaseResult = (result, t) => {
         ? result.pathogenType
         : (result.pathogenType ? String(result.pathogenType) : '');
 
-    if (!healthy && pathogenTypeRaw && !['unknown', 'none'].includes(pathogenTypeRaw.toLowerCase())) {
+    if (!healthy && !nutritionPrimary && pathogenTypeRaw && !['unknown', 'none'].includes(pathogenTypeRaw.toLowerCase())) {
         detailItems.push({
             key: 'pathogen',
             icon: 'bug',
@@ -113,7 +119,7 @@ export const normalizeDiseaseResult = (result, t) => {
         });
     }
 
-    if (!healthy && result.fungusType) {
+    if (!healthy && !nutritionPrimary && result.fungusType) {
         detailItems.push({
             key: 'fungus',
             icon: 'alert-circle',
@@ -125,6 +131,8 @@ export const normalizeDiseaseResult = (result, t) => {
 
     return {
         healthy,
+        nutritionPrimary,
+        sectionPolicy,
         resultState,
         stateLabel,
         differentials,

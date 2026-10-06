@@ -1,6 +1,6 @@
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
-import { assessScanDecision, isNoIssueDiagnosis, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, getScanSectionPolicy, isNoIssueDiagnosis, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
 export { SCAN_RESULT_STATES };
 import OpenAI from 'openai';
 import FormData from 'form-data';
@@ -3223,6 +3223,7 @@ export const applyCuratedProductRulesToRecommendation = (
     diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES,
 ) => {
     const output = validateProductRecommendationSelection(recommendation, availableTags, availableCategories);
+    const sectionPolicy = getScanSectionPolicy(diagnosisInfo);
     const contexts = [];
     const roleConfigs = [
         {
@@ -3231,7 +3232,7 @@ export const applyCuratedProductRulesToRecommendation = (
             categoryField: 'treatmentCategoryIds',
             tagLimit: 4,
             categoryLimit: 2,
-            allowed: canRecommendTreatmentProducts(diagnosisInfo),
+            allowed: sectionPolicy.showDiseaseProducts,
         },
         {
             role: 'fertilizer',
@@ -3239,7 +3240,7 @@ export const applyCuratedProductRulesToRecommendation = (
             categoryField: 'fertilizerCategoryIds',
             tagLimit: 3,
             categoryLimit: 2,
-            allowed: true,
+            allowed: sectionPolicy.showNutritionProducts,
         },
         {
             role: 'supplement',
@@ -3247,12 +3248,16 @@ export const applyCuratedProductRulesToRecommendation = (
             categoryField: 'supplementCategoryIds',
             tagLimit: 3,
             categoryLimit: 2,
-            allowed: true,
+            allowed: sectionPolicy.showNutritionProducts,
         },
     ];
 
     roleConfigs.forEach((config) => {
-        if (!config.allowed) return;
+        if (!config.allowed) {
+            output[config.tagField] = [];
+            output[config.categoryField] = [];
+            return;
+        }
 
         const context = buildDiseaseProductRuleContext(diagnosisInfo, config.role, diseaseProductRules);
         if (!context.matched) return;
@@ -3484,13 +3489,13 @@ You MUST split your recommendations into THREE groups:
 
 Rules:
 - Select 1-3 tag IDs AND 1-2 category IDs for EACH group (if applicable)
-- CRITICAL: Even if the plant is healthy, you MUST ALWAYS return at least 1-2 IDs for 'fertilizer' OR 'supplement' so the user always gets an enhancement recommendation.
+- For healthy plants, return maintenance fertilizer or supplement IDs when the catalog supports them.
 - IMPORTANT: You MUST heavily prioritize selecting WooCommerce Tags/Categories that contain or exactly match the "EXPLICIT PRODUCT SEARCH HINTS" provided below.
 - For healthy plants: treatment group can be empty, but focus on fertilizer and supplement.
 - For unhealthy plants: treatment group should address the specific disease.
 - For likely/suspected diagnoses, prefer cautious or IPM-aligned treatment supplies and state in the reasoning that field confirmation and physical product labels are required before use.
 - Do not recommend broad chemical disease-control products from weak evidence alone. If evidence is weak or retake is required, treatment can be empty and fertilizer/supplement can be general support only.
-- Fertilizer recommendations should be tied to confirmed/possible nutrition issues or general maintenance, not used as a cure for pest/fungal disease.
+- Fertilizer and supplement recommendations must be tied to confirmed/possible nutrition issues or healthy maintenance. Never use them as a cure for pest, fungal, bacterial, or other disease findings.
 - Fallback/exploratory products must not be described as diagnosis-specific.
 - Return ONLY IDs that exist in the provided catalogs
 - Output valid JSON only

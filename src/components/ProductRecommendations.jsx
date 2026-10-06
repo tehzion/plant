@@ -79,7 +79,15 @@ const getCautionLabel = (t, cautionLevel) => {
   }
 };
 
-const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onRecommendationsLoaded }) => {
+const ProductRecommendations = ({
+  plantType,
+  disease,
+  farmScale,
+  scanResult,
+  onRecommendationsLoaded,
+  displayMode = 'all',
+  recommendationState = null,
+}) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [products, setProducts] = useState(null);
@@ -93,6 +101,8 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   const [recommendationIntent, setRecommendationIntent] = useState('');
   const [consultation, setConsultation] = useState(null);
   const [requestAttempt, setRequestAttempt] = useState(0);
+  const externallyManaged = Boolean(recommendationState);
+  const isNutritionMode = displayMode === 'nutrition';
 
   const diagnosis = useMemo(
     () => buildProductDiagnosisPayload({ plantType, disease, scanResult }),
@@ -106,6 +116,32 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
   useEffect(() => {
     let isCancelled = false;
+
+    if (externallyManaged) {
+      const externalData = recommendationState?.data || null;
+      setLoading(Boolean(recommendationState?.loading));
+      setError(recommendationState?.error ? getProductErrorTitle(t, recommendationState.error) : null);
+      setErrorCode(recommendationState?.errorCode || recommendationState?.error?.code || '');
+      if (externalData) {
+        setProducts(externalData);
+        setFallbackMeta(externalData.fallbackMeta || null);
+        setReasoning(externalData.reasoning || '');
+        setStoreUrl(externalData.storeUrl || '');
+        setRecommendationIntent(externalData.recommendationIntent || '');
+        setConsultation(externalData.consultation || null);
+        onRecommendationsLoaded?.(externalData);
+      } else if (!recommendationState?.loading) {
+        setProducts(null);
+        setFallbackMeta(null);
+        setReasoning('');
+        setStoreUrl('');
+        setRecommendationIntent('');
+        setConsultation(null);
+      }
+      return () => {
+        isCancelled = true;
+      };
+    }
 
     const fetchProducts = async () => {
       if (!diagnosis.plantType && diagnosis.disease === 'None') {
@@ -161,7 +197,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
     return () => {
       isCancelled = true;
     };
-  }, [language, onRecommendationsLoaded, recommendationKey, requestAttempt]);
+  }, [externallyManaged, language, onRecommendationsLoaded, recommendationKey, recommendationState?.data, recommendationState?.error, recommendationState?.errorCode, recommendationState?.loading, requestAttempt]);
 
   const toggleProductSelection = (productId) => {
     if (!productId || !isWooProductId(productId) || !storeUrl) return;
@@ -231,6 +267,9 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
   const canCheckout = checkoutEligibleIds.length > 0 && Boolean(storeUrl);
   const usingCachedProducts = fallbackMeta?.used && fallbackMeta?.source === 'cache';
   const diagnosisState = diagnosis.resultState || diagnosis.status || (diagnosis.requiresRetake ? 'retake_required' : diagnosis.needsMoreEvidence ? 'uncertain' : 'likely');
+  const isHealthyDiagnosis = diagnosis.resultState === 'healthy' || diagnosis.healthStatus === 'healthy';
+  const isNutritionPrimaryDiagnosis = Boolean(diagnosis.sectionPolicy?.nutritionPrimary);
+  const canShowDiseaseConsultation = !isNutritionMode && !isHealthyDiagnosis && !isNutritionPrimaryDiagnosis;
 
   const retryProducts = () => {
     setRequestAttempt((value) => value + 1);
@@ -244,8 +283,26 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
 
   const processedProducts = useMemo(() => {
     if (!products) return null;
+    if (displayMode === 'disease') {
+      return {
+        ...products,
+        diseaseControl: products.diseaseControl || [],
+        fertilizers: [],
+        supplements: [],
+        otherPopular: [],
+      };
+    }
+    if (displayMode === 'nutrition') {
+      return {
+        ...products,
+        diseaseControl: [],
+        fertilizers: products.fertilizers || [],
+        supplements: products.supplements || [],
+        otherPopular: [],
+      };
+    }
     return products;
-  }, [products]);
+  }, [displayMode, products]);
 
   const recommendedCheckoutIds = useMemo(() => {
     if (!processedProducts) return [];
@@ -364,7 +421,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
             </a>
           </div>
         </div>
-        {renderConsultationPanel({
+        {canShowDiseaseConsultation && renderConsultationPanel({
           primary: true,
           reason: getLabel(t, 'results.productsErrorConsultationDesc', 'The live catalog could not load. Send this scan to our agronomy team for product guidance.'),
         })}
@@ -379,13 +436,21 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
                        !processedProducts.supplements?.length && 
                        !processedProducts.otherPopular?.length;
   const intent = processedProducts.recommendationIntent || recommendationIntent;
-  const consultationIsPrimary = hasNoProducts
+  const consultationIsPrimary = !isNutritionMode && !isHealthyDiagnosis && !isNutritionPrimaryDiagnosis && (hasNoProducts
     || [PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY, PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED].includes(intent)
-    || activeConsultation?.priority === 'primary';
-  const showCautiousProductNotice = !hasNoProducts
+    || activeConsultation?.priority === 'primary');
+  const showCautiousProductNotice = !isNutritionMode && !hasNoProducts
     && processedProducts.diseaseControl?.length > 0
     && !['confirmed', 'healthy', 'confident_treatment'].includes(diagnosisState);
   const canCheckoutRecommended = !consultationIsPrimary && recommendedCheckoutIds.length > 0 && Boolean(storeUrl);
+  const emptyStateTitle = isNutritionMode
+    ? (t('results.noNutritionProducts') || 'No nutrition products found')
+    : displayMode === 'disease'
+      ? (t('results.noDiseaseControlProducts') || 'No disease-control products recommended')
+      : (t('results.noProductsFound') || 'No specific products found');
+  const emptyStateDescription = displayMode === 'disease'
+    ? (t('results.noDiseaseControlProductsDesc') || 'This result does not support a disease-control product. Review the diagnosis or use Nutrition for nutrient guidance.')
+    : (t('results.noProductsDesc') || 'We couldn\'t find specific products in our store matching this condition right now.');
 
   const handleRecommendedCheckout = () => {
     if (consultationIsPrimary) {
@@ -640,7 +705,7 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
         </div>
       )}
 
-      {consultationIsPrimary && renderConsultationPanel({
+      {canShowDiseaseConsultation && consultationIsPrimary && renderConsultationPanel({
         primary: true,
         reason: fallbackMeta?.reason || activeConsultation?.reason,
       })}
@@ -692,15 +757,15 @@ const ProductRecommendations = ({ plantType, disease, farmScale, scanResult, onR
             </div>
           </div>
           <h3 className="product-state-title">
-            {t('results.noProductsFound') || 'No specific products found'}
+            {emptyStateTitle}
           </h3>
           <p className="product-state-hint">
-            {t('results.noProductsDesc') || 'We couldn\'t find specific products in our store matching this condition right now. You can still contact our suppliers directly.'}
+            {emptyStateDescription}
           </p>
         </div>
       )}
 
-      {!consultationIsPrimary && renderConsultationPanel({
+      {canShowDiseaseConsultation && !consultationIsPrimary && renderConsultationPanel({
         primary: false,
         compact: true,
       })}

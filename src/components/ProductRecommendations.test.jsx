@@ -60,6 +60,9 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.whyTheseProducts': 'Selection note',
             'results.noProductsFound': 'No products found',
             'results.noProductsDesc': 'No products description',
+            'results.noDiseaseControlProducts': 'No disease-control products recommended',
+            'results.noDiseaseControlProductsDesc': 'No disease-control products apply.',
+            'results.noNutritionProducts': 'No nutrition products found',
             'results.diseaseControl': 'Disease Control',
             'results.recommendedFertilizers': 'Recommended Fertilizers',
             'results.recommendedSupplements': 'Recommended Supplements',
@@ -538,5 +541,131 @@ describe('ProductRecommendations', () => {
         expect(await screen.findByText('Could not load products')).toBeInTheDocument();
         expect(screen.getByText('Catalog failed. Contact agronomy support.')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+    });
+
+    it('keeps nutrition products out of disease mode', async () => {
+        const recommendationState = {
+            loading: false,
+            error: null,
+            errorCode: '',
+            data: {
+                diseaseControl: [{ id: 10, name: 'Copper Guard', description: 'Fungicide', permalink: 'https://example.com/copper' }],
+                fertilizers: [{ id: 11, name: 'MOP Fertilizer', description: 'Potassium support', permalink: 'https://example.com/mop' }],
+                supplements: [{ id: 12, name: 'Magnesium Supplement', description: 'Magnesium support', permalink: 'https://example.com/magnesium' }],
+                otherPopular: [{ id: 13, name: 'Popular Garden Product', description: 'General product', permalink: 'https://example.com/general' }],
+                storeUrl: 'https://example.com/store',
+            },
+        };
+
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Leaf Spot"
+                scanResult={{ resultState: 'confident_treatment', healthStatus: 'unhealthy', confidence: 92 }}
+                displayMode="disease"
+                recommendationState={recommendationState}
+            />,
+        );
+
+        expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
+        expect(screen.queryByText('MOP Fertilizer')).not.toBeInTheDocument();
+        expect(screen.queryByText('Magnesium Supplement')).not.toBeInTheDocument();
+        expect(screen.queryByText('Popular Garden Product')).not.toBeInTheDocument();
+    });
+
+    it('keeps disease-control products out of nutrition mode', async () => {
+        const recommendationState = {
+            loading: false,
+            error: null,
+            errorCode: '',
+            data: {
+                diseaseControl: [{ id: 20, name: 'Copper Guard', description: 'Fungicide', permalink: 'https://example.com/copper' }],
+                fertilizers: [{ id: 21, name: 'MOP Fertilizer', description: 'Potassium support', permalink: 'https://example.com/mop' }],
+                supplements: [{ id: 22, name: 'Magnesium Supplement', description: 'Magnesium support', permalink: 'https://example.com/magnesium' }],
+                otherPopular: [{ id: 23, name: 'Popular Garden Product', description: 'General product', permalink: 'https://example.com/general' }],
+                storeUrl: 'https://example.com/store',
+            },
+        };
+
+        render(
+            <ProductRecommendations
+                plantType="Durian"
+                disease="Potassium deficiency"
+                scanResult={{ resultState: 'possible_nutrient_issue', healthStatus: 'unhealthy' }}
+                displayMode="nutrition"
+                recommendationState={recommendationState}
+            />,
+        );
+
+        expect(await screen.findByText('MOP Fertilizer')).toBeInTheDocument();
+        expect(screen.getByText('Magnesium Supplement')).toBeInTheDocument();
+        expect(screen.queryByText('Copper Guard')).not.toBeInTheDocument();
+        expect(screen.queryByText('Popular Garden Product')).not.toBeInTheDocument();
+    });
+
+    it('shows a direct empty disease-control state for healthy results', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Healthy Plant"
+                scanResult={{ resultState: 'healthy', healthStatus: 'healthy' }}
+                displayMode="disease"
+                recommendationState={{
+                    loading: false,
+                    error: null,
+                    errorCode: '',
+                    data: {
+                        diseaseControl: [],
+                        fertilizers: [{ id: 30, name: 'NPK Maintenance', description: 'Maintenance support' }],
+                        supplements: [],
+                        otherPopular: [],
+                        recommendationIntent: 'healthy_maintenance',
+                        consultation: null,
+                        storeUrl: '',
+                    },
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('No disease-control products recommended')).toBeInTheDocument();
+        expect(screen.queryByText('Consultation recommended')).not.toBeInTheDocument();
+        expect(screen.queryByText('NPK Maintenance')).not.toBeInTheDocument();
+    });
+
+    it('shows a direct empty disease-control state for nutrition-primary results', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Potassium deficiency"
+                scanResult={{
+                    resultState: 'possible_nutrient_issue',
+                    healthStatus: 'unhealthy',
+                    nutritionalIssues: { status: 'confirmed', deficientNutrients: ['Potassium'] },
+                }}
+                displayMode="disease"
+                recommendationState={{
+                    loading: false,
+                    error: null,
+                    errorCode: '',
+                    data: {
+                        diseaseControl: [],
+                        fertilizers: [{ id: 40, name: 'MOP Fertilizer', description: 'Potassium support' }],
+                        supplements: [],
+                        otherPopular: [],
+                        recommendationIntent: 'support_only',
+                        consultation: {
+                            url: 'https://wa.me/60136667810',
+                            priority: 'primary',
+                            label: 'Contact us for consultation',
+                        },
+                        storeUrl: '',
+                    },
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('No disease-control products recommended')).toBeInTheDocument();
+        expect(screen.queryByText('Consultation recommended')).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /contact us for consultation/i })).not.toBeInTheDocument();
     });
 });

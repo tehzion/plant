@@ -3,22 +3,31 @@ import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vites
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
     analyze: vi.fn(), identify: vi.fn(), logTraining: vi.fn(),
+    recommendProductTags: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
+    getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
+    getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
+    isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(),
 }));
 vi.mock('./services/aiService.js', () => ({
     identifyPlantWithPlantNet: mocks.identify, identifyPlantWithGPTVision: vi.fn(), analyzeWithGPT4Mini: mocks.analyze,
-    askAI: vi.fn(), recommendProductTags: vi.fn(), generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
+    askAI: vi.fn(), recommendProductTags: mocks.recommendProductTags, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
     parseNaturalLanguageLog: vi.fn(), generatePredictiveRisk: vi.fn(), localizeStoredAnalysisResult: vi.fn(),
-    canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(), getProductRecommendationIntent: vi.fn(),
-    buildProductConsultation: vi.fn(), PRODUCT_RECOMMENDATION_INTENTS: {},
+    canRecommendTreatmentProducts: mocks.canRecommendTreatmentProducts, enrichRecommendedProducts: mocks.enrichRecommendedProducts, getProductRecommendationIntent: mocks.getProductRecommendationIntent,
+    buildProductConsultation: mocks.buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS: {
+        SUPPORT_ONLY: 'support_only',
+        CONSULTATION_NEEDED: 'consultation_needed',
+        TREATMENT_READY: 'treatment_ready',
+        HEALTHY_MAINTENANCE: 'healthy_maintenance',
+    },
 }));
 vi.mock('./services/wooCommerceService.js', () => ({
-    getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
+    getAllTags: mocks.getAllTags, getAllCategories: mocks.getAllCategories, getProductsByTagIds: mocks.getProductsByTagIds, getStoreUrl: mocks.getStoreUrl,
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
-    getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: vi.fn(),
+    getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
 }));
 vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: vi.fn() }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
-vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: vi.fn() }));
+vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
 let app;
 let processListeners;
 beforeAll(async () => {
@@ -82,5 +91,94 @@ describe('diagnosis cache and feedback identity', () => {
         expect(mocks.logTraining).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'second' }));
         await invoke('/api/analyze', { body: { ...body, leafImage: 'leaf-b', scanId: 'third' } });
         expect(mocks.analyze).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('product search section grouping', () => {
+    beforeEach(() => {
+        mocks.isWooCommerceEnabled.mockReturnValue(true);
+        mocks.getAllTags.mockResolvedValue([
+            { id: 1, name: 'Fungicide' },
+            { id: 2, name: 'NPK fertilizer' },
+            { id: 3, name: 'Trace element supplement' },
+        ]);
+        mocks.getAllCategories.mockResolvedValue([
+            { id: 10, name: 'Disease Control' },
+            { id: 20, name: 'Fertilizer' },
+            { id: 30, name: 'Supplements' },
+        ]);
+        mocks.getDiseaseProductRules.mockResolvedValue([]);
+        mocks.recommendProductTags.mockResolvedValue({
+            treatmentTagIds: [1],
+            treatmentCategoryIds: [10],
+            fertilizerTagIds: [2],
+            fertilizerCategoryIds: [20],
+            supplementTagIds: [3],
+            supplementCategoryIds: [30],
+            reasoning: 'test grouping',
+        });
+        mocks.getProductsByTagIds.mockImplementation(async (tagIds = []) => {
+            if (tagIds.includes(1)) return [{ id: 101, name: 'Fungicide' }];
+            if (tagIds.includes(2)) return [{ id: 102, name: 'NPK fertilizer' }];
+            if (tagIds.includes(3)) return [{ id: 103, name: 'Trace supplement' }];
+            return [];
+        });
+        mocks.canRecommendTreatmentProducts.mockReturnValue(true);
+        mocks.enrichRecommendedProducts.mockImplementation((products, _diagnosis, role) => (
+            products.map((product) => ({ ...product, recommendationRole: role }))
+        ));
+        mocks.getProductRecommendationIntent.mockImplementation((_diagnosis, counts) => (
+            counts.treatmentCount > 0 ? 'treatment_ready' : 'healthy_maintenance'
+        ));
+        mocks.buildProductConsultation.mockReturnValue(null);
+        mocks.getStoreUrl.mockReturnValue('https://example.com/store');
+    });
+
+    it.each([
+        {
+            name: 'disease-only',
+            diagnosis: {
+                disease: 'Fungal leaf spot', diseaseCategory: 'fungal', pathogenType: 'fungal',
+                status: 'confirmed', resultState: 'confident_treatment', confidence: 92, healthStatus: 'unhealthy',
+            },
+            expected: { diseaseControl: 1, fertilizers: 0, supplements: 0 },
+        },
+        {
+            name: 'nutrition-only',
+            diagnosis: {
+                disease: 'Potassium deficiency', diseaseCategory: 'nutrient', resultState: 'possible_nutrient_issue',
+                nutritionalIssues: { status: 'confirmed', deficientNutrients: ['Potassium'] }, healthStatus: 'unhealthy',
+            },
+            expected: { diseaseControl: 0, fertilizers: 1, supplements: 1 },
+        },
+        {
+            name: 'healthy',
+            diagnosis: { disease: 'Healthy Plant', resultState: 'healthy', healthStatus: 'healthy' },
+            expected: { diseaseControl: 0, fertilizers: 1, supplements: 1 },
+        },
+        {
+            name: 'review',
+            diagnosis: { disease: 'Unknown', resultState: 'needs_closer_photo', requiresRetake: true, healthStatus: 'unhealthy' },
+            expected: { diseaseControl: 0, fertilizers: 0, supplements: 0 },
+        },
+        {
+            name: 'mixed',
+            diagnosis: {
+                disease: 'Fungal leaf spot', diseaseCategory: 'fungal', pathogenType: 'fungal',
+                status: 'confirmed', resultState: 'confident_treatment', confidence: 92, healthStatus: 'unhealthy',
+                nutritionalIssues: { status: 'possible', possibleNutrients: ['Magnesium'] },
+            },
+            expected: { diseaseControl: 1, fertilizers: 1, supplements: 1 },
+        },
+    ])('returns correctly grouped products for $name scans', async ({ diagnosis, expected }) => {
+        const response = await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
+        const body = response.json.mock.calls[0][0];
+
+        expect(body.diseaseControl).toHaveLength(expected.diseaseControl);
+        expect(body.fertilizers).toHaveLength(expected.fertilizers);
+        expect(body.supplements).toHaveLength(expected.supplements);
+        body.diseaseControl.forEach((product) => expect(product.recommendationRole).toBe('treatment'));
+        body.fertilizers.forEach((product) => expect(product.recommendationRole).toBe('fertilizer'));
+        body.supplements.forEach((product) => expect(product.recommendationRole).toBe('supplement'));
     });
 });

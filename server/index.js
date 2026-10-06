@@ -19,6 +19,7 @@ import { syncOperation } from './services/syncService.js';
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
+import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -568,11 +569,16 @@ app.post('/api/products/search', async (req, res, next) => {
         // 2. Ask GPT to pick the best tags & categories
         console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
         const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage, diseaseProductRules);
-        const treatmentAllowed = canRecommendTreatmentProducts(diagnosis);
+        const sectionPolicy = getScanSectionPolicy(diagnosis);
+        const treatmentAllowed = canRecommendTreatmentProducts(diagnosis) && sectionPolicy.showDiseaseProducts;
         const safeRecommendation = {
             ...recommendation,
             treatmentTagIds: treatmentAllowed ? recommendation.treatmentTagIds : [],
             treatmentCategoryIds: treatmentAllowed ? recommendation.treatmentCategoryIds : [],
+            fertilizerTagIds: sectionPolicy.showNutritionProducts ? recommendation.fertilizerTagIds : [],
+            fertilizerCategoryIds: sectionPolicy.showNutritionProducts ? recommendation.fertilizerCategoryIds : [],
+            supplementTagIds: sectionPolicy.showNutritionProducts ? recommendation.supplementTagIds : [],
+            supplementCategoryIds: sectionPolicy.showNutritionProducts ? recommendation.supplementCategoryIds : [],
         };
         
         // 3. Fetch products for each category in parallel
@@ -599,9 +605,15 @@ app.post('/api/products/search', async (req, res, next) => {
         const rawTreatment = finalizeList(treatmentProducts);
         const rawFertilizers = finalizeList(fertilizerProducts);
         const rawSupplements = finalizeList(supplementProducts);
-        const finalTreatment = enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules);
-        const finalFertilizers = enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules);
-        const finalSupplements = enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules);
+        const finalTreatment = sectionPolicy.showDiseaseProducts
+            ? enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules)
+            : [];
+        const finalFertilizers = sectionPolicy.showNutritionProducts
+            ? enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules)
+            : [];
+        const finalSupplements = sectionPolicy.showNutritionProducts
+            ? enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules)
+            : [];
         
         // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
         const otherPopular = [];

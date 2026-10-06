@@ -610,6 +610,58 @@ describe('aiService helpers', () => {
         expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 3 })).toBe('support_only');
     });
 
+    it('keeps product role ids aligned with the result section policy', () => {
+        const diseaseOnly = aiService.applyCuratedProductRulesToRecommendation(
+            {
+                treatmentTagIds: [30],
+                treatmentCategoryIds: [40],
+                fertilizerTagIds: [31],
+                fertilizerCategoryIds: [41],
+                supplementTagIds: [32],
+                supplementCategoryIds: [42],
+            },
+            [{ id: 30, name: 'Fungicide' }, { id: 31, name: 'NPK' }, { id: 32, name: 'Trace elements' }],
+            [{ id: 40, name: 'Disease Control' }, { id: 41, name: 'Fertilizer' }, { id: 42, name: 'Supplements' }],
+            {
+                disease: 'Fungal leaf spot',
+                diseaseCategory: 'fungal',
+                pathogenType: 'fungal',
+                status: 'confirmed',
+                resultState: 'confident_treatment',
+                confidence: 92,
+                healthStatus: 'unhealthy',
+            },
+        );
+
+        expect(diseaseOnly.treatmentTagIds).toEqual([30]);
+        expect(diseaseOnly.fertilizerTagIds).toEqual([]);
+        expect(diseaseOnly.supplementTagIds).toEqual([]);
+
+        const nutritionOnly = aiService.applyCuratedProductRulesToRecommendation(
+            {
+                treatmentTagIds: [30],
+                treatmentCategoryIds: [40],
+                fertilizerTagIds: [31],
+                fertilizerCategoryIds: [41],
+                supplementTagIds: [32],
+                supplementCategoryIds: [42],
+            },
+            [{ id: 30, name: 'Fungicide' }, { id: 31, name: 'NPK' }, { id: 32, name: 'Trace elements' }],
+            [{ id: 40, name: 'Disease Control' }, { id: 41, name: 'Fertilizer' }, { id: 42, name: 'Supplements' }],
+            {
+                disease: 'Potassium deficiency',
+                diseaseCategory: 'nutrient',
+                resultState: 'possible_nutrient_issue',
+                nutritionalIssues: { status: 'confirmed', deficientNutrients: ['Potassium'] },
+                healthStatus: 'unhealthy',
+            },
+        );
+
+        expect(nutritionOnly.treatmentTagIds).toEqual([]);
+        expect(nutritionOnly.fertilizerTagIds).toContain(31);
+        expect(nutritionOnly.supplementTagIds).toContain(32);
+    });
+
     it('adds active ingredient and caution metadata from curated rules to enriched products', () => {
         const diagnosis = {
             plantType: 'Padi',
