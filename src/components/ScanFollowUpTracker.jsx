@@ -6,6 +6,8 @@ import { imageToBase64 } from '../utils/diseaseDetection.js';
 import { resolvePrivateImageUrl } from '../utils/privateImageStorage.js';
 import { saveScanFollowUp } from '../utils/scanFollowUpStorage.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
+import FollowUpComparison from './FollowUpComparison.jsx';
+import { sortFollowUpEvents } from '../utils/followUpComparison.js';
 
 const ScanFollowUpTracker = ({ scan, onSaved }) => {
     const { language, t } = useLanguage();
@@ -17,6 +19,8 @@ const ScanFollowUpTracker = ({ scan, onSaved }) => {
     const [photos, setPhotos] = useState({});
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
+    const events = scan.followUp?.history || [];
+    const [selectedEventId, setSelectedEventId] = useState(() => sortFollowUpEvents(events)[0]?.id || '');
     const update = (field, value) => setForm(current => ({ ...current, [field]: value }));
     useEffect(() => {
         let cancelled = false;
@@ -31,6 +35,10 @@ const ScanFollowUpTracker = ({ scan, onSaved }) => {
         });
         return () => { cancelled = true; };
     }, [scan.followUp]);
+    useEffect(() => {
+        const sorted = sortFollowUpEvents(scan.followUp?.history || []);
+        setSelectedEventId(sorted[0]?.id || '');
+    }, [scan.followUp?.history]);
     const save = async event => {
         event.preventDefault();
         if (saving) return;
@@ -60,13 +68,20 @@ const ScanFollowUpTracker = ({ scan, onSaved }) => {
             <button type="submit" className="btn btn-primary">{saving ? t('common.loading') : copy.save}</button>
         </fieldset></form>
         {message && <p role="status">{message}</p>}
-        {(scan.followUp?.history || []).length > 0 && <ol>{scan.followUp.history.map(event => <li key={event.id}>
+        {events.length > 0 && <ol>{events.map(event => <li key={event.id}>
             <time dateTime={event.recordedAt}>{new Date(event.recordedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'ms' ? 'ms-MY' : 'en-GB')}</time>
             {' — '}{copy[event.outcome]}{event.severity ? ` · ${t(`results.${event.severity}`)}` : ''}
             {event.note && <p>{event.note}</p>}
             {(event.photo || photos[event.id]) && <img src={event.photo || photos[event.id]} alt={copy.followUp} loading="lazy" />}
         </li>)}</ol>}
         </details>
+        <FollowUpComparison
+            scan={scan}
+            events={events}
+            resolvedPhotos={photos}
+            selectedEventId={selectedEventId}
+            onSelectEvent={setSelectedEventId}
+        />
     </section>;
 };
 export default ScanFollowUpTracker;
