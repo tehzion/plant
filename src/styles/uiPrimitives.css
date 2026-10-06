@@ -32,12 +32,10 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
  .nav-item-label { overflow-wrap: anywhere; line-height: 1.25 !important; }
  .app-header__status-cluster { flex-wrap: wrap; }
 }
+ .results-content-grid, .results-sidebar { display: grid; gap: 24px; min-width: 0; align-items: start; }
 @media (min-width: 1100px) {
- .results .results-layout { max-width: 1200px; display: grid; grid-template-columns: minmax(0,2fr) minmax(280px,1fr); align-items: start; }
- .results-layout > * { grid-column: 1 / -1; }
- .results-layout > .results-diagnostics { grid-column: 1; grid-row: 3 / span 2; }
- .results-layout > .results-secondary { grid-column: 2; grid-row: 3; }
- .results-layout > .results-followup-group { grid-column: 2; grid-row: 4; }
+ .results .results-layout { max-width: 1200px; }
+ .results-content-grid { grid-template-columns: minmax(0,2fr) minmax(280px,1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -92,3 +90,14 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
 .farm-overview li { margin-top: 8px; overflow-wrap: anywhere; }
 .farm-overview a { color: var(--color-action); text-decoration: underline; }
 .analysis-language p { overflow-wrap: anywhere; }
+
+.ui-disclosure { padding: 16px 20px; border: 1px solid var(--ui-card-border); border-radius: var(--ui-card-radius); background: var(--ui-card-bg); margin-bottom: 16px; min-width: 0; }
+.ui-disclosure > summary, .farm-overview summary { cursor: pointer; min-height: 44px; font-weight: 600; overflow-wrap: anywhere; }
+.ui-disclosure[open] > summary { margin-bottom: 16px; }
+:where(button, a, select, input, textarea, summary):focus-visible { outline: 3px solid var(--color-action); outline-offset: 3px; }
+.farm-overview-totals { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-block: 16px; }
+.farm-overview-totals p { margin: 0; }
+.farm-overview-totals strong { font-size: 1.5rem; }
+.results-content-grid .scan-metadata-card { margin: 0; }
+
+.scan-photo-guidance__dismiss { min-width: 44px; min-height: 44px; }

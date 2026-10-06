@@ -21,6 +21,7 @@ const historyTranslations = {
             thisWeek: 'This Week',
             lastWeek: 'Last Week',
             older: 'Older',
+            loadMore: 'Load more',
         },
     },
     ms: {
@@ -45,6 +46,7 @@ const historyTranslations = {
             thisWeek: 'Minggu Ini',
             lastWeek: 'Minggu Lepas',
             older: 'Lebih Lama',
+            loadMore: 'Muatkan lagi',
         },
     },
     zh: {
@@ -69,6 +71,7 @@ const historyTranslations = {
             thisWeek: '本周',
             lastWeek: '上周',
             older: '更早',
+            loadMore: '加载更多',
         },
     },
 };

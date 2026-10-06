@@ -6,11 +6,11 @@ const ProgressStepper = ({ currentStep, steps }) => {
 
   return (
     <div className="progress-stepper">
-      <div className="step-text">
+      <div className="step-text" role="status" aria-live="polite" aria-atomic="true">
         <span className="step-count">{t('common.step')} {currentStep} {t('common.of')} {steps.length}</span>
         <span className="step-label">{steps[currentStep - 1]?.label}</span>
       </div>
-      <div className="progress-bar-container">
+      <div className="progress-bar-container" aria-hidden="true">
         {steps.map((_, index) => (
           <div
             key={index}

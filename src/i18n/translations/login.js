@@ -16,7 +16,23 @@ const loginTranslations = {
             "continueFacebook": "Continue with Facebook",
             "errorInvalidCredentials": "Wrong email or password.",
             "errorEmailExists": "That email is already registered. Try signing in instead.",
-            "errorEmailNotConfirmed": "Please confirm your email first, then sign in."
+            "errorEmailNotConfirmed": "Please confirm your email first, then sign in.",
+            "recoveryTitle": "Reset your password",
+            "recoverySubtitle": "We will email you a secure reset link.",
+            "recoverySent": "If an account exists for that email, we sent a password reset link.",
+            "sendResetLink": "Send reset link",
+            "rememberedPassword": "Remembered your password?",
+            "resetTitle": "Choose a new password",
+            "resetSubtitle": "Use a strong password you do not reuse elsewhere.",
+            "newPassword": "New password",
+            "confirmPassword": "Confirm password",
+            "updatePassword": "Update password",
+            "updatingPassword": "Updating…",
+            "passwordUpdated": "Password updated. Redirecting to sign in…",
+            "resetLinkInvalid": "This reset link is invalid or has expired. Request a new link and try again.",
+            "passwordTooShort": "Use at least 8 characters for your new password.",
+            "passwordMismatch": "The passwords do not match.",
+            "passwordUpdateFailed": "The password could not be updated. Request a new reset link."
         }
     },
     "ms": {
@@ -36,7 +52,23 @@ const loginTranslations = {
             "continueFacebook": "Teruskan dengan Facebook",
             "errorInvalidCredentials": "Nama pengguna atau kata laluan salah.",
             "errorEmailExists": "E-mel tersebut telah didaftarkan. Sila log masuk.",
-            "errorEmailNotConfirmed": "Sila sahkan e-mel anda dahulu, kemudian log masuk."
+            "errorEmailNotConfirmed": "Sila sahkan e-mel anda dahulu, kemudian log masuk.",
+            "recoveryTitle": "Tetapkan semula kata laluan",
+            "recoverySubtitle": "Kami akan menghantar pautan tetapan semula yang selamat.",
+            "recoverySent": "Jika akaun wujud untuk e-mel itu, kami telah menghantar pautan tetapan semula.",
+            "sendResetLink": "Hantar pautan tetapan semula",
+            "rememberedPassword": "Sudah ingat kata laluan?",
+            "resetTitle": "Pilih kata laluan baharu",
+            "resetSubtitle": "Gunakan kata laluan kukuh yang tidak digunakan di tempat lain.",
+            "newPassword": "Kata laluan baharu",
+            "confirmPassword": "Sahkan kata laluan",
+            "updatePassword": "Kemas kini kata laluan",
+            "updatingPassword": "Sedang mengemas kini…",
+            "passwordUpdated": "Kata laluan dikemas kini. Mengarahkan ke log masuk…",
+            "resetLinkInvalid": "Pautan tetapan semula tidak sah atau telah tamat tempoh. Minta pautan baharu.",
+            "passwordTooShort": "Gunakan sekurang-kurangnya 8 aksara untuk kata laluan baharu.",
+            "passwordMismatch": "Kata laluan tidak sepadan.",
+            "passwordUpdateFailed": "Kata laluan tidak dapat dikemas kini. Minta pautan tetapan semula baharu."
         }
     },
     "zh": {
@@ -56,7 +88,23 @@ const loginTranslations = {
             "continueFacebook": "使用Facebook继续",
             "errorInvalidCredentials": "邮箱或密码错误。",
             "errorEmailExists": "该邮箱已注册，请直接登录。",
-            "errorEmailNotConfirmed": "请先验证您的邮箱，然后再登录。"
+            "errorEmailNotConfirmed": "请先验证您的邮箱，然后再登录。",
+            "recoveryTitle": "重置密码",
+            "recoverySubtitle": "我们会通过电子邮件发送安全的重置链接。",
+            "recoverySent": "如果该邮箱存在账户，我们已发送密码重置链接。",
+            "sendResetLink": "发送重置链接",
+            "rememberedPassword": "想起密码了吗？",
+            "resetTitle": "设置新密码",
+            "resetSubtitle": "请使用未在其他地方重复使用的强密码。",
+            "newPassword": "新密码",
+            "confirmPassword": "确认密码",
+            "updatePassword": "更新密码",
+            "updatingPassword": "正在更新…",
+            "passwordUpdated": "密码已更新，正在返回登录…",
+            "resetLinkInvalid": "此重置链接无效或已过期。请重新申请链接。",
+            "passwordTooShort": "新密码至少需要 8 个字符。",
+            "passwordMismatch": "两次输入的密码不一致。",
+            "passwordUpdateFailed": "无法更新密码。请重新申请密码重置链接。"
         }
     }
 };

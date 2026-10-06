@@ -8,7 +8,7 @@ import './FollowUpComparison.css';
 const formatDate = (value, language) => {
     const date = value ? new Date(value) : null;
     if (!date || Number.isNaN(date.getTime())) return '';
-    return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'ms' ? 'ms-MY' : 'en-GB');
+    return date.toLocaleString(language === 'zh' ? 'zh-CN' : language === 'ms' ? 'ms-MY' : 'en-GB');
 };
 
 const FollowUpImage = ({ src, alt, emptyLabel }) => src ? (
@@ -51,7 +51,7 @@ const FollowUpComparison = ({ scan, events = [], resolvedPhotos = {}, selectedEv
                 <label>
                     <span>{copy.select}</span>
                     <select value={activeEvent?.id || ''} onChange={event => onSelectEvent?.(event.target.value)}>
-                        {sortedEvents.map(item => <option key={item.id} value={item.id}>{formatDate(item.recordedAt, language) || copy.notRecorded}</option>)}
+                        {sortedEvents.map(item => <option key={item.id} value={item.id}>{formatDate(item.recordedAt, language) || copy.notRecorded} · {getScanQualityCopy(language)[item.outcome] || item.outcome || copy.notRecorded}</option>)}
                     </select>
                 </label>
             </div>

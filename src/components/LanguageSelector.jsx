@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import './LanguageSelector.css';
+import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 
 const LanguageSelector = () => {
   const { language, setLanguage } = useLanguage();
@@ -38,7 +39,7 @@ const LanguageSelector = () => {
         value={language}
         onChange={(e) => setLanguage(e.target.value)}
         className="language-dropdown"
-        aria-label="Language selector"
+        aria-label={getEnhancementCopy(language).languageLabel}
       >
         {languages.map((lang) => (
           <option key={lang.code} value={lang.code}>

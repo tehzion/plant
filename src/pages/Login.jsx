@@ -60,7 +60,7 @@ const Login = () => {
                         throw recoveryError;
                     }
                 }
-                setSuccessMsg('If an account exists for that email, we sent a password reset link.');
+                setSuccessMsg(t('login.recoverySent'));
                 setError('');
                 return;
             }
@@ -96,9 +96,9 @@ const Login = () => {
                     <div className="login-header">
                         <span className="login-kicker">KANB</span>
                         <h2 className="login-title">
-                            {isRecovery ? 'Reset your password' : isLogin ? (t('login.welcomeBack') || 'Welcome Back') : (t('login.register') || 'Create Account')}
+                            {isRecovery ? t('login.recoveryTitle') : isLogin ? (t('login.welcomeBack') || 'Welcome Back') : (t('login.register') || 'Create Account')}
                         </h2>
-                        <p className="login-subtitle">{isRecovery ? 'We will email you a secure reset link.' : t('login.subtitle') || 'KANB Agropreneur Nasional'}</p>
+                        <p className="login-subtitle">{isRecovery ? t('login.recoverySubtitle') : t('login.subtitle') || 'KANB Agropreneur Nasional'}</p>
                     </div>
 
                     {hasPendingFollowUp && (
@@ -165,7 +165,7 @@ const Login = () => {
                                 <span className="btn-spinner" />
                             ) : (
                                 <>
-                                    <span>{isRecovery ? 'Send reset link' : isLogin ? (t('login.signIn') || 'Sign In') : (t('login.register') || 'Register')}</span>
+                                    <span>{isRecovery ? t('login.sendResetLink') : isLogin ? (t('login.signIn') || 'Sign In') : (t('login.register') || 'Register')}</span>
                                     <ArrowRight size={20} />
                                 </>
                             )}
@@ -189,7 +189,7 @@ const Login = () => {
 
                     <div className="login-footer">
                         <p>
-                            {isRecovery ? 'Remembered your password?' : isLogin ? (t('login.noAccount') || "Don't have an account?") : (t('common.alreadyHaveAccount') || 'Already have an account?')}
+                            {isRecovery ? t('login.rememberedPassword') : isLogin ? (t('login.noAccount') || "Don't have an account?") : (t('common.alreadyHaveAccount') || 'Already have an account?')}
                             <button onClick={() => { setIsRecovery(false); setIsLogin(isRecovery ? true : !isLogin); setError(''); setSuccessMsg(''); }} className="toggle-btn">
                                 {isRecovery ? 'Sign In' : isLogin ? (t('login.register') || 'Register') : (t('login.signIn') || 'Sign In')}
                             </button>

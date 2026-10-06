@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import { getGuestId, setLocalStorageNamespace } from '../utils/localStorage';
+import { migrateLegacyCollection } from '../utils/indexedDbStorage.js';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,11 @@ const getAuthEmailRedirectUrl = () => {
         return `${window.location.origin}/login`;
     }
     return undefined;
+};
+
+const getAuthResetRedirectUrl = () => {
+    if (typeof window === 'undefined' || !window.location?.origin) return undefined;
+    return `${window.location.origin}/reset-password`;
 };
 
 export const AuthProvider = ({ children }) => {
@@ -35,7 +41,7 @@ export const AuthProvider = ({ children }) => {
         // adapter verifies every collection.
         const currentGuestId = getGuestId();
         setGuestId(currentGuestId);
-        import('../utils/indexedDbStorage.js').then(async ({ migrateLegacyCollection }) => {
+        (async () => {
             const owner = `guest:${currentGuestId}`;
             const collections = [
                 ['scans', 'sea_plant_scan_history'],
@@ -47,7 +53,7 @@ export const AuthProvider = ({ children }) => {
             for (const [collection, legacyKey] of collections) {
                 try { await migrateLegacyCollection({ owner, collection, legacyKey }); } catch (error) { console.warn('IndexedDB migration deferred:', error.message); }
             }
-        }).catch(() => {});
+        })().catch(() => {});
 
         // ── Supabase not configured → run in guest/localStorage mode ──────────
         if (!supabase) {
@@ -162,7 +168,7 @@ export const AuthProvider = ({ children }) => {
             throw new Error('Password recovery is not configured yet.');
         }
         const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-            redirectTo: `${window.location.origin}/reset-password`,
+            redirectTo: getAuthResetRedirectUrl(),
         });
         if (error) throw error;
     };

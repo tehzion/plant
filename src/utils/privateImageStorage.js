@@ -8,6 +8,11 @@ const textOrEmpty = (value) => {
     return String(value).trim();
 };
 
+const isSafePath = (value) => {
+    const path = textOrEmpty(value);
+    return Boolean(path && !path.includes('..') && !path.startsWith('/') && !path.includes('\\'));
+};
+
 const blobFromBase64 = (base64) => {
     const base64Data = base64.startsWith('data:') ? base64.split(',')[1] : base64;
     const byteChars = atob(base64Data);
@@ -19,7 +24,7 @@ const blobFromBase64 = (base64) => {
 
 export const createSignedImageUrl = async (path, expiresIn = SIGNED_IMAGE_URL_EXPIRES_IN_SECONDS) => {
     const cleanPath = textOrEmpty(path);
-    if (!supabase || !cleanPath) return '';
+    if (!supabase || !isSafePath(cleanPath)) return '';
 
     try {
         const { data, error } = await supabase.storage
@@ -43,7 +48,7 @@ export const resolvePrivateImageUrl = async (path, fallbackUrl = '') => {
 
 export const uploadPrivateImage = async ({ base64, userId, path }) => {
     const cleanPath = textOrEmpty(path);
-    if (!supabase || !base64 || !userId || !cleanPath) {
+    if (!supabase || !base64 || !userId || !isSafePath(cleanPath) || !cleanPath.startsWith(`${userId}/`)) {
         return { path: '', signedUrl: '' };
     }
 

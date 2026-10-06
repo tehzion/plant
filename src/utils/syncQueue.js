@@ -16,6 +16,7 @@ export const flushSyncQueue = async ({ owner, send, isAuthenticated = true, onCo
     const operations = await listPendingOperations(owner);
     let synced = 0; let conflicts = 0; let failed = 0;
     for (const operation of operations) {
+        if (operation.nextRetryAt && operation.nextRetryAt > Date.now()) continue;
         try {
             const result = await send(operation);
             if (result?.conflict) {

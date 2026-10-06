@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getGroupedScans, deleteScan, clearAllScans } from '../utils/localStorage';
+import { fetchScanHistoryPage, getGroupedScans, groupScansByDate, deleteScan, clearAllScans } from '../utils/localStorage';
 import ScanHistoryCard from '../components/ScanHistoryCard';
 import CustomModal from '../components/CustomModal';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -67,6 +67,9 @@ const History = () => {
     const [historyLoading, setHistoryLoading] = useState(true);
     const [historyLoadedOnce, setHistoryLoadedOnce] = useState(false);
     const [historyError, setHistoryError] = useState(null);
+    const [historyRows, setHistoryRows] = useState([]);
+    const [nextCursor, setNextCursor] = useState(null);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     const refreshHistory = async ({ showSkeleton = false } = {}) => {
         if (showSkeleton) {
@@ -74,13 +77,48 @@ const History = () => {
         }
         try {
             setHistoryError(null);
-            const grouped = await getGroupedScans(user?.id ?? null);
-            setGroupedScans(grouped);
+            if (user?.id && typeof fetchScanHistoryPage === 'function') {
+                const page = await fetchScanHistoryPage(user.id, { limit: 20 });
+                if (!page?.rows) {
+                    const grouped = await getGroupedScans(user.id);
+                    const rows = Object.values(grouped).flat();
+                    setHistoryRows(rows);
+                    setNextCursor(null);
+                    setGroupedScans(grouped);
+                    return;
+                }
+                const rows = page.rows || [];
+                setHistoryRows(rows);
+                setNextCursor(page.nextCursor || null);
+                setGroupedScans(typeof groupScansByDate === 'function' ? groupScansByDate(rows) : await getGroupedScans(user.id));
+            } else {
+                const grouped = await getGroupedScans(null);
+                const rows = Object.values(grouped).flat();
+                setHistoryRows(rows);
+                setNextCursor(null);
+                setGroupedScans(grouped);
+            }
         } catch (error) {
             setHistoryError(error);
         } finally {
             setHistoryLoading(false);
             setHistoryLoadedOnce(true);
+        }
+    };
+
+    const loadMore = async () => {
+        if (!user?.id || typeof fetchScanHistoryPage !== 'function' || !nextCursor || loadingMore) return;
+        setLoadingMore(true);
+        try {
+            const page = await fetchScanHistoryPage(user.id, { cursor: nextCursor, limit: 20 });
+            const merged = [...historyRows, ...(page.rows || [])];
+            setHistoryRows(merged);
+            setNextCursor(page.nextCursor || null);
+            setGroupedScans(groupScansByDate(merged));
+        } catch (error) {
+            setHistoryError(error);
+        } finally {
+            setLoadingMore(false);
         }
     };
     // Initial load + refresh when user or scan state changes
@@ -282,6 +320,11 @@ const History = () => {
                                     />
                                 ))}
                             </section>
+                        )}
+                        {user?.id && nextCursor && (
+                            <button type="button" className="btn btn-secondary history-load-more" onClick={loadMore} disabled={loadingMore}>
+                                {loadingMore ? (t('common.loading') || 'Loading…') : (t('history.loadMore') || 'Load more')}
+                            </button>
                         )}
                     </div>
                 )}

@@ -4,6 +4,8 @@ import History from './History.jsx';
 
 const navigateMock = vi.fn();
 const getGroupedScansMock = vi.fn();
+const fetchScanHistoryPageMock = vi.fn();
+const groupScansByDateMock = vi.fn();
 const deleteScanMock = vi.fn();
 const clearAllScansMock = vi.fn();
 const notifySuccessMock = vi.fn();
@@ -14,6 +16,8 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('../utils/localStorage', () => ({
     getGroupedScans: (...args) => getGroupedScansMock(...args),
+    fetchScanHistoryPage: (...args) => fetchScanHistoryPageMock(...args),
+    groupScansByDate: (...args) => groupScansByDateMock(...args),
     deleteScan: (...args) => deleteScanMock(...args),
     clearAllScans: (...args) => clearAllScansMock(...args),
 }));
@@ -71,6 +75,8 @@ describe('History', () => {
     beforeEach(() => {
         navigateMock.mockReset();
         getGroupedScansMock.mockReset();
+        fetchScanHistoryPageMock.mockReset();
+        groupScansByDateMock.mockReset();
         deleteScanMock.mockReset();
         clearAllScansMock.mockReset();
         notifySuccessMock.mockReset();
@@ -82,6 +88,7 @@ describe('History', () => {
             lastWeek: [],
             older: [],
         });
+        fetchScanHistoryPageMock.mockResolvedValue(undefined);
         deleteScanMock.mockResolvedValue();
         clearAllScansMock.mockResolvedValue();
     });

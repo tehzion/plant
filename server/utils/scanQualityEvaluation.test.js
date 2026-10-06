@@ -27,4 +27,9 @@ describe('expert evaluation', () => {
         expect(report.healthyAccuracy).toBeNull();
         expect(report.reviewRate).toBe(1);
     });
+    it('accepts string alternatives and rejects malformed aliases', () => {
+        expect(isExpertLabel({ ...expert, diseaseAliases: 'Leaf Spot' })).toBe(false);
+        const report = evaluateScanQuality([{ ...expert, result: { disease: 'Rust', differentialDiagnoses: ['Leaf Spot'] } }], 1);
+        expect(report.top3HitRate).toBe(1);
+    });
 });

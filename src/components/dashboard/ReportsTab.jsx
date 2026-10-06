@@ -68,7 +68,10 @@ const ReportsTab = ({
         }
         let cancelled = false;
         setServerReportError('');
-        fetchReportSummary({ from: '2000-01-01', to: new Date().toISOString().slice(0, 10), plotId: selectedPlotId })
+        const reportEnd = new Date();
+        reportEnd.setDate(reportEnd.getDate() + 1);
+        const reportEndText = [reportEnd.getFullYear(), String(reportEnd.getMonth() + 1).padStart(2, '0'), String(reportEnd.getDate()).padStart(2, '0')].join('-');
+        fetchReportSummary({ from: '2000-01-01', to: reportEndText, plotId: selectedPlotId })
             .then((summary) => { if (!cancelled) setServerSummary(summary); })
             .catch((error) => { if (!cancelled) setServerReportError(error.message || 'Could not load the complete report.'); });
         return () => { cancelled = true; };

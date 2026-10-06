@@ -3,11 +3,12 @@ import { assessScanDecision, confidencePercent } from '../../shared/scanResultPo
 // These labels come from a separately maintained expert file, never the public feedback API.
 export const isExpertLabel = (label) => Boolean(label
     && label.reviewStatus === 'expert_verified'
-    && typeof label.reviewedBy === 'string' && label.reviewedBy.trim() && label.reviewedBy !== 'unknown'
+    && typeof label.reviewedBy === 'string' && label.reviewedBy.trim() && label.reviewedBy.trim().toLowerCase() !== 'unknown'
     && Number.isFinite(Date.parse(label.reviewedAt))
     && typeof label.correctHealthy === 'boolean'
     && typeof label.correctDisease === 'string' && label.correctDisease.trim()
     && typeof label.correctCrop === 'string' && label.correctCrop.trim()
+    && (!label.diseaseAliases || (Array.isArray(label.diseaseAliases) && label.diseaseAliases.every(name => typeof name === 'string' && name.trim())))
     && ['healthy', 'fungal', 'bacterial', 'viral', 'pest', 'nutrient', 'environmental', 'unknown'].includes(label.correctCauseCategory));
 
 const normalize = (value) => String(value || '').normalize('NFKC').trim().toLowerCase();
@@ -30,7 +31,7 @@ export const evaluateScanQuality = (entries, minimum = 20) => {
         const acceptedNames = [entry.correctDisease, ...(entry.diseaseAliases || [])].map(normalize);
         const hit = acceptedNames.includes(normalize(scan.disease));
         const candidates = [...new Set([normalize(scan.disease), ...(scan.differentialDiagnoses || [])
-            .map(item => normalize(item.name))].filter(Boolean))].slice(0, 3);
+            .map(item => normalize(typeof item === 'string' ? item : item?.name))].filter(Boolean))].slice(0, 3);
         correct += Number(hit);
         top3 += Number(candidates.some(name => acceptedNames.includes(name)));
         retakes += Number(decision.requiresRetake);

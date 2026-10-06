@@ -28,6 +28,8 @@ import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
 import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
+import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
@@ -494,7 +496,7 @@ const Home = () => {
             <div className="loading-card">
               <div className="loading-spinner-circle"></div>
 
-              <h2 className="loading-title">
+              <h2 className="loading-title" role="status" aria-live="polite" aria-atomic="true">
                 {analyzingStep === 0 && (t('home.stepProcessing') || t('home.stepSmart'))}
                 {analyzingStep === 1 && t('onboarding.step2Title')}
                 {analyzingStep === 2 && t('home.generating')}
@@ -589,13 +591,6 @@ const Home = () => {
                   </div>
 
                   {/* Main Image Upload */}
-                  <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
-                  <ScanPhotoGuidance
-                    plantPart={captureContext.plantPart}
-                    captureRole={photoQualityIssue?.role || 'whole'}
-                    qualityIssue={photoQualityIssue?.code || ''}
-                    onDismissIssue={() => setPhotoQualityIssue(null)}
-                  />
                   <div className="mb-lg">
                     <CameraUpload
                       onImageCapture={file => { setPhotoQualityIssue(null); scanActions.handleImageCapture(file); }}
@@ -605,8 +600,22 @@ const Home = () => {
                     />
                   </div>
 
+                  <details className="ui-disclosure">
+                    <summary>{getEnhancementCopy(language).optionalContext}</summary>
+                    <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
+                  </details>
+                  <details className="ui-disclosure" open={photoQualityIssue ? true : undefined}>
+                    <summary>{getScanQualityCopy(language).photoGuidance.title}</summary>
+                  <ScanPhotoGuidance
+                    plantPart={captureContext.plantPart}
+                    captureRole={photoQualityIssue?.role || 'whole'}
+                    qualityIssue={photoQualityIssue?.code || ''}
+                    onDismissIssue={() => setPhotoQualityIssue(null)}
+                  />
+                  </details>
                   {/* Leaf Image Upload (Optional) */}
-                  <div className="leaf-upload-card mb-lg fade-in-delayed">
+                  <details className="leaf-upload-card ui-disclosure mb-lg fade-in-delayed" open={selectedLeafImage ? true : undefined}>
+                    <summary>{t('home.addLeafPhoto')}</summary>
                     <div className="leaf-card-header">
                       <div className="leaf-icon-circle">
                         <Leaf size={20} />
@@ -622,7 +631,7 @@ const Home = () => {
                       onQualityIssue={(code, role) => setPhotoQualityIssue({ code, role })}
                       currentImage={selectedLeafImage}
                     />
-                  </div>
+                  </details>
 
                   <div className="step-actions mt-xl">
                     <button className="btn btn-secondary" onClick={handleResetAndClose}>{t('common.cancel')}</button>

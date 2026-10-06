@@ -1,7 +1,7 @@
 import { getServiceClient } from '../utils/supabaseAuth.js';
 
 const TABLES = {
-    scans: { table: 'scan_history', fields: ['id', 'disease', 'confidence', 'severity', 'category', 'scale', 'location_name', 'result_json', 'image_path', 'leaf_image_path', 'created_at', 'revision'] },
+    scans: { table: 'scan_history', fields: ['id', 'disease', 'confidence', 'severity', 'category', 'scale', 'location_name', 'plot_id', 'result_json', 'image_path', 'leaf_image_path', 'created_at', 'revision'] },
     logbook: { table: 'mygap_logs', fields: ['id', 'type', 'notes', 'created_at'] },
     notes: { table: 'daily_notes', fields: ['id', 'note', 'activity_type', 'plot_id', 'chemical_name', 'chemical_qty', 'application_timing', 'temperature_am', 'humidity', 'growth_stage', 'pest_notes', 'disease_incidence', 'disease_name_observed', 'scout_severity', 'kg_harvested', 'quality_grade', 'price_per_kg', 'buyer_name', 'expense_amount', 'expense_category', 'pruned_count', 'pruning_type', 'inspection_type', 'inspection_status', 'photo_path', 'created_at'] },
     plots: { table: 'plots', fields: ['id', 'name', 'crop_type', 'area', 'unit', 'soil_ph', 'npk_n', 'npk_p', 'npk_k', 'created_at'] },

@@ -11,6 +11,9 @@ export const fetchReportSummary = async ({ from, to, plotId } = {}) => {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (plotId && plotId !== 'all') params.set('plotId', plotId);
+    if (typeof Intl !== 'undefined') {
+        params.set('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kuala_Lumpur');
+    }
     const response = await fetch(`${API_URL}/api/reports/summary?${params}`, { headers: { Authorization: `Bearer ${token}` } });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.message || payload.error || 'Could not load reports.');

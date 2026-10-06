@@ -508,7 +508,6 @@ ${t('pdf.generatedBy')}
   return (
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
-        <ScanDecisionSummary result={result} />
         {(originalScan?.analysisLanguage || originalScan?.language) !== language && <section className="analysis-language ui-card" aria-busy={translating}>
           <p>{enhancementCopy.source}: {enhancementCopy.languages[originalScan?.analysisLanguage || originalScan?.language] || originalScan?.analysisLanguage || originalScan?.language || enhancementCopy.unknown}</p>
           {scan.analysisLanguage === language && <p role="status">{enhancementCopy.translated}</p>}
@@ -518,16 +517,19 @@ ${t('pdf.generatedBy')}
           </div>
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
+        <ScanDecisionSummary result={result} />
         <div className="results-next-action">
           <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { setActiveResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
             {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
           </button>
         </div>
+        <div className="results-content-grid">
         {/* Tabbed Results */}
         <div id="results-diagnostics" className="results-diagnostics fade-slide-up" style={{ animationDelay: '0.1s' }}>
           <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={setActiveResultTab} />
         </div>
 
+        <aside className="results-sidebar">
         {/* Scan Metadata Card - Modern Design */}
         <details className="scan-metadata-card app-surface app-surface--soft results-secondary">
           <summary className="results-section-kicker">{scanCopy.scanDetails}</summary>
@@ -674,6 +676,8 @@ ${t('pdf.generatedBy')}
         </div>
 
         </section>
+        </aside>
+        </div>
         {/* Quick Actions Bar */}
         <QuickActions
           onScanAgain={handleScanAgain}

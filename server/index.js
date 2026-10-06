@@ -14,8 +14,9 @@ import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4M
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
-import { getReportSummary } from './services/reportService.js';
+import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
 import { syncOperation } from './services/syncService.js';
+import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
@@ -172,8 +173,23 @@ app.get('/api/reports/summary', async (req, res, next) => {
             from: req.query.from,
             to: req.query.to,
             plotId: req.query.plotId,
+            timezone: req.query.timezone,
+            accessToken: getBearerToken(req),
         });
         res.json(summary);
+    } catch (error) { next(error); }
+});
+
+app.get('/api/history', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        let cursor = null;
+        if (req.query.cursor) {
+            try { cursor = JSON.parse(Buffer.from(String(req.query.cursor), 'base64url').toString('utf8')); } catch {
+                return res.status(400).json({ error: 'Invalid history cursor.' });
+            }
+        }
+        res.json(await getScanHistoryPage(user.id, { cursor, limit: req.query.limit, accessToken: getBearerToken(req) }));
     } catch (error) { next(error); }
 });
 
@@ -234,6 +250,28 @@ app.use(aiRoutes, async (req, res, next) => {
     if (req.method !== 'POST') return next();
     try {
         req.aiIdentity = await resolveAiIdentity(req);
+        next();
+    } catch (error) { next(error); }
+});
+
+app.use('/api/analyze', async (req, res, next) => {
+    if (req.method !== 'POST' || !req.body?.scanId) return next();
+    const identity = req.aiIdentity || `ip:${req.ip || 'unknown'}`;
+    const scanId = String(req.body.scanId).slice(0, 200);
+    try {
+        if (!await claimAnalysis({ identity, scanId })) {
+            return res.status(202).json({ id: scanId, status: 'processing' });
+        }
+        const release = () => { releaseAnalysis({ identity, scanId }).catch(() => {}); };
+        res.once('finish', release);
+        res.once('close', release);
+        next();
+    } catch (error) { next(error); }
+});
+
+app.use(aiRoutes, async (req, res, next) => {
+    if (req.method !== 'POST') return next();
+    try {
         const quota = await consumeAiQuota({ identity: req.aiIdentity, limit: Number(process.env.AI_IDENTITY_DAILY_LIMIT) || 50 });
         if (!quota.allowed) {
             console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId, identity: req.aiIdentity }));
@@ -241,18 +279,6 @@ app.use(aiRoutes, async (req, res, next) => {
         }
         next();
     } catch (error) { next(error); }
-});
-
-const activeAnalyses = new Map();
-app.use('/api/analyze', (req, res, next) => {
-    if (req.method !== 'POST' || !req.body?.scanId) return next();
-    const key = `${req.aiIdentity || `ip:${req.ip || 'unknown'}`}:${req.body.scanId}`;
-    if (activeAnalyses.has(key)) return res.status(202).json({ id: req.body.scanId, status: 'processing' });
-    activeAnalyses.set(key, true);
-    const release = () => activeAnalyses.delete(key);
-    res.once('finish', release);
-    res.once('close', release);
-    next();
 });
 app.use(aiRoutes, rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
@@ -372,6 +398,11 @@ app.post('/api/feedback', async (req, res, next) => {
 
 // Main Analysis Endpoint
 app.post('/api/analyze', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('AI request deadline exceeded')), 180000);
+    const abortOnDisconnect = () => requestController.abort(new Error('AI request cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         // Validation: Critical Keys
         if (!process.env.OPENAI_API_KEY) {
@@ -415,6 +446,7 @@ app.post('/api/analyze', async (req, res, next) => {
                 leafImage,
                 category,
                 imageQuality,
+                signal: requestController.signal,
             }),
             12000,
             null,
@@ -424,7 +456,7 @@ app.post('/api/analyze', async (req, res, next) => {
         // 4. Fallback Identification (GPT Vision)
         if (!plantNetResult) {
             const gptVisionResult = await withStageTimeout(
-                identifyPlantWithGPTVision(mainImage, category),
+                identifyPlantWithGPTVision(mainImage, category, { signal: requestController.signal }),
                 12000,
                 null,
             );
@@ -457,6 +489,7 @@ app.post('/api/analyze', async (req, res, next) => {
                 language,
                 location,
                 imageQuality,
+                { signal: requestController.signal },
             ),
             Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
             null,
@@ -506,7 +539,15 @@ app.post('/api/analyze', async (req, res, next) => {
         // ... (previous code)
 
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('Analysis timed out or was cancelled. Please try again.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
@@ -789,6 +830,19 @@ app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, r
         const note = String(req.body?.verificationNote || '').trim().slice(0, 1000);
         if (!['approved', 'rejected'].includes(decision) || !note) {
             return res.status(400).json({ error: 'A decision and verification note are required.' });
+        }
+        if (typeof client.rpc === 'function') {
+            const { data, error } = await client.rpc('approve_order_recovery', {
+                p_request_id: req.params.requestId,
+                p_reviewer_user_id: reviewer.id,
+                p_decision: decision,
+                p_verification_note: note,
+            });
+            if (error) {
+                error.status = error.code === '23505' ? 409 : error.code === 'P0002' ? 404 : error.code === '22023' ? 400 : 500;
+                throw error;
+            }
+            return res.json(data || { status: decision });
         }
         const { data: request, error: requestError } = await client.from('order_recovery_requests')
             .select('id,order_id,requester_user_id,status').eq('id', req.params.requestId).maybeSingle();

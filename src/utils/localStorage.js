@@ -1,7 +1,7 @@
 import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
-import { enqueueOperation, isIndexedDbAvailable, putRecord } from './indexedDbStorage.js';
+import { dataUrlToBlob, enqueueOperation, isIndexedDbAvailable, putPhoto, putRecord, deleteRecord } from './indexedDbStorage.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -28,8 +28,19 @@ const persistIndexedGuestRecord = async (collection, value, revision = 0) => {
     if (!isIndexedDbAvailable() || storageNamespace === 'demo') return true;
     const owner = `guest:${getGuestId()}`;
     try {
-        await putRecord({ owner, collection, id: value.id, value, revision });
-        await enqueueOperation({ owner, collection, recordId: value.id, type: 'create', expectedRevision: revision, payload: value });
+        const indexedValue = { ...value };
+        const photoRefs = {};
+        for (const field of ['image', 'leafImage', 'photo_base64']) {
+            const blob = dataUrlToBlob(indexedValue[field]);
+            if (!blob) continue;
+            const photoId = `${collection}:${value.id}:${field}`;
+            await putPhoto(owner, photoId, blob);
+            photoRefs[field] = photoId;
+            indexedValue[field] = null;
+        }
+        if (Object.keys(photoRefs).length) indexedValue.photoRefs = photoRefs;
+        await putRecord({ owner, collection, id: value.id, value: indexedValue, revision });
+        await enqueueOperation({ owner, collection, recordId: value.id, type: 'create', expectedRevision: revision, payload: indexedValue });
         return true;
     } catch (error) {
         console.error('IndexedDB guest write failed:', error);
@@ -197,6 +208,7 @@ export const toScanHistoryRow = (
     category: scanData.category || null,
     scale: scanData.farmScale || scanData.scale || null,
     location_name: scanData.locationName || scanData.location_name || null,
+    plot_id: scanData.plotId || scanData.plot_id || scanData.result_json?.plot_id || null,
     result_json: { ...scanData, image: null, leafImage: null },
     image_url: imageUrl || scanData.image_url || null,
     leaf_image_url: leafImageUrl || scanData.leaf_image_url || null,
@@ -220,6 +232,7 @@ export const fromScanHistoryRow = (row = {}, signedUrls = {}) => ({
     image_path: row.image_path || row.result_json?.image_path || null,
     leaf_image_path: row.leaf_image_path || row.result_json?.leaf_image_path || null,
     locationName: row.location_name,
+    plotId: row.plot_id || row.result_json?.plot_id || null,
     revision: Number.isInteger(row.revision) ? row.revision : Number.isInteger(row.result_json?.revision) ? row.result_json.revision : 0,
 });
 
@@ -418,7 +431,11 @@ export const saveScan = async (scanData, userId = null) => {
             const leafImagePath = leafUpload?.path || null;
             const row = toScanHistoryRow(scanData, userId, id, imageUrl, leafImageUrl, imagePath, leafImagePath);
             const { error } = await supabase.from('scan_history').insert(row);
-            if (error) throw error;
+            if (error) {
+                const paths = [imagePath, leafImagePath].filter(Boolean);
+                if (paths.length) await supabase.storage.from('scan-images').remove(paths);
+                throw error;
+            }
             return {
                 ...scanData,
                 id,
@@ -465,6 +482,23 @@ export const fetchAllUserRows = async (table, userId) => {
     }
 };
 
+export const fetchScanHistoryPage = async (userId, { cursor = null, limit = 20 } = {}) => {
+    if (!isCloudUser(userId)) {
+        const rows = getScanHistory().slice(0, Math.min(Number(limit) || 20, 100));
+        return { rows, nextCursor: null };
+    }
+    const tokenResult = await supabase.auth.getSession();
+    const token = tokenResult.data?.session?.access_token;
+    if (!token) throw new Error('History needs an authenticated account.');
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set('cursor', btoa(JSON.stringify(cursor)).replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_'));
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/history?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || payload.error || 'Could not load history.');
+    const rows = await Promise.all((payload.rows || []).map(hydrateScanHistoryRow));
+    return { ...payload, rows };
+};
+
 export const getScanHistory = (userId = null) => {
     if (isCloudUser(userId)) {
         return fetchAllUserRows('scan_history', userId).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
@@ -486,26 +520,34 @@ export const getScanById = (id, userId = null) => {
             .eq('user_id', userId)
             .single()
             .then(({ data, error }) => {
-                if (error || !data) return getLocalScan();
+                // A cloud account must never fall back to the shared guest
+                // namespace. A failed lookup can otherwise reveal another
+                // user's local record on a shared device.
+                if (error || !data) return null;
                 return hydrateScanHistoryRow(data);
             })
-            .catch(() => getLocalScan());
+            .catch(() => null);
     }
     return getLocalScan();
 };
 
 export const deleteScan = async (id, userId = null) => {
     if (isCloudUser(userId)) {
+        const { data: row, error: readError } = await supabase.from('scan_history').select('image_path,leaf_image_path').eq('id', id).eq('user_id', userId).maybeSingle();
+        if (readError) return false;
         const { error } = await supabase.from('scan_history').delete().eq('id', id).eq('user_id', userId);
         if (error) {
             console.error('deleteScan error:', error);
             return false;
         }
+        const paths = [row?.image_path, row?.leaf_image_path].filter(Boolean);
+        if (paths.length) await supabase.storage.from('scan-images').remove(paths);
         return true;
     }
     if (isIndexedDbAvailable() && storageNamespace !== 'demo') {
         const owner = `guest:${getGuestId()}`;
         try {
+            await deleteRecord(owner, id);
             await enqueueOperation({ owner, collection: 'scans', recordId: id, type: 'delete', payload: null });
         } catch (error) {
             console.error('IndexedDB scan delete queue failed:', error);
@@ -518,10 +560,16 @@ export const deleteScan = async (id, userId = null) => {
 
 export const clearAllScans = async (userId = null) => {
     if (isCloudUser(userId)) {
+        const { data: rows, error: readError } = await supabase.from('scan_history').select('image_path,leaf_image_path').eq('user_id', userId);
+        if (readError) return false;
         const { error } = await supabase.from('scan_history').delete().eq('user_id', userId);
         if (error) {
             console.error('clearAllScans error:', error);
             return false;
+        }
+        const paths = (rows || []).flatMap((row) => [row.image_path, row.leaf_image_path]).filter(Boolean);
+        for (let index = 0; index < paths.length; index += 100) {
+            await supabase.storage.from('scan-images').remove(paths.slice(index, index + 100));
         }
         return true;
     }
@@ -533,8 +581,7 @@ export const clearAllScans = async (userId = null) => {
     }
 };
 
-export const getGroupedScans = async (userId = null) => {
-    const history = await Promise.resolve(getScanHistory(userId));
+export const groupScansByDate = (history = []) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
@@ -556,6 +603,11 @@ export const getGroupedScans = async (userId = null) => {
     });
 
     return grouped;
+};
+
+export const getGroupedScans = async (userId = null) => {
+    const history = await Promise.resolve(getScanHistory(userId));
+    return groupScansByDate(history);
 };
 
 export const saveLogEntry = async (logEntry, userId = null) => {
@@ -759,7 +811,10 @@ export const deletePlot = async (id, userId = null) => {
     }
     if (isIndexedDbAvailable() && storageNamespace !== 'demo') {
         const owner = `guest:${getGuestId()}`;
-        try { await enqueueOperation({ owner, collection: 'plots', recordId: id, type: 'delete', payload: null }); }
+        try {
+            await deleteRecord(owner, id);
+            await enqueueOperation({ owner, collection: 'plots', recordId: id, type: 'delete', payload: null });
+        }
         catch (error) { console.error('IndexedDB plot delete queue failed:', error); return false; }
     }
     const filtered = safeRead(PLOTS_KEY, []).filter((plot) => plot.id !== id);

@@ -6,7 +6,7 @@
 2. Configure the server-only Supabase service role key and URL. Production diagnosis collection uses Supabase by default. It reports collection failures without blocking diagnosis; failed feedback saves return an error.
 3. Configure `ORDER_ACCESS_SECRET` with at least 32 random characters. The Render blueprint generates a value for a newly provisioned service. Existing services need the variable added. Keep this value stable across deployments; rotating it invalidates guest order access.
 4. Set `TRUST_PROXY_HOPS` to the deployment's known proxy count. The Render blueprint sets one hop. Leave it at zero when running directly.
-5. Adjust `AI_GUEST_DAILY_LIMIT`, `AI_SERVER_DAILY_LIMIT`, and `AI_MAX_CONCURRENT_REQUESTS` for the expected load. The guest allowance is per IP. The memory-backed quotas apply to one server instance and reset on restart; deployments with multiple instances should supply a shared rate-limit store.
+5. Adjust `AI_GUEST_DAILY_LIMIT`, `AI_SERVER_DAILY_LIMIT`, and `AI_MAX_CONCURRENT_REQUESTS` for the expected load. The guest allowance is per IP, while identity quotas are persisted in `ai_usage_counters` through the atomic `consume_ai_quota` function. The in-memory path is only a local-development fallback.
 
 Apply schema changes before deploying the backend. Verify the tables have RLS and no grants to browser roles:
 
@@ -44,7 +44,7 @@ One scan UUID now links the diagnosis response, stored scan, training record, an
 
 Run `npm run audit:export` with server credentials to export cloud records and private images for the existing holdout tools. Exports are placed in the ignored `server/dataset` directory, or `DIAGNOSIS_DATA_DIR` if configured. Protect any exported files as private data.
 
-Schedule `npm run audit:prune` as a maintenance job to enforce `DIAGNOSIS_RETENTION_DAYS` (default 90). The job removes expired cloud audit records, their training images, and expired feedback. This job must be configured on the hosting platform; it is not automatically scheduled by the application. User scan-history photos are outside the training prefix and are not selected by this cleanup.
+Schedule `npm run audit:prune` as a maintenance job to enforce `DIAGNOSIS_RETENTION_DAYS` (default 90). The Render blueprint schedules this job daily at `0 20 * * *` (03:00 Asia/Jakarta). The job removes expired cloud audit records, their training images, and expired feedback. User scan-history photos are outside the training prefix and are not selected by this cleanup. Alert when a run fails or no successful run is recorded within 48 hours.
 
 For local development, collection uses local files. An explicitly configured production local backend requires `DIAGNOSIS_DATA_DIR` on a persistent volume; the default ephemeral folder is rejected.
 

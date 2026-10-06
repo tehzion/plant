@@ -73,10 +73,11 @@ const migrateLocalData = async (userId) => {
         if (localScans.length > 0) {
             const rows = await Promise.all(localScans.map(scan => migrateScanImages(scan, userId)));
 
-            // Use upsert so duplicates are silently ignored
+            // Insert-only migration: an ID collision must never update a row
+            // that belongs to another account.
             const { error: scanErr } = await supabase
                 .from('scan_history')
-                .upsert(rows, { onConflict: 'id' });
+                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
 
             recordError('scan_history', scanErr);
         }
@@ -88,7 +89,7 @@ const migrateLocalData = async (userId) => {
 
             const { error: logErr } = await supabase
                 .from('mygap_logs')
-                .upsert(rows, { onConflict: 'id' });
+                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
 
             recordError('mygap_logs', logErr);
         }
@@ -109,7 +110,7 @@ const migrateLocalData = async (userId) => {
             const rows = localNotes.map(note => toDailyNoteRow(note, userId));
             const { error: noteErr } = await supabase
                 .from('daily_notes')
-                .upsert(rows, { onConflict: 'id' });
+                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
             recordError('daily_notes', noteErr);
         }
 
@@ -119,7 +120,7 @@ const migrateLocalData = async (userId) => {
             const rows = localPlots.map(plot => toPlotRow(plot, userId));
             const { error: plotErr } = await supabase
                 .from('plots')
-                .upsert(rows, { onConflict: 'id' });
+                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
             recordError('plots', plotErr);
         }
 

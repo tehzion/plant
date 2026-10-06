@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Focus, Leaf, Sun, X } from 'lucide-react';
+import { AlertTriangle, Check, Focus, Leaf, Sun, Apple, Sprout, TreeDeciduous, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
@@ -13,6 +13,7 @@ const ScanPhotoGuidance = ({
     const { language } = useLanguage();
     const guidanceRef = useRef(null);
     const copy = getScanQualityCopy(language).photoGuidance;
+    const SubjectIcon = { leaf: Leaf, fruit: Apple, stem: Sprout, whole: TreeDeciduous }[plantPart] || Leaf;
     const closeUp = captureRole === 'closeup';
     const issueMessage = qualityIssue ? (copy.issues?.[qualityIssue] || copy.issues?.LOW_IMAGE_QUALITY) : '';
     const subjectLabel = getScanQualityCopy(language)[plantPart] || getScanQualityCopy(language).leaf;
@@ -24,7 +25,7 @@ const ScanPhotoGuidance = ({
     return (
         <aside ref={guidanceRef} tabIndex={qualityIssue ? -1 : undefined} className="scan-photo-guidance app-surface app-surface--soft" aria-live={issueMessage ? 'assertive' : 'polite'}>
             <div className="scan-photo-guidance__heading">
-                <div className="scan-photo-guidance__icon" aria-hidden="true"><Leaf size={20} /></div>
+                <div className="scan-photo-guidance__icon" aria-hidden="true"><SubjectIcon size={20} /></div>
                 <div>
                     <h3>{issueMessage ? copy.retakeTitle : copy.title}</h3>
                     <p>{issueMessage || copy.intro}</p>
@@ -39,14 +40,14 @@ const ScanPhotoGuidance = ({
             <div className="scan-photo-guidance__examples" aria-label={`${copy.title}: ${subjectLabel}`}>
                 <div className={`scan-photo-guidance__example ${!closeUp ? 'is-active' : ''}`}>
                     <div className="scan-photo-guidance__illustration scan-photo-guidance__illustration--whole" aria-hidden="true">
-                        <Sun size={18} /><Leaf size={35} /><span className="scan-photo-guidance__ground" />
+                        <Sun size={18} /><TreeDeciduous size={35} /><span className="scan-photo-guidance__ground" />
                     </div>
                     <strong>{copy.wholeTitle}</strong>
                     <span>{copy.wholeHint}</span>
                 </div>
                 <div className={`scan-photo-guidance__example ${closeUp ? 'is-active' : ''}`}>
                     <div className="scan-photo-guidance__illustration scan-photo-guidance__illustration--close" aria-hidden="true">
-                        <Focus size={21} /><Leaf size={39} />
+                        <Focus size={21} /><SubjectIcon size={39} />
                     </div>
                     <strong>{copy.closeUpTitle}</strong>
                     <span>{copy.closeUpHint}</span>

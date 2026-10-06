@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ client: { from: vi.fn() } }));
-vi.mock('../utils/supabaseAuth.js', () => ({ getServiceClient: () => mocks.client }));
+vi.mock('../utils/supabaseAuth.js', () => ({ getServiceClient: () => mocks.client, getAuthenticatedClient: () => null }));
 import { getReportSummary } from './reportService.js';
 
 const query = (rows) => ({ select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), gte: vi.fn().mockReturnThis(), lt: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: rows, error: null }), contains: vi.fn().mockReturnThis() });

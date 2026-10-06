@@ -30,6 +30,8 @@ services:
         sync: false
       - key: VITE_AUTH_EMAIL_REDIRECT_URL
         sync: false
+      - key: VITE_ENABLE_DEMO_AUTH
+        value: 'false'
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_PUBLISHABLE_KEY

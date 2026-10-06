@@ -86,6 +86,15 @@ export const putPhoto = async (owner, id, blob) => {
     return row;
 };
 
+export const dataUrlToBlob = (value) => {
+    if (typeof value !== 'string' || !value.startsWith('data:')) return null;
+    const [header, encoded] = value.split(',', 2);
+    if (!encoded) return null;
+    const mime = header.match(/^data:([^;]+);base64$/i)?.[1] || 'image/jpeg';
+    const binary = atob(encoded);
+    return new Blob([Uint8Array.from(binary, (char) => char.charCodeAt(0))], { type: mime });
+};
+
 export const getPhoto = async (owner, id) => {
     const result = await transaction(STORES.photos, 'readonly', (store) => requestResult(store.get(ownerKey(owner, id))));
     return result?.blob ?? null;
@@ -93,7 +102,7 @@ export const getPhoto = async (owner, id) => {
 
 export const enqueueOperation = async ({ owner, recordId, collection, type, expectedRevision = 0, payload = null }) => {
     if (!owner || !recordId || !['create', 'update', 'delete'].includes(type)) throw new Error('Invalid sync operation');
-    const operation = { id: crypto.randomUUID(), owner, recordId, collection, type, expectedRevision, payload, state: 'pending', attempts: 0, createdAt: new Date().toISOString() };
+    const operation = { id: crypto.randomUUID(), owner, recordId, collection, type, expectedRevision, payload, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString() };
     await transaction(STORES.pendingOps, 'readwrite', (store) => store.put(operation));
     return operation;
 };
@@ -101,6 +110,13 @@ export const enqueueOperation = async ({ owner, recordId, collection, type, expe
 export const listPendingOperations = async (owner) => {
     const rows = await transaction(STORES.pendingOps, 'readonly', (store) => requestResult(store.index('owner').getAll(owner)));
     return (rows || []).filter((row) => row.state === 'pending').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+};
+
+export const retryFailedOperations = async (owner) => {
+    const rows = await transaction(STORES.pendingOps, 'readonly', (store) => requestResult(store.index('owner').getAll(owner)));
+    const failed = (rows || []).filter((row) => row.state === 'failed');
+    await Promise.all(failed.map((row) => updateOperation({ ...row, state: 'pending', nextRetryAt: 0, lastError: null })));
+    return failed.length;
 };
 
 export const updateOperation = async (operation) => transaction(STORES.pendingOps, 'readwrite', (store) => store.put(operation));

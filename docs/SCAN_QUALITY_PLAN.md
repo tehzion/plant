@@ -50,3 +50,37 @@ Build a 300–500 case pilot with healthy cases, common diseases, pests, nutrien
 Apply `supabase/migrations/20261005201000_scan_followup_revision.sql` to an existing project before using cloud follow-up saves. The source schema also includes the revision column. Cloud writes compare and increment that revision to detect concurrent changes.
 
 Cloud follow-up reads/writes and private photo uploads should also be checked against the deployed Supabase project with an authenticated test account. Unit tests exercise owner scoping, failed writes, and concurrent-update handling; they do not validate deployed RLS configuration.
+
+## Standalone expert benchmark
+
+`npm run benchmark:expert -- /absolute/path/to/expert_benchmark.json` accepts an array of records in the following format. Example values are placeholders, not reviewed evidence:
+
+```json
+[
+  {
+    "scanId": "unique-real-scan-id",
+    "label": {
+      "crop": "Durian",
+      "diagnosis": "expert-confirmed-condition",
+      "healthState": "unhealthy",
+      "reviewStatus": "expert_verified",
+      "reviewedBy": "actual-reviewer-id",
+      "reviewedAt": "2026-10-06T10:00:00Z",
+      "approvedAliases": []
+    },
+    "prediction": {
+      "disease": "actual-fresh-prediction",
+      "healthStatus": "unhealthy",
+      "diagnosisConfidence": 85,
+      "status": "high_confidence",
+      "differentialDiagnoses": [{ "name": "actual-alternative" }]
+    }
+  }
+]
+```
+
+Use the complete original prediction, including quality and uncertainty fields. Reviewers must label the photo independently of the AI output. The benchmark ignores malformed labels and duplicate scan IDs and requires at least 20 verified cases before returning rates; this is a minimum reporting gate, not evidence of general accuracy. An absent default dataset reports `awaiting_expert_labels`, not zero accuracy. A supplied missing file remains an error.
+
+Disease matches are exact after Unicode/case/whitespace normalization, with explicit expert-approved aliases. Top-three uses three distinct candidates including the primary prediction. Health accuracy excludes review/retake cases and is accompanied by health coverage; always report both. Confidently wrong rate counts wrong primary diagnoses scoring at least 80% and uses all verified cases as the denominator. Scores accept 0–1 or 0–100 formats and prefer diagnosis confidence over overall confidence.
+
+Before claiming release accuracy, collect the representative 300–500 case pilot above, retain model/policy versions, report uncertainty intervals and per-crop sample sizes, and review false healthy decisions and confidently wrong cases. Neither passing software tests nor high model scores establishes photo diagnosis accuracy.

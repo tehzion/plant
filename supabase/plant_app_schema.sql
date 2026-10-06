@@ -20,6 +20,7 @@ create table if not exists public.scan_history (
     category text,
     scale text,
     location_name text,
+    plot_id text,
     result_json jsonb not null default '{}'::jsonb,
     image_url text,
     leaf_image_url text,
@@ -164,6 +165,7 @@ create table if not exists public.disease_product_rules (
 );
 
 create index if not exists scan_history_user_id_created_at_idx on public.scan_history(user_id, created_at desc);
+create index if not exists scan_history_user_plot_created_at_idx on public.scan_history(user_id, plot_id, created_at desc);
 create index if not exists mygap_logs_user_id_created_at_idx on public.mygap_logs(user_id, created_at desc);
 create index if not exists daily_notes_user_id_created_at_idx on public.daily_notes(user_id, created_at desc);
 create index if not exists plots_user_id_created_at_idx on public.plots(user_id, created_at desc);
@@ -290,6 +292,19 @@ create table if not exists public.ai_usage_counters (
 alter table public.ai_usage_counters enable row level security;
 revoke all on public.ai_usage_counters from anon, authenticated;
 grant select, insert, update, delete on public.ai_usage_counters to service_role;
+
+create table if not exists public.ai_analysis_requests (
+    identity_key text not null,
+    scan_id text not null,
+    status text not null default 'processing' check (status in ('processing')),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    primary key (identity_key, scan_id)
+);
+alter table public.ai_analysis_requests enable row level security;
+revoke all on public.ai_analysis_requests from anon, authenticated;
+grant select, insert, update, delete on public.ai_analysis_requests to service_role;
+create index if not exists ai_analysis_requests_updated_idx on public.ai_analysis_requests(updated_at);
 
 grant select, insert, update, delete on public.profiles to authenticated;
 grant select, insert, update, delete on public.scan_history to authenticated;

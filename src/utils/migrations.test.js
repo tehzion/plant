@@ -20,7 +20,7 @@ describe('guest migration', () => {
         expect(mocks.upload).toHaveBeenCalledTimes(2);
         expect(upsert).toHaveBeenCalledWith([expect.objectContaining({
             id: 'scan-1', image_path: 'user-1/scan-1_main.jpg', leaf_image_path: 'user-1/scan-1_leaf.jpg',
-        })], { onConflict: 'id' });
+        })], { onConflict: 'id', ignoreDuplicates: true });
         expect(localStorage.getItem(scansKey)).toBeNull();
         expect(localStorage.getItem('plant_migrated_user-1')).toBe('1');
     });

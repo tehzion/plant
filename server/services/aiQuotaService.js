@@ -12,13 +12,14 @@ export const consumeAiQuota = async ({ identity = 'anonymous', limit = 50 } = {}
         memoryCounters.set(key, next);
         return { allowed: next <= limit, used: next, limit };
     }
-    const { data: current, error: readError } = await client.from('ai_usage_counters')
-        .select('request_count').eq('identity_key', identity).eq('window_date', todayKey()).maybeSingle();
-    if (readError) throw readError;
-    const next = Number(current?.request_count || 0) + 1;
-    const { error } = await client.from('ai_usage_counters').upsert({
-        identity_key: identity, window_date: todayKey(), request_count: next, updated_at: new Date().toISOString(),
-    }, { onConflict: 'identity_key,window_date' });
+    const { data, error } = await client.rpc('consume_ai_quota', {
+        p_identity_key: identity,
+        p_window_date: todayKey(),
+        p_limit: limit,
+    });
     if (error) throw error;
-    return { allowed: next <= limit, used: next, limit };
+    const row = Array.isArray(data) ? data[0] : data;
+    const used = Number(row?.used ?? row?.request_count ?? 0);
+    const quotaLimit = Number(row?.quota_limit ?? row?.limit ?? limit);
+    return { allowed: Boolean(row?.allowed), used, limit: quotaLimit };
 };

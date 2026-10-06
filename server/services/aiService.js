@@ -144,7 +144,8 @@ export async function identifyPlantWithPlantNet(imageBase64, options = {}) {
             {
                 method: 'POST',
                 body: formData,
-                headers: formData.getHeaders()
+                headers: formData.getHeaders(),
+                signal: options.signal,
             }
         );
 
@@ -182,6 +183,7 @@ export async function identifyPlantWithPlantNet(imageBase64, options = {}) {
 
     } catch (error) {
         console.error('❌ Primary identification method failed');
+        if (options.signal?.aborted) throw error;
         return null;
     }
 }
@@ -2015,7 +2017,7 @@ export function deriveScanResultState(result = {}) { return assessScanDecision(r
 /**
  * Fallback: Identify plant using GPT Vision
  */
-export async function identifyPlantWithGPTVision(imageBase64, category) {
+export async function identifyPlantWithGPTVision(imageBase64, category, options = {}) {
     try {
         console.log('🔍 Using backup identification method...');
 
@@ -2058,9 +2060,11 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                     }
                 ],
                 maxTokens: 500,
-                temperature: 0.3
+                temperature: 0.3,
+                signal: options.signal,
             });
         } catch (primaryError) {
+            if (options.signal?.aborted) throw primaryError;
             console.error(`⚠️ Primary model (${model}) failed: ${primaryError.code || primaryError.status || primaryError.message}`);
 
             // Fallback if the primary model is unavailable for this project.
@@ -2101,7 +2105,8 @@ export async function identifyPlantWithGPTVision(imageBase64, category) {
                     }
                 ],
                 maxTokens: 500,
-                temperature: 0.3
+                temperature: 0.3,
+                signal: options.signal,
             });
         }
 
@@ -2469,7 +2474,7 @@ const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
     }
 };
 
-const callOpenAIJson = async (messages, maxTokens = 2400) => {
+const callOpenAIJson = async (messages, maxTokens = 2400, options = {}) => {
     let model = OPENAI_PRIMARY_MODEL;
 
     try {
@@ -2479,8 +2484,10 @@ const callOpenAIJson = async (messages, maxTokens = 2400) => {
             messages,
             maxTokens,
             temperature: 0.2,
+            signal: options.signal,
         });
     } catch (primaryError) {
+        if (options.signal?.aborted) throw primaryError;
         console.error(`⚠️ Primary analysis model (${model}) failed:`, primaryError.message, primaryError.status ? `(Status: ${primaryError.status})` : '');
         model = OPENAI_FALLBACK_MODEL;
         return await createChatCompletion({
@@ -2489,6 +2496,7 @@ const callOpenAIJson = async (messages, maxTokens = 2400) => {
             messages,
             maxTokens,
             temperature: 0.2,
+            signal: options.signal,
         });
     }
 };
@@ -2622,7 +2630,7 @@ export const mergeDiagnosisResult = ({
     return ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
 };
 
-export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation, imageQuality = null) {
+export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation, imageQuality = null, options = {}) {
     console.log(`🌿 PlantNet Data Used: ${plantNetResult ? 'Yes' : 'No'}`);
     if (plantNetResult) {
         console.log(`   - Species: ${plantNetResult.scientificName}`);
@@ -2660,7 +2668,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         });
 
         const diagnosisMessages = createModelMessagesWithImages(diagnosisPrompt, treeImage, leafImage, speciesContext);
-        const diagnosisResponse = await callOpenAIJson(diagnosisMessages, 2600);
+        const diagnosisResponse = await callOpenAIJson(diagnosisMessages, 2600, options);
         const stageOne = parseOpenAIJson(diagnosisResponse.choices[0].message.content, 'diagnosis stage');
 
         const provisional = mergeDiagnosisResult({
@@ -2698,7 +2706,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
 
             try {
                 const treatmentResponse = await withTimeout(
-                    callOpenAIJson(treatmentMessages, 1600),
+                    callOpenAIJson(treatmentMessages, 1600, options),
                     25000,
                     'Treatment enrichment timed out',
                 );
