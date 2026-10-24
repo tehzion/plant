@@ -1,7 +1,4 @@
-import * as supabaseAuth from '../utils/supabaseAuth.js';
-
-const getAuthenticatedClient = supabaseAuth.getAuthenticatedClient;
-const getServiceClient = supabaseAuth.getServiceClient;
+import { queryNeon } from '../utils/neonDatabase.js';
 
 const DEFAULT_TIMEZONE = 'Asia/Kuala_Lumpur';
 const DEFAULT_REPORT_MAX_ROWS = 5000;
@@ -42,25 +39,25 @@ const getReportMaxRows = () => {
     return Math.min(Math.max(Math.trunc(configured), 100), MAX_REPORT_MAX_ROWS);
 };
 
-const fetchRows = async (client, table, userId, from, to, plotId) => {
+const fetchRows = async (table, userId, from, to, plotId) => {
     const rows = [];
     const pageSize = 1000;
     const maxRows = getReportMaxRows();
     for (let offset = 0; offset < maxRows; offset += pageSize) {
-        let query = client.from(table).select(REPORT_FIELDS[table] || 'id,created_at').eq('user_id', userId)
-            .gte('created_at', from.toISOString()).lt('created_at', to.toISOString())
-            .order('created_at', { ascending: true }).order('id', { ascending: true });
-        if (plotId && table === 'daily_notes') query = query.eq('plot_id', plotId);
-        if (plotId && table === 'scan_history') query = query.eq('plot_id', plotId);
         const remaining = maxRows - offset;
         const requestedPageSize = Math.min(pageSize, remaining);
-        const result = typeof query.range === 'function'
-            ? await query.range(offset, offset + requestedPageSize - 1)
-            : await query.limit(maxRows);
-        if (result.error) throw result.error;
-        const page = Array.isArray(result.data) ? result.data : [];
+        const params = [userId, from.toISOString(), to.toISOString()];
+        let sql = `select ${REPORT_FIELDS[table]} from public.${table} where user_id = $1 and created_at >= $2 and created_at < $3`;
+        if (plotId) {
+            params.push(plotId);
+            sql += ` and plot_id = $${params.length}`;
+        }
+        params.push(requestedPageSize, offset);
+        sql += ` order by created_at asc, id asc limit $${params.length - 1} offset $${params.length}`;
+        const result = await queryNeon(sql, params);
+        const page = Array.isArray(result.rows) ? result.rows : [];
         rows.push(...page);
-        if (typeof query.range !== 'function' || !page.length || page.length < requestedPageSize) {
+        if (!page.length || page.length < requestedPageSize) {
             return { rows, truncated: false };
         }
         if (rows.length >= maxRows) return { rows: rows.slice(0, maxRows), truncated: true };
@@ -69,12 +66,6 @@ const fetchRows = async (client, table, userId, from, to, plotId) => {
 };
 
 export const getReportSummary = async (userId, { from, to, plotId, timezone = DEFAULT_TIMEZONE, accessToken = null } = {}) => {
-    const client = (typeof getAuthenticatedClient === 'function' ? getAuthenticatedClient(accessToken) : null) || getServiceClient();
-    if (!client) {
-        const error = new Error('Reports are temporarily unavailable.');
-        error.status = 503;
-        throw error;
-    }
     const start = zonedMidnight(from, timezone, new Date(Date.now() - 365 * 86400000));
     const end = zonedMidnight(to, timezone, new Date(Date.now() + 86400000));
     if (end <= start) {
@@ -83,8 +74,8 @@ export const getReportSummary = async (userId, { from, to, plotId, timezone = DE
         throw error;
     }
     const [notesResult, scansResult] = await Promise.all([
-        fetchRows(client, 'daily_notes', userId, start, end, plotId),
-        fetchRows(client, 'scan_history', userId, start, end, plotId),
+        fetchRows('daily_notes', userId, start, end, plotId),
+        fetchRows('scan_history', userId, start, end, plotId),
     ]);
     const notes = notesResult.rows;
     const scans = scansResult.rows;
@@ -139,32 +130,21 @@ export const getReportSummary = async (userId, { from, to, plotId, timezone = DE
 };
 
 export const getScanHistoryPage = async (userId, { cursor = null, limit = 20, accessToken = null } = {}) => {
-    const client = (typeof getAuthenticatedClient === 'function' ? getAuthenticatedClient(accessToken) : null) || getServiceClient();
-    if (!client) {
-        const error = new Error('History is temporarily unavailable.');
-        error.status = 503;
-        throw error;
-    }
     const pageSize = Math.min(Math.max(Number(limit) || 20, 1), 100);
     if (cursor && (!cursor.createdAt || !/^\d{4}-\d{2}-\d{2}T[\d:.+-]+Z$/.test(String(cursor.createdAt)) || !/^[A-Za-z0-9_-]{1,200}$/.test(String(cursor.id || '')))) {
         const error = new Error('Invalid history cursor.');
         error.status = 400;
         throw error;
     }
-    let query = client.from('scan_history')
-        .select('id,disease,confidence,severity,category,scale,location_name,plot_id,result_json,image_path,leaf_image_path,created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(pageSize + 1);
-    if (cursor?.createdAt && cursor?.id && typeof query.or === 'function') {
-        const createdAt = String(cursor.createdAt).replace(/[(),]/g, '');
-        const id = String(cursor.id).replace(/[(),]/g, '');
-        query = query.or(`created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`);
+    const params = [userId];
+    let sql = 'select id,disease,confidence,severity,category,scale,location_name,plot_id,result_json,image_path,leaf_image_path,created_at from public.scan_history where user_id = $1';
+    if (cursor?.createdAt && cursor?.id) {
+        params.push(String(cursor.createdAt), String(cursor.id));
+        sql += ' and (created_at < $2 or (created_at = $2 and id < $3))';
     }
-    const { data, error } = await query;
-    if (error) throw error;
-    const rows = Array.isArray(data) ? data : [];
+    params.push(pageSize + 1);
+    sql += ` order by created_at desc, id desc limit $${params.length}`;
+    const { rows = [] } = await queryNeon(sql, params);
     const hasMore = rows.length > pageSize;
     const page = hasMore ? rows.slice(0, pageSize) : rows;
     const last = page[page.length - 1];

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { insertMock, getUserMock } = vi.hoisted(() => ({
+const { insertMock, getUserMock, neonDataRequestMock } = vi.hoisted(() => ({
     insertMock: vi.fn(),
     getUserMock: vi.fn(),
+    neonDataRequestMock: vi.fn(),
 }));
+vi.mock('./neonApi.js', () => ({ neonDataRequest: neonDataRequestMock }));
 
 vi.mock('../lib/supabase', () => ({
     supabase: {
@@ -26,9 +28,11 @@ describe('product event capture', () => {
     beforeEach(() => {
         localStorage.clear();
         insertMock.mockReset();
+        neonDataRequestMock.mockReset();
         getUserMock.mockReset();
         getUserMock.mockResolvedValue({ data: { user: { id: 'user-1' } } });
         insertMock.mockResolvedValue({ error: null });
+        neonDataRequestMock.mockResolvedValue({ row: {} });
     });
 
     it('builds a compact product click payload from scan and product context', () => {
@@ -99,8 +103,9 @@ describe('product event capture', () => {
         });
 
         expect(result).toEqual({ saved: true });
-        expect(insertMock).toHaveBeenCalledTimes(1);
-        expect(insertMock.mock.calls[0][0]).toMatchObject({
+        expect(neonDataRequestMock).toHaveBeenCalledTimes(1);
+        expect(neonDataRequestMock.mock.calls[0][0]).toBe('product_events');
+        expect(neonDataRequestMock.mock.calls[0][1]).toMatchObject({
             scan_id: 'scan-456',
             user_id: 'user-1',
             event_type: 'recommended_checkout_click',
@@ -111,7 +116,7 @@ describe('product event capture', () => {
             crop: 'Padi',
             disease: 'Rice Blast',
         });
-        expect(insertMock.mock.calls[0][0].guest_id).toMatch(/^guest_/);
-        expect(insertMock.mock.calls[0][0].metadata.selectedProductIds).toEqual(['12', '18']);
+        expect(neonDataRequestMock.mock.calls[0][1].guest_id).toMatch(/^guest_/);
+        expect(neonDataRequestMock.mock.calls[0][1].metadata.selectedProductIds).toEqual(['12', '18']);
     });
 });

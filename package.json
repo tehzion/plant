@@ -1,7 +1,7 @@
 {
   "name": "agropreneur-smart-plant-detector-with-mygap",
   "private": true,
-  "version": "6.0.0",
+  "version": "7.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "test": "vitest run",
     "audit:export": "node server/scripts/exportDiagnosisAudit.js",
     "audit:prune": "node server/scripts/pruneDiagnosisAudit.js",
+    "db:migrate:supabase": "node server/scripts/migrateSupabaseDataToNeon.js",
     "benchmark:expert": "node server/scripts/evaluateExpertBenchmark.js",
     "check:translations": "node ./scripts/check-translations.mjs",
     "check:translations:strict": "node ./scripts/check-translations.mjs --strict",
@@ -19,6 +20,8 @@
     "start": "node server/index.js"
   },
   "dependencies": {
+    "@neon/config": "^1.9.3",
+    "@neon/env": "^1.6.4",
     "@supabase/supabase-js": "^2.100.0",
     "@vitejs/plugin-react": "^4.3.3",
     "compression": "^1.8.2",
@@ -37,6 +40,7 @@
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "openai": "^4.67.3",
+    "pg": "^8.23.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

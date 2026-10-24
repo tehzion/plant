@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { queryNeon } from './neonDatabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,11 +74,13 @@ export const logTrainingData = async (data) => {
                 uploadAuditImage(treeImage, scanId, 'tree'),
                 uploadAuditImage(leafImage, scanId, 'leaf'),
             ]);
-            const { error } = await getAuditClient().from('diagnosis_training_logs').upsert({
-                id: scanId, created_at: timestamp, category,
-                images: { tree, leaf }, raw_result: result, metadata,
-            }, { onConflict: 'id' });
-            if (error) throw error;
+            await queryNeon(
+                `insert into public.diagnosis_training_logs(id, created_at, category, images, raw_result, metadata)
+                 values ($1, $2, $3, $4, $5, $6)
+                 on conflict (id) do update set created_at = excluded.created_at, category = excluded.category,
+                    images = excluded.images, raw_result = excluded.raw_result, metadata = excluded.metadata`,
+                [scanId, timestamp, category || null, { tree, leaf }, result || {}, metadata || {}],
+            );
             return true;
         }
         await ensureLocalDataset();
@@ -162,10 +165,10 @@ export const logFeedback = async (feedbackData) => {
     try {
         const now = new Date();
         if (useCloudAudit()) {
-            const { error } = await getAuditClient().from('diagnosis_feedback').insert({
-                scan_id: feedbackData.scanId, feedback: feedbackData, created_at: now.toISOString(),
-            });
-            if (error) throw error;
+            await queryNeon(
+                'insert into public.diagnosis_feedback(scan_id, feedback, created_at) values ($1, $2, $3)',
+                [feedbackData.scanId, feedbackData, now.toISOString()],
+            );
             return true;
         }
         await ensureLocalDataset();

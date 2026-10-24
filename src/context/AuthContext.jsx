@@ -64,8 +64,8 @@ export const AuthProvider = ({ children }) => {
         const migrateForUser = async (currentUser) => {
             if (!currentUser) return;
             try {
-                const { migrateLocalStorageToSupabase } = await import('../utils/migrations');
-                await migrateLocalStorageToSupabase(currentUser.id);
+                const { migrateLocalStorageToNeon } = await import('../utils/migrations');
+                await migrateLocalStorageToNeon(currentUser.id);
                 const { flushAuthenticatedSyncQueue } = await import('../utils/cloudSync.js');
                 await flushAuthenticatedSyncQueue(currentUser.id);
             } catch (e) {

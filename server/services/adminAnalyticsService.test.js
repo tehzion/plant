@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { createClientMock, getUserMock, dataByTable } = vi.hoisted(() => ({
+const { createClientMock, getUserMock, queryNeonMock, dataByTable } = vi.hoisted(() => ({
     createClientMock: vi.fn(),
     getUserMock: vi.fn(),
+    queryNeonMock: vi.fn(),
     dataByTable: {
         scan_history: [],
         consultation_leads: [],
@@ -19,6 +20,10 @@ const makeBuilder = (table) => ({
 
 vi.mock('@supabase/supabase-js', () => ({
     createClient: createClientMock,
+}));
+vi.mock('../utils/neonDatabase.js', () => ({
+    getNeonPool: vi.fn(() => ({ query: queryNeonMock })),
+    queryNeon: queryNeonMock,
 }));
 
 const adminClient = {
@@ -50,6 +55,7 @@ describe('adminAnalyticsService', () => {
         dataByTable.scan_history = [];
         dataByTable.consultation_leads = [];
         dataByTable.product_events = [];
+        queryNeonMock.mockImplementation((sql) => ({ rows: dataByTable[sql.match(/public\.(scan_history|consultation_leads|product_events)/)?.[1]] || [] }));
     });
 
     it('normalizes admin query bounds', () => {

@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ createClient: vi.fn(), upload: vi.fn(), upsert: vi.fn(), insert: vi.fn() }));
+const mocks = vi.hoisted(() => ({ createClient: vi.fn(), upload: vi.fn(), upsert: vi.fn(), insert: vi.fn(), queryNeon: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: mocks.createClient }));
+vi.mock('./neonDatabase.js', () => ({ queryNeon: mocks.queryNeon }));
 import { logTrainingData, logFeedback } from './dataCollector.js';
 
 beforeEach(() => {
@@ -15,6 +16,7 @@ beforeEach(() => {
     mocks.upload.mockResolvedValue({ error: null });
     mocks.upsert.mockResolvedValue({ error: null });
     mocks.insert.mockResolvedValue({ error: null });
+    mocks.queryNeon.mockResolvedValue({ rows: [] });
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -23,14 +25,14 @@ it('stores private images and an idempotent durable diagnosis record', async () 
     const result = { disease: 'Leaf spot', confidence: 70 };
     expect(await logTrainingData({ id, treeImage: 'data:image/jpeg;base64,/9j/AA==', result })).toBe(true);
     expect(mocks.upload).toHaveBeenCalledWith(`training/${id}_tree.jpg`, expect.any(Buffer), expect.objectContaining({ upsert: true }));
-    expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ id, raw_result: result }), { onConflict: 'id' });
+    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('diagnosis_training_logs'), [id, expect.any(String), null, expect.objectContaining({ tree: `training/${id}_tree.jpg` }), result, {}]);
 });
 it('reports an audit upload failure instead of writing a photo-less record', async () => {
     mocks.upload.mockResolvedValue({ error: new Error('storage offline') });
     expect(await logTrainingData({ id: 'scan-1', treeImage: 'data:image/jpeg;base64,/9j/AA==', result: {} })).toBe(false);
-    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.queryNeon).not.toHaveBeenCalled();
 });
 it('stores feedback with the same scan ID', async () => {
     expect(await logFeedback({ scanId: 'scan-1', wasCorrect: true })).toBe(true);
-    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ scan_id: 'scan-1', feedback: { scanId: 'scan-1', wasCorrect: true } }));
+    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('diagnosis_feedback'), ['scan-1', { scanId: 'scan-1', wasCorrect: true }, expect.any(String)]);
 });

@@ -31,3 +31,4 @@ server/dataset/
 *.sln
 *.sw?
 .vercel
+.neon

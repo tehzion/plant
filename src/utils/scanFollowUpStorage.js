@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { getScanHistory, getPlots, isCloudUser, STORAGE_COLLECTION_KEYS, writeStorageCollection } from './localStorage.js';
 import { uploadPrivateImage } from './privateImageStorage.js';
+import { neonDataRowRequest } from './neonApi.js';
 
 export const saveScanFollowUp = async (scanId, changes, userId = null) => {
     if (!['pending', 'improving', 'unchanged', 'worsening', 'resolved'].includes(changes.outcome)) throw new Error('Invalid outcome');
@@ -12,9 +13,9 @@ export const saveScanFollowUp = async (scanId, changes, userId = null) => {
     const cloud = isCloudUser(userId);
     let source, localHistory;
     if (cloud) {
-        const { data, error } = await supabase.from('scan_history').select('result_json,revision').eq('id', scanId).eq('user_id', userId).single();
-        if (error || !data) throw error || new Error('Scan not found');
-        source = { ...(data.result_json || {}), __revision: Number.isInteger(data.revision) ? data.revision : 0 };
+        const { row } = await neonDataRowRequest('scan_history', scanId, { operation: 'get' });
+        if (!row) throw new Error('Scan not found');
+        source = { ...(row.result_json || {}), __revision: Number.isInteger(row.revision) ? row.revision : 0 };
     } else {
         localHistory = getScanHistory();
         source = localHistory.find(scan => scan.id === scanId);
@@ -40,11 +41,11 @@ export const saveScanFollowUp = async (scanId, changes, userId = null) => {
         // session helper yet. RLS and the revision predicate still protect it.
         if (!supabase.auth?.getSession) {
             const { __revision, ...sourceResult } = source;
-            const { data, error } = await supabase.from('scan_history').update({
-                result_json: { ...sourceResult, ...metadata }, revision: revision + 1,
-            }).eq('id', scanId).eq('user_id', userId).eq('revision', revision).select('id,revision');
-            if (error) throw error;
-            if (!data?.length) throw new Error('The scan changed in another session. Reload and retry.');
+            const response = await neonDataRowRequest('scan_history', scanId, {
+                operation: 'update',
+                payload: { result_json: { ...sourceResult, ...metadata }, revision: revision + 1 },
+            });
+            if (!response.row) throw new Error('The scan changed in another session. Reload and retry.');
             return metadata;
         }
         const { data: sessionData } = await supabase.auth.getSession();

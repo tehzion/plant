@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getGuestId } from './localStorage';
+import { neonDataRequest } from './neonApi.js';
 
 export const CONSULTATION_LEAD_INTENT = 'whatsapp_consultation';
 export const CONSULTATION_LEAD_SOURCE = 'product_recommendations';
@@ -89,14 +90,7 @@ export const saveConsultationLead = async ({
             source,
         });
 
-        const { error } = await supabase
-            .from('consultation_leads')
-            .insert(payload);
-
-        if (error) {
-            console.warn('Consultation lead capture failed:', error.message);
-            return { saved: false, error };
-        }
+        await neonDataRequest('consultation_leads', payload, { authRequired: false });
 
         return { saved: true };
     } catch (error) {

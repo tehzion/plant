@@ -12,7 +12,7 @@ import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
-import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
+import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
 import { syncOperation } from './services/syncService.js';
@@ -22,11 +22,15 @@ import { getDiseaseProductRules } from './services/diseaseProductRuleService.js'
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 import { withAbortableTimeout } from './utils/requestTimeout.js';
+import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
+import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Load environment variables
+// Load environment variables. Neon pulls local development credentials into
+// .env.local; hosted environments continue to provide env vars directly.
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -161,6 +165,71 @@ app.get('/api/health', (req, res) => {
             }
         })
     });
+});
+
+app.get('/api/neon/health', async (req, res) => {
+    const database = await checkNeonDatabase();
+    res.status(database.connected ? 200 : 503).json(database);
+});
+
+const optionalAuthenticatedUser = async (req) => {
+    if (!getBearerToken(req)) return null;
+    return verifyAuthenticatedUser(req);
+};
+
+// Neon is the application database. These routes deliberately keep the
+// database credential on the server and enforce ownership after Supabase Auth
+// verifies the bearer token. Supabase remains responsible only for Auth and
+// private image Storage.
+app.get('/api/data/:table', async (req, res, next) => {
+    try {
+        if (!getDatasetNames().includes(req.params.table)) return res.status(404).json({ error: 'Data collection not found.' });
+        const user = await verifyAuthenticatedUser(req);
+        const result = await listUserRows(req.params.table, user.id, req.query);
+        res.json({ rows: result.rows, data: result.rows, count: result.count });
+    } catch (error) { next(error); }
+});
+
+app.post('/api/data/:table', async (req, res, next) => {
+    try {
+        const { table } = req.params;
+        if (getTelemetryDatasetNames().includes(table)) {
+            const user = await optionalAuthenticatedUser(req);
+            const row = await insertTelemetryRow(table, req.body?.payload || req.body, {
+                userId: user?.id || null,
+                guestId: req.body?.guest_id || req.body?.payload?.guest_id || null,
+            });
+            return res.status(201).json({ row, data: row });
+        }
+        if (!getDatasetNames().includes(table)) return res.status(404).json({ error: 'Data collection not found.' });
+        const user = await verifyAuthenticatedUser(req);
+        const operation = req.body?.operation || 'insert';
+        const payload = req.body?.payload || req.body;
+        if (operation === 'bulk-upsert') {
+            const rows = await bulkInsertUserRows(table, user.id, req.body?.rows || [], { upsert: true });
+            return res.status(201).json({ rows, data: rows });
+        }
+        const row = await insertUserRow(table, user.id, payload, { upsert: operation === 'upsert' });
+        res.status(201).json({ row, data: row });
+    } catch (error) { next(error); }
+});
+
+app.post('/api/data/:table/:id', async (req, res, next) => {
+    try {
+        const { table, id } = req.params;
+        if (!getDatasetNames().includes(table)) return res.status(404).json({ error: 'Data collection not found.' });
+        const user = await verifyAuthenticatedUser(req);
+        const operation = req.body?.operation || 'update';
+        const payload = req.body?.payload || req.body;
+        const row = operation === 'get'
+            ? await getUserRow(table, user.id, id)
+            : operation === 'delete'
+            ? await deleteUserRow(table, user.id, id)
+            : await updateUserRow(table, user.id, id, payload);
+        if (operation === 'get' && !row) return res.json({ row: null, data: null });
+        if (!row) return res.status(404).json({ error: 'Record not found.' });
+        res.json({ row, data: row });
+    } catch (error) { next(error); }
 });
 
 app.use('/api/', limiter);
@@ -768,15 +837,10 @@ app.post('/api/orders/recovery-requests', async (req, res, next) => {
             return res.status(400).json({ error: 'Enter a valid order number.' });
         }
         if (!explanation) return res.status(400).json({ error: 'A short explanation is required.' });
-        const client = getServiceClient();
-        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
-        const { error } = await client.from('order_recovery_requests').insert({
-            order_id: orderNumber,
-            requester_user_id: user.id,
-            explanation,
-            status: 'pending',
-        });
-        if (error) throw error;
+        await queryNeon(
+            'insert into public.order_recovery_requests(order_id, requester_user_id, explanation, status) values ($1, $2, $3, $4)',
+            [orderNumber, user.id, explanation, 'pending'],
+        );
         res.status(202).json({ message: 'Your request was received and will be reviewed by the store team.' });
     } catch (error) { next(error); }
 });
@@ -852,74 +916,53 @@ app.get('/api/orders/:orderId', async (req, res, next) => {
 app.get('/api/admin/order-recovery-requests', async (req, res, next) => {
     try {
         await verifyAdminRequest(req);
-        const client = getServiceClient();
-        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
         const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : null;
-        let query = client.from('order_recovery_requests')
-            .select('id,order_id,requester_user_id,explanation,status,reviewer_user_id,reviewed_at,verification_note,created_at')
-            .order('created_at', { ascending: false }).limit(100);
-        if (status) query = query.eq('status', status);
-        const { data, error } = await query;
-        if (error) throw error;
-        res.json(Array.isArray(data) ? data : []);
+        const params = [];
+        let sql = 'select id,order_id,requester_user_id,explanation,status,reviewer_user_id,reviewed_at,verification_note,created_at from public.order_recovery_requests';
+        if (status) { params.push(status); sql += ' where status = $1'; }
+        sql += ` order by created_at desc limit ${status ? '$2' : '$1'}`;
+        params.push(100);
+        const { rows } = await queryNeon(sql, params);
+        res.json(Array.isArray(rows) ? rows : []);
     } catch (error) { next(error); }
 });
 
 app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, res, next) => {
     try {
         const reviewer = await verifyAdminRequest(req);
-        const client = getServiceClient();
-        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
         const decision = String(req.body?.decision || '').toLowerCase();
         const note = String(req.body?.verificationNote || '').trim().slice(0, 1000);
         if (!['approved', 'rejected'].includes(decision) || !note) {
             return res.status(400).json({ error: 'A decision and verification note are required.' });
         }
-        if (typeof client.rpc === 'function') {
-            const { data, error } = await client.rpc('approve_order_recovery', {
-                p_request_id: req.params.requestId,
-                p_reviewer_user_id: reviewer.id,
-                p_decision: decision,
-                p_verification_note: note,
-            });
-            if (error) {
-                error.status = error.code === '23505' ? 409 : error.code === 'P0002' ? 404 : error.code === '22023' ? 400 : 500;
-                throw error;
+        const result = await withNeonTransaction(async (client) => {
+            const requestResult = await client.query(
+                'select id,order_id,requester_user_id,status from public.order_recovery_requests where id = $1 for update',
+                [req.params.requestId],
+            );
+            const request = requestResult.rows[0];
+            if (!request || request.status !== 'pending') return null;
+            if (decision === 'approved') {
+                const existingResult = await client.query('select id,user_id from public.order_refs where order_id = $1 for update', [request.order_id]);
+                const existing = existingResult.rows[0];
+                if (existing?.user_id && existing.user_id !== request.requester_user_id) {
+                    const conflict = new Error('This order already belongs to another account.');
+                    conflict.status = 409;
+                    throw conflict;
+                }
+                if (existing?.id) {
+                    await client.query('update public.order_refs set user_id = $1, guest_id = null where id = $2', [request.requester_user_id, existing.id]);
+                } else {
+                    await client.query('insert into public.order_refs(id,order_id,user_id,guest_id) values ($1,$2,$3,null)', [`recovered-${request.order_id}`, request.order_id, request.requester_user_id]);
+                }
             }
-            return res.json(data || { status: decision });
-        }
-        const { data: request, error: requestError } = await client.from('order_recovery_requests')
-            .select('id,order_id,requester_user_id,status').eq('id', req.params.requestId).maybeSingle();
-        if (requestError) throw requestError;
-        if (!request || request.status !== 'pending') return res.status(404).json({ error: 'Recovery request not found.' });
-        if (decision === 'approved') {
-            const { data: existing, error: existingError } = await client.from('order_refs')
-                .select('id,user_id').eq('order_id', request.order_id).maybeSingle();
-            if (existingError) throw existingError;
-            if (existing?.user_id && existing.user_id !== request.requester_user_id) {
-                return res.status(409).json({ error: 'This order already belongs to another account.' });
-            }
-            let refResult;
-            if (existing?.id) {
-                refResult = await client.from('order_refs').update({ user_id: request.requester_user_id, guest_id: null }).eq('id', existing.id);
-            } else {
-                refResult = await client.from('order_refs').insert({
-                    id: `recovered-${request.order_id}`,
-                    order_id: request.order_id,
-                    user_id: request.requester_user_id,
-                    guest_id: null,
-                });
-            }
-            const { error: refError } = refResult;
-            if (refError) throw refError;
-        }
-        const { error } = await client.from('order_recovery_requests').update({
-            status: decision,
-            reviewer_user_id: reviewer.id,
-            reviewed_at: new Date().toISOString(),
-            verification_note: note,
-        }).eq('id', request.id).eq('status', 'pending');
-        if (error) throw error;
+            await client.query(
+                'update public.order_recovery_requests set status = $1, reviewer_user_id = $2, reviewed_at = now(), verification_note = $3 where id = $4 and status = $5',
+                [decision, reviewer.id, note, request.id, 'pending'],
+            );
+            return { status: decision };
+        });
+        if (!result) return res.status(404).json({ error: 'Recovery request not found.' });
         res.json({ status: decision });
     } catch (error) { next(error); }
 });

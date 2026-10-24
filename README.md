@@ -31,21 +31,25 @@ VITE_ENCRYPTION_KEY=
 VITE_SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 VITE_AUTH_EMAIL_REDIRECT_URL=https://plant-2-uvev.onrender.com/login
+DATABASE_URL=postgresql://...Neon pooled URL...
+DATABASE_URL_UNPOOLED=postgresql://...Neon direct URL for migrations...
 ```
 
-Supabase is wired for email/password auth and cloud sync. Apply
-`supabase/plant_app_schema.sql`
-to the Agropeuner project after it is active, then add the publishable key to
-your local `.env` and production environment. Do not put a Supabase service role
-or secret key in any `VITE_*` frontend variable.
+Neon is the application database. Initialize the linked project with
+`neon deploy`, then apply `neon/migrations/0001_plant_app.sql` using the direct
+`DATABASE_URL_UNPOOLED` URL. The frontend never receives a database credential:
+authenticated reads and writes go through the backend, which verifies Supabase
+Auth tokens and enforces row ownership. Supabase remains responsible for
+email/password authentication and private image Storage. Do not put a Supabase
+service role, secret key, or Neon URL in any `VITE_*` frontend variable.
 
 The schema also seeds `disease_product_rules`, a public-read curated mapping used
 by product recommendations to connect crop disease aliases to WooCommerce tags,
 active ingredients, and caution notes.
 Consultation CTA clicks are captured in `consultation_leads` before opening
 WhatsApp, using an insert-only browser policy so lead lists are not exposed.
-New Supabase Storage uploads use the private `scan-images` bucket: the database
-stores object paths and the app generates short-lived signed URLs for display.
+New Supabase Storage uploads use the private `scan-images` bucket: Neon stores
+object paths and the app generates short-lived signed URLs for display.
 Legacy public/base64 image values remain readable for old records.
 
 Production Supabase Auth checklist:
@@ -64,6 +68,8 @@ PLANTNET_API_KEY=your_plantnet_api_key_here
 WOOCOMMERCE_URL=https://your-store-domain
 WOOCOMMERCE_CONSUMER_KEY=your_woocommerce_consumer_key
 WOOCOMMERCE_CONSUMER_SECRET=your_woocommerce_consumer_secret
+DATABASE_URL=postgresql://...Neon pooled URL...
+DATABASE_URL_UNPOOLED=postgresql://...Neon direct URL for migrations...
 SUPABASE_URL=https://aweyluvuvydbwdanodqe.supabase.co
 SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 SUPABASE_SERVICE_ROLE_KEY=server_only_service_role_key_for_admin_dashboard

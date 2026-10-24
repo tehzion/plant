@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { getAuditClient } from '../utils/dataCollector.js';
+import { queryNeon } from '../utils/neonDatabase.js';
 
 // Export private audit records for the existing holdout/evaluation scripts.
 const outputDir = path.resolve(process.env.DIAGNOSIS_DATA_DIR || 'server/dataset');
@@ -10,12 +11,10 @@ await fs.mkdir(path.join(outputDir, 'images'), { recursive: true });
 const readAll = async (table) => {
     const rows = [];
     for (let offset = 0; ;) {
-        const { data, error, count } = await getAuditClient().from(table).select('*', { count: 'exact' })
-            .order('created_at').order('id').range(offset, offset + 499);
-        if (error) throw error;
+        const { rows: data } = await queryNeon(`select * from public.${table} order by created_at, id limit 500 offset $1`, [offset]);
         rows.push(...data);
         offset += data.length;
-        if (!data.length || (count != null ? offset >= count : data.length < 500)) return rows;
+        if (!data.length || data.length < 500) return rows;
     }
 };
 

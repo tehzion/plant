@@ -2,27 +2,21 @@
 
 ## Deployment setup
 
-1. Apply the updated `supabase/plant_app_schema.sql`. It adds the RLS-enabled, server-only `diagnosis_training_logs` and `diagnosis_feedback` tables. Images use the existing private `scan-images` bucket under a `training/` prefix that browser ownership policies cannot access.
-2. Configure the server-only Supabase service role key and URL. Production diagnosis collection uses Supabase by default. It reports collection failures without blocking diagnosis; failed feedback saves return an error.
+1. Apply `neon/migrations/0001_plant_app.sql` to the Neon production branch using `DATABASE_URL_UNPOOLED`. It creates the application tables, server-only audit tables, indexes, plot ownership triggers, and seeded recommendation rules.
+2. Configure `DATABASE_URL` (pooled) for application traffic and keep `DATABASE_URL_UNPOOLED` for migrations or administration. Configure the server-only Supabase service role key and URL for Auth verification and private Storage. Diagnosis metadata writes to Neon; private training images remain in Supabase Storage.
 3. Configure `ORDER_ACCESS_SECRET` with at least 32 random characters. The Render blueprint generates a value for a newly provisioned service. Existing services need the variable added. Keep this value stable across deployments; rotating it invalidates guest order access.
 4. Set `TRUST_PROXY_HOPS` to the deployment's known proxy count. The Render blueprint sets one hop. Leave it at zero when running directly.
-5. Adjust `AI_GUEST_DAILY_LIMIT`, `AI_SERVER_DAILY_LIMIT`, and `AI_MAX_CONCURRENT_REQUESTS` for the expected load. The guest allowance is per IP, while identity quotas are persisted in `ai_usage_counters` through the atomic `consume_ai_quota` function. The in-memory path is only a local-development fallback.
+5. Adjust `AI_GUEST_DAILY_LIMIT`, `AI_SERVER_DAILY_LIMIT`, and `AI_MAX_CONCURRENT_REQUESTS` for the expected load. The guest allowance is per IP, while identity quotas are persisted in Neon `ai_usage_counters`. The in-memory path is only a local-development fallback.
 
-Apply schema changes before deploying the backend. Verify the tables have RLS and no grants to browser roles:
+Apply the Neon migration before deploying the backend. Verify the application tables exist; Neon credentials must never be exposed to the browser:
 
 ```sql
-select tablename, rowsecurity from pg_tables
+select tablename
 where schemaname = 'public'
-and tablename in ('diagnosis_training_logs', 'diagnosis_feedback');
-
-select table_name, grantee, privilege_type
-from information_schema.role_table_grants
-where table_schema = 'public'
-and table_name in ('diagnosis_training_logs', 'diagnosis_feedback')
-and grantee in ('anon', 'authenticated');
+and tablename in ('profiles', 'scan_history', 'mygap_logs', 'daily_notes', 'plots', 'diagnosis_training_logs', 'diagnosis_feedback');
 ```
 
-The first query should return two rows with `rowsecurity = true`; the second should return no rows.
+The query should return the listed tables. Browser data access is blocked by design because all Neon queries run through the authenticated backend API.
 
 ## Guest orders
 

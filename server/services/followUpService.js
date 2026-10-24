@@ -1,3 +1,4 @@
+import { queryNeon } from '../utils/neonDatabase.js';
 import { getServiceClient } from '../utils/supabaseAuth.js';
 
 const OUTCOMES = new Set(['pending', 'improving', 'unchanged', 'worsening', 'resolved']);
@@ -6,8 +7,15 @@ const SEVERITIES = new Set(['', 'mild', 'moderate', 'severe', 'critical']);
 const mapDatabaseError = (error) => {
     if (!error || error.status) return error;
     const mapped = new Error(error.message || 'Follow-up could not be saved.');
-    mapped.status = error.code === '40001' ? 409 : error.code === 'P0002' ? 404 : error.code === '42501' ? 403 : 500;
+    mapped.status = error.code === '40001' ? 409 : error.code === '23503' ? 400 : error.code === '23505' ? 409 : 500;
     return mapped;
+};
+
+const cleanupPhoto = async (userId, path) => {
+    if (!path || !path.startsWith(`${userId}/`)) return;
+    try { await getServiceClient()?.storage.from('scan-images').remove([path]); } catch (error) {
+        console.warn('Follow-up photo cleanup failed:', error.message);
+    }
 };
 
 export const createFollowUpEvent = async (userId, input = {}) => {
@@ -18,86 +26,74 @@ export const createFollowUpEvent = async (userId, input = {}) => {
         error.status = 400;
         throw error;
     }
-    const client = getServiceClient();
-    if (!client) { const error = new Error('Follow-up storage is temporarily unavailable.'); error.status = 503; throw error; }
-    const { data: scan, error: scanError } = await client.from('scan_history').select('id,result_json,revision').eq('id', scanId).eq('user_id', userId).maybeSingle();
-    if (scanError) throw scanError;
-    if (!scan) { const error = new Error('Scan not found.'); error.status = 404; throw error; }
-    if (input.plotId) {
-        const { data: plot, error: plotError } = await client.from('plots').select('id').eq('id', input.plotId).eq('user_id', userId).maybeSingle();
-        if (plotError) throw plotError;
-        if (!plot) { const error = new Error('Selected plot is unavailable.'); error.status = 400; throw error; }
-    }
-    if (input.photoPath && !String(input.photoPath).startsWith(`${userId}/`)) {
-        const error = new Error('Follow-up photo ownership could not be verified.');
-        error.status = 400;
-        throw error;
-    }
-    const current = scan.result_json && typeof scan.result_json === 'object' ? scan.result_json : {};
-    const revision = Number.isInteger(scan.revision) ? scan.revision : 0;
-    const recordedAt = new Date().toISOString();
-    const event = {
-        id: eventId, user_id: userId, scan_id: scanId, plot_id: input.plotId || null,
-        outcome: input.outcome, severity: input.severity || '', note: String(input.note || '').slice(0, 2000),
-        photo_path: input.photoPath || null, next_check_date: input.nextCheckDate || null, recorded_at: recordedAt,
-    };
-    const cleanupPhoto = async (path) => {
-        if (!path || !path.startsWith(`${userId}/`)) return;
-        try { await client.storage.from('scan-images').remove([path]); } catch (error) {
-            console.warn('Follow-up photo cleanup failed:', error.message);
-        }
-    };
-    if (typeof client.rpc === 'function') {
-        try {
-            const { data, error } = await client.rpc('create_followup_event', {
-                p_user_id: userId,
-                p_scan_id: scanId,
-                p_expected_revision: revision,
-                p_event: event,
-            });
-            if (error) throw error;
-            if (data?.event) {
-                if (data.duplicate && event.photo_path && data.event.photo_path !== event.photo_path) await cleanupPhoto(event.photo_path);
-                return { event: data.event, revision: Number(data.revision || revision), followUp: data.followUp || {} };
-            }
-        } catch (error) {
-            await cleanupPhoto(event.photo_path);
-            throw mapDatabaseError(error);
-        }
-    }
-    let inserted;
     try {
-        const result = await client.from('scan_followup_events').upsert(event, { onConflict: 'id' }).select('*');
-        if (result.error) throw result.error;
-        inserted = result.data;
+        const scanResult = await queryNeon(
+            'select id,result_json,revision from public.scan_history where id = $1 and user_id = $2 limit 1',
+            [scanId, userId],
+        );
+        const scan = scanResult.rows[0];
+        if (!scan) throw Object.assign(new Error('Scan not found.'), { status: 404 });
+        if (input.plotId) {
+            const plot = await queryNeon('select id from public.plots where id = $1 and user_id = $2 limit 1', [input.plotId, userId]);
+            if (!plot.rows[0]) throw Object.assign(new Error('Selected plot is unavailable.'), { status: 400 });
+        }
+        if (input.photoPath && !String(input.photoPath).startsWith(`${userId}/`)) {
+            throw Object.assign(new Error('Follow-up photo ownership could not be verified.'), { status: 400 });
+        }
+        const current = scan.result_json && typeof scan.result_json === 'object' ? scan.result_json : {};
+        const revision = Number.isInteger(scan.revision) ? scan.revision : 0;
+        const recordedAt = new Date().toISOString();
+        const event = {
+            id: eventId, user_id: userId, scan_id: scanId, plot_id: input.plotId || null,
+            outcome: input.outcome, severity: input.severity || '', note: String(input.note || '').slice(0, 2000),
+            photo_path: input.photoPath || null, next_check_date: input.nextCheckDate || null, recorded_at: recordedAt,
+        };
+
+        const existingResult = await queryNeon('select * from public.scan_followup_events where id = $1 and user_id = $2 limit 1', [eventId, userId]);
+        if (existingResult.rows[0]) {
+            if (event.photo_path && event.photo_path !== existingResult.rows[0].photo_path) await cleanupPhoto(userId, event.photo_path);
+            return {
+                event: existingResult.rows[0], revision, followUp: current.followUp || {},
+            };
+        }
+
+        const insertedResult = await queryNeon(
+            `insert into public.scan_followup_events
+                (id,user_id,scan_id,plot_id,outcome,severity,note,photo_path,next_check_date,recorded_at)
+             values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+             returning *`,
+            [event.id, event.user_id, event.scan_id, event.plot_id, event.outcome, event.severity, event.note, event.photo_path, event.next_check_date || null, event.recorded_at],
+        );
+        const inserted = insertedResult.rows[0] || event;
+        const history = Array.isArray(current.followUp?.history) ? current.followUp.history : [];
+        const nextHistory = history.some((item) => item.id === eventId)
+            ? history
+            : [...history, { id: eventId, recordedAt, outcome: event.outcome, severity: event.severity, note: event.note, photoPath: event.photo_path }];
+        const nextResult = { ...current, plot_id: event.plot_id, followUp: { nextCheckDate: event.next_check_date || '', history: nextHistory } };
+        const updatedResult = await queryNeon(
+            `update public.scan_history set result_json = $1, revision = $2
+             where id = $3 and user_id = $4 and revision = $5 returning id,revision`,
+            [nextResult, revision + 1, scanId, userId, revision],
+        );
+        if (!updatedResult.rows.length) {
+            await queryNeon('delete from public.scan_followup_events where id = $1 and user_id = $2', [eventId, userId]);
+            await cleanupPhoto(userId, event.photo_path);
+            throw Object.assign(new Error('The scan changed in another session. Reload and retry.'), { status: 409 });
+        }
+        return { event: inserted, revision: revision + 1, followUp: nextResult.followUp };
     } catch (error) {
-        await cleanupPhoto(event.photo_path);
-        throw error;
+        throw mapDatabaseError(error);
     }
-    const history = Array.isArray(current.followUp?.history) ? current.followUp.history : [];
-    const nextHistory = history.some((item) => item.id === eventId) ? history : [...history, { id: eventId, recordedAt, outcome: event.outcome, severity: event.severity, note: event.note, photoPath: event.photo_path }];
-    const nextResult = { ...current, plot_id: event.plot_id, followUp: { nextCheckDate: event.next_check_date || '', history: nextHistory } };
-    const { data: updated, error: updateError } = await client.from('scan_history').update({ result_json: nextResult, revision: revision + 1 })
-        .eq('id', scanId).eq('user_id', userId).eq('revision', revision).select('id,revision');
-    if (updateError) {
-        await client.from('scan_followup_events').delete().eq('id', eventId).eq('user_id', userId);
-        await cleanupPhoto(event.photo_path);
-        throw updateError;
-    }
-    if (!updated?.length) {
-        await client.from('scan_followup_events').delete().eq('id', eventId).eq('user_id', userId);
-        await cleanupPhoto(event.photo_path);
-        const error = new Error('The scan changed in another session. Reload and retry.');
-        error.status = 409;
-        throw error;
-    }
-    return { event: inserted?.[0] || event, revision: revision + 1, followUp: nextResult.followUp };
 };
 
 export const listFollowUpEvents = async (userId, scanId) => {
-    const client = getServiceClient();
-    if (!client) { const error = new Error('Follow-up storage is temporarily unavailable.'); error.status = 503; throw error; }
-    const { data, error } = await client.from('scan_followup_events').select('*').eq('user_id', userId).eq('scan_id', scanId).order('recorded_at', { ascending: true });
-    if (error) throw error;
-    return data || [];
+    try {
+        const { rows } = await queryNeon(
+            'select * from public.scan_followup_events where user_id = $1 and scan_id = $2 order by recorded_at asc',
+            [userId, scanId],
+        );
+        return rows || [];
+    } catch (error) {
+        throw mapDatabaseError(error);
+    }
 };

@@ -1,4 +1,4 @@
-import { getServiceClient } from '../utils/supabaseAuth.js';
+import { queryNeon } from '../utils/neonDatabase.js';
 
 const TABLES = {
     scans: { table: 'scan_history', fields: ['id', 'disease', 'confidence', 'severity', 'category', 'scale', 'location_name', 'plot_id', 'result_json', 'image_path', 'leaf_image_path', 'created_at', 'revision'] },
@@ -7,10 +7,22 @@ const TABLES = {
     plots: { table: 'plots', fields: ['id', 'name', 'crop_type', 'area', 'unit', 'soil_ph', 'npk_n', 'npk_p', 'npk_k', 'created_at'] },
 };
 
+const identifier = (value) => {
+    if (!/^[a-z_]+$/.test(value)) throw new Error('Unsafe database identifier.');
+    return value;
+};
+
 const cleanPayload = (collection, payload = {}) => {
     const config = TABLES[collection];
     if (!config || !payload || typeof payload !== 'object') return null;
     return Object.fromEntries(config.fields.filter((field) => payload[field] !== undefined).map((field) => [field, payload[field]]));
+};
+
+const mapDatabaseError = (error) => {
+    if (!error || error.status) return error;
+    const mapped = new Error(error.message || 'Sync failed.');
+    mapped.status = error.code === '23505' ? 409 : error.code === '23503' ? 400 : 500;
+    return mapped;
 };
 
 export const syncOperation = async (userId, operation = {}) => {
@@ -20,37 +32,54 @@ export const syncOperation = async (userId, operation = {}) => {
         error.status = 400;
         throw error;
     }
-    const client = getServiceClient();
-    if (!client) {
-        const error = new Error('Sync is temporarily unavailable.');
-        error.status = 503;
-        throw error;
-    }
+    const table = identifier(config.table);
     const id = String(operation.recordId);
     const expectedRevision = Number.isInteger(operation.expectedRevision) ? operation.expectedRevision : null;
-    if (operation.type === 'create') {
-        const row = { ...cleanPayload(operation.collection, operation.payload), id, user_id: userId };
-        if (operation.collection === 'scans' && row.revision == null) row.revision = 0;
-        const { data: existing, error: existingError } = await client.from(config.table).select('id,user_id').eq('id', id).maybeSingle();
-        if (existingError) throw existingError;
-        if (existing && existing.user_id !== userId) return { conflict: true, reason: 'ownership' };
-        const { error } = await client.from(config.table).upsert(row, { onConflict: 'id' });
-        if (error) throw error;
-        return { ok: true, revision: row.revision ?? null };
+    try {
+        if (operation.type === 'create') {
+            const payload = { ...cleanPayload(operation.collection, operation.payload), id };
+            if (operation.collection === 'scans' && payload.revision == null) payload.revision = 0;
+            const fields = ['user_id', ...Object.keys(payload).filter((field) => config.fields.includes(field))];
+            const values = [userId, ...fields.slice(1).map((field) => payload[field])];
+            const placeholders = values.map((_, index) => `$${index + 1}`);
+            const updates = fields.slice(1).map((field) => `${identifier(field)} = excluded.${identifier(field)}`);
+            const returning = operation.collection === 'scans' ? 'id, user_id, revision' : 'id, user_id';
+            const result = await queryNeon(
+                `insert into public.${table} (${fields.map(identifier).join(', ')}) values (${placeholders.join(', ')})
+                 on conflict (id) do update set ${updates.join(', ')} where ${table}.user_id = excluded.user_id
+                 returning ${returning}`,
+                values,
+            );
+            if (!result.rows.length) return { conflict: true, reason: 'ownership' };
+            return { ok: true, revision: result.rows[0].revision ?? null };
+        }
+
+        const payload = cleanPayload(operation.collection, operation.payload) || {};
+        if (operation.type === 'delete') {
+            const values = [id, userId];
+            let sql = `delete from public.${table} where id = $1 and user_id = $2`;
+            if (operation.collection === 'scans' && expectedRevision != null) {
+                values.push(expectedRevision);
+                sql += ' and revision = $3';
+            }
+            const result = await queryNeon(`${sql} returning id`, values);
+            if (!result.rows.length) return { conflict: true, reason: 'stale_revision_or_missing_record' };
+            return { ok: true };
+        }
+
+        const fields = Object.keys(payload).filter((field) => config.fields.includes(field) && field !== 'id');
+        if (!fields.length) return { conflict: true, reason: 'stale_revision_or_missing_record' };
+        const values = fields.map((field) => payload[field]);
+        values.push(id, userId);
+        let sql = `update public.${table} set ${fields.map((field, index) => `${identifier(field)} = $${index + 1}`).join(', ')} where id = $${values.length - 1} and user_id = $${values.length}`;
+        if (operation.collection === 'scans' && expectedRevision != null) {
+            values.push(expectedRevision);
+            sql += ` and revision = $${values.length}`;
+        }
+        const result = await queryNeon(`${sql} returning ${operation.collection === 'scans' ? 'id, revision' : 'id'}`, values);
+        if (!result.rows.length) return { conflict: true, reason: 'stale_revision_or_missing_record' };
+        return { ok: true, revision: result.rows[0].revision ?? null };
+    } catch (error) {
+        throw mapDatabaseError(error);
     }
-    if (operation.type === 'delete') {
-        let query = client.from(config.table).delete().eq('id', id).eq('user_id', userId);
-        if (operation.collection === 'scans' && expectedRevision != null) query = query.eq('revision', expectedRevision);
-        const { data, error } = await query.select('id');
-        if (error) throw error;
-        if (!data?.length) return { conflict: true, reason: 'stale_revision_or_missing_record' };
-        return { ok: true };
-    }
-    let query = client.from(config.table).update(cleanPayload(operation.collection, operation.payload)).eq('id', id).eq('user_id', userId);
-    if (operation.collection === 'scans' && expectedRevision != null) query = query.eq('revision', expectedRevision).select('id,revision');
-    else query = query.select('id');
-    const { data, error } = await query;
-    if (error) throw error;
-    if (!data?.length) return { conflict: true, reason: 'stale_revision_or_missing_record' };
-    return { ok: true, revision: data[0].revision ?? null };
 };

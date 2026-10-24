@@ -1,32 +1,29 @@
 // @vitest-environment node
 import { beforeEach, it, expect, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ client: { from: vi.fn(), storage: { from: vi.fn() } } }));
+const mocks = vi.hoisted(() => ({ client: { from: vi.fn(), storage: { from: vi.fn() } }, queryNeon: vi.fn() }));
 vi.mock('../utils/dataCollector.js', () => ({ getAuditClient: () => mocks.client }));
+vi.mock('../utils/neonDatabase.js', () => ({ queryNeon: mocks.queryNeon }));
 import { pruneDiagnosisAudit } from './diagnosisAuditService.js';
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); mocks.queryNeon.mockReset(); });
 
 it('deletes only expired audit records and their private training images', async () => {
-    const scans = { select: vi.fn().mockReturnThis(), lt: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValueOnce({ data: [{ id: 'old', images: { tree: 'training/old_tree.jpg' } }] }).mockResolvedValueOnce({ data: [] }),
-        delete: vi.fn().mockReturnThis(), in: vi.fn().mockResolvedValue({ error: null }) };
-    const feedback = { delete: vi.fn().mockReturnThis(), lt: vi.fn().mockResolvedValue({ error: null }) };
     const remove = vi.fn().mockResolvedValue({ error: null });
-    mocks.client.from.mockImplementation((table) => table === 'diagnosis_training_logs' ? scans : feedback);
     mocks.client.storage.from.mockReturnValue({ remove });
+    mocks.queryNeon.mockImplementation((sql) => sql.includes('diagnosis_training_logs')
+        ? { rows: mocks.queryNeon.mock.calls.filter(([text]) => text.includes('diagnosis_training_logs')).length === 1 ? [{ id: 'old', images: { tree: 'training/old_tree.jpg' } }] : [] }
+        : { rows: [{ id: 'feedback-1' }] });
     const result = await pruneDiagnosisAudit(90);
     expect(result.deletedScans).toBe(1);
     expect(remove).toHaveBeenCalledWith(['training/old_tree.jpg']);
-    expect(scans.in).toHaveBeenCalledWith('id', ['old']);
-    expect(feedback.lt).toHaveBeenCalledWith('created_at', result.cutoff);
+    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('delete from public.diagnosis_training_logs'), ['old']);
+    expect(result.deletedFeedback).toBe(1);
 });
 it('refuses an invalid retention window', async () => {
     await expect(pruneDiagnosisAudit(0)).rejects.toThrow('Retention');
     expect(mocks.client.from).not.toHaveBeenCalled();
 });
 it('stops before deleting anything when an image path is outside the audit folder', async () => {
-    const query = { select: vi.fn().mockReturnThis(), lt: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue({ data: [{ id: 'old', images: { tree: 'user-id/main.jpg' } }] }) };
-    mocks.client.from.mockReturnValue(query);
+    mocks.queryNeon.mockResolvedValue({ rows: [{ id: 'old', images: { tree: 'user-id/main.jpg' } }] });
     await expect(pruneDiagnosisAudit(90)).rejects.toThrow('Unexpected audit image path');
     expect(mocks.client.storage.from).not.toHaveBeenCalled();
 });
