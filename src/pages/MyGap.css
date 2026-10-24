@@ -45,6 +45,7 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
+    min-height: 44px;
     padding: 8px;
     border: none;
     background: transparent;
@@ -218,8 +219,8 @@
 }
 
 .add-log-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: var(--color-primary);
     color: white;
@@ -264,6 +265,29 @@
     border-radius: var(--radius-md);
     font-family: inherit;
     font-size: 0.95rem;
+}
+
+.form-group select,
+.form-group input {
+    min-height: 44px;
+}
+
+.form-hint,
+.form-error {
+    display: block;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.form-hint {
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+}
+
+.form-error {
+    color: #b91c1c;
+    font-size: 0.82rem;
+    font-weight: 600;
 }
 
 .form-actions {
@@ -328,6 +352,16 @@
     color: var(--color-text-secondary);
 }
 
+.data-scope-note {
+    margin: 0 0 var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-left: 3px solid var(--color-primary);
+    background: var(--color-primary-light);
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
 .phi-result-card {
     margin-top: var(--space-xl);
     padding: var(--space-lg);
@@ -372,6 +406,17 @@
     color: #b91c1c;
 }
 
+.result-badge.safe {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.result-product {
+    margin: -4px 0 var(--space-sm);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+}
+
 .result-warning {
     display: flex;
     align-items: center;
@@ -379,6 +424,22 @@
     font-size: 0.85rem;
     color: #b91c1c;
     font-weight: 600;
+}
+
+.result-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #166534;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.phi-advisory {
+    margin-top: var(--space-sm);
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 
 .w-full {
@@ -499,5 +560,19 @@
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-btn,
+    .add-log-btn,
+    .progress-fill,
+    .official-link-button,
+    .report-button,
+    .fade-in,
+    .slide-down,
+    .synced-badge svg {
+        animation: none;
+        transition: none;
     }
 }

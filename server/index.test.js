@@ -3,14 +3,14 @@ import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vites
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
     analyze: vi.fn(), identify: vi.fn(), logTraining: vi.fn(),
-    recommendProductTags: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
+    buildKeywordProductRecommendation: vi.fn(), recommendProductTags: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
     getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
     isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(),
 }));
 vi.mock('./services/aiService.js', () => ({
     identifyPlantWithPlantNet: mocks.identify, identifyPlantWithGPTVision: vi.fn(), analyzeWithGPT4Mini: mocks.analyze,
-    askAI: vi.fn(), recommendProductTags: mocks.recommendProductTags, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
+    askAI: vi.fn(), buildKeywordProductRecommendation: mocks.buildKeywordProductRecommendation, recommendProductTags: mocks.recommendProductTags, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
     parseNaturalLanguageLog: vi.fn(), generatePredictiveRisk: vi.fn(), localizeStoredAnalysisResult: vi.fn(),
     canRecommendTreatmentProducts: mocks.canRecommendTreatmentProducts, enrichRecommendedProducts: mocks.enrichRecommendedProducts, getProductRecommendationIntent: mocks.getProductRecommendationIntent,
     buildProductConsultation: mocks.buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS: {
@@ -108,7 +108,7 @@ describe('product search section grouping', () => {
             { id: 30, name: 'Supplements' },
         ]);
         mocks.getDiseaseProductRules.mockResolvedValue([]);
-        mocks.recommendProductTags.mockResolvedValue({
+        mocks.buildKeywordProductRecommendation.mockReturnValue({
             treatmentTagIds: [1],
             treatmentCategoryIds: [10],
             fertilizerTagIds: [2],
@@ -116,6 +116,16 @@ describe('product search section grouping', () => {
             supplementTagIds: [3],
             supplementCategoryIds: [30],
             reasoning: 'test grouping',
+            keywords: {
+                treatment: ['fungicide'],
+                fertilizer: ['fertilizer'],
+                supplement: ['supplement'],
+            },
+            searchTerms: {
+                treatment: ['fungicide'],
+                fertilizer: ['fertilizer'],
+                supplement: ['supplement'],
+            },
         });
         mocks.getProductsByTagIds.mockImplementation(async (tagIds = []) => {
             if (tagIds.includes(1)) return [{ id: 101, name: 'Fungicide' }];
@@ -174,6 +184,7 @@ describe('product search section grouping', () => {
         const response = await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
         const body = response.json.mock.calls[0][0];
 
+        expect(mocks.recommendProductTags).not.toHaveBeenCalled();
         expect(body.diseaseControl).toHaveLength(expected.diseaseControl);
         expect(body.fertilizers).toHaveLength(expected.fertilizers);
         expect(body.supplements).toHaveLength(expected.supplements);

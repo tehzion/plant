@@ -28,6 +28,14 @@ const normalizeList = (value) => {
         .slice(0, 5);
 };
 
+const normalizeMatchedFields = (value) => {
+    if (!value || typeof value !== 'object') return {};
+    return Object.fromEntries(['tags', 'categories', 'name', 'description'].map((field) => [
+        field,
+        normalizeList(value[field]),
+    ]));
+};
+
 const getSupabaseUserId = async () => {
     if (!supabase?.auth?.getUser) return null;
 
@@ -64,6 +72,7 @@ export const buildProductEventPayload = ({
         matchScore: normalizeNumber(product.matchScore),
         cautionLevel: normalizeText(product.cautionLevel) || null,
         matchedTerms: normalizeList(product.matchedTerms),
+        matchedFields: normalizeMatchedFields(product.matchedFields),
         selectedProductIds: normalizeList(metadata.selectedProductIds),
         productCount: normalizeNumber(metadata.productCount),
     },

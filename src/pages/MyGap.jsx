@@ -5,7 +5,7 @@ import {
     ShieldCheck, Sprout, HeartHandshake, Globe, AlertTriangle, ExternalLink, RefreshCw,
     ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download
 } from 'lucide-react';
-import { saveLogEntry, saveChecklistState } from '../utils/localStorage';
+import { getLogbook, saveLogEntry, saveChecklistState } from '../utils/localStorage';
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
@@ -14,6 +14,7 @@ import { jsPDF } from 'jspdf';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
 import { createPdfTextRenderer } from '../utils/pdfTextRenderer';
 import { createPdfPageFlow, getPdfTranslation } from '../utils/pdfReportLayout';
+import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
 import './MyGap.css';
 
 const MyGapPage = () => {
@@ -29,8 +30,9 @@ const MyGapPage = () => {
         derivedChecklist,
         autoCheckedItems,
         checklistPct,
-        allEvents
-    } = useFarmStats({ userId: user?.id, getLocation, notify, t });
+        allEvents,
+        hasMoreData,
+    } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
     const [isAddingLog, setIsAddingLog] = useState(false);
@@ -40,6 +42,7 @@ const MyGapPage = () => {
     const [phiDays, setPhiDays] = useState('');
     const [pesticideName, setPesticideName] = useState('');
     const [phiResult, setPhiResult] = useState(null);
+    const [phiError, setPhiError] = useState('');
 
     const handleCheckToggle = async (id) => {
         const newState = { ...checklist, [id]: !checklist[id] };
@@ -62,15 +65,19 @@ const MyGapPage = () => {
 
     const calculatePHI = (e) => {
         e.preventDefault();
-        const days = parseInt(phiDays);
-        if (isNaN(days)) return;
+        const days = parsePHIDays(phiDays);
+        if (days === null) {
+            setPhiResult(null);
+            setPhiError(t('mygap.phiInvalid') || `Enter a whole number from 0 to ${MAX_PHI_DAYS} days.`);
+            return;
+        }
 
-        const safeDate = new Date();
-        safeDate.setDate(safeDate.getDate() + days);
+        setPhiError('');
 
         setPhiResult({
-            date: safeDate,
-            daysRemaining: days
+            date: calculateSafeHarvestDate(days),
+            daysRemaining: days,
+            pesticideName: pesticideName.trim(),
         });
     };
 
@@ -98,6 +105,7 @@ const MyGapPage = () => {
         : 0;
 
     const generateReport = async () => {
+        const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
         const doc = new jsPDF();
         const renderer = createPdfTextRenderer(doc);
         const reportLang = language || 'en';
@@ -162,7 +170,7 @@ const MyGapPage = () => {
         const totalChecks = checklistItems.length;
         const completedChecks = Object.values(derivedChecklist).filter(Boolean).length;
         const complianceRate = Math.round((completedChecks / totalChecks) * 100);
-        const totalLogs = logs.length;
+        const totalLogs = reportLogs.length;
 
         doc.setDrawColor(226, 232, 240);
         doc.setFillColor(248, 250, 252);
@@ -259,7 +267,7 @@ const MyGapPage = () => {
         flow.yPos += 8;
         await writeSectionTitle(rt('mygap.logbookSummary'));
 
-        if (logs.length === 0) {
+        if (reportLogs.length === 0) {
             await writeParagraph(rt('mygap.noLogs'), {
                 x: 14,
                 width: pageWidth - 28,
@@ -268,7 +276,7 @@ const MyGapPage = () => {
                 gapAfter: 6,
             });
         } else {
-            for (const log of logs.slice(0, 50)) {
+            for (const log of reportLogs) {
                 const dateLabel = new Date(log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
                 const typeLabel = rt(`mygap.${log.type}Log`).split(' ')[0];
                 const notesHeight = renderer.measureTextHeight(log.notes || '-', pageWidth - 36, { fontSize: 9 });
@@ -415,7 +423,7 @@ const MyGapPage = () => {
                     </div>
 
                     <div className="button-group">
-                        <a href="http://mygap.doa.gov.my/" target="_blank" rel="noopener noreferrer" className="official-link-button">
+                        <a href="https://mygap.doa.gov.my/" target="_blank" rel="noopener noreferrer" className="official-link-button">
                             {t('mygap.officialLink')}
                             <ExternalLink size={16} />
                         </a>
@@ -484,6 +492,7 @@ const MyGapPage = () => {
                     <div className="content-card">
                         <h2 className="section-title">{t('mygap.tabCalendar')}</h2>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
+                        {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
                         <ComplianceCalendar events={allEvents} />
                     </div>
                 </div>
@@ -495,19 +504,24 @@ const MyGapPage = () => {
                         <div className="section-header-row">
                             <h2 className="section-title">{t('mygap.logbookTitle')}</h2>
                             <button
+                                type="button"
                                 className="add-log-btn"
                                 onClick={() => setIsAddingLog(!isAddingLog)}
+                                aria-label={t('mygap.addLog') || 'Add activity log'}
+                                aria-expanded={isAddingLog}
                             >
                                 <Plus size={20} />
                             </button>
                         </div>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
+                        {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
 
                         {isAddingLog && (
                             <form className="add-log-form slide-down" onSubmit={handleAddLog}>
                                 <div className="form-group">
-                                    <label>{t('mygap.logType')}</label>
+                                    <label htmlFor="mygap-log-type">{t('mygap.logType')}</label>
                                     <select
+                                        id="mygap-log-type"
                                         value={newLog.type}
                                         onChange={(e) => setNewLog({ ...newLog, type: e.target.value })}
                                     >
@@ -518,8 +532,9 @@ const MyGapPage = () => {
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>{t('mygap.logNotes')}</label>
+                                    <label htmlFor="mygap-log-notes">{t('mygap.logNotes')}</label>
                                     <textarea
+                                        id="mygap-log-notes"
                                         required
                                         value={newLog.notes}
                                         onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
@@ -571,8 +586,9 @@ const MyGapPage = () => {
 
                         <form className="phi-form" onSubmit={calculatePHI}>
                             <div className="form-group">
-                                <label>{t('mygap.pesticideName')}</label>
+                                <label htmlFor="mygap-pesticide-name">{t('mygap.pesticideName')}</label>
                                 <input
+                                    id="mygap-pesticide-name"
                                     type="text"
                                     value={pesticideName}
                                     onChange={(e) => setPesticideName(e.target.value)}
@@ -580,14 +596,24 @@ const MyGapPage = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>{t('mygap.phiDays')}</label>
+                                <label htmlFor="mygap-phi-days">{t('mygap.phiDays')}</label>
                                 <input
+                                    id="mygap-phi-days"
                                     type="number"
                                     required
+                                    min="0"
+                                    max={MAX_PHI_DAYS}
+                                    step="1"
                                     value={phiDays}
                                     onChange={(e) => setPhiDays(e.target.value)}
                                     placeholder={t('mygap.phiDaysPlaceholder')}
+                                    aria-invalid={Boolean(phiError)}
+                                    aria-describedby={phiError ? 'mygap-phi-days-error' : 'mygap-phi-days-hint'}
                                 />
+                                <small id="mygap-phi-days-hint" className="form-hint">
+                                    {t('mygap.phiRange') || `Enter a whole number from 0 to ${MAX_PHI_DAYS}.`}
+                                </small>
+                                {phiError && <p id="mygap-phi-days-error" className="form-error" role="alert">{phiError}</p>}
                             </div>
                             <button type="submit" className="btn btn-primary w-full">
                                 {t('mygap.calcSafeDate')}
@@ -603,13 +629,21 @@ const MyGapPage = () => {
                                         <h3 className="result-date">{phiResult.date.toLocaleDateString()}</h3>
                                     </div>
                                 </div>
-                                <div className="result-badge danger">
-                                    {t('mygap.daysRemaining')} {phiResult.daysRemaining}
+                                {phiResult.pesticideName && (
+                                    <p className="result-product">{t('mygap.pesticideName')}: {phiResult.pesticideName}</p>
+                                )}
+                                <div className={`result-badge ${phiResult.daysRemaining === 0 ? 'safe' : 'danger'}`}>
+                                    {phiResult.daysRemaining === 0
+                                        ? (t('mygap.safeToday') || 'No waiting period')
+                                        : `${t('mygap.daysRemaining')} ${phiResult.daysRemaining}`}
                                 </div>
-                                <p className="result-warning">
-                                    <AlertTriangle size={16} />
-                                    {t('mygap.notSafeToHarvest')}
+                                <p className={phiResult.daysRemaining === 0 ? 'result-note' : 'result-warning'}>
+                                    <AlertTriangle size={16} aria-hidden="true" />
+                                    {phiResult.daysRemaining === 0
+                                        ? (t('mygap.safeTodayNotice') || 'No waiting period was entered. Follow the product label before harvesting.')
+                                        : t('mygap.notSafeToHarvest')}
                                 </p>
+                                <p className="phi-advisory">{t('mygap.phiAdvisory') || 'Advisory only: always follow the pesticide label and local agricultural guidance.'}</p>
                             </div>
                         )}
                     </div>

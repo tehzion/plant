@@ -146,8 +146,9 @@ export const normalizeDiseaseResult = (result, t) => {
             ? (displayTitle.match(/\(([^)]+)\)/)?.[1] || '')
             : '',
         extraDescription: extraDescription || result.additionalNotes || (healthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning')),
-        showDemoModeWarning: typeof result.additionalNotes === 'string'
-            && DEMO_TERMS.some((term) => result.additionalNotes.toLowerCase().includes(term)),
+        showDemoModeWarning: Boolean(result.isDemo)
+            || (typeof result.additionalNotes === 'string'
+                && DEMO_TERMS.some((term) => result.additionalNotes.toLowerCase().includes(term))),
         detailItems,
         translatedHealthStatus: healthy
             ? t('results.healthy')

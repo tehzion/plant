@@ -237,7 +237,7 @@ Your plant disease detection system now uses **PlantNet + GPT-4o Text** working 
 ### ✅ Backend Changes
 
 1. **`server/.env`** - UPDATED
-   - Added: `PLANTNET_API_KEY=2b10...`
+   - Added: `PLANTNET_API_KEY=your_plantnet_api_key_here`
 
 2. **`server/index.js`** - COMPLETELY REWRITTEN
    - PlantNet API integration
@@ -822,7 +822,7 @@ Main plant analysis endpoint
 ### PlantNet API Settings
 
 **Current Settings:**
-- API Key: `2b1043fL6rSigfYKfGUeFdue`
+- API Key: `[redacted; rotate the provider credential]`
 - Endpoint: `https://my-api.plantnet.org/v2/identify/all`
 - Organ Type: `leaf` (can be: leaf, flower, fruit, bark, habit, other)
 - Free tier: 100 credits/day (per IP)
@@ -2995,7 +2995,7 @@ npm run dev
 ```
 
 **If you see ❌ for PlantNet:**
-- Check that `PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue` is in `server/.env`
+- Check that `PLANTNET_API_KEY=your_plantnet_api_key_here` is in `server/.env`
 
 ---
 
@@ -3147,7 +3147,7 @@ nano .env  # or open in text editor
 
 Add this line:
 ```
-PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue
+PLANTNET_API_KEY=your_plantnet_api_key_here
 ```
 
 Save and restart server.
@@ -4571,7 +4571,7 @@ Your plant disease detection system now uses **PlantNet + GPT-4o Text** working 
 ### ✅ Backend Changes
 
 1. **`server/.env`** - UPDATED
-   - Added: `PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue`
+   - Added: `PLANTNET_API_KEY=your_plantnet_api_key_here`
 
 2. **`server/index.js`** - COMPLETELY REWRITTEN
    - PlantNet API integration
@@ -4979,7 +4979,7 @@ User uploads plant images (1-2 photos)
 
 1. **Environment Variables Set:**
    - ✅ `OPENAI_API_KEY` - GPT-4o access
-   - ✅ `PLANTNET_API_KEY` - PlantNet access (2b1043fL6rSigfYKfGUeFdue)
+   - ✅ `PLANTNET_API_KEY` - PlantNet access (configured in the server environment)
 
 2. **Dependencies Added:**
    - ✅ `form-data` - For PlantNet image upload
@@ -5156,7 +5156,7 @@ Main plant analysis endpoint
 ### PlantNet API Settings
 
 **Current Settings:**
-- API Key: `2b1043fL6rSigfYKfGUeFdue`
+- API Key: `[redacted; rotate the provider credential]`
 - Endpoint: `https://my-api.plantnet.org/v2/identify/all`
 - Organ Type: `leaf` (can be: leaf, flower, fruit, bark, habit, other)
 - Free tier: 100 credits/day (per IP)
@@ -7325,7 +7325,7 @@ npm run dev
 ```
 
 **If you see ❌ for PlantNet:**
-- Check that `PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue` is in `server/.env`
+- Check that `PLANTNET_API_KEY=your_plantnet_api_key_here` is in `server/.env`
 
 ---
 
@@ -7477,7 +7477,7 @@ nano .env  # or open in text editor
 
 Add this line:
 ```
-PLANTNET_API_KEY=2b1043fL6rSigfYKfGUeFdue
+PLANTNET_API_KEY=your_plantnet_api_key_here
 ```
 
 Save and restart server.

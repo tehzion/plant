@@ -181,6 +181,38 @@ create index if not exists product_events_created_at_idx on public.product_event
 create index if not exists product_events_user_id_created_at_idx on public.product_events(user_id, created_at desc);
 create index if not exists product_events_scan_id_idx on public.product_events(scan_id);
 create index if not exists product_events_event_type_created_at_idx on public.product_events(event_type, created_at desc);
+
+-- New installations enforce plot existence and same-user ownership. Existing
+-- migrations add these constraints as NOT VALID so production rows can be
+-- reviewed before validation rather than being rewritten implicitly.
+create or replace function public.ensure_plot_belongs_to_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.plot_id is not null and not exists (
+        select 1 from public.plots where id = new.plot_id and user_id = new.user_id
+    ) then
+        raise exception 'plot_id does not belong to user_id';
+    end if;
+    return new;
+end;
+$$;
+
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'scan_history_plot_id_fkey') then
+        alter table public.scan_history add constraint scan_history_plot_id_fkey
+            foreign key (plot_id) references public.plots(id) on delete set null not valid;
+    end if;
+    if not exists (select 1 from pg_constraint where conname = 'daily_notes_plot_id_fkey') then
+        alter table public.daily_notes add constraint daily_notes_plot_id_fkey
+            foreign key (plot_id) references public.plots(id) on delete set null not valid;
+    end if;
+end;
+$$;
 drop index if exists public.profiles_user_id_idx;
 drop index if exists public.scan_history_user_created_idx;
 drop index if exists public.mygap_logs_user_created_idx;
@@ -245,6 +277,27 @@ create table if not exists public.scan_followup_events (
     recorded_at timestamptz not null default now(),
     created_at timestamptz not null default now()
 );
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'scan_followup_events_plot_id_fkey') then
+        alter table public.scan_followup_events add constraint scan_followup_events_plot_id_fkey
+            foreign key (plot_id) references public.plots(id) on delete set null not valid;
+    end if;
+end;
+$$;
+drop trigger if exists scan_history_plot_owner_guard on public.scan_history;
+create trigger scan_history_plot_owner_guard
+before insert or update of plot_id, user_id on public.scan_history
+for each row execute function public.ensure_plot_belongs_to_user();
+drop trigger if exists daily_notes_plot_owner_guard on public.daily_notes;
+create trigger daily_notes_plot_owner_guard
+before insert or update of plot_id, user_id on public.daily_notes
+for each row execute function public.ensure_plot_belongs_to_user();
+drop trigger if exists scan_followup_events_plot_owner_guard on public.scan_followup_events;
+create trigger scan_followup_events_plot_owner_guard
+before insert or update of plot_id, user_id on public.scan_followup_events
+for each row execute function public.ensure_plot_belongs_to_user();
+revoke execute on function public.ensure_plot_belongs_to_user() from anon, authenticated;
 create index if not exists scan_followup_events_owner_scan_idx on public.scan_followup_events(user_id, scan_id, recorded_at);
 alter table public.scan_followup_events enable row level security;
 revoke all on public.scan_followup_events from anon, authenticated;

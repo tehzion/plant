@@ -6,12 +6,13 @@
 export const DEMO_SCANS = [
     {
         id: 'demo-scan-1',
+        isDemo: true,
         disease: 'Leaf Rust',
         healthStatus: 'unhealthy',
         severity: 'moderate',
         category: 'Fruits',
         plantType: 'Durian',
-        confidence: 94,
+        confidence: null,
         locationName: 'Bentong, Pahang',
         created_at: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
         image_url: 'https://images.unsplash.com/photo-1596436805366-51d293d5616b?w=400&q=80',
@@ -19,12 +20,13 @@ export const DEMO_SCANS = [
     },
     {
         id: 'demo-scan-2',
+        isDemo: true,
         disease: 'Healthy',
         healthStatus: 'healthy',
         severity: 'low',
         category: 'Fruits',
         plantType: 'Durian',
-        confidence: 98,
+        confidence: null,
         locationName: 'Bentong, Pahang',
         created_at: new Date(Date.now() - 5 * 86400000).toISOString(), // 5 days ago
         image_url: null,
@@ -32,16 +34,37 @@ export const DEMO_SCANS = [
     },
     {
         id: 'demo-scan-3',
+        isDemo: true,
         disease: 'Stem Borer',
         healthStatus: 'unhealthy',
         severity: 'severe',
         category: 'Fruits',
         plantType: 'Coconut',
-        confidence: 89,
+        confidence: null,
         locationName: 'Kuala Selangor, Selangor',
         created_at: new Date(Date.now() - 8 * 86400000).toISOString(), // 8 days ago
         image_url: 'https://images.unsplash.com/photo-1596003906949-67221c37965c?w=400&q=80',
         additionalNotes: 'Visible entry holes in the trunk. Recommend pesticide application.'
+    },
+    {
+        id: 'demo-scan-4',
+        isDemo: true,
+        disease: 'No clear diagnosis yet',
+        healthStatus: 'unknown',
+        resultState: 'needs_closer_photo',
+        severity: 'unknown',
+        category: 'Fruits',
+        plantType: 'Durian',
+        confidence: null,
+        locationName: 'Bentong, Pahang',
+        created_at: new Date().toISOString(),
+        image_url: null,
+        retakeReason: 'The image does not show enough sharp detail to assess the affected area.',
+        abstainReason: 'A clearer whole-plant view and affected-area close-up are needed.',
+        diagnosticEvidence: {
+            evidenceAgainst: ['The affected area is not clear enough to distinguish among possible causes.'],
+        },
+        additionalNotes: 'Demo scenario: the result pauses safely and asks for better information.'
     }
 ];
 

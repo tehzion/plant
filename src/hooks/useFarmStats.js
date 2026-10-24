@@ -40,7 +40,7 @@ const createScoutAlert = (note) => ({
     },
 });
 
-export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key }) => {
+export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key, maxRows = null }) => {
     const [dataLoading, setDataLoading] = useState(true);
     const [dataError, setDataError] = useState(null);
     const [loadVersion, setLoadVersion] = useState(0);
@@ -79,12 +79,13 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key }) 
                 });
             }
 
+            const dataOptions = Number.isFinite(Number(maxRows)) && Number(maxRows) > 0 ? { limit: Number(maxRows) } : {};
             const [history, checklist, loadedLogbook, dailyNotes, farmPlots] = await Promise.all([
-                Promise.resolve(getScanHistory(userId ?? null)),
+                Promise.resolve(getScanHistory(userId ?? null, dataOptions)),
                 Promise.resolve(getChecklistState(userId ?? null)),
-                Promise.resolve(getLogbook(userId ?? null)),
-                Promise.resolve(getDailyNotes(userId ?? null)),
-                Promise.resolve(getPlots(userId ?? null)),
+                Promise.resolve(getLogbook(userId ?? null, dataOptions)),
+                Promise.resolve(getDailyNotes(userId ?? null, dataOptions)),
+                Promise.resolve(getPlots(userId ?? null, dataOptions)),
             ]);
 
             if (cancelled) return;
@@ -102,7 +103,7 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key }) 
             if (!cancelled) setDataLoading(false);
         });
         return () => { cancelled = true; };
-    }, [userId, loadVersion]);
+    }, [maxRows, userId, loadVersion]);
 
     // ── Derived stats ─────────────────────────────────────────────────────────
     const stats = useMemo(() => {
@@ -357,6 +358,7 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key }) 
         setNotes,
         plots,
         setPlots,
+        hasMoreData: Boolean(maxRows && [scanHistory, logbook, notes, plots].some((rows) => rows.length >= Number(maxRows))),
         acknowledgedIds,
         setAcknowledgedIds: persistAcknowledgedIds,
         assessingRisk,

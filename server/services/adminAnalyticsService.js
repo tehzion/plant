@@ -15,6 +15,11 @@ const normalizeText = (value, fallback = '') => {
     return text;
 };
 
+const normalizeList = (value, limit = 5) => (Array.isArray(value) ? value : [])
+    .map((item) => normalizeText(item))
+    .filter(Boolean)
+    .slice(0, limit);
+
 const getSupabaseAdminConfig = () => {
     const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
@@ -115,6 +120,11 @@ const normalizeProductEvent = (row = {}) => ({
     recommendationRole: row.recommendation_role,
     crop: row.crop,
     disease: row.disease,
+    matchScore: Number.isFinite(Number(row.metadata?.matchScore)) ? Number(row.metadata.matchScore) : null,
+    matchedTerms: normalizeList(row.metadata?.matchedTerms),
+    matchedFields: row.metadata?.matchedFields && typeof row.metadata.matchedFields === 'object'
+        ? row.metadata.matchedFields
+        : {},
     createdAt: row.created_at,
 });
 
@@ -191,7 +201,7 @@ export const getAdminReviewSummary = async ({ days = ADMIN_SUMMARY_DEFAULT_DAYS,
     const [scanRows, leadRows, eventRows] = await Promise.all([
         runSelect(client, 'scan_history', 'id, disease, confidence, severity, category, location_name, result_json, created_at', sinceIso, rowLimit),
         runSelect(client, 'consultation_leads', 'id, scan_id, disease, crop, confidence, phone, recommendation_intent, source, created_at', sinceIso, rowLimit),
-        runSelect(client, 'product_events', 'id, scan_id, event_type, product_id, product_name, recommendation_intent, recommendation_role, crop, disease, created_at', sinceIso, rowLimit),
+        runSelect(client, 'product_events', 'id, scan_id, event_type, product_id, product_name, recommendation_intent, recommendation_role, crop, disease, metadata, created_at', sinceIso, rowLimit),
     ]);
 
     const recentScans = scanRows.map(normalizeRecentScan);

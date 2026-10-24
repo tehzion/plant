@@ -4,11 +4,14 @@
  */
 
 import NodeCache from 'node-cache';
+import { withAbortableTimeout } from '../utils/requestTimeout.js';
 
 // Cache products for 1 hour, tags & categories for 6 hours
 const productCache = new NodeCache({ stdTTL: 3600 });
 const tagCache = new NodeCache({ stdTTL: 21600 });
 const categoryCache = new NodeCache({ stdTTL: 21600 });
+const WOO_REQUEST_TIMEOUT_MS = Number(process.env.WOO_REQUEST_TIMEOUT_MS) || 15000;
+const WOO_MAX_CATALOG_PAGES = Number(process.env.WOO_MAX_CATALOG_PAGES) || 20;
 
 const sanitizeProductDescription = (value = '') => String(value)
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
@@ -31,6 +34,22 @@ const transformWooProduct = (product) => ({
     categoryIds: product.categories?.map((category) => category.id) || [],
     tags: product.tags?.map((tag) => tag.name) || [],
     tagIds: product.tags?.map((tag) => tag.id) || [],
+    stockStatus: product.stock_status || null,
+    availability: product.stock_status === 'instock'
+        ? 'in_stock'
+        : product.stock_status === 'outofstock'
+            ? 'out_of_stock'
+            : product.stock_status === 'onbackorder'
+                ? 'on_backorder'
+                : null,
+    inStock: typeof product.in_stock === 'boolean'
+        ? product.in_stock
+        : product.stock_status === 'instock'
+            ? true
+            : product.stock_status === 'outofstock'
+                ? false
+                : null,
+    purchasable: typeof product.purchasable === 'boolean' ? product.purchasable : null,
 });
 
 /**
@@ -74,11 +93,24 @@ const getWooRequestConfig = (endpoint, params = {}, method = 'GET') => {
     return { url: url.toString(), headers };
 };
 
+const requestWoo = (request, { signal = null, ...options } = {}) => {
+    if (!request) return Promise.resolve(null);
+    return withAbortableTimeout(
+        (requestSignal) => fetch(request.url, {
+            ...options,
+            headers: request.headers,
+            signal: requestSignal,
+        }),
+        WOO_REQUEST_TIMEOUT_MS,
+        { signal, timeoutMessage: 'WooCommerce request timed out' },
+    );
+};
+
 /**
  * Fetch all WooCommerce product tags (cached, paginated)
  * @returns {Promise<Array>} Array of { id, name, count }
  */
-export const getAllTags = async () => {
+export const getAllTags = async ({ signal = null } = {}) => {
     const cacheKey = 'woo_all_tags';
     const cached = tagCache.get(cacheKey);
     if (cached) {
@@ -94,11 +126,11 @@ export const getAllTags = async () => {
         let allTags = [];
         let page = 1;
 
-        while (true) {
+        while (page <= WOO_MAX_CATALOG_PAGES) {
             const req = getWooRequestConfig('products/tags', { per_page: 100, page });
             if (!req) break;
 
-            const response = await fetch(req.url, { headers: req.headers });
+            const response = await requestWoo(req, { signal });
             if (!response.ok) {
                 throw new Error(`WooCommerce Tags API error: ${response.status}`);
             }
@@ -115,6 +147,7 @@ export const getAllTags = async () => {
             page += 1;
         }
 
+        if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce tag catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
         const usefulTags = allTags.filter((tag) => tag.count > 0);
 
         tagCache.set(cacheKey, usefulTags);
@@ -130,7 +163,7 @@ export const getAllTags = async () => {
  * Fetch all WooCommerce product categories (cached, paginated)
  * @returns {Promise<Array>} Array of { id, name, count, parent }
  */
-export const getAllCategories = async () => {
+export const getAllCategories = async ({ signal = null } = {}) => {
     const cacheKey = 'woo_all_categories';
     const cached = categoryCache.get(cacheKey);
     if (cached) {
@@ -146,11 +179,11 @@ export const getAllCategories = async () => {
         let allCategories = [];
         let page = 1;
 
-        while (true) {
+        while (page <= WOO_MAX_CATALOG_PAGES) {
             const req = getWooRequestConfig('products/categories', { per_page: 100, page });
             if (!req) break;
 
-            const response = await fetch(req.url, { headers: req.headers });
+            const response = await requestWoo(req, { signal });
             if (!response.ok) {
                 throw new Error(`WooCommerce Categories API error: ${response.status}`);
             }
@@ -168,6 +201,7 @@ export const getAllCategories = async () => {
             page += 1;
         }
 
+        if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce category catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
         const usefulCategories = allCategories.filter((category) => category.count > 0);
 
         categoryCache.set(cacheKey, usefulCategories);
@@ -183,7 +217,7 @@ export const getAllCategories = async () => {
  * Fetch all products from WooCommerce (cached, paginated)
  * @returns {Promise<Array>} Array of products
  */
-export const getAllProducts = async () => {
+export const getAllProducts = async ({ signal = null } = {}) => {
     const cacheKey = 'woo_all_products';
     const cached = productCache.get(cacheKey);
     if (cached) {
@@ -196,11 +230,11 @@ export const getAllProducts = async () => {
         let allProducts = [];
         let page = 1;
 
-        while (true) {
+        while (page <= WOO_MAX_CATALOG_PAGES) {
             const req = getWooRequestConfig('products', { per_page: 100, status: 'publish', page });
             if (!req) break;
 
-            const response = await fetch(req.url, { headers: req.headers });
+            const response = await requestWoo(req, { signal });
             if (!response.ok) {
                 throw new Error(`WooCommerce API error: ${response.status}`);
             }
@@ -212,6 +246,7 @@ export const getAllProducts = async () => {
             page += 1;
         }
 
+        if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce product catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
         productCache.set(cacheKey, allProducts);
         console.log(`✅ Cached ${allProducts.length} products from WooCommerce`);
 
@@ -228,31 +263,72 @@ export const getAllProducts = async () => {
  * @param {Array<number>} categoryIds - Optional array of WooCommerce category IDs
  * @returns {Promise<Array>} Matching products sorted by relevance
  */
-export const getProductsByTagIds = async (tagIds, categoryIds = []) => {
-    const hasTagIds = tagIds && Array.isArray(tagIds) && tagIds.length > 0;
-    const hasCatIds = categoryIds && Array.isArray(categoryIds) && categoryIds.length > 0;
-    if (!hasTagIds && !hasCatIds) return [];
+const normalizeProductQueryIds = (values = []) => (Array.isArray(values) ? values : [])
+    .map((value) => Number.parseInt(value, 10))
+    .filter((value, index, all) => Number.isInteger(value) && all.indexOf(value) === index);
 
-    const allProducts = await getAllProducts();
-    const tagIdSet = new Set(tagIds || []);
-    const catIdSet = new Set(categoryIds || []);
+const normalizeProductSearchTerms = (values = []) => (Array.isArray(values) ? values : [])
+    .map((value) => String(value || '').trim())
+    .filter((value, index, all) => value.length >= 3 && all.indexOf(value) === index)
+    .slice(0, 2);
 
-    const scoredProducts = allProducts.map((product) => {
-        let score = 0;
-        product.tagIds.forEach((tagId) => {
-            if (tagIdSet.has(tagId)) score += 2;
+const fetchFilteredProducts = async (params, { signal = null } = {}) => {
+    const cacheKey = `woo_filtered_products_${Object.entries(params)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, value]) => `${key}-${String(value).toLowerCase().replace(/[^a-z0-9-]+/g, '-')}`)
+        .join('_')}`;
+    const cached = productCache.get(cacheKey);
+    if (cached) return cached;
+
+    const req = getWooRequestConfig('products', {
+        per_page: 50,
+        status: 'publish',
+        ...params,
+    });
+    if (!req) return [];
+
+    const response = await requestWoo(req, { signal });
+    if (!response.ok) throw new Error(`WooCommerce filtered products API error: ${response.status}`);
+    const products = await response.json();
+    const transformed = (Array.isArray(products) ? products : []).map(transformWooProduct);
+    productCache.set(cacheKey, transformed);
+    return transformed;
+};
+
+export const getProductsByTagIds = async (tagIds, categoryIds = [], { signal = null, searchTerms = [] } = {}) => {
+    const normalizedTagIds = normalizeProductQueryIds(tagIds);
+    const normalizedCategoryIds = normalizeProductQueryIds(categoryIds);
+    const normalizedSearchTerms = normalizeProductSearchTerms(searchTerms);
+    if (normalizedTagIds.length === 0 && normalizedCategoryIds.length === 0 && normalizedSearchTerms.length === 0) return [];
+
+    const queries = [
+        ...normalizedTagIds.map((id) => ({ tag: id })),
+        ...normalizedCategoryIds.map((id) => ({ category: id })),
+        ...normalizedSearchTerms.map((search) => ({ search })),
+    ];
+    const results = await Promise.allSettled(queries.map((query) => fetchFilteredProducts(query, { signal })));
+    const productsById = new Map();
+
+    results.forEach((result) => {
+        if (result.status !== 'fulfilled') {
+            console.warn('⚠️ WooCommerce filtered product query failed:', result.reason?.message || result.reason);
+            return;
+        }
+        result.value.forEach((product) => {
+            const key = String(product.id);
+            const existing = productsById.get(key);
+            if (existing) {
+                existing.sourceScore += 1;
+                return;
+            }
+            productsById.set(key, { product, sourceScore: 1 });
         });
-        product.categoryIds.forEach((categoryId) => {
-            if (catIdSet.has(categoryId)) score += 1;
-        });
-        return { product, score };
     });
 
-    return scoredProducts
-        .filter((entry) => entry.score > 0)
-        .sort((left, right) => right.score - left.score)
-        .map((entry) => entry.product)
-        .slice(0, 10);
+    return [...productsById.values()]
+        .sort((left, right) => right.sourceScore - left.sourceScore || Number(left.product.id) - Number(right.product.id))
+        .map(({ product }) => product)
+        .slice(0, 30);
 };
 
 export const getStoreUrl = () => {
@@ -271,7 +347,7 @@ export const isWooCommerceEnabled = () => {
  * Create a new Guest Order in WooCommerce
  * @param {Object} orderData - Order details (items, billing, guestId)
  */
-export const createOrder = async (orderData) => {
+export const createOrder = async (orderData, { signal = null } = {}) => {
     const config = getWooConfig();
     if (!config) return null;
 
@@ -301,10 +377,10 @@ export const createOrder = async (orderData) => {
         const req = getWooRequestConfig('orders', {}, 'POST');
         console.log(`📦 Creating WooCommerce order for guest: ${guestId}...`);
         
-        const response = await fetch(req.url, {
+        const response = await requestWoo(req, {
             method: 'POST',
-            headers: req.headers,
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal,
         });
 
         if (!response.ok) {
@@ -326,13 +402,13 @@ export const createOrder = async (orderData) => {
  * This is more reliable for guests who track their orders locally
  * @param {Array<number|string>} ids - Array of order IDs
  */
-export const getOrdersByIds = async (ids) => {
+export const getOrdersByIds = async (ids, { signal = null } = {}) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) return [];
 
     try {
         // WooCommerce 'include' param handles multiple IDs
         const req = getWooRequestConfig('orders', { include: ids.join(',') });
-        const response = await fetch(req.url, { headers: req.headers });
+        const response = await requestWoo(req, { signal });
         if (!response.ok) return [];
         
         return await response.json();
@@ -346,7 +422,7 @@ export const getOrdersByIds = async (ids) => {
  * Fetch orders for a specific App Instance ID (fallback/audit method)
  * @param {string} appId - The unique ID from the app's localStorage
  */
-export const getOrdersByAppId = async (appId) => {
+export const getOrdersByAppId = async (appId, { signal = null } = {}) => {
     if (!appId) return [];
 
     try {
@@ -358,7 +434,7 @@ export const getOrdersByAppId = async (appId) => {
             const req = getWooRequestConfig('orders', { per_page: 100, page });
             if (!req) break;
 
-            const response = await fetch(req.url, { headers: req.headers });
+            const response = await requestWoo(req, { signal });
             if (!response.ok) break;
             
             const orders = await response.json();
@@ -386,10 +462,10 @@ export const getOrdersByAppId = async (appId) => {
 /**
  * Get single order status
  */
-export const getOrderStatus = async (orderId) => {
+export const getOrderStatus = async (orderId, { signal = null } = {}) => {
     try {
         const req = getWooRequestConfig(`orders/${orderId}`);
-        const response = await fetch(req.url, { headers: req.headers });
+        const response = await requestWoo(req, { signal });
         if (!response.ok) return null;
         return await response.json();
     } catch (error) {

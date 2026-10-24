@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-    BookOpen,
     ClipboardList,
     Home as HomeIcon,
     ScanLine,
+    ShoppingBag,
     User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -56,12 +56,18 @@ const BottomNav = () => {
                     <span className="nav-item-label">{label('nav.scan', 'Scan')}</span>
                 </Link>
 
-                <Link to="/encyclopedia" className={`nav-item ${isActive('/encyclopedia') ? 'active' : ''}`} aria-current={isActive('/encyclopedia') ? 'page' : undefined}>
+                <a
+                    href="https://www.mojosense.app/kanb/products/"
+                    className="nav-item"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={label('nav.shop', 'Shop')}
+                >
                     <span className="nav-item-icon">
-                        <BookOpen size={20} strokeWidth={1.85} />
+                        <ShoppingBag size={20} strokeWidth={1.85} />
                     </span>
-                    <span className="nav-item-label">{label('nav.encyclopedia', 'Encyclopedia')}</span>
-                </Link>
+                    <span className="nav-item-label">{label('nav.shop', 'Shop')}</span>
+                </a>
 
                 <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`} aria-current={isActive('/profile') ? 'page' : undefined}>
                     <span className="nav-item-icon nav-item-icon--profile">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPinned, BookOpen, BarChart3, ShoppingBag, CheckSquare, Info } from 'lucide-react';
+import { BookOpen, CheckSquare, History, ScanLine, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +8,12 @@ const ActionGrid = ({ onScan }) => {
     const navigate = useNavigate();
 
     const actions = [
+        {
+            id: 'scan',
+            label: t('nav.scan') || 'Scan',
+            icon: <ScanLine size={20} strokeWidth={2} />,
+            onClick: onScan,
+        },
         {
             id: 'shop',
             label: t('nav.shop') || 'Shop',
@@ -25,6 +31,12 @@ const ActionGrid = ({ onScan }) => {
             label: t('settings.guide') || 'User Guide',
             icon: <BookOpen size={20} strokeWidth={2} />,
             onClick: () => navigate('/guide')
+        },
+        {
+            id: 'history',
+            label: t('nav.history') || 'History',
+            icon: <History size={20} strokeWidth={2} />,
+            onClick: () => navigate('/history')
         }
     ];
 
@@ -39,8 +51,10 @@ const ActionGrid = ({ onScan }) => {
                 {actions.map(action => (
                     <button
                         key={action.id}
+                        type="button"
                         onClick={action.onClick}
                         className="superapp-utility-card"
+                        aria-label={action.label}
                     >
                         <div className="superapp-utility-icon-box">
                             {action.icon}

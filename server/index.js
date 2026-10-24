@@ -10,7 +10,7 @@ import { buildAnalysisCacheKey } from './utils/analysisCache.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
@@ -21,6 +21,7 @@ import { createFollowUpEvent, listFollowUpEvents } from './services/followUpServ
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
+import { withAbortableTimeout } from './utils/requestTimeout.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -53,17 +54,16 @@ app.use((req, res, next) => {
     next();
 });
 
-const withStageTimeout = async (promise, timeoutMs, fallbackValue = null) => {
-    let timeoutId = null;
+const withStageTimeout = async (operation, timeoutMs, fallbackValue = null, parentSignal = null) => {
     try {
-        return await Promise.race([
-            promise,
-            new Promise((resolve) => {
-                timeoutId = setTimeout(() => resolve(fallbackValue), timeoutMs);
-            }),
-        ]);
-    } finally {
-        if (timeoutId) clearTimeout(timeoutId);
+        return await withAbortableTimeout(operation, timeoutMs, {
+            signal: parentSignal,
+            timeoutMessage: 'AI pipeline stage timed out',
+        });
+    } catch (error) {
+        if (parentSignal?.aborted) throw error;
+        console.warn('AI pipeline stage skipped:', error.message);
+        return fallbackValue;
     }
 };
 
@@ -304,6 +304,11 @@ app.use(aiRoutes, (req, res, next) => {
 
 // General AI Question Endpoint (Cached)
 app.post('/api/ask', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('AI request deadline exceeded')), Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000);
+    const abortOnDisconnect = () => requestController.abort(new Error('AI request cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const {
             question,
@@ -342,7 +347,11 @@ app.post('/api/ask', async (req, res, next) => {
         console.log(`🧠 Cache MISS for question: "${question.substring(0, 30)}..." - Calling OpenAI...`);
 
         // 3. Call Service
-        const answer = await askAI(question, language, recentNotes, recentAlerts);
+        const answer = await withAbortableTimeout(
+            (signal) => askAI(question, language, recentNotes, recentAlerts, { signal }),
+            Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000,
+            { signal: requestController.signal, timeoutMessage: 'AI question timed out' },
+        );
 
         // 4. Save to Cache (7 Days = 604800 seconds)
         const result = { answer, timestamp: Date.now() };
@@ -351,7 +360,15 @@ app.post('/api/ask', async (req, res, next) => {
         res.json({ ...result, cached: false });
 
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('AI request timed out or was cancelled. Please try again.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
@@ -442,23 +459,25 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // 3. Identify Species
         let plantNetResult = await withStageTimeout(
-            identifyPlantWithPlantNet(mainImage, {
+            (signal) => identifyPlantWithPlantNet(mainImage, {
                 leafImage,
                 category,
                 imageQuality,
-                signal: requestController.signal,
+                signal,
             }),
             12000,
             null,
+            requestController.signal,
         );
         let identificationSource = 'PlantNet';
 
         // 4. Fallback Identification (GPT Vision)
         if (!plantNetResult) {
             const gptVisionResult = await withStageTimeout(
-                identifyPlantWithGPTVision(mainImage, category, { signal: requestController.signal }),
+                (signal) => identifyPlantWithGPTVision(mainImage, category, { signal }),
                 12000,
                 null,
+                requestController.signal,
             );
             if (gptVisionResult) {
                 if (gptVisionResult.isPlant === false) {
@@ -481,7 +500,7 @@ app.post('/api/analyze', async (req, res, next) => {
         // 5. Analyze Health (configured OpenAI primary model)
 
         const analysisResult = await withStageTimeout(
-            analyzeWithGPT4Mini(
+            (signal) => analyzeWithGPT4Mini(
                 plantNetResult,
                 mainImage,
                 leafImage,
@@ -489,10 +508,11 @@ app.post('/api/analyze', async (req, res, next) => {
                 language,
                 location,
                 imageQuality,
-                { signal: requestController.signal },
+                { signal },
             ),
             Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
             null,
+            requestController.signal,
         );
         if (!analysisResult) {
             const timeoutError = new Error('Analysis timed out. Please try again with a clearer photo.');
@@ -570,6 +590,11 @@ app.post('/api/results/localize', async (req, res, next) => {
 
 // WooCommerce Products Search Endpoint (GPT-5-mini Powered)
 app.post('/api/products/search', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Product recommendation deadline exceeded')), Number(process.env.PRODUCT_REQUEST_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Product recommendation cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { diagnosis, language = 'en' } = req.body;
         const targetLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
@@ -591,8 +616,8 @@ app.post('/api/products/search', async (req, res, next) => {
         
         // 1. Fetch all available WooCommerce tags AND categories in parallel
         const [availableTags, availableCategories, diseaseProductRules] = await Promise.all([
-            getAllTags(),
-            getAllCategories(),
+            getAllTags({ signal: requestController.signal }),
+            getAllCategories({ signal: requestController.signal }),
             getDiseaseProductRules(),
         ]);
         
@@ -607,9 +632,17 @@ app.post('/api/products/search', async (req, res, next) => {
             });
         }
         
-        // 2. Ask GPT to pick the best tags & categories
-        console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
-        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage, diseaseProductRules);
+        // 2. Match diagnosis keywords to the store taxonomy locally. Product
+        // recommendations are deterministic and explainable; diagnosis AI is
+        // intentionally kept separate from catalog matching.
+        console.log(`🛒 Catalog Recommendation: Matching keywords for "${diagnosis.disease}"...`);
+        const recommendation = buildKeywordProductRecommendation(
+            diagnosis,
+            availableTags,
+            availableCategories,
+            targetLanguage,
+            diseaseProductRules,
+        );
         const sectionPolicy = getScanSectionPolicy(diagnosis);
         const treatmentAllowed = canRecommendTreatmentProducts(diagnosis) && sectionPolicy.showDiseaseProducts;
         const safeRecommendation = {
@@ -624,9 +657,9 @@ app.post('/api/products/search', async (req, res, next) => {
         
         // 3. Fetch products for each category in parallel
         const [treatmentProducts, fertilizerProducts, supplementProducts] = await Promise.all([
-            getProductsByTagIds(safeRecommendation.treatmentTagIds, safeRecommendation.treatmentCategoryIds),
-            getProductsByTagIds(safeRecommendation.fertilizerTagIds, safeRecommendation.fertilizerCategoryIds),
-            getProductsByTagIds(safeRecommendation.supplementTagIds, safeRecommendation.supplementCategoryIds),
+            getProductsByTagIds(safeRecommendation.treatmentTagIds, safeRecommendation.treatmentCategoryIds, { signal: requestController.signal, searchTerms: safeRecommendation.searchTerms?.treatment || [] }),
+            getProductsByTagIds(safeRecommendation.fertilizerTagIds, safeRecommendation.fertilizerCategoryIds, { signal: requestController.signal, searchTerms: safeRecommendation.searchTerms?.fertilizer || [] }),
+            getProductsByTagIds(safeRecommendation.supplementTagIds, safeRecommendation.supplementCategoryIds, { signal: requestController.signal, searchTerms: safeRecommendation.searchTerms?.supplement || [] }),
         ]);
         
         // 4. Group and deduplicate
@@ -700,11 +733,22 @@ app.post('/api/products/search', async (req, res, next) => {
             recommendationIntent,
             consultation,
             curatedRules: recommendation.curatedRules || [],
+            keywords: recommendation.keywords || {},
             storeUrl: getStoreUrl()
         });
     } catch (error) {
-        console.error('❌ Product search failed:', error);
-        res.status(500).json({ error: 'Failed to search products' });
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('Product recommendations timed out or were cancelled.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else {
+            console.error('❌ Product search failed:', error);
+            res.status(500).json({ error: 'Failed to search products' });
+        }
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
@@ -886,54 +930,90 @@ app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, r
 
 // 1. AI Agronomist Insights
 app.post('/api/farm/insights', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm insight deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm insight cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { logs, alerts, harvestData, plots, checklistPct, language = 'en' } = req.body;
         if (!logs || !Array.isArray(logs)) {
             return res.status(400).json({ error: 'logs array is required' });
         }
-        const insights = await generateAgronomistInsights(logs, alerts, harvestData, plots, checklistPct, language);
+        const insights = await generateAgronomistInsights(logs, alerts, harvestData, plots, checklistPct, language, { signal: requestController.signal });
         res.json(insights);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm insights timed out or were cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // 2. Smart Treatment SOP Generator
 app.post('/api/farm/sop', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm SOP deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm SOP cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { crop, disease, severity, language = 'en' } = req.body;
         if (!crop || !disease) {
             return res.status(400).json({ error: 'crop and disease are required' });
         }
-        const sop = await generateTreatmentSOP(crop, disease, severity, language);
+        const sop = await generateTreatmentSOP(crop, disease, severity, language, { signal: requestController.signal });
         res.json(sop);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm SOP generation timed out or was cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // 3. Natural Language Activity Logging
 app.post('/api/farm/parse-log', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm log parsing deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm log parsing cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { text, language = 'en' } = req.body;
         if (!text) {
             return res.status(400).json({ error: 'text is required' });
         }
-        const parsedData = await parseNaturalLanguageLog(text, language);
+        const parsedData = await parseNaturalLanguageLog(text, language, { signal: requestController.signal });
         res.json(parsedData);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm log parsing timed out or was cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // 4. Predictive Farm Risk Assessor
 app.post('/api/farm/predict', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm prediction deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm prediction cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { plots, logs, alerts, location, language = 'en' } = req.body;
-        const risk = await generatePredictiveRisk(plots, logs, alerts, location, language);
+        const risk = await generatePredictiveRisk(plots, logs, alerts, location, language, { signal: requestController.signal });
         res.json(risk);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm risk prediction timed out or was cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
@@ -999,14 +1079,21 @@ if (!process.env.VERCEL) {
 }
 
 // Global Process Error Handlers (Critical for stability)
-process.on('uncaughtException', (error) => {
-    console.error('🔥 CRITICAL: Uncaught Exception:', error);
-    // In production, you might want to exit here, but for now we log it to prevent silent failures
-    // process.exit(1); 
-});
+// An uncaught exception or unhandled rejection can leave the process in an
+// unknown state. Let the platform replace it in production, while keeping
+// local development and tests observable without terminating the runner.
+const handleFatalProcessError = (event, error) => {
+    console.error(JSON.stringify({
+        event,
+        message: error?.message || String(error),
+        stack: error?.stack,
+    }));
+    if (process.env.NODE_ENV === 'production') {
+        setImmediate(() => process.exit(1));
+    }
+};
 
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('🔥 CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
-});
+process.on('uncaughtException', (error) => handleFatalProcessError('uncaught_exception', error));
+process.on('unhandledRejection', (reason) => handleFatalProcessError('unhandled_rejection', reason));
 
 export default app;

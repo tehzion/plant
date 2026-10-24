@@ -58,7 +58,15 @@ const mygapTranslations = {
             "reportTitle": "myGAP Compliance Report",
             "reportGenerated": "Generated on",
             "logbookSummary": "Logbook Summary",
-            "noLogs": "No activity logs recorded yet."
+            "noLogs": "No activity logs recorded yet.",
+            "addLog": "Add activity log",
+            "phiRange": "Enter a whole number from 0 to 3650.",
+            "phiInvalid": "Enter a whole number from 0 to 3650 days.",
+            "safeToday": "No waiting period",
+            "safeTodayNotice": "No waiting period was entered. Follow the product label before harvesting.",
+            "phiAdvisory": "Advisory only: always follow the pesticide label and local agricultural guidance.",
+            "noEvents": "No recorded activities",
+            "recentDataNotice": "Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook."
         }
     },
     "ms": {
@@ -120,7 +128,15 @@ const mygapTranslations = {
             "reportTitle": "Laporan Pematuhan myGAP",
             "reportGenerated": "Dijana pada",
             "logbookSummary": "Ringkasan Log Aktiviti",
-            "noLogs": "Tiada rekod aktiviti lagi."
+            "noLogs": "Tiada rekod aktiviti lagi.",
+            "addLog": "Tambah log aktiviti",
+            "phiRange": "Masukkan nombor bulat dari 0 hingga 3650.",
+            "phiInvalid": "Masukkan nombor bulat dari 0 hingga 3650 hari.",
+            "safeToday": "Tiada tempoh menunggu",
+            "safeTodayNotice": "Tiada tempoh menunggu dimasukkan. Ikut label produk sebelum menuai.",
+            "phiAdvisory": "Panduan sahaja: sentiasa ikut label pestisid dan nasihat pertanian tempatan.",
+            "noEvents": "Tiada aktiviti direkodkan",
+            "recentDataNotice": "200 rekod terkini dipaparkan untuk pemuatan lebih pantas. Laporan PDF merangkumi log aktiviti lengkap."
         }
     },
     "zh": {
@@ -182,7 +198,15 @@ const mygapTranslations = {
             "reportTitle": "myGAP 合规报告",
             "reportGenerated": "生成于",
             "logbookSummary": "日志摘要",
-            "noLogs": "暂无活动记录。"
+            "noLogs": "暂无活动记录。",
+            "addLog": "添加活动日志",
+            "phiRange": "请输入 0 至 3650 之间的整数。",
+            "phiInvalid": "请输入 0 至 3650 天之间的整数。",
+            "safeToday": "无需等待",
+            "safeTodayNotice": "未输入等待期。采收前请遵循产品标签。",
+            "phiAdvisory": "仅供参考：请始终遵循农药标签和当地农业指导。",
+            "noEvents": "没有记录的活动",
+            "recentDataNotice": "为加快加载，当前显示最近 200 条记录。PDF 报告包含完整活动日志。"
         }
     }
 };

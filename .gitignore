@@ -30,3 +30,4 @@ server/dataset/
 *.njsproj
 *.sln
 *.sw?
+.vercel

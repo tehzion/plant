@@ -60,6 +60,7 @@ export const createEmptyProductRecommendations = () => ({
     recommendationIntent: '',
     consultation: null,
     curatedRules: [],
+    keywords: {},
     storeUrl: '',
 });
 
@@ -300,6 +301,9 @@ export const normalizeProductRecommendationsResponse = (data = {}) => ({
     recommendationIntent: normalizeText(data?.recommendationIntent),
     consultation: normalizeConsultation(data?.consultation),
     curatedRules: Array.isArray(data?.curatedRules) ? data.curatedRules : [],
+    keywords: data?.keywords && typeof data.keywords === 'object'
+        ? Object.fromEntries(['treatment', 'fertilizer', 'supplement'].map((role) => [role, normalizeList(data.keywords[role])]))
+        : {},
     storeUrl: normalizeText(data?.storeUrl),
 });
 

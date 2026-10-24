@@ -67,10 +67,44 @@ const migrateLocalData = async (userId) => {
         console.warn(`Migration: ${label} error`, error.message || error);
     };
 
+    const canMigrateRows = async (table, ids) => {
+        const uniqueIds = [...new Set(ids.filter(Boolean).map(String))];
+        if (uniqueIds.length === 0) return true;
+        const { data, error } = await supabase
+            .from(table)
+            .select('id,user_id')
+            .in('id', uniqueIds);
+        if (error) {
+            recordError(`${table} ownership preflight`, error);
+            return false;
+        }
+        if (data?.length) {
+            const conflict = new Error(`${table} already contains ${data.length} record(s); migration paused to preserve local data.`);
+            conflict.code = 'MIGRATION_ID_CONFLICT';
+            recordError(`${table} ownership preflight`, conflict);
+            return false;
+        }
+        return true;
+    };
+
+    const verifyMigratedRows = async (table, ids, userId) => {
+        const uniqueIds = [...new Set(ids.filter(Boolean).map(String))];
+        if (uniqueIds.length === 0) return;
+        const { data, error } = await supabase
+            .from(table)
+            .select('id,user_id')
+            .in('id', uniqueIds);
+        if (error) throw error;
+        const verified = new Set((data || []).filter((row) => row.user_id === userId).map((row) => String(row.id)));
+        if (verified.size !== uniqueIds.length) {
+            throw new Error(`${table} verification did not confirm every migrated record; local data was retained.`);
+        }
+    };
+
     try {
         // ── 1. Scan history ───────────────────────────────────────────────────
         const localScans = getScanHistory(); // synchronous, no userId
-        if (localScans.length > 0) {
+        if (localScans.length > 0 && await canMigrateRows('scan_history', localScans.map((scan) => scan.id))) {
             const rows = await Promise.all(localScans.map(scan => migrateScanImages(scan, userId)));
 
             // Insert-only migration: an ID collision must never update a row
@@ -80,11 +114,15 @@ const migrateLocalData = async (userId) => {
                 .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
 
             recordError('scan_history', scanErr);
+            if (!scanErr) {
+                try { await verifyMigratedRows('scan_history', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('scan_history verification', error); }
+            }
         }
 
         // ── 2. Logbook ────────────────────────────────────────────────────────
         const localLogs = getLogbook(); // synchronous, no userId
-        if (localLogs.length > 0) {
+        if (localLogs.length > 0 && await canMigrateRows('mygap_logs', localLogs.map((log) => log.id))) {
             const rows = localLogs.map(log => toLogbookRow(log, userId));
 
             const { error: logErr } = await supabase
@@ -92,6 +130,10 @@ const migrateLocalData = async (userId) => {
                 .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
 
             recordError('mygap_logs', logErr);
+            if (!logErr) {
+                try { await verifyMigratedRows('mygap_logs', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('mygap_logs verification', error); }
+            }
         }
 
         // ── 3. Checklist ──────────────────────────────────────────────────────
@@ -104,24 +146,34 @@ const migrateLocalData = async (userId) => {
             recordError('mygap_checklist', clErr);
         }
 
-        // ── 4. Daily Notes ───────────────────────────────────────────────────
-        const localNotes = getDailyNotes();
-        if (localNotes.length > 0) {
-            const rows = localNotes.map(note => toDailyNoteRow(note, userId));
-            const { error: noteErr } = await supabase
-                .from('daily_notes')
-                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
-            recordError('daily_notes', noteErr);
-        }
-
-        // ── 5. Farm Plots ─────────────────────────────────────────────────────
+        // ── 4. Farm Plots ─────────────────────────────────────────────────────
+        // Plots are migrated before notes so future database integrity checks
+        // can safely validate note.plot_id references.
         const localPlots = getPlots();
-        if (localPlots.length > 0) {
+        if (localPlots.length > 0 && await canMigrateRows('plots', localPlots.map((plot) => plot.id))) {
             const rows = localPlots.map(plot => toPlotRow(plot, userId));
             const { error: plotErr } = await supabase
                 .from('plots')
                 .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
             recordError('plots', plotErr);
+            if (!plotErr) {
+                try { await verifyMigratedRows('plots', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('plots verification', error); }
+            }
+        }
+
+        // ── 5. Daily Notes ───────────────────────────────────────────────────
+        const localNotes = getDailyNotes();
+        if (localNotes.length > 0 && await canMigrateRows('daily_notes', localNotes.map((note) => note.id))) {
+            const rows = localNotes.map(note => toDailyNoteRow(note, userId));
+            const { error: noteErr } = await supabase
+                .from('daily_notes')
+                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+            recordError('daily_notes', noteErr);
+            if (!noteErr) {
+                try { await verifyMigratedRows('daily_notes', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('daily_notes verification', error); }
+            }
         }
 
         // ── 6. Profile info ──────────────────────────────────────────────────

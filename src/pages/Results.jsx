@@ -1,6 +1,6 @@
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
-﻿import { useNavigate, useParams } from 'react-router-dom';
+﻿import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -55,10 +55,19 @@ const RESULTS_SECTION_FALLBACK = (
   </div>
 );
 
+const RESULT_TAB_KEYS = ['disease', 'care', 'nutrition', 'products'];
+
+const getResultTabIndex = (value) => {
+  const index = RESULT_TAB_KEYS.indexOf(value);
+  return index >= 0 ? index : 0;
+};
+
 const Results = () => {
-  const [activeResultTab, setActiveResultTab] = useState(0);
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const [activeResultTab, setActiveResultTab] = useState(() => getResultTabIndex(requestedTab));
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [scan, setScan] = useState(null);
@@ -69,6 +78,18 @@ const Results = () => {
   const [translationError, setTranslationError] = useState(false);
   const enhancementCopy = getEnhancementCopy(language);
   const [scanLoading, setScanLoading] = useState(true);
+  useEffect(() => {
+    setActiveResultTab(getResultTabIndex(requestedTab));
+  }, [requestedTab]);
+
+  const selectResultTab = useCallback((index) => {
+    setActiveResultTab(index);
+    const nextParams = new URLSearchParams(searchParams);
+    if (index === 0) nextParams.delete('tab');
+    else nextParams.set('tab', RESULT_TAB_KEYS[index]);
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const label = useCallback((key, fallback) => {
     const translated = t(key);
     return translated && translated !== key ? translated : fallback;
@@ -519,14 +540,14 @@ ${t('pdf.generatedBy')}
         </section>}
         <ScanDecisionSummary result={result} />
         <div className="results-next-action">
-          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { setActiveResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
+          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
             {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
           </button>
         </div>
         <div className="results-content-grid">
         {/* Tabbed Results */}
         <div id="results-diagnostics" className="results-diagnostics fade-slide-up" style={{ animationDelay: '0.1s' }}>
-          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={setActiveResultTab} />
+          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={selectResultTab} />
         </div>
 
         <aside className="results-sidebar">
@@ -615,6 +636,7 @@ ${t('pdf.generatedBy')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="map-link-small"
+                    aria-label={`${t('results.viewOnMap')}: ${locationNameValue}`}
                     title={t('results.viewOnMap')}
                   >
                     <ExternalLink size={12} />

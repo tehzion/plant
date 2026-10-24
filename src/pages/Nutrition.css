@@ -1,0 +1,56 @@
+.nutrition-page-container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-md) 120px;
+}
+
+.nutrition-page-state {
+    display: grid;
+    min-height: 50vh;
+    place-items: center;
+    color: var(--color-text-secondary);
+}
+
+.nutrition-empty-state {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-md);
+    padding: clamp(2rem, 8vw, 5rem) var(--space-xl);
+    text-align: center;
+}
+
+.nutrition-empty-icon {
+    display: grid;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.nutrition-empty-state h1,
+.nutrition-empty-state p {
+    margin: 0;
+}
+
+.nutrition-empty-state p {
+    max-width: 42rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+}
+
+.nutrition-empty-state .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nutrition-empty-state,
+    .nutrition-empty-icon {
+        transition: none;
+        animation: none;
+    }
+}

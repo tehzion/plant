@@ -74,11 +74,16 @@ export const AuthProvider = ({ children }) => {
         };
 
         // ── Supabase email/password auth path ─────────────────────────────────
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            const currentUser = session?.user ?? null;
-            setUser(currentUser);
-            migrateForUser(currentUser);
-        });
+        supabase.auth.getSession()
+            .then(({ data: { session } }) => {
+                const currentUser = session?.user ?? null;
+                setUser(currentUser);
+                migrateForUser(currentUser);
+            })
+            .catch((error) => {
+                console.warn('Supabase session initialization failed; continuing in guest mode:', error.message);
+                setUser(null);
+            });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {

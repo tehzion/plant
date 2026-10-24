@@ -4,10 +4,12 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { compressImage } from '../utils/imageCompressor';
 import { getImageQualityGuidance } from '../utils/diseaseDetection';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import './CameraUpload.css';
 
 const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, captureRole = 'whole' }) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+    const qualityCopy = getScanQualityCopy(language);
     const { notifyError } = useNotifications();
     const [preview, setPreview] = useState(null);
     const fileInputRef = useRef(null);
@@ -225,7 +227,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
     };
 
     return (
-        <div className="camera-upload">
+        <div className="camera-upload" aria-describedby={`camera-upload-guidance-${captureRole}`}>
             {isCameraOpen ? (
                 <div className="camera-modal" ref={cameraDialogRef} role="dialog" aria-modal="true" aria-label={t('common.takePhoto')}>
                     <div className="video-container">
@@ -238,10 +240,10 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         />
                     </div>
                     <div className="camera-controls">
-                        <button onClick={stopCamera} aria-label={t('common.close')} className="btn-circle cancel">
+                        <button type="button" onClick={stopCamera} aria-label={t('common.close')} className="btn-circle cancel">
                             <X size={24} />
                         </button>
-                        <button onClick={capturePhoto} aria-label={t('common.takePhoto')} className="btn-circle large capture"></button>
+                        <button type="button" onClick={capturePhoto} aria-label={t('common.takePhoto')} className="btn-circle large capture"></button>
                         <div className="camera-controls-spacer" aria-hidden="true"></div>
                     </div>
                 </div>
@@ -249,6 +251,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                 <div className="preview-container fade-in">
                     <img src={preview} alt={t('common.takePhoto')} className="preview-image" />
                     <button
+                        type="button"
                         onClick={clearPreview}
                         className="btn btn-secondary mt-md display-flex-center gap-sm"
                         disabled={disabled}
@@ -260,6 +263,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                 <div className="upload-buttons">
                     {/* Camera Button */}
                     <button
+                        type="button"
                         onClick={startCamera}
                         className="btn btn-primary btn-large camera-btn"
                         disabled={disabled}
@@ -270,6 +274,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
                     {/* Gallery Button */}
                     <button
+                        type="button"
                         onClick={handleGalleryClick}
                         className="btn btn-secondary btn-large"
                         disabled={disabled}
@@ -277,6 +282,13 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         <Image size={32} className="btn-icon-large" />
                         <span>{t('common.uploadGallery')}</span>
                     </button>
+                    <div id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance">
+                        <strong>{qualityCopy.photoGuidance.tipsTitle}</strong>
+                        <p>{qualityCopy.photoGuidance.intro}</p>
+                        <ul>
+                            {qualityCopy.photoGuidance.tips.slice(0, 3).map((tip) => <li key={tip}>{tip}</li>)}
+                        </ul>
+                    </div>
                 </div>
             )}
 

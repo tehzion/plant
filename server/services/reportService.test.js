@@ -20,4 +20,22 @@ describe('report service', () => {
         expect(mocks.client.from).toHaveBeenCalledWith('daily_notes');
         expect(mocks.client.from).toHaveBeenCalledWith('scan_history');
     });
+
+    it('bounds large reports and marks summaries that are incomplete', async () => {
+        vi.stubEnv('REPORT_MAX_ROWS', '100');
+        const makeBoundedQuery = () => {
+            const builder = {
+                select: vi.fn(), eq: vi.fn(), gte: vi.fn(), lt: vi.fn(), order: vi.fn(),
+                range: vi.fn().mockResolvedValue({ data: Array.from({ length: 100 }, () => ({})), error: null }),
+            };
+            for (const method of ['select', 'eq', 'gte', 'lt', 'order']) builder[method].mockReturnValue(builder);
+            return builder;
+        };
+        mocks.client.from.mockImplementation(() => makeBoundedQuery());
+
+        const result = await getReportSummary('user-a', { from: '2026-01-01', to: '2026-02-01' });
+
+        expect(result.truncated).toBe(true);
+        vi.unstubAllEnvs();
+    });
 });

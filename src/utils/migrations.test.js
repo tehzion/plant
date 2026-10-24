@@ -7,11 +7,24 @@ import { migrateLocalStorageToSupabase } from './migrations.js';
 const scansKey = 'sea_plant_scan_history';
 const scan = { id: 'scan-1', image: 'data:image/jpeg;base64,abc', leafImage: 'data:image/jpeg;base64,def', disease: 'Leaf Spot' };
 let upsert;
+let persistedRows;
 beforeEach(() => {
     vi.clearAllMocks(); localStorage.clear();
     localStorage.setItem(scansKey, JSON.stringify([scan]));
-    upsert = vi.fn().mockResolvedValue({ error: null });
-    mocks.from.mockReturnValue({ upsert });
+    persistedRows = [];
+    upsert = vi.fn().mockImplementation(async (rows) => {
+        persistedRows.push(...(Array.isArray(rows) ? rows : [rows]));
+        return { error: null };
+    });
+    mocks.from.mockReturnValue({
+        upsert,
+        select: vi.fn(() => ({
+            in: vi.fn().mockResolvedValue({
+                data: persistedRows.map(({ id, user_id }) => ({ id, user_id: user_id || 'user-1' })),
+                error: null,
+            }),
+        })),
+    });
     mocks.upload.mockImplementation(async ({ path }) => ({ path, signedUrl: `signed:${path}` }));
 });
 describe('guest migration', () => {
@@ -37,6 +50,24 @@ describe('guest migration', () => {
         expect(localStorage.getItem(scansKey)).not.toBeNull();
         await migrateLocalStorageToSupabase('user-1');
         expect(localStorage.getItem(scansKey)).toBeNull();
+    });
+    it('pauses on an existing cloud ID before uploading local images', async () => {
+        mocks.from.mockReturnValue({
+            upsert,
+            select: vi.fn(() => ({
+                in: vi.fn().mockResolvedValue({
+                    data: [{ id: 'scan-1', user_id: 'user-1' }],
+                    error: null,
+                }),
+            })),
+        });
+
+        await migrateLocalStorageToSupabase('user-1');
+
+        expect(mocks.upload).not.toHaveBeenCalled();
+        expect(upsert).not.toHaveBeenCalled();
+        expect(localStorage.getItem(scansKey)).not.toBeNull();
+        expect(localStorage.getItem('plant_migrated_user-1')).toBeNull();
     });
     it('shares an in-flight migration and preserves records added during upload', async () => {
         let release;

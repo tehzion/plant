@@ -273,6 +273,11 @@ const ReportsTab = ({
             </div>
 
             {serverReportError && <p className="rep-inline-error" role="status">{serverReportError}</p>}
+            {serverSummary?.truncated && (
+                <p className="rep-inline-warning" role="status">
+                    {label('profile.reportDataLimited', 'This report is limited to a safe record cap. Narrow the date or plot filter for a complete view.')}
+                </p>
+            )}
 
             <Suspense fallback={REPORTS_CHARTS_FALLBACK}>
                 <ReportsCharts

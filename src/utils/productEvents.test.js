@@ -47,6 +47,7 @@ describe('product event capture', () => {
                 matchScore: 91,
                 cautionLevel: 'standard',
                 matchedTerms: ['copper'],
+            matchedFields: { tags: ['copper'], categories: ['disease control'] },
             },
             recommendationIntent: 'treatment_ready',
             userId: 'user-1',
@@ -69,6 +70,10 @@ describe('product event capture', () => {
         });
         expect(payload.metadata.matchScore).toBe(91);
         expect(payload.metadata.matchedTerms).toEqual(['copper']);
+        expect(payload.metadata.matchedFields).toMatchObject({
+            tags: ['copper'],
+            categories: ['disease control'],
+        });
     });
 
     it('saves product events through Supabase without blocking callers', async () => {

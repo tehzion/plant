@@ -12,14 +12,36 @@ const ScanDecisionSummary = ({ result }) => {
         ? result.diagnosticEvidence.evidenceFor : result.symptoms || [];
     const limits = [result.abstainReason, result.retakeReason,
         ...(result.diagnosticEvidence?.evidenceAgainst || [])].filter(Boolean);
+    const plantLabel = result.plantType || result.category || t('common.unknown');
+    const severityKey = result.severity ? `results.${String(result.severity).toLowerCase()}` : '';
+    const translatedSeverity = severityKey ? t(severityKey) : '';
+    const severityLabel = translatedSeverity && translatedSeverity !== severityKey
+        ? translatedSeverity
+        : (result.severity || t('results.notRecorded'));
+    const hasScore = result.confidence !== null && result.confidence !== undefined;
     return <section className={`scan-decision app-surface scan-decision--${result.tone}`} aria-label={copy.primary}>
-        <h2>{result.disease || t('results.unknownDisease')}</h2>
-        <p className="scan-decision-status">{getDiagnosisStatusLabel(t, result.resultState)}</p>
+        <div className="scan-decision__header">
+            <div>
+                <p className="scan-decision__eyebrow">
+                    {result.isDemo ? t('results.demoModeTitle') : copy.primary}
+                </p>
+                <h2>{result.disease || t('results.unknownDisease')}</h2>
+                <p className="scan-decision-status">{getDiagnosisStatusLabel(t, result.resultState)}</p>
+            </div>
+            <span className={`scan-decision__state scan-decision__state--${result.tone}`} aria-hidden="true">
+                {result.healthy ? '01' : result.requiresRetake ? '03' : '02'}
+            </span>
+        </div>
+        <div className="scan-decision__meta" role="list">
+            <div role="listitem"><span>{t('results.plantType')}</span><strong>{plantLabel}</strong></div>
+            <div role="listitem"><span>{t('results.severity')}</span><strong>{severityLabel}</strong></div>
+            {hasScore && <div role="listitem"><span>{t('results.confidence')}</span><strong>{Math.round(Number(result.confidence))}% <small>{t('results.estimate') || 'estimate'}</small></strong></div>}
+        </div>
         <h3>{copy.observations}</h3>
         {observations.length ? <ul>{observations.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul> : <p>{copy.noEvidence}</p>}
         {limits.length > 0 && <><h3>{copy.limits}</h3><ul>{[...new Set(limits)].slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul></>}
         <h3>{copy.next}</h3><p>{nextScanStep(result, copy)}</p>
-        <p className="scan-score-note">{copy.scoreNote}</p>
+        <p className="scan-score-note">{result.isDemo ? t('results.demoModeDesc') : copy.scoreNote}</p>
     </section>;
 };
 export default ScanDecisionSummary;

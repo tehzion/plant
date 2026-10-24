@@ -468,17 +468,21 @@ export const saveScan = async (scanData, userId = null) => {
     return newScan;
 };
 
-export const fetchAllUserRows = async (table, userId) => {
+export const fetchAllUserRows = async (table, userId, { limit = null } = {}) => {
     const rows = [];
     const pageSize = 500;
+    const maxRows = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : null;
     for (let offset = 0; ;) {
+        const batchSize = maxRows ? Math.min(pageSize, maxRows - offset) : pageSize;
+        if (batchSize <= 0) return rows.slice(0, maxRows);
         const { data, error, count } = await supabase.from(table).select('*', { count: 'exact' })
             .eq('user_id', userId).order('created_at', { ascending: false })
-            .order('id', { ascending: false }).range(offset, offset + pageSize - 1);
+            .order('id', { ascending: false }).range(offset, offset + batchSize - 1);
         if (error) throw error;
         rows.push(...(data || []));
         offset += data?.length || 0;
-        if (!data?.length || (count != null ? offset >= count : data.length < pageSize)) return rows;
+        if (maxRows && rows.length >= maxRows) return rows.slice(0, maxRows);
+        if (!data?.length || (count != null ? offset >= count : data.length < batchSize)) return rows;
     }
 };
 
@@ -499,11 +503,14 @@ export const fetchScanHistoryPage = async (userId, { cursor = null, limit = 20 }
     return { ...payload, rows };
 };
 
-export const getScanHistory = (userId = null) => {
+export const getScanHistory = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('scan_history', userId).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
+        return fetchAllUserRows('scan_history', userId, options).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
     }
-    return safeRead(STORAGE_KEY, []);
+    const history = safeRead(STORAGE_KEY, []);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? history.slice(0, Number(options.limit))
+        : history;
 };
 
 export const getScanById = (id, userId = null) => {
@@ -628,11 +635,14 @@ export const saveLogEntry = async (logEntry, userId = null) => {
     return safeWrite(LOGBOOK_KEY, logs).ok ? newLog : null;
 };
 
-export const getLogbook = (userId = null) => {
+export const getLogbook = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('mygap_logs', userId).then((rows) => rows.map(fromLogbookRow));
+        return fetchAllUserRows('mygap_logs', userId, options).then((rows) => rows.map(fromLogbookRow));
     }
-    return safeRead(LOGBOOK_KEY, []);
+    const logs = safeRead(LOGBOOK_KEY, []);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? logs.slice(0, Number(options.limit))
+        : logs;
 };
 
 export const saveChecklistState = async (state, userId = null) => {
@@ -725,11 +735,14 @@ export const saveDailyNote = async (entry, userId = null) => {
     return writeResult.ok ? newNote : null;
 };
 
-export const getDailyNotes = (userId = null) => {
+export const getDailyNotes = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('daily_notes', userId).then((rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
+        return fetchAllUserRows('daily_notes', userId, options).then((rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
     }
-    return safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);
+    const notes = safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? notes.slice(0, Number(options.limit))
+        : notes;
 };
 
 export const savePlot = async (plot, userId = null) => {
@@ -762,11 +775,14 @@ export const savePlot = async (plot, userId = null) => {
     return writeResult.ok ? newPlot : null;
 };
 
-export const getPlots = (userId = null) => {
+export const getPlots = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('plots', userId).then((rows) => rows.map(normalizeStoredPlot));
+        return fetchAllUserRows('plots', userId, options).then((rows) => rows.map(normalizeStoredPlot));
     }
-    return safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
+    const plots = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? plots.slice(0, Number(options.limit))
+        : plots;
 };
 
 // ─── Guest Identity & Orders ──────────────────────────────────────────────────
@@ -831,6 +847,28 @@ export const seedDemoData = (userId, data) => {
         if (existing.length === 0) {
             const normalized = normalizeFn ? items.map(normalizeFn) : items;
             safeWrite(key, normalized);
+            return;
+        }
+
+        // Demo records are intentionally illustrative. Keep any locally added
+        // records, but make sure the prepared scenarios remain available and do
+        // not carry stale, fabricated confidence values from an older seed.
+        if (userId === 'demo-user-123' && key === STORAGE_KEY) {
+            const preparedById = new Map(items.map(item => [item.id, item]));
+            const merged = [...existing];
+            preparedById.forEach((prepared, id) => {
+                const index = merged.findIndex(item => item.id === id);
+                if (index === -1) {
+                    merged.push(prepared);
+                    return;
+                }
+                merged[index] = {
+                    ...merged[index],
+                    isDemo: true,
+                    confidence: prepared.confidence ?? null,
+                };
+            });
+            if (JSON.stringify(merged) !== JSON.stringify(existing)) safeWrite(key, merged);
         }
     };
 

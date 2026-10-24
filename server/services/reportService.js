@@ -4,6 +4,8 @@ const getAuthenticatedClient = supabaseAuth.getAuthenticatedClient;
 const getServiceClient = supabaseAuth.getServiceClient;
 
 const DEFAULT_TIMEZONE = 'Asia/Kuala_Lumpur';
+const DEFAULT_REPORT_MAX_ROWS = 5000;
+const MAX_REPORT_MAX_ROWS = 20000;
 
 const zonedMidnight = (value, timezone, fallback) => {
     if (!value) return fallback;
@@ -29,23 +31,41 @@ const zonedMidnight = (value, timezone, fallback) => {
 
 const decimal = (value) => Number(value || 0).toFixed(2);
 
+const REPORT_FIELDS = Object.freeze({
+    daily_notes: 'id,activity_type,plot_id,kg_harvested,price_per_kg,expense_amount,created_at',
+    scan_history: 'id,plot_id,result_json,created_at',
+});
+
+const getReportMaxRows = () => {
+    const configured = Number(process.env.REPORT_MAX_ROWS);
+    if (!Number.isFinite(configured)) return DEFAULT_REPORT_MAX_ROWS;
+    return Math.min(Math.max(Math.trunc(configured), 100), MAX_REPORT_MAX_ROWS);
+};
+
 const fetchRows = async (client, table, userId, from, to, plotId) => {
     const rows = [];
     const pageSize = 1000;
-    for (let offset = 0; ; offset += pageSize) {
-        let query = client.from(table).select('*', { count: 'exact' }).eq('user_id', userId)
+    const maxRows = getReportMaxRows();
+    for (let offset = 0; offset < maxRows; offset += pageSize) {
+        let query = client.from(table).select(REPORT_FIELDS[table] || 'id,created_at').eq('user_id', userId)
             .gte('created_at', from.toISOString()).lt('created_at', to.toISOString())
             .order('created_at', { ascending: true }).order('id', { ascending: true });
         if (plotId && table === 'daily_notes') query = query.eq('plot_id', plotId);
         if (plotId && table === 'scan_history') query = query.eq('plot_id', plotId);
+        const remaining = maxRows - offset;
+        const requestedPageSize = Math.min(pageSize, remaining);
         const result = typeof query.range === 'function'
-            ? await query.range(offset, offset + pageSize - 1)
-            : await query.limit(pageSize);
+            ? await query.range(offset, offset + requestedPageSize - 1)
+            : await query.limit(maxRows);
         if (result.error) throw result.error;
         const page = Array.isArray(result.data) ? result.data : [];
         rows.push(...page);
-        if (!page.length || page.length < pageSize || (result.count != null && rows.length >= result.count)) return rows;
+        if (typeof query.range !== 'function' || !page.length || page.length < requestedPageSize) {
+            return { rows, truncated: false };
+        }
+        if (rows.length >= maxRows) return { rows: rows.slice(0, maxRows), truncated: true };
     }
+    return { rows, truncated: true };
 };
 
 export const getReportSummary = async (userId, { from, to, plotId, timezone = DEFAULT_TIMEZONE, accessToken = null } = {}) => {
@@ -62,10 +82,12 @@ export const getReportSummary = async (userId, { from, to, plotId, timezone = DE
         error.status = 400;
         throw error;
     }
-    const [notes, scans] = await Promise.all([
+    const [notesResult, scansResult] = await Promise.all([
         fetchRows(client, 'daily_notes', userId, start, end, plotId),
         fetchRows(client, 'scan_history', userId, start, end, plotId),
     ]);
+    const notes = notesResult.rows;
+    const scans = scansResult.rows;
     const harvest = notes.filter((note) => note.activity_type === 'harvest');
     const totalKg = harvest.reduce((sum, note) => sum + (Number(note.kg_harvested) || 0), 0);
     const revenue = harvest.reduce((sum, note) => sum + ((Number(note.kg_harvested) || 0) * (Number(note.price_per_kg) || 0)), 0);
@@ -112,7 +134,7 @@ export const getReportSummary = async (userId, { from, to, plotId, timezone = DE
             profit: decimal(item.profit),
         })),
         recordCounts: { notes: notes.length, scans: scans.length },
-        truncated: false,
+        truncated: notesResult.truncated || scansResult.truncated,
     };
 };
 

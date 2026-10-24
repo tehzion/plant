@@ -50,10 +50,18 @@
   background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
   pointer-events: none;
   z-index: 101;
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+}
+
+.tab-headers-container.can-scroll-right::after {
+  opacity: 0.4;
+  visibility: visible;
   animation: tabbed-results-chevron 2s ease-in-out infinite;
 }
 
-.tab-headers-container.scrolled::after {
+.tab-headers-container.can-scroll-right.scrolled::after {
   opacity: 0.3;
   animation: none;
 }
@@ -214,5 +222,17 @@
 @media (max-width: 480px) {
   .tab-title {
     font-size: 0.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-headers-container::before,
+  .tab-headers-container::after,
+  .tab-header,
+  .tab-icon,
+  .active-indicator,
+  .tab-content {
+    animation: none;
+    transition: none;
   }
 }
