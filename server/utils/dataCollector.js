@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { queryNeon } from './neonDatabase.js';
+import { normalizeDataConsent } from '../../shared/dataConsent.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,8 +70,13 @@ export const logTrainingData = async (data) => {
         const LOG_FILE = path.join(DATASET_DIR, `data_log_${dateStr}.jsonl`);
 
         const timestamp = now.toISOString();
-        const { id, treeImage, leafImage, category, result, ownerHash = null } = data;
-        const metadata = { ...(data.metadata || {}), ...(ownerHash ? { ownerHash } : {}) };
+        const { id, category, result, ownerHash = null } = data;
+        // Photos are kept only when the farmer opted in; the assessment text
+        // is kept either way and carries the consent answer with it.
+        const dataConsent = normalizeDataConsent(data.dataConsent);
+        const treeImage = dataConsent.aiImprovement ? data.treeImage : null;
+        const leafImage = dataConsent.aiImprovement ? data.leafImage : null;
+        const metadata = { ...(data.metadata || {}), dataConsent, ...(ownerHash ? { ownerHash } : {}) };
         const scanId = id || crypto.randomUUID();
         if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) throw new Error('Invalid scan ID');
 

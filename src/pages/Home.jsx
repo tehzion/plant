@@ -7,6 +7,7 @@ import {
 import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
 import { DEMO_SCANS } from '../utils/demoData';
 import CameraUpload from '../components/CameraUpload';
+import DataConsentToggle from '../components/DataConsentToggle';
 import PlantCategorySelector from '../components/PlantCategorySelector';
 import FarmScaleSelector from '../components/FarmScaleSelector';
 import ProgressStepper from '../components/ProgressStepper';
@@ -714,6 +715,8 @@ const Home = () => {
                       selectedCategory={selectedCategory}
                     />
                   </div>
+
+                  <DataConsentToggle disabled={loading} />
 
                   <div className="step-actions">
                     <button className="btn btn-secondary" onClick={scanActions.prevStep}>{t('common.back')}</button>

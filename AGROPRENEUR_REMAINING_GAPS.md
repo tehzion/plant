@@ -47,3 +47,17 @@
 | Performance, cost per assessment and latency not measured. | Instrument p50/p95 latency and AI calls per scan (`diagnosisAttempts` is now recorded). |
 | Farmer usability not observed. | Short field sessions with farmers in ms/en/zh, focusing on the comparison cards and offline banner. |
 | Workbox runtime caching of API GETs not configured. | Not needed now — reads fall back to the IndexedDB cache. |
+
+---
+
+## Addendum — data consent (31 October 2026)
+
+| Priority | Gap | Recommended next action |
+|---|---|---|
+| P0 | The consent wording and privacy policy changes have not been reviewed by a lawyer under the PDPA. | Have qualified counsel review the checkbox text, the privacy policy and the retention period before release. |
+| P0 | The privacy policy still says scan history is "stored locally on your device using encryption". This was not verified and is probably inaccurate (history also syncs to Neon). | Correct the wording, together with the legal review. |
+| P1 | `server/scripts/exportDiagnosisAudit.js` exports every assessment record regardless of consent. | Filter on `metadata->'dataConsent'->>'aiImprovement' = 'true'` in any export used for AI evaluation or development. |
+| P1 | Records created before this change have no `dataConsent` and their photos were kept under the earlier policy. | Treat them as not consented for AI development. Decide whether to delete their photos early or let the existing 90-day pruning remove them. |
+| P1 | Experts reviewing non-consented scans see only the text assessment, without photos. | Accept this, or ask for a separate, explicit consent to expert review. Measure how many cases lack photos. |
+| P2 | Consent is saved per device, not per account. | Store the answer on the profile for signed-in users, and add a setting to change it later. |
+| P2 | No way to withdraw consent for photos already stored. | Add a request path, such as a support contact or an in-app action, that deletes stored photos for a scan ID. |

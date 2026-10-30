@@ -94,6 +94,13 @@ describe('diagnosis cache and feedback identity', () => {
         await invoke('/api/analyze', { body: { ...body, leafImage: 'leaf-b', scanId: 'third' } });
         expect(mocks.analyze).toHaveBeenCalledTimes(2);
     });
+    it('passes the farmer consent answer and analysis duration to the audit log', async () => {
+        const dataConsent = { aiImprovement: true, version: '2026-11-v1' };
+        await invoke('/api/analyze', { body: { treeImage: 'unique-tree-consent', category: 'Durian', language: 'en', scanId: 'consent-1', dataConsent } });
+        expect(mocks.logTraining).toHaveBeenLastCalledWith(expect.objectContaining({
+            id: 'consent-1', dataConsent, metadata: expect.objectContaining({ durationMs: expect.any(Number) }),
+        }));
+    });
 });
 
 describe('assessment and feedback attribution', () => {

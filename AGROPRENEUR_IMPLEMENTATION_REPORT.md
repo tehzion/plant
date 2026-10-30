@@ -168,3 +168,24 @@ If the server is deployed before migration 0002 is applied, these values are fol
 ## 11. Remaining limitations
 
 See [AGROPRENEUR_REMAINING_GAPS.md](AGROPRENEUR_REMAINING_GAPS.md). In short: no measured diagnostic accuracy; eligibility is text-heuristic, not a pesticide-registration lookup; tests use mocks and an in-memory database emulation, not a live Neon branch, real devices or real AI responses.
+
+---
+
+## 12. Addendum — farmer data consent (31 October 2026, uncommitted at time of writing)
+
+Added because the TTIA submission says farmer data is "appropriately consented", while the app had no consent capture; consent was only mentioned in the privacy policy.
+
+**Behaviour**
+- On the plant-details step, before **Analyse**, there is an optional checkbox: *"Help improve plant diagnosis (optional)"*. It is **unticked by default**, with a link to the privacy policy. Scanning works the same whether or not it is ticked.
+- The answer is saved per device and sent with every scan as `dataConsent: { aiImprovement, version }`.
+- On the server, `logTrainingData` keeps scan photos (tree/leaf) **only when** `aiImprovement === true` for the current consent version. Without consent, the assessment text is still kept for the existing audit window (for expert review and error investigation), without photos.
+- Every assessment record now stores `metadata.dataConsent`, so datasets can be filtered on `metadata->'dataConsent'->>'aiImprovement' = 'true'`.
+- A missing, malformed or outdated answer counts as **no consent**. Changing `DATA_CONSENT_VERSION` asks farmers again.
+- **Added at the same time:** `metadata.durationMs` (server-side analysis time per scan), so response times needed for TTIA Q4 can be measured from existing records.
+- The privacy policy section on images now describes this behaviour (en/ms/zh).
+
+**Files**
+- New: `shared/dataConsent.js`, `src/utils/dataConsent.js`, `src/components/DataConsentToggle.jsx` (+ `.css`, `.test.jsx`).
+- Modified: `server/index.js`, `server/utils/dataCollector.js` (+ test), `server/utils/requestValidation.js` (+ test), `server/index.test.js`, `src/pages/Home.jsx`, `src/utils/diseaseDetection.js`, `src/i18n/translations/home.js`, `src/i18n/translations/privacy.js`.
+
+No database migration is needed; consent is stored in the existing `metadata` JSONB column.

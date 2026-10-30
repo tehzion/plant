@@ -47,3 +47,16 @@ Do **not** claim yet:
 ## 4. Status
 
 Award readiness is improved on the technical-integrity and responsible-AI dimensions. Outcome claims still depend on items 1–6 above. This release is not yet deployed.
+
+---
+
+## 5. Addendum — data consent (31 October 2026)
+
+| Improvement | Why it matters for Category 5 | Implemented | Verified (tests) | Effectiveness demonstrated |
+|---|---|---|---|---|
+| Opt-in consent before scan photos are kept for AI improvement; each record stores the consent answer | The submission's claim that data is "appropriately consented" can now be backed by code and records | Yes | Yes (unit tests, plus a manual browser check) | n/a (governance control); the opt-in rate is not yet measured |
+| Analysis time recorded per scan (`durationMs`) | Gives Q4 a real response-time measure (median and 95th percentile) from existing records | Yes | Yes | **No** — no live data yet |
+
+Supportable wording once deployed: *"Farmers choose whether their photos are kept to help improve the AI. Photos are kept only with opt-in consent, and each record stores the farmer's answer."* Don't say it complies with the PDPA until a lawyer has reviewed it.
+
+New measures for the next evaluation: the opt-in rate (consented scans ÷ all scans), and median and 95th-percentile `durationMs` over a stated period.

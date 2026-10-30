@@ -12,6 +12,12 @@ describe('API input validation', () => {
         }
         expect(validate('/analyze', { treeImage: 'data:image/jpeg;base64,/9j/AA==' })).toBeUndefined();
     });
+    it('accepts a well-formed consent answer and rejects anything else', () => {
+        const treeImage = 'data:image/jpeg;base64,/9j/AA==';
+        expect(validate('/analyze', { treeImage, dataConsent: { aiImprovement: true, version: '2026-11-v1' } })).toBeUndefined();
+        expect(validate('/analyze', { treeImage, dataConsent: { aiImprovement: 'yes', version: '2026-11-v1' } }).status).toBe(400);
+        expect(validate('/analyze', { treeImage, dataConsent: 'true' }).status).toBe(400);
+    });
     it('bounds prompts and feedback and rejects unsupported languages', () => {
         expect(validate('/ask', { question: 123 }).status).toBe(400);
         expect(validate('/ask', { question: 'x'.repeat(4001) }).status).toBe(400);

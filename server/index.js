@@ -528,7 +528,8 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // Fix: Extract treeImage/leafImage to match Frontend Payload (src/utils/diseaseDetection.js)
         // Fallback to 'image' for backward compatibility
-        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null } = req.body;
+        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null, dataConsent = null } = req.body;
+        const analysisStartedAt = Date.now();
 
         const mainImage = treeImage || image;
 
@@ -549,8 +550,8 @@ app.post('/api/analyze', async (req, res, next) => {
         const cachedResult = aiCache.get(cacheKey);
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
-            logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category,
-                result: cachedResult, metadata: { language, location, imageQuality, cached: true } })
+            logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category, dataConsent,
+                result: cachedResult, metadata: { language, location, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
                 .catch(err => console.error('Data logging failed:', err.message));
             return res.json({ ...cachedResult, id: scanId, feedbackToken, cached: true });
         }
@@ -641,6 +642,7 @@ app.post('/api/analyze', async (req, res, next) => {
             treeImage: mainImage,
             leafImage: leafImage,
             category,
+            dataConsent,
             result: finalResult,
             metadata: {
                 language,
@@ -654,6 +656,7 @@ app.post('/api/analyze', async (req, res, next) => {
                 requestId: req.requestId,
                 model: finalResult.analysisMetadata?.model || null,
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
+                durationMs: Date.now() - analysisStartedAt,
             }
         }).catch(err => console.error('Data logging failed:', err));
 

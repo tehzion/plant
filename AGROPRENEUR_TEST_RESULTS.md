@@ -66,3 +66,25 @@ During development, new tests caught two real UI defects which were fixed before
 
 - Passing tests show the code behaves as designed under mocked inputs. They do **not** demonstrate diagnostic accuracy, real-world alternative quality, or farmer comprehension.
 - Coverage was not measured.
+
+---
+
+## 7. Addendum — data consent change (31 October 2026)
+
+| Run | Test files | Tests | Result |
+|---|---|---|---|
+| After consent change | 76 | 346 | **346 passed, 0 failed** |
+| Translation check (`--strict`) | — | — | Keys aligned across en / ms / zh |
+| `vite build` | — | — | Succeeded; 107 precache entries |
+| Manual browser check (local dev server, 375 px mobile viewport) | — | — | Checkbox shows on the plant-details step in Malay, starts unticked, fits the layout, and ticking it stores the opt-in |
+
+New tests:
+- Photos are not uploaded without consent, but the assessment record is still written with the consent answer (`dataCollector.test.js`).
+- Missing, malformed or outdated consent counts as no consent (`dataCollector.test.js`).
+- The analyse route passes the consent answer and `durationMs` to the audit log (`index.test.js`).
+- Request validation accepts a correct consent object and rejects anything else (`requestValidation.test.js`).
+- The checkbox is unticked by default, saves opt-in and opt-out, and asks again after a wording change (`DataConsentToggle.test.jsx`).
+
+Two existing `dataCollector` tests now pass `dataConsent` explicitly, because storing photos now requires consent.
+
+**Not executed:** ESLint. The repository has no `eslint.config.js` for the installed ESLint version, so lint does not run (pre-existing).
