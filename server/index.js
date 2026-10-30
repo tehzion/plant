@@ -1,4 +1,5 @@
 import express from 'express';
+import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
@@ -7,6 +8,7 @@ import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { buildAnalysisCacheKey } from './utils/analysisCache.js';
+import { isAiProviderConfigured, resolveAiProvider } from './utils/aiProvider.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
@@ -28,6 +30,7 @@ import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
 import { createScanCapability, hashIdentity, verifyScanCapability } from './utils/scanCapability.js';
 import { classifyAnalysisFailure } from './utils/analysisErrors.js';
+import { chatWithAssistant } from './services/assistantService.js';
 import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
 import path from 'path';
@@ -165,7 +168,8 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString(),
         ...(!isProduction && {
             config: {
-                openai: !!process.env.OPENAI_API_KEY,
+                aiProvider: resolveAiProvider().provider,
+                aiConfigured: isAiProviderConfigured(),
                 plantnet: !!process.env.PLANTNET_API_KEY
             }
         })
@@ -290,7 +294,7 @@ app.get('/api/followups/:scanId', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
-const aiRoutes = ['/api/analyze', '/api/ask', '/api/results/localize', '/api/products/search', '/api/farm'];
+const aiRoutes = ['/api/analyze', '/api/ask', '/api/assistant', '/api/results/localize', '/api/products/search', '/api/farm'];
 app.use(aiRoutes, rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50,
@@ -395,8 +399,8 @@ app.post('/api/ask', async (req, res, next) => {
             return res.status(400).json({ error: 'Question is required' });
         }
 
-        if (!process.env.OPENAI_API_KEY) {
-            return res.status(503).json({ error: 'Service Unavailable', message: 'OpenAI API Key is missing on the server.' });
+        if (!isAiProviderConfigured()) {
+            return res.status(503).json({ error: 'Service Unavailable', message: 'AI provider API key is missing on the server.' });
         }
 
         // 1. Normalize Cache Key
@@ -436,6 +440,33 @@ app.post('/api/ask', async (req, res, next) => {
     } catch (error) {
         if (requestController.signal.aborted) {
             const timeoutError = new Error('AI request timed out or was cancelled. Please try again.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
+    }
+});
+
+// Floating help assistant: short answers that link to encyclopedia entries,
+// live store products and the support team.
+app.post('/api/assistant/chat', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Assistant deadline exceeded')), Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Assistant request cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
+    try {
+        if (!isAiProviderConfigured()) {
+            return res.status(503).json({ error: 'ASSISTANT_UNAVAILABLE', message: 'AI provider API key is missing on the server.' });
+        }
+        const { messages, language = 'en' } = req.body;
+        res.json(await chatWithAssistant({ messages, language, signal: requestController.signal }));
+    } catch (error) {
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('Assistant request timed out or was cancelled. Please try again.');
             timeoutError.status = 504;
             next(timeoutError);
         } else next(error);
@@ -538,11 +569,11 @@ app.post('/api/analyze', async (req, res, next) => {
     res.once?.('close', abortOnDisconnect);
     try {
         // Validation: Critical Keys
-        if (!process.env.OPENAI_API_KEY) {
-            console.error('❌ Request Failed: OPENAI_API_KEY is missing.');
+        if (!isAiProviderConfigured()) {
+            console.error('❌ Request Failed: AI provider API key is missing.');
             return res.status(503).json({
                 error: 'Configuration Error',
-                message: 'Server is missing API Keys. Please check Render Environment Variables.'
+                message: 'AI provider is not configured on the server.'
             });
         }
 
@@ -1177,6 +1208,7 @@ app.post('/api/expert/cases/:scanId/reviews', async (req, res, next) => {
 });
 
 registerFarmerReviewRoutes(app);
+registerEvaluationRoutes(app);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

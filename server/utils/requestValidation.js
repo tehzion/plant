@@ -65,6 +65,13 @@ export const validateApiRequest = (req, _res, next) => {
                 array(body.recentNotes, 'recentNotes', 5);
                 array(body.recentAlerts, 'recentAlerts', 3);
                 break;
+            case '/assistant/chat':
+                array(body.messages, 'messages', 20, true);
+                for (const message of body.messages) {
+                    if (!['user', 'assistant'].includes(message?.role)) throw fail('Invalid message role');
+                    text(message.content, 'message', 1500, true);
+                }
+                break;
             case '/feedback':
                 text(body.scanId, 'scanId', 100, true);
                 text(body.feedbackToken, 'feedbackToken', 200);

@@ -850,6 +850,12 @@ describe('aiService helpers', () => {
         })).toBe('expert_review_needed');
     });
 
+    it('does not label contradictory disease results as healthy maintenance or offer treatment', () => {
+        const diagnosis = { healthStatus: 'healthy', disease: 'Leaf blight', diseaseCategory: 'fungal', status: 'confirmed', confidence: 95 };
+        expect(aiService.canRecommendTreatmentProducts(diagnosis)).toBe(false);
+        expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 3 })).toBe('support_only');
+    });
+
     it('keeps possible pest states consultation-first even with matched treatment products', () => {
         const diagnosis = {
             plantType: 'Papaya',

@@ -62,6 +62,11 @@ describe('statusUtils', () => {
         expect(getStandardizedStatus(scan)).toBe('unhealthy');
     });
 
+    it('does not allow treatment for a high-confidence contradictory healthy disease result', () => {
+        expect(getScanResultState({ healthStatus: 'healthy', disease: 'Leaf blight', diseaseCategory: 'fungal', status: 'confirmed', confidence: 95 }))
+            .toBe(SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED);
+    });
+
     it('classifies confident disease scans as treatment-ready', () => {
         expect(getScanResultState({
             status: 'confirmed',

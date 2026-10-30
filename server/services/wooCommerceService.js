@@ -20,12 +20,13 @@ const sanitizeProductDescription = (value = '') => String(value)
     .replace(/\s+/g, ' ')
     .trim();
 
+const storePrice = (value, minorUnit) => value == null || value === '' ? '' : (Number(value) / (10 ** (Number.isInteger(minorUnit) ? minorUnit : 2))).toFixed(Number.isInteger(minorUnit) ? minorUnit : 2);
 const transformWooProduct = (product) => ({
     id: product.id,
     name: product.name,
-    price: product.price,
-    regularPrice: product.regular_price,
-    salePrice: product.sale_price,
+    price: product.price ?? storePrice(product.prices?.price, product.prices?.currency_minor_unit),
+    regularPrice: product.regular_price ?? storePrice(product.prices?.regular_price, product.prices?.currency_minor_unit),
+    salePrice: product.sale_price ?? storePrice(product.prices?.sale_price, product.prices?.currency_minor_unit),
     description: sanitizeProductDescription(product.short_description || product.description),
     image: product.images?.[0]?.src || null,
     permalink: product.permalink,
@@ -34,22 +35,22 @@ const transformWooProduct = (product) => ({
     categoryIds: product.categories?.map((category) => category.id) || [],
     tags: product.tags?.map((tag) => tag.name) || [],
     tagIds: product.tags?.map((tag) => tag.id) || [],
-    stockStatus: product.stock_status || null,
-    availability: product.stock_status === 'instock'
+    stockStatus: product.stock_status || (product.is_in_stock === true ? 'instock' : product.is_in_stock === false ? 'outofstock' : null),
+    availability: product.is_in_stock === true ? 'in_stock' : product.is_in_stock === false ? 'out_of_stock' : product.stock_status === 'instock'
         ? 'in_stock'
         : product.stock_status === 'outofstock'
             ? 'out_of_stock'
             : product.stock_status === 'onbackorder'
                 ? 'on_backorder'
                 : null,
-    inStock: typeof product.in_stock === 'boolean'
+    inStock: typeof product.is_in_stock === 'boolean' ? product.is_in_stock : typeof product.in_stock === 'boolean'
         ? product.in_stock
         : product.stock_status === 'instock'
             ? true
             : product.stock_status === 'outofstock'
                 ? false
                 : null,
-    purchasable: typeof product.purchasable === 'boolean' ? product.purchasable : null,
+    purchasable: typeof product.is_purchasable === 'boolean' ? product.is_purchasable : typeof product.purchasable === 'boolean' ? product.purchasable : null,
 });
 
 /**
@@ -60,10 +61,7 @@ const getWooConfig = () => {
     const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY;
     const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET;
 
-    if (!url || !consumerKey || !consumerSecret) {
-        console.warn('⚠️ WooCommerce credentials not configured. Product sync disabled.');
-        return null;
-    }
+    if (!url || !consumerKey || !consumerSecret) return null;
 
     return { url, consumerKey, consumerSecret };
 };
@@ -73,9 +71,12 @@ const getWooConfig = () => {
  */
 const getWooRequestConfig = (endpoint, params = {}, method = 'GET') => {
     const config = getWooConfig();
-    if (!config) return null;
+    const base = String(process.env.WOOCOMMERCE_URL || '').replace(/\/$/, '');
+    const publicCatalog = !config && base && method === 'GET' && ['products','products/tags','products/categories'].includes(endpoint);
+    if (!config && !publicCatalog) return null;
 
-    const url = new URL(`${config.url}/wp-json/wc/v3/${endpoint}`);
+    const url = new URL(`${base}/wp-json/wc/${publicCatalog ? 'store/v1' : 'v3'}/${endpoint}`);
+    if (url.protocol !== 'https:') throw new Error('WooCommerce URL must use HTTPS');
 
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -87,8 +88,10 @@ const getWooRequestConfig = (endpoint, params = {}, method = 'GET') => {
         'Content-Type': 'application/json',
     };
 
-    const auth = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64');
-    headers['Authorization'] = `Basic ${auth}`;
+    if (config) {
+        const auth = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64');
+        headers['Authorization'] = `Basic ${auth}`;
+    }
 
     return { url: url.toString(), headers };
 };
@@ -96,11 +99,16 @@ const getWooRequestConfig = (endpoint, params = {}, method = 'GET') => {
 const requestWoo = (request, { signal = null, ...options } = {}) => {
     if (!request) return Promise.resolve(null);
     return withAbortableTimeout(
-        (requestSignal) => fetch(request.url, {
-            ...options,
-            headers: request.headers,
-            signal: requestSignal,
-        }),
+        async (requestSignal) => {
+            const response = await fetch(request.url, {
+                ...options,
+                headers: request.headers,
+                signal: requestSignal,
+            });
+            // Consume the body before the timeout helper closes its signal.
+            const body = await response.json().catch(() => ({}));
+            return { ok: response.ok, status: response.status, json: async () => body };
+        },
         WOO_REQUEST_TIMEOUT_MS,
         { signal, timeoutMessage: 'WooCommerce request timed out' },
     );
@@ -118,8 +126,7 @@ export const getAllTags = async ({ signal = null } = {}) => {
         return cached;
     }
 
-    const config = getWooConfig();
-    if (!config) return [];
+    if (!process.env.WOOCOMMERCE_URL) return [];
 
     try {
         console.log('🏷️ Fetching all product tags from WooCommerce...');
@@ -143,6 +150,8 @@ export const getAllTags = async ({ signal = null } = {}) => {
                 name: tag.name,
                 count: tag.count,
             })));
+
+            if (tags.length < 100) break;
 
             page += 1;
         }
@@ -171,8 +180,7 @@ export const getAllCategories = async ({ signal = null } = {}) => {
         return cached;
     }
 
-    const config = getWooConfig();
-    if (!config) return [];
+    if (!process.env.WOOCOMMERCE_URL) return [];
 
     try {
         console.log('📂 Fetching all product categories from WooCommerce...');
@@ -197,6 +205,8 @@ export const getAllCategories = async ({ signal = null } = {}) => {
                 count: category.count,
                 parent: category.parent,
             })));
+
+            if (categories.length < 100) break;
 
             page += 1;
         }
@@ -243,6 +253,8 @@ export const getAllProducts = async ({ signal = null } = {}) => {
             if (!products || products.length === 0) break;
 
             allProducts.push(...products.map(transformWooProduct));
+
+            if (products.length < 100) break;
             page += 1;
         }
 
@@ -332,15 +344,14 @@ export const getProductsByTagIds = async (tagIds, categoryIds = [], { signal = n
 };
 
 export const getStoreUrl = () => {
-    const config = getWooConfig();
-    return config ? config.url : null;
+    return process.env.WOOCOMMERCE_URL || null;
 };
 
 /**
  * Check if WooCommerce is configured
  */
 export const isWooCommerceEnabled = () => {
-    return !!getWooConfig();
+    return !!process.env.WOOCOMMERCE_URL;
 };
 
 /**

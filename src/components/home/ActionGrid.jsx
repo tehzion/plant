@@ -1,3 +1,4 @@
+import { STORE_URL } from '../../utils/store.js';
 import React from 'react';
 import { BookOpen, CheckSquare, History, ScanLine, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
@@ -18,7 +19,7 @@ const ActionGrid = ({ onScan }) => {
             id: 'shop',
             label: t('nav.shop') || 'Shop',
             icon: <ShoppingBag size={20} strokeWidth={2} />,
-            onClick: () => window.open('https://www.mojosense.app/kanb/products/', '_blank', 'noopener,noreferrer')
+            onClick: () => window.open(STORE_URL, '_blank', 'noopener,noreferrer')
         },
         {
             id: 'mygap',

@@ -29,10 +29,6 @@ vi.mock('../utils/diseaseDetection', () => diseaseDetectionMocks);
 
 vi.mock('../utils/localStorage', () => storageMocks);
 
-vi.mock('../utils/statusUtils', () => ({
-    getStandardizedStatus: () => 'unhealthy',
-}));
-
 vi.mock('../utils/toast.js', () => ({
     showToast: vi.fn(),
 }));
@@ -81,6 +77,7 @@ describe('useScanLogic', () => {
             expect.objectContaining({
                 category: 'Durian',
                 plantType: 'Durian',
+                healthStatus: 'unknown',
             }),
             'user-1',
         );

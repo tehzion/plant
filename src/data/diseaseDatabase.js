@@ -12,7 +12,7 @@ export const diseaseDatabase = [
         },
         name: {
             en: 'Rice Blast',
-            ms: 'Karat Daun Padi',
+            ms: 'Penyakit Karah Padi',
             zh: '稻瘟病'
         },
         category: 'Fungicides',
@@ -29,19 +29,22 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply tricyclazole fungicide: 20g per 10L water',
-                'Use azoxystrobin: 15ml per 10L water',
-                'Remove and destroy infected plant debris'
+                'Apply tricyclazole fungicide',
+                'Use azoxystrobin',
+                'Remove and destroy infected plant debris',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan racun kulat tricyclazole: 20g per 10L air',
-                'Gunakan azoxystrobin: 15ml per 10L air',
-                'Buang dan musnahkan sisa tanaman yang dijangkiti'
+                'Gunakan racun kulat tricyclazole',
+                'Gunakan azoxystrobin',
+                'Buang dan musnahkan sisa tanaman yang dijangkiti',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用三环唑杀菌剂：每10升水20克',
-                '使用嘧菌酯：每10升水15毫升',
-                '移除并销毁受感染的植物残骸'
+                '施用三环唑杀菌剂',
+                '使用嘧菌酯',
+                '移除并销毁受感染的植物残骸',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -262,22 +265,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply sulfur-based fungicides: 30g per 10L water',
+                'Apply sulfur-based fungicides',
                 'Use potassium bicarbonate spray',
-                'Spray neem oil solution: 30ml per 10L water',
-                'Remove heavily infected leaves'
+                'Spray neem oil solution',
+                'Remove heavily infected leaves',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan racun kulat berasaskan sulfur: 30g per 10L air',
+                'Gunakan racun kulat berasaskan sulfur',
                 'Gunakan semburan kalium bikarbonat',
-                'Sembur larutan minyak neem: 30ml per 10L air',
-                'Buang daun yang sangat terjejas'
+                'Sembur larutan minyak neem',
+                'Buang daun yang sangat terjejas',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用硫磺类杀菌剂：每10升水30克',
+                '施用硫磺类杀菌剂',
                 '使用碳酸氢钾喷雾',
-                '喷洒印楝油溶液：每10升水30毫升',
-                '移除受感染严重的叶片'
+                '喷洒印楝油溶液',
+                '移除受感染严重的叶片',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -326,19 +332,22 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply copper-based fungicides: 25g per 10L water',
-                'Use mancozeb: 25g per 10L water',
-                'Remove and destroy infected fruits'
+                'Apply copper-based fungicides',
+                'Use mancozeb',
+                'Remove and destroy infected fruits',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan racun kulat berasaskan tembaga: 25g per 10L air',
-                'Gunakan mancozeb: 25g per 10L air',
-                'Buang dan musnahkan buah yang dijangkiti'
+                'Gunakan racun kulat berasaskan tembaga',
+                'Gunakan mancozeb',
+                'Buang dan musnahkan buah yang dijangkiti',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用铜基杀菌剂：每10升水25克',
-                '使用代森锰锌：每10升水25克',
-                '移除并销毁受感染的果实'
+                '施用铜基杀菌剂',
+                '使用代森锰锌',
+                '移除并销毁受感染的果实',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -553,22 +562,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply Trichoderma harzianum: 50g per 10L water',
-                'Use carbendazim: 10g per 10L water',
+                'Apply Trichoderma harzianum',
+                'Use carbendazim',
                 'Solarize soil with plastic sheeting for 4-6 weeks',
-                'Remove and destroy infected plants'
+                'Remove and destroy infected plants',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan Trichoderma harzianum: 50g per 10L air',
-                'Gunakan carbendazim: 10g per 10L air',
+                'Gunakan Trichoderma harzianum',
+                'Gunakan carbendazim',
                 'Solarisasikan tanah dengan kepingan plastik selama 4-6 minggu',
-                'Buang dan musnahkan tanaman yang dijangkiti'
+                'Buang dan musnahkan tanaman yang dijangkiti',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用哈茨木霉：每10升水50克',
-                '使用多菌灵：每10升水10克',
+                '施用哈茨木霉',
+                '使用多菌灵',
                 '用塑料薄膜对土壤进行4-6周的太阳能消毒',
-                '移除并销毁受感染的植物'
+                '移除并销毁受感染的植物',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -617,22 +629,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply metalaxyl: 20ml per 10L water',
+                'Apply metalaxyl',
                 'Use copper fungicide (Bordeaux mixture)',
                 'Remove and destroy infected leaves',
-                'Improve air circulation by pruning'
+                'Improve air circulation by pruning',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan metalaxyl: 20ml per 10L air',
+                'Gunakan metalaxyl',
                 'Gunakan racun kulat tembaga (campuran Bordeaux)',
                 'Buang dan musnahkan daun yang dijangkiti',
-                'Tingkatkan pengudaraan dengan mencantas'
+                'Tingkatkan pengudaraan dengan mencantas',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用甲霜灵：每10升水20毫升',
+                '施用甲霜灵',
                 '使用铜基杀菌剂（波尔多液）',
                 '移除并销毁受感染的叶片',
-                '通过修剪改善空气流通'
+                '通过修剪改善空气流通',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -681,22 +696,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply mancozeb: 25g per 10L water',
+                'Apply mancozeb',
                 'Use chlorothalonil fungicide',
                 'Spray neem oil solution weekly',
-                'Remove infected leaves'
+                'Remove infected leaves',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan mancozeb: 25g per 10L air',
+                'Gunakan mancozeb',
                 'Gunakan racun kulat chlorothalonil',
                 'Sembur larutan minyak neem setiap minggu',
-                'Buang daun yang dijangkiti'
+                'Buang daun yang dijangkiti',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用代森锰锌：每10升水25克',
+                '施用代森锰锌',
                 '使用百菌清杀菌剂',
                 '每周喷洒印楝油溶液',
-                '移除受感染的叶片'
+                '移除受感染的叶片',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -746,21 +764,24 @@ export const diseaseDatabase = [
         treatment: {
             en: [
                 'Apply sulfur-based fungicides',
-                'Use propiconazole: 10ml per 10L water',
+                'Use propiconazole',
                 'Remove and burn infected plant parts',
-                'Apply copper oxychloride sprays'
+                'Apply copper oxychloride sprays',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
                 'Gunakan racun kulat berasaskan sulfur',
-                'Gunakan propiconazole: 10ml per 10L air',
+                'Gunakan propiconazole',
                 'Buang dan bakar bahagian tanaman yang dijangkiti',
-                'Sembur kuprum oksiklorida'
+                'Sembur kuprum oksiklorida',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
                 '施用硫磺类杀菌剂',
-                '使用丙环唑：每10升水10毫升',
+                '使用丙环唑',
                 '移除并焚烧受感染的植物部分',
-                '施用氧氯化铜喷雾'
+                '施用氧氯化铜喷雾',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -811,22 +832,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Spray imidacloprid: 5ml per 10L water',
-                'Use neem oil: 30ml per 10L water',
+                'Spray imidacloprid',
+                'Use neem oil',
                 'Apply insecticidal soap',
-                'Spray with strong water jet to dislodge'
+                'Spray with strong water jet to dislodge',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Sembur imidacloprid: 5ml per 10L air',
-                'Gunakan minyak neem: 30ml per 10L air',
+                'Sembur imidacloprid',
+                'Gunakan minyak neem',
                 'Gunakan sabun insektisida',
-                'Sembur dengan pancutan air kuat untuk menanggalkan'
+                'Sembur dengan pancutan air kuat untuk menanggalkan',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '喷洒吡虫啉：每10升水5毫升',
-                '使用印楝油：每10升水30毫升',
+                '喷洒吡虫啉',
+                '使用印楝油',
                 '施用杀虫皂',
-                '用强力水柱冲刷以将其驱除'
+                '用强力水柱冲刷以将其驱除',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -874,22 +898,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply acetamiprid: 5g per 10L water',
+                'Apply acetamiprid',
                 'Use yellow sticky traps',
                 'Spray neem oil solution',
-                'Apply pyrethrin-based insecticide'
+                'Apply pyrethrin-based insecticide',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan acetamiprid: 5g per 10L air',
+                'Gunakan acetamiprid',
                 'Gunakan perangkap pelekat kuning',
                 'Sembur larutan minyak neem',
-                'Gunakan racun serangga berasaskan pyrethrin'
+                'Gunakan racun serangga berasaskan pyrethrin',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用啶虫脒：每10升水5克',
+                '施用啶虫脒',
                 '使用黄色粘虫板',
                 '喷洒印楝油溶液',
-                '施用除虫菊酯类杀虫剂'
+                '施用除虫菊酯类杀虫剂',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1000,22 +1027,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply abamectin: 10ml per 10L water',
+                'Apply abamectin',
                 'Use spinosad insecticide',
                 'Remove and destroy affected leaves',
-                'Apply neem oil spray'
+                'Apply neem oil spray',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan abamectin: 10ml per 10L air',
+                'Gunakan abamectin',
                 'Gunakan racun serangga spinosad',
                 'Buang dan musnahkan daun yang terjejas',
-                'Sembur minyak neem'
+                'Sembur minyak neem',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用阿维菌素：每10升水10毫升',
+                '施用阿维菌素',
                 '使用多杀霉素杀虫剂',
                 '移除并销毁受害叶片',
-                '喷洒印楝油喷雾'
+                '喷洒印楝油喷雾',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1064,22 +1094,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Spray spinosad: 10ml per 10L water',
+                'Spray spinosad',
                 'Use blue sticky traps',
                 'Apply neem oil solution',
-                'Use pyrethrin insecticide'
+                'Use pyrethrin insecticide',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Sembur spinosad: 10ml per 10L air',
+                'Sembur spinosad',
                 'Gunakan perangkap pelekat biru',
                 'Gunakan larutan minyak neem',
-                'Gunakan racun serangga pyrethrin'
+                'Gunakan racun serangga pyrethrin',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '喷洒多杀霉素：每10升水10毫升',
+                '喷洒多杀霉素',
                 '使用蓝色粘虫板',
                 '喷洒印楝油溶液',
-                '使用除虫菊酯杀虫剂'
+                '使用除虫菊酯杀虫剂',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1130,22 +1163,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply 2,4-D herbicide: 20ml per 10L water',
+                'Apply 2,4-D herbicide',
                 'Use glyphosate for non-selective control',
                 'Hand-pull young weeds',
-                'Mulch heavily to suppress growth'
+                'Mulch heavily to suppress growth',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan racun rumpai 2,4-D: 20ml per 10L air',
+                'Gunakan racun rumpai 2,4-D',
                 'Gunakan glifosat untuk kawalan bukan selektif',
                 'Cabut rumpai muda dengan tangan',
-                'Mulsakan dengan tebal untuk menyekat pertumbuhan'
+                'Mulsakan dengan tebal untuk menyekat pertumbuhan',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用2,4-D除草剂：每10升水20毫升',
+                '施用2,4-D除草剂',
                 '使用草甘膦进行非选择性防治',
                 '手工拔除幼苗期杂草',
-                '厚铺地膜以抑制生长'
+                '厚铺地膜以抑制生长',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1194,22 +1230,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply paraquat: 30ml per 10L water (use with caution)',
+                'Apply glufosinate-ammonium (paraquat is banned in Malaysia)',
                 'Use glyphosate for perennial grasses',
                 'Manual removal before seed set',
-                'Mulch to suppress regrowth'
+                'Mulch to suppress regrowth',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan paraquat: 30ml per 10L air (gunakan dengan berhati-hati)',
+                'Gunakan glufosinat-amonium (paraquat diharamkan di Malaysia)',
                 'Gunakan glifosat untuk rumput saka',
                 'Buang secara manual sebelum biji benih terbentuk',
-                'Mulsakan untuk menyekat pertumbuhan semula'
+                'Mulsakan untuk menyekat pertumbuhan semula',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用百草枯：每10升水30毫升（小心使用）',
+                '施用草铵膦（百草枯在马来西亚已被禁用）',
                 '对多年生杂草使用草甘膦',
                 '在结籽前进行人工拔除',
-                '铺设地膜以抑制再次生长'
+                '铺设地膜以抑制再次生长',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1260,22 +1299,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply metaldehyde pellets: 5g per m²',
+                'Apply metaldehyde pellets',
                 'Use iron phosphate baits (organic option)',
                 'Set up beer traps',
-                'Hand-pick at night or early morning'
+                'Hand-pick at night or early morning',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur pelet metaldehyde: 5g per m²',
+                'Tabur pelet metaldehyde',
                 'Gunakan umpan besi fosfat (pilihan organik)',
                 'Pasang perangkap bir',
-                'Kutip dengan tangan pada waktu malam atau awal pagi'
+                'Kutip dengan tangan pada waktu malam atau awal pagi',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '撒放四聚乙醛颗粒：每平方米5克',
+                '撒放四聚乙醛颗粒',
                 '使用磷酸铁诱饵（有机选择）',
                 '设置啤酒诱捕器',
-                '在夜间或清晨进行人工捕捉'
+                '在夜间或清晨进行人工捕捉',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1326,22 +1368,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply abamectin: 10ml per 10L water',
-                'Use sulfur spray: 30g per 10L water',
+                'Apply abamectin',
+                'Use sulfur spray',
                 'Spray with strong water to dislodge',
-                'Apply neem oil solution'
+                'Apply neem oil solution',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan abamectin: 10ml per 10L air',
-                'Gunakan semburan sulfur: 30g per 10L air',
+                'Gunakan abamectin',
+                'Gunakan semburan sulfur',
                 'Sembur dengan air kuat untuk menanggalkan',
-                'Gunakan larutan minyak neem'
+                'Gunakan larutan minyak neem',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用阿维菌素：每10升水10毫升',
-                '使用硫磺喷雾：每10升水30克',
+                '施用阿维菌素',
+                '使用硫磺喷雾',
                 '用强力喷水冲刷以将其驱除',
-                '施用印楝油溶液'
+                '施用印楝油溶液',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1453,22 +1498,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply Urea 46-0-0: 50g per tree every 2 weeks',
-                'Use ammonium sulfate: 100g per tree monthly',
-                'Apply organic compost 5kg per tree',
-                'Foliar spray with urea solution (2%)'
+                'Apply Urea 46-0-0',
+                'Use ammonium sulfate',
+                'Apply organic compost',
+                'Foliar spray with urea solution (2%)',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur Urea 46-0-0: 50g sepokok setiap 2 minggu',
-                'Gunakan ammonium sulfat: 100g sepokok setiap bulan',
-                'Tabur kompos organik 5kg sepokok',
-                'Semburan daun dengan larutan urea (2%)'
+                'Tabur Urea 46-0-0',
+                'Gunakan ammonium sulfat',
+                'Tabur kompos organik',
+                'Semburan daun dengan larutan urea (2%)',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用尿素 46-0-0：每棵树每2周50克',
-                '使用硫酸铵：每棵树每月100克',
-                '施用有机堆肥：每棵树5公斤',
-                '用2%尿素溶液进行叶面喷施'
+                '施用尿素 46-0-0',
+                '使用硫酸铵',
+                '施用有机堆肥',
+                '用2%尿素溶液进行叶面喷施',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1512,22 +1560,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply Triple Superphosphate (0-46-0): 30g per tree',
+                'Apply Triple Superphosphate (0-46-0)',
                 'Use Rock Phosphate for long-term supply',
-                'Apply bone meal: 200g per tree',
-                'Foliar spray with phosphoric acid'
+                'Apply bone meal',
+                'Foliar spray with phosphoric acid',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur Triple Superphosphate (0-46-0): 30g sepokok',
+                'Tabur Triple Superphosphate (0-46-0)',
                 'Gunakan Rock Phosphate untuk bekalan jangka panjang',
-                'Tabur tepung tulang: 200g sepokok',
-                'Semburan daun dengan asid fosforik'
+                'Tabur tepung tulang',
+                'Semburan daun dengan asid fosforik',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用重过磷酸钙 (0-46-0)：每棵树30克',
+                '施用重过磷酸钙 (0-46-0)',
                 '使用磷矿粉进行长期供应',
-                '施用骨粉：每棵树200克',
-                '用磷酸溶液进行叶面喷施'
+                '施用骨粉',
+                '用磷酸溶液进行叶面喷施',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1571,22 +1622,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply Potassium Sulfate (0-0-50): 50g per tree',
-                'Use Muriate of Potash: 40g per tree',
-                'Apply wood ash: 300g per tree',
-                'Foliar spray with potassium nitrate (1%)'
+                'Apply Potassium Sulfate (0-0-50)',
+                'Use Muriate of Potash',
+                'Apply wood ash',
+                'Foliar spray with potassium nitrate (1%)',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur Kalium Sulfat (0-0-50): 50g sepokok',
-                'Gunakan Muriate of Potash: 40g sepokok',
-                'Tabur abu kayu: 300g sepokok',
-                'Semburan daun dengan kalium nitrat (1%)'
+                'Tabur Kalium Sulfat (0-0-50)',
+                'Gunakan Muriate of Potash',
+                'Tabur abu kayu',
+                'Semburan daun dengan kalium nitrat (1%)',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用硫酸钾 (0-0-50)：每棵树50克',
-                '使用氯化钾：每棵树40克',
-                '施用草木灰：每棵树300克',
-                '用1%硝酸钾溶液进行叶面喷施'
+                '施用硫酸钾 (0-0-50)',
+                '使用氯化钾',
+                '施用草木灰',
+                '用1%硝酸钾溶液进行叶面喷施',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1630,22 +1684,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply chelated iron (Fe-EDTA): 10g per 10L water',
-                'Use ferrous sulfate: 50g per tree',
-                'Lower soil pH with sulfur: 100g per tree',
-                'Foliar spray iron sulfate (0.5%)'
+                'Apply chelated iron (Fe-EDTA)',
+                'Use ferrous sulfate',
+                'Lower soil pH with sulfur',
+                'Foliar spray iron sulfate (0.5%)',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan zat besi kelat (Fe-EDTA): 10g per 10L air',
-                'Gunakan ferus sulfat: 50g sepokok',
-                'Turunkan pH tanah dengan sulfur: 100g sepokok',
-                'Semburan daun ferus sulfat (0.5%)'
+                'Gunakan zat besi kelat (Fe-EDTA)',
+                'Gunakan ferus sulfat',
+                'Turunkan pH tanah dengan sulfur',
+                'Semburan daun ferus sulfat (0.5%)',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用螯合铁 (Fe-EDTA)：每10升水10克',
-                '使用硫酸亚铁：每棵树50克',
-                '用硫磺粉降低土壤 pH 值：每棵树100克',
-                '用0.5%硫酸亚铁溶液进行叶面喷施'
+                '施用螯合铁 (Fe-EDTA)',
+                '使用硫酸亚铁',
+                '用硫磺粉降低土壤 pH 值',
+                '用0.5%硫酸亚铁溶液进行叶面喷施',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1689,22 +1746,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply Epsom salt (MgSO4): 30g per tree',
-                'Use Dolomite lime: 200g per tree',
+                'Apply Epsom salt (MgSO4)',
+                'Use Dolomite lime',
                 'Foliar spray magnesium sulfate (2%)',
-                'Apply magnesium oxide: 20g per tree'
+                'Apply magnesium oxide',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Gunakan garam Epsom (MgSO4): 30g sepokok',
-                'Gunakan kapur Dolomit: 200g sepokok',
+                'Gunakan garam Epsom (MgSO4)',
+                'Gunakan kapur Dolomit',
                 'Semburan daun magnesium sulfat (2%)',
-                'Tabur magnesium oksida: 20g sepokok'
+                'Tabur magnesium oksida',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用泻盐 (硫酸镁)：每棵树30克',
-                '使用白云石石灰：每棵树200克',
+                '施用泻盐 (硫酸镁)',
+                '使用白云石石灰',
                 '用2%硫酸镁溶液进行叶面喷施',
-                '施用氧化镁：每棵树20克'
+                '施用氧化镁',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1748,22 +1808,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply calcium nitrate: 50g per tree',
-                'Use gypsum: 100g per tree',
-                'Apply agricultural lime: 200g per tree',
-                'Foliar spray calcium chloride (0.5%)'
+                'Apply calcium nitrate',
+                'Use gypsum',
+                'Apply agricultural lime',
+                'Foliar spray calcium chloride (0.5%)',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur kalsium nitrat: 50g sepokok',
-                'Gunakan gipsum: 100g sepokok',
-                'Tabur kapur pertanian: 200g sepokok',
-                'Semburan daun kalsium klorida (0.5%)'
+                'Tabur kalsium nitrat',
+                'Gunakan gipsum',
+                'Tabur kapur pertanian',
+                'Semburan daun kalsium klorida (0.5%)',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用硝酸钙：每棵树50克',
-                '使用石膏：每棵树100克',
-                '施用农业石灰：每棵树200克',
-                '用0.5%氯化钙溶液进行叶面喷施'
+                '施用硝酸钙',
+                '使用石膏',
+                '施用农业石灰',
+                '用0.5%氯化钙溶液进行叶面喷施',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1807,22 +1870,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply zinc sulfate: 25g per tree',
+                'Apply zinc sulfate',
                 'Foliar spray zinc sulfate (0.5%)',
-                'Use chelated zinc: 10g per tree',
-                'Apply zinc oxide: 15g per tree'
+                'Use chelated zinc',
+                'Apply zinc oxide',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur zink sulfat: 25g sepokok',
+                'Tabur zink sulfat',
                 'Semburan daun zink sulfat (0.5%)',
-                'Gunakan zink kelat: 10g sepokok',
-                'Tabur zink oksida: 15g sepokok'
+                'Gunakan zink kelat',
+                'Tabur zink oksida',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用硫酸锌：每棵树25克',
+                '施用硫酸锌',
                 '用0.5%硫酸锌溶液进行叶面喷施',
-                '使用螯合锌：每棵树10克',
-                '施用氧化锌：每棵树15克'
+                '使用螯合锌',
+                '施用氧化锌',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
@@ -1866,22 +1932,25 @@ export const diseaseDatabase = [
         },
         treatment: {
             en: [
-                'Apply manganese sulfate: 20g per tree',
+                'Apply manganese sulfate',
                 'Foliar spray manganese sulfate (0.3%)',
-                'Use chelated manganese: 10g per tree',
-                'Lower soil pH with sulfur if needed'
+                'Use chelated manganese',
+                'Lower soil pH with sulfur if needed',
+                'Follow the product label for application rate, timing and safety precautions'
             ],
             ms: [
-                'Tabur mangan sulfat: 20g sepokok',
+                'Tabur mangan sulfat',
                 'Semburan daun mangan sulfat (0.3%)',
-                'Gunakan mangan kelat: 10g sepokok',
-                'Turunkan pH tanah dengan sulfur jika perlu'
+                'Gunakan mangan kelat',
+                'Turunkan pH tanah dengan sulfur jika perlu',
+                'Ikut label produk untuk kadar, masa dan langkah keselamatan penggunaan'
             ],
             zh: [
-                '施用硫酸锰：每棵树20克',
+                '施用硫酸锰',
                 '用0.3%硫酸锰溶液进行叶面喷施',
-                '使用螯合锰：每棵树10克',
-                '如果需要，用硫磺粉降低土壤 pH 值'
+                '使用螯合锰',
+                '如果需要，用硫磺粉降低土壤 pH 值',
+                '请按照产品标签上的用量、施用时间和安全注意事项使用'
             ]
         },
         prevention: {
