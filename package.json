@@ -12,6 +12,7 @@
     "test": "vitest run",
     "audit:export": "node server/scripts/exportDiagnosisAudit.js",
     "audit:prune": "node server/scripts/pruneDiagnosisAudit.js",
+    "audit:metrics": "node server/scripts/reportAssessmentMetrics.js",
     "db:migrate:supabase": "node server/scripts/migrateSupabaseDataToNeon.js",
     "benchmark:expert": "node server/scripts/evaluateExpertBenchmark.js",
     "check:translations": "node ./scripts/check-translations.mjs",

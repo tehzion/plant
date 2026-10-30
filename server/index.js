@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { buildAnalysisCacheKey } from './utils/analysisCache.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
-import { logTrainingData, logFeedback } from './utils/dataCollector.js';
+import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
@@ -460,6 +460,25 @@ const resolveFeedbackAttribution = async (req, scanId) => {
     }
     return null;
 };
+
+// Withdraw consent for one scan's photos. Same proof of ownership as
+// feedback; the assessment text is kept, only the photos are deleted.
+app.post('/api/scans/:scanId/withdraw-photos', async (req, res, next) => {
+    try {
+        const scanId = String(req.params.scanId || '');
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) return res.status(400).json({ error: 'Invalid scan ID' });
+        if (!await resolveFeedbackAttribution(req, scanId)) {
+            return res.status(403).json({
+                error: 'WITHDRAWAL_NOT_AUTHORISED',
+                message: 'Photos can only be withdrawn from the device or account that ran this scan.',
+            });
+        }
+        const result = await withdrawTrainingImages(scanId);
+        res.json({ withdrawn: true, removedPhotos: result?.removed || 0 });
+    } catch (error) {
+        next(error);
+    }
+});
 
 app.post('/api/feedback', async (req, res, next) => {
     try {

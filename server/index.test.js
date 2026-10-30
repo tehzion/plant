@@ -2,7 +2,7 @@
 import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
-    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(),
+    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), withdrawImages: vi.fn(),
     buildKeywordProductRecommendation: vi.fn(), recommendProductTags: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
     getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('./services/wooCommerceService.js', () => ({
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
     getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
 }));
-vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback }));
+vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, withdrawTrainingImages: mocks.withdrawImages }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
 let app;
@@ -139,6 +139,21 @@ describe('assessment and feedback attribution', () => {
         const forged = await invoke('/api/feedback', { body: { scanId, wasCorrect: true, feedbackToken: `v1.${'a'.repeat(40)}.forged` }, headers: {}, get: () => '' });
         expect(forged.status).toHaveBeenCalledWith(403);
         expect(mocks.logFeedback).not.toHaveBeenCalled();
+    });
+
+    it('lets only the device that ran a scan withdraw its photos', async () => {
+        mocks.withdrawImages.mockResolvedValue({ removed: 2 });
+        const { feedbackToken } = (await analyze('guest:farmer-a')).json.mock.calls[0][0];
+        const withdraw = (body) => invoke('/api/scans/:scanId/withdraw-photos', { params: { scanId }, body, headers: {}, get: () => '' });
+        const anonymous = await withdraw({});
+        expect(anonymous.status).toHaveBeenCalledWith(403);
+        const otherScan = '2d8f4e3a-1f6c-4e3d-8a4b-5c7d8e9f0a1b';
+        const { feedbackToken: otherToken } = (await analyze('guest:farmer-b', otherScan, 'tree-b3')).json.mock.calls[0][0];
+        expect((await withdraw({ feedbackToken: otherToken })).status).toHaveBeenCalledWith(403);
+        expect(mocks.withdrawImages).not.toHaveBeenCalled();
+        const allowed = await withdraw({ feedbackToken });
+        expect(mocks.withdrawImages).toHaveBeenCalledWith(scanId);
+        expect(allowed.json).toHaveBeenCalledWith({ withdrawn: true, removedPhotos: 2 });
     });
 });
 

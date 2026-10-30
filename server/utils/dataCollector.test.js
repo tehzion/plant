@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ createClient: vi.fn(), upload: vi.fn(), upsert: vi.fn(), insert: vi.fn(), queryNeon: vi.fn() }));
+const mocks = vi.hoisted(() => ({ createClient: vi.fn(), upload: vi.fn(), remove: vi.fn(), upsert: vi.fn(), insert: vi.fn(), queryNeon: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: mocks.createClient }));
 vi.mock('./neonDatabase.js', () => ({ queryNeon: mocks.queryNeon }));
-import { logTrainingData, logFeedback } from './dataCollector.js';
+import { logTrainingData, logFeedback, withdrawTrainingImages } from './dataCollector.js';
 import { DATA_CONSENT_VERSION } from '../../shared/dataConsent.js';
 
 beforeEach(() => {
@@ -11,10 +11,11 @@ beforeEach(() => {
     vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('SUPABASE_URL', 'https://test.example');
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-only-placeholder'); vi.stubEnv('DIAGNOSIS_DATA_BACKEND', 'supabase');
     mocks.createClient.mockReturnValue({
-        storage: { from: vi.fn(() => ({ upload: mocks.upload })) },
+        storage: { from: vi.fn(() => ({ upload: mocks.upload, remove: mocks.remove })) },
         from: vi.fn(() => ({ upsert: mocks.upsert, insert: mocks.insert })),
     });
     mocks.upload.mockResolvedValue({ error: null });
+    mocks.remove.mockResolvedValue({ error: null });
     mocks.upsert.mockResolvedValue({ error: null });
     mocks.insert.mockResolvedValue({ error: null });
     mocks.queryNeon.mockResolvedValue({ rows: [] });
@@ -74,4 +75,24 @@ it('treats missing, malformed or outdated consent as no consent', async () => {
     expect(mocks.upload).not.toHaveBeenCalled();
     const inserts = mocks.queryNeon.mock.calls.filter(([sql]) => sql.includes('insert into public.diagnosis_training_logs'));
     expect(inserts.map(([, params]) => params[5].dataConsent.aiImprovement)).toEqual([false, false, false]);
+});
+it('withdraws consent by deleting stored photos and marking the record not consented', async () => {
+    mocks.queryNeon.mockImplementation(async (sql) => ({ rows: sql.startsWith('select') ? [{ images: { tree: 'training/a/s_tree.jpg', leaf: null } }] : [] }));
+    expect(await withdrawTrainingImages('scan-4')).toEqual({ removed: 1 });
+    expect(mocks.remove).toHaveBeenCalledWith(['training/a/s_tree.jpg']);
+    const [sql, params] = mocks.queryNeon.mock.calls.find(([text]) => text.trim().startsWith('update'));
+    expect(sql).toContain('dataConsent');
+    expect(params[1]).toEqual({ tree: null, leaf: null });
+    expect(params[2]).toMatchObject({ aiImprovement: false, withdrawnAt: expect.any(String) });
+});
+it('does not mark the record when photo deletion fails, and rejects invalid IDs', async () => {
+    mocks.queryNeon.mockResolvedValue({ rows: [{ images: { tree: 'training/a/s_tree.jpg' } }] });
+    mocks.remove.mockResolvedValue({ error: new Error('storage offline') });
+    await expect(withdrawTrainingImages('scan-5')).rejects.toThrow('storage offline');
+    expect(mocks.queryNeon.mock.calls.some(([text]) => text.trim().startsWith('update'))).toBe(false);
+    await expect(withdrawTrainingImages('../etc')).rejects.toThrow('Invalid scan ID');
+});
+it('returns null when there is no record to withdraw', async () => {
+    mocks.queryNeon.mockResolvedValue({ rows: [] });
+    expect(await withdrawTrainingImages('scan-6')).toBeNull();
 });

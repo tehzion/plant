@@ -221,3 +221,35 @@ export const logFeedback = async (feedbackData, attribution = null) => {
         return false;
     }
 };
+
+/**
+ * Withdraw consent for one scan: delete its stored photos and mark the record
+ * as not consented. The assessment text stays for the audit window. Callers
+ * must have verified that the requester ran or owns the scan.
+ * @returns {Promise<{ removed: number }|null>} null when no record exists
+ */
+export const withdrawTrainingImages = async (scanId) => {
+    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(String(scanId || ''))) throw new Error('Invalid scan ID');
+    const withdrawn = { ...normalizeDataConsent(null), withdrawnAt: new Date().toISOString() };
+    if (useCloudAudit()) {
+        const { rows } = await queryNeon('select images from public.diagnosis_training_logs where id = $1', [scanId]);
+        if (!rows?.length) return null;
+        const paths = Object.values(rows[0].images || {}).filter(Boolean);
+        if (paths.length) {
+            const { error } = await getAuditClient().storage.from('scan-images').remove(paths);
+            if (error) throw error;
+        }
+        await queryNeon(
+            `update public.diagnosis_training_logs
+             set images = $2, metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object('dataConsent', $3::jsonb)
+             where id = $1`,
+            [scanId, { tree: null, leaf: null }, withdrawn],
+        );
+        return { removed: paths.length };
+    }
+    // Local development dataset: images are named <owner>_<scanId>_<kind>.jpg.
+    const files = await fs.promises.readdir(IMAGES_DIR).catch(() => []);
+    const matches = files.filter((name) => name.endsWith(`_${scanId}_tree.jpg`) || name.endsWith(`_${scanId}_leaf.jpg`));
+    await Promise.all(matches.map((name) => fs.promises.unlink(path.join(IMAGES_DIR, name))));
+    return { removed: matches.length };
+};

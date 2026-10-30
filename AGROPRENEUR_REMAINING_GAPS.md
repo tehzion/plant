@@ -44,7 +44,7 @@
 | Admin and expert screens are English only. | Translate if non-English reviewers are expected. |
 | myGAP coverage vs official requirements not verified; no certification or government integration. | Map fields to the official myGAP checklist with DOA/an auditor; keep "preparation aid" wording. |
 | PDPA assessment for images, location and feedback not done. | Qualified legal review; document retention for audit images and reviews. |
-| Performance, cost per assessment and latency not measured. | Instrument p50/p95 latency and AI calls per scan (`diagnosisAttempts` is now recorded). |
+| Performance, cost per assessment and latency not measured. | Server analysis time is now recorded per scan, and `npm run audit:metrics -- 30` reports median and 95th-percentile time plus the consent opt-in rate for a period (read-only). Run it after deployment for real figures; AI cost per scan is still not reported. |
 | Farmer usability not observed. | Short field sessions with farmers in ms/en/zh, focusing on the comparison cards and offline banner. |
 | Workbox runtime caching of API GETs not configured. | Not needed now — reads fall back to the IndexedDB cache. |
 
@@ -55,9 +55,9 @@
 | Priority | Gap | Recommended next action |
 |---|---|---|
 | P0 | The consent wording and privacy policy changes have not been reviewed by a lawyer under the PDPA. | Have qualified counsel review the checkbox text, the privacy policy and the retention period before release. |
-| P0 | The privacy policy still says scan history is "stored locally on your device using encryption". This was not verified and is probably inaccurate (history also syncs to Neon). | Correct the wording, together with the legal review. |
-| P1 | `server/scripts/exportDiagnosisAudit.js` exports every assessment record regardless of consent. | Filter on `metadata->'dataConsent'->>'aiImprovement' = 'true'` in any export used for AI evaluation or development. |
+| ~~P0~~ Fixed | The privacy policy said scan history was "stored locally on your device using encryption". | Reworded in en/ms/zh: records are kept on the device and, when signed in, in the cloud database, sent over encrypted connections; kept photos are deleted after the retention period (daily `audit:prune` cron in `render.yaml`). Still needs the legal review above. |
+| ~~P1~~ Fixed | `server/scripts/exportDiagnosisAudit.js` exported every record regardless of consent. | Now exports only consented scans and their feedback; records with no answer (including older ones) count as not consented. |
 | P1 | Records created before this change have no `dataConsent` and their photos were kept under the earlier policy. | Treat them as not consented for AI development. Decide whether to delete their photos early or let the existing 90-day pruning remove them. |
 | P1 | Experts reviewing non-consented scans see only the text assessment, without photos. | Accept this, or ask for a separate, explicit consent to expert review. Measure how many cases lack photos. |
 | P2 | Consent is saved per device, not per account. | Store the answer on the profile for signed-in users, and add a setting to change it later. |
-| P2 | No way to withdraw consent for photos already stored. | Add a request path, such as a support contact or an in-app action, that deletes stored photos for a scan ID. |
+| P2 (partly fixed) | No way to withdraw consent for photos already stored. | Added `POST /api/scans/:scanId/withdraw-photos` (same proof of ownership as feedback): deletes the photos and marks the record not consented. The privacy policy tells farmers to contact support. **Still missing:** an in-app button on Results/History. |
