@@ -197,6 +197,12 @@
 }
 
 @media (min-width: 1024px) {
+  /* Three card columns need more than the phone-width app column. */
+  .encyclopedia-layout {
+    max-width: 1180px;
+    padding: 24px 32px 80px;
+  }
+
   .diseases-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
