@@ -76,4 +76,13 @@ describe('FeedbackWidget', () => {
     expect(payload.feedbackToken).toBe('v1.token');
     expect(request.headers.Authorization).toBeUndefined();
   });
+
+  it('explains why feedback cannot be sent for an older scan instead of failing', async () => {
+    global.fetch = vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) }));
+    render(<FeedbackWidget scanId="old-scan" scan={{ disease: 'Leaf Spot' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Looks correct' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit review' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('not available for scans saved before');
+    expect(showToastMock).not.toHaveBeenCalledWith(expect.anything(), 'error');
+  });
 });

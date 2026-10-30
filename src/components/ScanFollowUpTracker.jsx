@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getPlots } from '../utils/localStorage.js';
@@ -8,8 +8,11 @@ import { saveScanFollowUp } from '../utils/scanFollowUpStorage.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import FollowUpComparison from './FollowUpComparison.jsx';
 import { sortFollowUpEvents } from '../utils/followUpComparison.js';
+import { localDateKey } from '../utils/farmerPrefs.js';
 
-const ScanFollowUpTracker = ({ scan, onSaved }) => {
+// openRequest ({ date, at }) lets the result page open this form with a
+// suggested re-check date without the farmer hunting for it.
+const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
     const { language, t } = useLanguage();
     const { user } = useAuth();
     const copy = getScanQualityCopy(language);
@@ -22,6 +25,15 @@ const ScanFollowUpTracker = ({ scan, onSaved }) => {
     const events = scan.followUp?.history || [];
     const [selectedEventId, setSelectedEventId] = useState(() => sortFollowUpEvents(events)[0]?.id || '');
     const update = (field, value) => setForm(current => ({ ...current, [field]: value }));
+    const detailsRef = useRef(null);
+    useEffect(() => {
+        if (!openRequest || !detailsRef.current) return;
+        detailsRef.current.open = true;
+        // Keep a future date the farmer already chose; replace an empty or past one.
+        if (openRequest.date) setForm(current => (current.nextCheckDate && current.nextCheckDate >= localDateKey() ? current : { ...current, nextCheckDate: openRequest.date }));
+        detailsRef.current.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        detailsRef.current.querySelector('input[type="date"]')?.focus();
+    }, [openRequest]);
     useEffect(() => {
         let cancelled = false;
         Promise.resolve(getPlots(user?.id || null)).then(data => { if (!cancelled) setPlots(data); }).catch(() => {});
@@ -51,7 +63,7 @@ const ScanFollowUpTracker = ({ scan, onSaved }) => {
         finally { setSaving(false); }
     };
     return <section className="scan-followup-tracker app-surface" aria-label={copy.followUp}>
-        <details><summary>{copy.followUp}{scan.followUp?.nextCheckDate ? ` · ${scan.followUp.nextCheckDate}` : ''}</summary>
+        <details ref={detailsRef}><summary>{copy.followUp}{scan.followUp?.nextCheckDate ? ` · ${scan.followUp.nextCheckDate}` : ''}</summary>
         <form onSubmit={save}><fieldset disabled={saving}>
             <label>{copy.plot}<select value={form.plotId} onChange={e => update('plotId', e.target.value)}>
                 <option value="">{copy.noPlot}</option>{plots.map(plot => <option value={plot.id} key={plot.id}>{plot.name}</option>)}

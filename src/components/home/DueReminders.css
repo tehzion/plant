@@ -1,0 +1,9 @@
+.due-reminders { padding: 14px 16px; margin-bottom: 16px; border-left: 4px solid #b45309; display: grid; gap: 10px; }
+.due-reminders h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.05rem; }
+.due-reminders ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.due-reminders li { display: flex; gap: 8px; align-items: center; }
+.due-reminders__item { flex: 1; min-height: 48px; display: flex; align-items: center; padding: 8px 12px; border-radius: 10px; background: #fff7ed; color: #7c2d12; font: inherit; font-weight: 600; text-align: left; border: 1px solid #fed7aa; }
+button.due-reminders__item { cursor: pointer; }
+.due-reminders__done { min-height: 48px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--color-border); background: var(--color-bg-card); font: inherit; font-weight: 700; cursor: pointer; }
+.due-reminders__enable { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.due-reminders__message { margin: 0; font-size: .9rem; color: #475569; }

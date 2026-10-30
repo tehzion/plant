@@ -23,6 +23,13 @@ const FeedbackWidget = ({ scanId, scan }) => {
   const [correctCrop, setCorrectCrop] = useState('');
   const [correctDisease, setCorrectDisease] = useState('');
   const [note, setNote] = useState('');
+  // Set when the server refuses feedback for this scan (older scans have no
+  // feedback token), so the farmer gets an explanation instead of a retry loop.
+  const [blockedMessage, setBlockedMessage] = useState('');
+  const label = (key, fallback) => {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  };
 
   const issueOptions = useMemo(() => ISSUE_TYPES.map((value) => ({
     value,
@@ -59,6 +66,13 @@ const FeedbackWidget = ({ scanId, scan }) => {
         }),
       });
 
+      if (response.status === 403) {
+        setBlockedMessage(scan?.feedbackToken
+          ? label('assessment.ux.feedbackNotAllowed', 'Feedback can only be sent from the phone or account that ran this scan.')
+          : label('assessment.ux.feedbackUnavailable', 'Feedback is not available for scans saved before the latest update.'));
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('feedback_failed');
       }
@@ -72,6 +86,15 @@ const FeedbackWidget = ({ scanId, scan }) => {
       setIsSubmitting(false);
     }
   };
+
+  if (blockedMessage) {
+    return (
+      <div className="feedback-widget" role="status">
+        <MessageSquareWarning size={18} />
+        <span>{blockedMessage}</span>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (

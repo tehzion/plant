@@ -177,3 +177,24 @@ export const submitExpertReview = async (reviewer, scanId, body) => {
     );
     return inserted.rows[0];
 };
+
+/**
+ * Farmer-facing summary of the latest expert review. Reviewer identity and
+ * internal notes are not exposed; only the verdict and any correction.
+ */
+export const getFarmerReviewSummary = async (scanId) => {
+    if (!SCAN_ID_PATTERN.test(String(scanId || ''))) throw fail('Invalid scan ID.');
+    const { rows } = await queryNeon(
+        `select verdict, corrected_diagnosis, corrected_crop, created_at
+         from public.diagnosis_expert_reviews where scan_id = $1 order by created_at desc limit 1`,
+        [scanId],
+    );
+    const row = rows?.[0];
+    if (!row) return null;
+    return {
+        verdict: row.verdict,
+        correctedDiagnosis: row.corrected_diagnosis || null,
+        correctedCrop: row.corrected_crop || null,
+        reviewedAt: row.created_at,
+    };
+};

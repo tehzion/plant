@@ -929,3 +929,10 @@
     gap: 20px;
   }
 }
+
+.product-label-details { margin-top: 6px; }
+.product-label-details summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; color: var(--color-text-primary); }
+.product-label-details summary { list-style: none; justify-content: space-between; }
+.product-label-details summary::-webkit-details-marker { display: none; }
+.product-label-details summary::after { content: '▾'; color: #475569; }
+.product-label-details[open] summary::after { transform: rotate(180deg); }

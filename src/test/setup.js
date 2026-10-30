@@ -7,6 +7,11 @@ vi.mock('lucide-react', () => {
     const iconNames = [
         'AlertCircle',
         'ClipboardCheck',
+        'CalendarCheck',
+        'ListChecks',
+        'Mic',
+        'MicOff',
+        'Wand2',
         'CloudOff',
         'AlertTriangle',
         'Apple',

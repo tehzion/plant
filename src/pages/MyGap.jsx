@@ -6,6 +6,8 @@ import {
     ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download
 } from 'lucide-react';
 import { getLogbook, saveLogEntry, saveChecklistState } from '../utils/localStorage';
+import VoiceLogInput from '../components/VoiceLogInput';
+import { addHarvestReminder, getLogDefaults, localDateKey, rememberLogDefaults } from '../utils/farmerPrefs.js';
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
@@ -36,7 +38,9 @@ const MyGapPage = () => {
 
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
     const [isAddingLog, setIsAddingLog] = useState(false);
-    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: new Date().toISOString().slice(0, 10), plot_id: '', crop: '', product_used: '', quantity: '', operator: '' });
+    // Plot, crop and operator rarely change between entries, so they are
+    // remembered on this device and pre-filled.
+    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults() });
     const [newLog, setNewLog] = useState(emptyLog);
     const label = (key, fallback) => {
         const value = t(key);
@@ -60,6 +64,7 @@ const MyGapPage = () => {
         e.preventDefault();
         const entry = await saveLogEntry(newLog, user?.id ?? null);
         if (entry) {
+            rememberLogDefaults(newLog);
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
             setNewLog(emptyLog());
@@ -69,6 +74,24 @@ const MyGapPage = () => {
         } else {
             notify({ type: 'error', title: t('common.error'), message: t('common.error') });
         }
+    };
+
+    const repeatLastLog = () => {
+        const last = logs[0];
+        if (!last) return;
+        setNewLog({
+            ...emptyLog(),
+            type: last.type || 'pesticide',
+            notes: last.notes || '',
+            ...Object.fromEntries(['plot_id', 'crop', 'product_used', 'quantity', 'operator'].map((field) => [field, last[field] || ''])),
+        });
+        setIsAddingLog(true);
+    };
+
+    const saveHarvestReminder = () => {
+        if (!phiResult) return;
+        const saved = addHarvestReminder({ date: localDateKey(phiResult.date), name: phiResult.pesticideName || t('mygap.safeHarvestDate') });
+        notify({ type: saved ? 'success' : 'error', title: saved ? label('assessment.ux.harvestReminderSaved', 'Reminder saved') : t('common.error'), message: saved ? phiResult.date.toLocaleDateString() : t('common.error') });
     };
 
     const calculatePHI = (e) => {
@@ -533,8 +556,15 @@ const MyGapPage = () => {
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
                         {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
 
+                        {!isAddingLog && logs.length > 0 && (
+                            <button type="button" className="btn btn-secondary mygap-repeat-btn" onClick={repeatLastLog}>
+                                {label('assessment.ux.repeatLast', 'Repeat last entry')}
+                            </button>
+                        )}
+
                         {isAddingLog && (
                             <form className="add-log-form slide-down" onSubmit={handleAddLog}>
+                                <VoiceLogInput onFill={(fields) => setNewLog((current) => ({ ...current, ...fields }))} />
                                 <div className="form-group">
                                     <label htmlFor="mygap-log-type">{t('mygap.logType')}</label>
                                     <select
@@ -612,6 +642,11 @@ const MyGapPage = () => {
                                 <div className="empty-logs">
                                     <Calendar size={48} />
                                     <p>{t('mygap.emptyLogs')}</p>
+                                    {!isAddingLog && (
+                                        <button type="button" className="btn btn-primary" onClick={() => setIsAddingLog(true)}>
+                                            {label('assessment.ux.addFirstLog', 'Add your first record')}
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 logs.map((log) => (
@@ -713,6 +748,11 @@ const MyGapPage = () => {
                                         : t('mygap.notSafeToHarvest')}
                                 </p>
                                 <p className="phi-advisory">{t('mygap.phiAdvisory') || 'Advisory only: always follow the pesticide label and local agricultural guidance.'}</p>
+                                {phiResult.daysRemaining > 0 && (
+                                    <button type="button" className="btn btn-secondary phi-reminder-btn" onClick={saveHarvestReminder}>
+                                        {label('assessment.ux.saveHarvestReminder', 'Remind me on this date')}
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

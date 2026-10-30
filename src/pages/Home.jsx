@@ -26,6 +26,7 @@ import HeroSection from '../components/home/HeroSection';
 import EventProductHero from '../components/home/EventProductHero';
 import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
+import DueReminders from '../components/home/DueReminders';
 import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
@@ -33,7 +34,7 @@ import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
 import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
-import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
+import { isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
   const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
@@ -482,6 +483,9 @@ const Home = () => {
                 weatherError={weatherError}
               />
 
+              {/* Follow-up checks and harvest dates that are due, shown before the promo banner. */}
+              <DueReminders scans={dueScans} onOpenScan={(id) => navigate(`/results/${id}`)} />
+
               <EventProductHero
                 onScan={handleStartScan}
                 showDemoScenarios={user?.id === 'demo-user-123'}
@@ -490,11 +494,6 @@ const Home = () => {
 
               <div className="home-dashboard-stack">
                 <ActionGrid onScan={handleStartScan} />
-                {dueScans.length > 0 && <section className="app-surface home-followups">
-                  <h3>{getUiCopy(language).due}</h3>
-                  {dueScans.slice(0, 5).map(scan => <button className="btn btn-secondary" key={scan.id} onClick={() => navigate(`/results/${scan.id}`)}>{scan.disease} · {scan.followUp.nextCheckDate}</button>)}
-                  <button className="home-section-link" onClick={() => navigate('/history')}>{t('home.seeAll')}</button>
-                </section>}
                 <RecentScans
                   scans={recentScans}
                   onSeeAll={() => navigate('/history')}

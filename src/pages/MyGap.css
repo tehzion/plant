@@ -583,3 +583,12 @@
 .field-hint { display: block; margin-top: 4px; font-size: .8rem; color: var(--color-text-secondary); }
 .log-details { margin: 6px 0 0; font-size: .85rem; color: var(--color-text-secondary); line-height: 1.45; }
 .log-sync-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: #eff6ff; color: #1e3a8a; font-size: .75rem; font-weight: 700; }
+.mygap-repeat-btn, .phi-reminder-btn { min-height: 48px; width: 100%; margin-bottom: 12px; }
+.phi-reminder-btn { margin-top: 12px; }
+.empty-logs .btn { margin-top: 12px; min-height: 48px; }
+.voice-log { display: grid; gap: 8px; margin-bottom: 16px; padding: 12px; border-radius: 12px; background: var(--color-primary-lighter); border: 1px solid var(--color-brand-border); }
+.voice-log label { font-weight: 700; }
+.voice-log textarea { min-height: 64px; padding: 10px; border-radius: 8px; border: 1px solid var(--color-border); font: inherit; }
+.voice-log__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.voice-log__actions .btn { min-height: 48px; display: inline-flex; align-items: center; gap: 6px; flex: 1 1 140px; justify-content: center; }
+.voice-log__message { margin: 0; font-size: .9rem; color: #14532d; }

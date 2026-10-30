@@ -86,3 +86,15 @@ describe('expert review records', () => {
         expect(view.aiAssessment.alternatives).toEqual([{ name: 'Septoria Leaf Spot', confidence_level: 'low' }]);
     });
 });
+
+describe('farmer-facing review summary', () => {
+    it('exposes only the verdict and correction, not reviewer identity or notes', async () => {
+        const { getFarmerReviewSummary } = await import('./expertReviewService.js');
+        mocks.queryNeon.mockResolvedValueOnce({ rows: [{ verdict: 'corrected', corrected_diagnosis: 'Rust', corrected_crop: null, created_at: 'now' }] });
+        const summary = await getFarmerReviewSummary('scan-1');
+        expect(summary).toEqual({ verdict: 'corrected', correctedDiagnosis: 'Rust', correctedCrop: null, reviewedAt: 'now' });
+        expect(mocks.queryNeon.mock.calls[0][0]).not.toMatch(/reviewer|notes/);
+        mocks.queryNeon.mockResolvedValueOnce({ rows: [] });
+        expect(await getFarmerReviewSummary('scan-1')).toBeNull();
+    });
+});

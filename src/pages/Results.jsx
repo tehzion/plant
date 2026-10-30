@@ -23,6 +23,8 @@ import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
 import { buildScanResultModel } from '../utils/scanResultModel.js';
 import ScanDecisionSummary, { nextScanStep } from '../components/ScanDecisionSummary.jsx';
+import TodayPlanCard from '../components/results/TodayPlanCard.jsx';
+import { fetchScanExpertReview } from '../utils/expertReview.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { confidencePercent } from '../../shared/scanResultPolicy.js';
 import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
@@ -71,6 +73,8 @@ const Results = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [scan, setScan] = useState(null);
+  const [recheckRequest, setRecheckRequest] = useState(null);
+  const [expertReview, setExpertReview] = useState(null);
   const [originalScan, setOriginalScan] = useState(null);
   const translationRequest = useRef(0);
   useEffect(() => { translationRequest.current++; setTranslating(false); setTranslationError(false); return () => { translationRequest.current++; }; }, [id, language]);
@@ -109,6 +113,16 @@ const Results = () => {
         setScanLoading(false);
       });
   }, [id, user?.id]);
+
+  // Expert reviews are optional extra context; a failed or offline lookup
+  // simply leaves the badge hidden.
+  useEffect(() => {
+    if (!scan?.id) return undefined;
+    let cancelled = false;
+    setExpertReview(null);
+    fetchScanExpertReview(scan).then(review => { if (!cancelled) setExpertReview(review); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [scan?.id, scan?.feedbackToken]);
 
   const translateAnalysis = async () => {
     if (!originalScan || translating) return;
@@ -538,7 +552,8 @@ ${t('pdf.generatedBy')}
           </div>
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
-        <ScanDecisionSummary result={result} />
+        <ScanDecisionSummary result={result} expertReview={expertReview} />
+        <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
         <div className="results-next-action">
           <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
             {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
@@ -671,7 +686,7 @@ ${t('pdf.generatedBy')}
         </details>
 
         <section className="results-followup-group">
-        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
+        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
         <div className="follow-up-card app-surface app-surface--soft">
           <div className="follow-up-icon">
             <ClipboardList size={22} />

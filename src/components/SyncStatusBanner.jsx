@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CloudOff, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { getSyncSummary, retryFailedSync, SYNC_STATUS_EVENT } from '../utils/syncQueue.js';
+import { getSyncSummary, listWaitingRecords, retryFailedSync, SYNC_STATUS_EVENT } from '../utils/syncQueue.js';
 import './SyncStatusBanner.css';
 
 const DEMO_USER_ID = 'demo-user-123';
@@ -14,6 +14,7 @@ const SyncStatusBanner = () => {
     const { t } = useLanguage();
     const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine !== false);
     const [summary, setSummary] = useState({ pending: 0, failed: 0, conflict: 0 });
+    const [waiting, setWaiting] = useState(null);
     const owner = user?.id && user.id !== DEMO_USER_ID ? `user:${user.id}` : null;
     const label = (key, fallback) => {
         const value = t(key);
@@ -22,7 +23,9 @@ const SyncStatusBanner = () => {
 
     const refresh = useCallback(async () => {
         if (!owner) return setSummary({ pending: 0, failed: 0, conflict: 0 });
-        try { setSummary(await getSyncSummary(owner)); } catch { /* IndexedDB unavailable */ }
+        try {
+            setSummary(await getSyncSummary(owner));
+        } catch { /* IndexedDB unavailable */ }
     }, [owner]);
 
     useEffect(() => {
@@ -46,6 +49,11 @@ const SyncStatusBanner = () => {
         refresh();
     };
 
+    const toggleWaiting = async () => {
+        if (waiting) return setWaiting(null);
+        try { setWaiting(await listWaitingRecords(owner)); } catch { setWaiting([]); }
+    };
+
     const problems = summary.failed + summary.conflict;
     if (online && !summary.pending && !problems) return null;
 
@@ -60,10 +68,26 @@ const SyncStatusBanner = () => {
                     {problems > 0 && ` ${label('assessment.sync.failed', '{count} record(s) could not sync. They are still saved on this device.').replace('{count}', problems)}`}
                 </span>
             </div>
+            {owner && (summary.pending > 0 || problems > 0) && (
+                <button type="button" className="sync-status__retry" onClick={toggleWaiting} aria-expanded={Boolean(waiting)}>
+                    {waiting ? label('assessment.ux.syncHideWaiting', 'Hide') : label('assessment.ux.syncShowWaiting', 'Show waiting records')}
+                </button>
+            )}
             {online && summary.failed > 0 && (
                 <button type="button" className="sync-status__retry" onClick={retry}>
                     {label('assessment.sync.retry', 'Retry sync')}
                 </button>
+            )}
+            {waiting && (
+                <ul className="sync-status__list">
+                    {waiting.map((item) => (
+                        <li key={item.id}>
+                            {label(`assessment.ux.collection.${item.collection}`, item.collection)}
+                            {' · '}{item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
+                            {item.state !== 'pending' && ` · ${item.lastError || item.state}`}
+                        </li>
+                    ))}
+                </ul>
             )}
         </div>
     );

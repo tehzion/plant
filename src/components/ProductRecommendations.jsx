@@ -582,8 +582,6 @@ const ProductRecommendations = ({
           : '';
     const availabilityLabel = availabilityKey ? getLabel(t, `results.${availabilityKey}`, availabilityKey.replaceAll('_', ' ')) : '';
     const cautionLabel = getCautionLabel(t, product.cautionLevel);
-    const matchScore = Number(product.matchScore);
-    const hasMatchScore = Number.isFinite(matchScore) && matchScore > 0;
     const matchReason = translateIfNeeded(product.matchReason);
     const activeIngredients = Array.isArray(product.activeIngredients)
       ? product.activeIngredients.map(translateIfNeeded).filter(Boolean).slice(0, 4)
@@ -669,20 +667,15 @@ const ProductRecommendations = ({
 
           <p className="product-description">{productDesc}</p>
 
-          {(hasMatchScore || matchReason || cautionLabel) && (
+          {(recommendationReason || matchReason || cautionLabel || product.discoveryOnly) && (
             <div className="product-match-summary">
-              <div className="product-match-pills">
-                {hasMatchScore && (
-                  <span className="product-match-pill">
-                    {getLabel(t, 'results.productMatchScore', 'Match')} {Math.round(matchScore)}%
-                  </span>
-                )}
-                {cautionLabel && (
+              {cautionLabel && (
+                <div className="product-match-pills">
                   <span className={`product-match-pill product-match-pill--${product.cautionLevel}`}>
                     {cautionLabel}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
               {recommendationReason && (
                 <p className="product-match-reason">
                   <strong>{getLabel(t, 'assessment.whySuggested', 'Why suggested')}:</strong> {recommendationReason}
@@ -694,16 +687,23 @@ const ProductRecommendations = ({
               {product.discoveryOnly && (
                 <p className="product-rule-caution">{getLabel(t, 'assessment.discoveryCardNote', 'Not confirmed for this result. Check the label for your crop before use.')}</p>
               )}
-              {ingredientList.length > 0 && (
-                <p className="product-active-ingredients">
-                  <Pill size={13} />
-                  <span>
-                    {getLabel(t, 'results.activeIngredientToCheck', 'Active ingredient to check')}: {ingredientList.join(', ')}
-                  </span>
-                </p>
-              )}
-              {cautionNote && (
-                <p className="product-rule-caution">{cautionNote}</p>
+              {/* The keyword match score is an internal ranking signal, not a
+                  quality rating, so it is no longer shown to farmers. */}
+              {(ingredientList.length > 0 || cautionNote) && (
+                <details className="product-label-details" onClick={(event) => event.stopPropagation()}>
+                  <summary>{getLabel(t, 'assessment.ux.labelDetails', 'Label details')}</summary>
+                  {ingredientList.length > 0 && (
+                    <p className="product-active-ingredients">
+                      <Pill size={13} />
+                      <span>
+                        {getLabel(t, 'results.activeIngredientToCheck', 'Active ingredient to check')}: {ingredientList.join(', ')}
+                      </span>
+                    </p>
+                  )}
+                  {cautionNote && (
+                    <p className="product-rule-caution">{cautionNote}</p>
+                  )}
+                </details>
               )}
             </div>
           )}

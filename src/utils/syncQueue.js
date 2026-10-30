@@ -36,6 +36,11 @@ export const getSyncSummary = async (owner) => {
     return summary;
 };
 
+/** Queued records still on this device, oldest first, for the status banner. */
+export const listWaitingRecords = async (owner) => (owner ? await listOperations(owner) : [])
+    .map(({ id, collection, state, createdAt, lastError }) => ({ id, collection, state, createdAt, lastError: lastError || '' }))
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+
 export const retryFailedSync = async (owner) => {
     const count = await retryFailedOperations(owner);
     notifySyncStatus(owner);

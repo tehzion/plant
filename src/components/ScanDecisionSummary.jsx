@@ -6,7 +6,7 @@ import { CONFIDENCE_LEVEL_FALLBACK_LABELS } from '../../shared/diseaseAssessment
 export const nextScanStep = (result, copy) => result.requiresRetake ? copy.nextRetake
     : result.healthy ? copy.nextHealthy : result.treatmentEligible ? copy.nextTreat : copy.nextScout;
 
-const ScanDecisionSummary = ({ result }) => {
+const ScanDecisionSummary = ({ result, expertReview = null }) => {
     const { language, t } = useLanguage();
     const copy = getScanQualityCopy(language);
     const observations = result.diagnosticEvidence?.evidenceFor?.length
@@ -29,8 +29,11 @@ const ScanDecisionSummary = ({ result }) => {
     const assessment = result.structuredAssessment?.assessment || null;
     const confidenceLevel = assessment?.confidence_level || result.confidenceLevel || null;
     const plantStatus = result.structuredAssessment?.plant?.identification_status;
-    const infoNeeded = assessment?.additional_information_needed || [];
-    const questions = assessment?.follow_up_questions || [];
+    const reviewText = expertReview?.verdict === 'corrected'
+        ? label('assessment.ux.expertCorrected', "The expert's diagnosis: {name}").replace('{name}', expertReview.correctedDiagnosis || expertReview.correctedCrop || '')
+        : expertReview?.verdict === 'confirmed'
+            ? label('assessment.ux.expertConfirmed', 'The expert agreed with this result.')
+            : label('assessment.ux.expertUncertain', 'The expert needs more information to confirm this result.');
     return <section className={`scan-decision app-surface scan-decision--${result.tone}`} aria-label={copy.primary}>
         <div className="scan-decision__header">
             <div>
@@ -56,13 +59,22 @@ const ScanDecisionSummary = ({ result }) => {
                 </strong></div>
             ) : hasScore && <div role="listitem"><span>{t('results.confidence')}</span><strong>{Math.round(Number(result.confidence))}% <small>{t('results.estimate') || 'estimate'}</small></strong></div>}
         </div>
+        {expertReview && (
+            <div className={`scan-decision__expert scan-decision__expert--${expertReview.verdict}`} role="note">
+                <strong>{label('assessment.ux.expertReviewed', 'Reviewed by an agricultural expert')}</strong>
+                <span>{reviewText}</span>
+            </div>
+        )}
         <h3>{copy.observations}</h3>
         {observations.length ? <ul>{observations.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul> : <p>{copy.noEvidence}</p>}
-        {limits.length > 0 && <><h3>{copy.limits}</h3><ul>{[...new Set(limits)].slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul></>}
-        {infoNeeded.length > 0 && <><h3>{label('assessment.infoNeededTitle', 'What would help confirm this')}</h3><ul>{infoNeeded.map((item, i) => <li key={i}>{item}</li>)}</ul></>}
-        {questions.length > 0 && <><h3>{label('assessment.questionsTitle', 'Questions to check in the field')}</h3><ul>{questions.map((item, i) => <li key={i}>{item}</li>)}</ul></>}
-        <h3>{copy.next}</h3><p>{nextScanStep(result, copy)}</p>
-        {assessment?.needs_expert_review && <p className="scan-decision__review-note" role="note">{label('assessment.expertReviewNote', 'Ask an agricultural expert to check this result before buying or spraying any chemical.')}</p>}
+        {assessment?.needs_expert_review && !expertReview && <p className="scan-decision__review-note" role="note">{label('assessment.expertReviewNote', 'Ask an agricultural expert to check this result before buying or spraying any chemical.')}</p>}
+        {limits.length > 0 && (
+            <details className="scan-decision__why">
+                <summary>{label('assessment.ux.whyTitle', 'Why we think this')}</summary>
+                <h3>{copy.limits}</h3>
+                <ul>{[...new Set(limits)].slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul>
+            </details>
+        )}
         <p className="scan-score-note">{result.isDemo ? t('results.demoModeDesc') : copy.scoreNote}</p>
     </section>;
 };

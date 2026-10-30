@@ -76,11 +76,11 @@ const DiseaseResultSections = ({ normalized, t }) => {
             )}
 
             {diagnosticEvidence && (
-                <div className="evidence-section">
-                    <h4 className="subsection-title">
+                <details className="evidence-section results-why">
+                    <summary className="subsection-title">
                         <Info size={18} className="subsection-icon" />
-                        {t('results.diagnosticEvidence') || 'Diagnostic evidence'}
-                    </h4>
+                        {label('assessment.ux.whyTitle', 'Why we think this')}
+                    </summary>
                     <div className="evidence-grid">
                         <div className="evidence-item"><span>{t('results.leafAgeAffected') || 'Leaf age affected'}</span><strong>{diagnosticEvidence.leafAgeAffected}</strong></div>
                         <div className="evidence-item"><span>{t('results.lesionShape') || 'Lesion shape'}</span><strong>{diagnosticEvidence.lesionShape}</strong></div>
@@ -89,7 +89,7 @@ const DiseaseResultSections = ({ normalized, t }) => {
                         <div className="evidence-item"><span>{t('results.colorPattern') || 'Color pattern'}</span><strong>{diagnosticEvidence.colorPattern}</strong></div>
                         <div className="evidence-item"><span>{t('results.likelyCauseCategory') || 'Likely cause'}</span><strong>{diagnosticEvidence.likelyCauseCategory}</strong></div>
                     </div>
-                </div>
+                </details>
             )}
 
             {alternatives.length > 0 && (

@@ -36,3 +36,6 @@
   font-size: 0.76rem;
   line-height: 1.45;
 }
+
+.camera-upload-step { margin: 0 0 10px; font-weight: 700; font-size: 1rem; color: var(--color-text-primary); }
+.camera-upload-quality-ok { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 6px 12px; border-radius: 999px; background: var(--color-brand-soft); color: #14532d; font-weight: 700; font-size: .9rem; }

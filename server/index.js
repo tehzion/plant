@@ -13,6 +13,7 @@ import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/da
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
+import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
@@ -1174,6 +1175,8 @@ app.post('/api/expert/cases/:scanId/reviews', async (req, res, next) => {
         res.status(201).json({ review });
     } catch (error) { next(error); }
 });
+
+registerFarmerReviewRoutes(app);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

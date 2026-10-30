@@ -324,7 +324,8 @@ describe('ProductRecommendations', () => {
         );
 
         expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
-        expect(screen.getByText('Match 88%')).toBeInTheDocument();
+        // The keyword match score is no longer shown as if it were a quality rating.
+        expect(screen.queryByText(/Match 88%/)).not.toBeInTheDocument();
         expect(screen.getByText('Matched fungicide from the scan result.')).toBeInTheDocument();
         expect(screen.getByText(/Active ingredient to check: copper/i)).toBeInTheDocument();
         expect(screen.getByText('Use only crop-registered fungicides.')).toBeInTheDocument();
