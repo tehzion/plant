@@ -9,6 +9,7 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import NodeCache from 'node-cache';
 import { withAbortableTimeout } from '../utils/requestTimeout.js';
+import { getAIClientOptions, getBaseModelName, getFallbackModel, getPrimaryModel, hasAIApiKey } from './aiProvider.js';
 import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
 import {
     DEFAULT_DISEASE_PRODUCT_RULES,
@@ -21,29 +22,27 @@ dotenv.config();
 let openaiClient = null;
 
 const getOpenAIClient = () => {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!hasAIApiKey()) {
         const error = new Error('OpenAI API Key is missing on the server.');
         error.status = 503;
         throw error;
     }
 
     if (!openaiClient) {
-        openaiClient = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
+        openaiClient = new OpenAI(getAIClientOptions());
     }
 
     return openaiClient;
 };
 
-const OPENAI_PRIMARY_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
-const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
+const OPENAI_PRIMARY_MODEL = getPrimaryModel();
+const OPENAI_FALLBACK_MODEL = getFallbackModel();
 
 // Cache product recommendations for 1 hour
 const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
-const usesModernCompletionLimit = (model = '') => /^(gpt-5|o\d|o[1-9]|gpt-oss)/i.test(String(model));
-const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(String(model));
+const usesModernCompletionLimit = (model = '') => /^(gpt-5|o\d|o[1-9]|gpt-oss)/i.test(getBaseModelName(model));
+const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(getBaseModelName(model));
 
 /**
  * GPT-5 / O-series compatible chat completion wrapper.
@@ -2937,7 +2936,7 @@ export async function localizeStoredAnalysisResult(result = {}, language = 'en')
         return { ...result, analysisLanguage: targetLanguage };
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!hasAIApiKey()) {
         return { ...result };
     }
 

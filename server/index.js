@@ -32,6 +32,7 @@ import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDataset
 
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { hasAIApiKey } from './services/aiProvider.js';
 
 // Load environment variables. Neon pulls local development credentials into
 // .env.local; hosted environments continue to provide env vars directly.
@@ -165,7 +166,7 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString(),
         ...(!isProduction && {
             config: {
-                openai: !!process.env.OPENAI_API_KEY,
+                openai: hasAIApiKey(),
                 plantnet: !!process.env.PLANTNET_API_KEY
             }
         })
@@ -395,7 +396,7 @@ app.post('/api/ask', async (req, res, next) => {
             return res.status(400).json({ error: 'Question is required' });
         }
 
-        if (!process.env.OPENAI_API_KEY) {
+        if (!hasAIApiKey()) {
             return res.status(503).json({ error: 'Service Unavailable', message: 'OpenAI API Key is missing on the server.' });
         }
 
@@ -538,7 +539,7 @@ app.post('/api/analyze', async (req, res, next) => {
     res.once?.('close', abortOnDisconnect);
     try {
         // Validation: Critical Keys
-        if (!process.env.OPENAI_API_KEY) {
+        if (!hasAIApiKey()) {
             console.error('❌ Request Failed: OPENAI_API_KEY is missing.');
             return res.status(503).json({
                 error: 'Configuration Error',

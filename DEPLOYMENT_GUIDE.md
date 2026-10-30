@@ -15,7 +15,8 @@ Do not deploy this app as a `server/`-only Render service anymore. The current p
 
 ```env
 NODE_ENV=production
-OPENAI_API_KEY=your_openai_api_key_here
+OPENROUTER_API_KEY=sk-or-v1-your_openrouter_key   # or OPENAI_API_KEY for direct OpenAI
+# Optional: OPENAI_MODEL / OPENAI_FALLBACK_MODEL (default openai/gpt-5.4-mini / openai/gpt-5-mini on OpenRouter)
 PLANTNET_API_KEY=your_plantnet_api_key_here
 FRONTEND_URL=https://your-public-domain
 FRONTEND_URLS=https://ai.kanb.coop.my,https://www.mojosense.app,https://mojosense.app
