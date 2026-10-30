@@ -85,4 +85,21 @@ describe('useScanLogic', () => {
             'user-1',
         );
     });
+
+    it('explains that AI assessment needs connectivity and sends nothing while offline', async () => {
+        const onLine = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+        const { result } = renderHook(() => useScanLogic());
+        const image = new File(['leaf'], 'leaf.jpg', { type: 'image/jpeg' });
+        let thrown;
+        await act(async () => {
+            try {
+                await result.current.actions.performAnalyze(null, 'Malaysia', { selectedImage: image, selectedCategory: 'Durian' });
+            } catch (error) { thrown = error; }
+        });
+        onLine.mockRestore();
+        expect(thrown.userCode).toBe('ANALYSIS_OFFLINE');
+        expect(result.current.state.errorCode).toBe('ANALYSIS_OFFLINE');
+        expect(diseaseDetectionMocks.analyzePlantDisease).not.toHaveBeenCalled();
+        expect(storageMocks.saveScan).not.toHaveBeenCalled();
+    });
 });

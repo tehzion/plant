@@ -20,19 +20,37 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-it('stores private images and an idempotent durable diagnosis record', async () => {
+const OWNER = 'a'.repeat(40);
+const OTHER = 'b'.repeat(40);
+const auditInsert = () => mocks.queryNeon.mock.calls.find(([sql]) => sql.includes('insert into public.diagnosis_training_logs'));
+
+it('stores private images under the owner prefix and an owner-bound durable record', async () => {
     const id = '8ea7d623-6f88-4695-bce1-f7c71f4c3c47';
     const result = { disease: 'Leaf spot', confidence: 70 };
-    expect(await logTrainingData({ id, treeImage: 'data:image/jpeg;base64,/9j/AA==', result })).toBe(true);
-    expect(mocks.upload).toHaveBeenCalledWith(`training/${id}_tree.jpg`, expect.any(Buffer), expect.objectContaining({ upsert: true }));
-    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('diagnosis_training_logs'), [id, expect.any(String), null, expect.objectContaining({ tree: `training/${id}_tree.jpg` }), result, {}]);
+    mocks.queryNeon.mockImplementation(async (sql) => ({ rows: sql.startsWith('select') ? [] : [{ id }] }));
+    expect(await logTrainingData({ id, ownerHash: OWNER, treeImage: 'data:image/jpeg;base64,/9j/AA==', result })).toBe(true);
+    expect(mocks.upload).toHaveBeenCalledWith(`training/${OWNER.slice(0, 16)}/${id}_tree.jpg`, expect.any(Buffer), expect.objectContaining({ upsert: true }));
+    const [sql, params] = auditInsert();
+    expect(sql).toContain("where diagnosis_training_logs.metadata->>'ownerHash' is not distinct from excluded.metadata->>'ownerHash'");
+    expect(params).toEqual([id, expect.any(String), null, expect.objectContaining({ tree: `training/${OWNER.slice(0, 16)}/${id}_tree.jpg` }), result, { ownerHash: OWNER }]);
+});
+it('refuses to overwrite an assessment that belongs to a different identity', async () => {
+    mocks.queryNeon.mockResolvedValueOnce({ rows: [{ owner_hash: OTHER }] });
+    expect(await logTrainingData({ id: 'scan-1', ownerHash: OWNER, treeImage: 'data:image/jpeg;base64,/9j/AA==', result: {} })).toBe(false);
+    expect(mocks.upload).not.toHaveBeenCalled();
+    expect(auditInsert()).toBeUndefined();
+});
+it('treats a lost race with another identity as a failed write', async () => {
+    mocks.queryNeon.mockResolvedValue({ rows: [] });
+    expect(await logTrainingData({ id: 'scan-1', ownerHash: OWNER, result: {} })).toBe(false);
 });
 it('reports an audit upload failure instead of writing a photo-less record', async () => {
     mocks.upload.mockResolvedValue({ error: new Error('storage offline') });
-    expect(await logTrainingData({ id: 'scan-1', treeImage: 'data:image/jpeg;base64,/9j/AA==', result: {} })).toBe(false);
-    expect(mocks.queryNeon).not.toHaveBeenCalled();
+    expect(await logTrainingData({ id: 'scan-1', ownerHash: OWNER, treeImage: 'data:image/jpeg;base64,/9j/AA==', result: {} })).toBe(false);
+    expect(auditInsert()).toBeUndefined();
 });
-it('stores feedback with the same scan ID', async () => {
-    expect(await logFeedback({ scanId: 'scan-1', wasCorrect: true })).toBe(true);
-    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('diagnosis_feedback'), ['scan-1', { scanId: 'scan-1', wasCorrect: true }, expect.any(String)]);
+it('stores feedback with the same scan ID and server-side attribution', async () => {
+    const attribution = { source: 'farmer', verifiedBy: 'scan_capability', submitterHash: OWNER };
+    expect(await logFeedback({ scanId: 'scan-1', wasCorrect: true }, attribution)).toBe(true);
+    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('diagnosis_feedback'), ['scan-1', { scanId: 'scan-1', wasCorrect: true, attribution }, expect.any(String)]);
 });

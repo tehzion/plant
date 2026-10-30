@@ -55,6 +55,7 @@ export const createEmptyProductRecommendations = () => ({
     fertilizers: [],
     supplements: [],
     otherPopular: [],
+    catalogueDiscovery: [],
     reasoning: '',
     fallbackMeta: null,
     recommendationIntent: '',
@@ -118,6 +119,7 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     scanId: normalizeText(scanResult?.id || scanResult?.scanId),
     plantType: normalizeText(plantType),
     disease: normalizeText(disease, 'None') || 'None',
+    primaryScientificName: normalizeText(scanResult?.primaryScientificName),
     status: normalizeText(scanResult?.status),
     resultState: normalizeText(scanResult?.resultState),
     confidence: normalizeNumber(scanResult?.confidence),
@@ -150,7 +152,7 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
 };
 
 export const createProductRecommendationsKey = (payload, language = 'en') => JSON.stringify({
-    policyVersion: 3,
+    policyVersion: 4,
     captureAssessment: payload?.captureAssessment || null,
     language: normalizeLanguage(language),
     plantType: normalizeText(payload?.plantType),
@@ -232,6 +234,7 @@ const normalizeProductItem = (product = {}) => {
         cautionNote: normalizeText(product.cautionNote),
         recommendationRole: normalizeText(product.recommendationRole),
         cautionLevel: normalizeText(product.cautionLevel),
+        recommendationReason: normalizeText(product.recommendationReason),
     };
 };
 
@@ -296,6 +299,7 @@ export const normalizeProductRecommendationsResponse = (data = {}) => ({
     fertilizers: normalizeProductList(data?.fertilizers),
     supplements: normalizeProductList(data?.supplements),
     otherPopular: normalizeProductList(data?.otherPopular),
+    catalogueDiscovery: normalizeProductList(data?.catalogueDiscovery).map((product) => ({ ...product, discoveryOnly: true })),
     reasoning: normalizeText(data?.reasoning),
     fallbackMeta: data?.fallbackMeta && typeof data.fallbackMeta === 'object' ? data.fallbackMeta : null,
     recommendationIntent: normalizeText(data?.recommendationIntent),

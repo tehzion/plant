@@ -1,8 +1,9 @@
 import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
-import { dataUrlToBlob, enqueueOperation, isIndexedDbAvailable, putPhoto, putRecord, deleteRecord } from './indexedDbStorage.js';
+import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
 import { fetchNeonRows, neonDataRequest, neonDataRowRequest } from './neonApi.js';
+import { queueSyncOperation } from './syncQueue.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -49,6 +50,72 @@ const persistIndexedGuestRecord = async (collection, value, revision = 0) => {
     }
 };
 
+
+// ─── Signed-in offline support ───────────────────────────────────────────────
+// Signed-in records normally go straight to Neon. When the network is down the
+// record is kept on this device and queued for /api/sync instead of being lost.
+const CLOUD_COLLECTION_TABLES = { logbook: 'mygap_logs', notes: 'daily_notes', plots: 'plots' };
+const cloudOwner = (userId) => `user:${userId}`;
+
+export const isConnectivityError = (error) => (
+    error instanceof TypeError
+    || (typeof navigator !== 'undefined' && navigator.onLine === false)
+    || [408, 429, 500, 502, 503, 504].includes(Number(error?.status))
+);
+
+const queueCloudRecord = async (userId, collection, row, localValue) => {
+    if (!isIndexedDbAvailable()) return null;
+    const owner = cloudOwner(userId);
+    const { user_id: _ownerFromClient, ...payload } = row;
+    const value = { ...localValue, syncStatus: 'pending' };
+    await putRecord({ owner, collection, id: String(row.id), value });
+    await queueSyncOperation({ owner, collection, recordId: String(row.id), type: 'create', payload });
+    return value;
+};
+
+const writeCloudRecord = async (userId, collection, row, localValue) => {
+    try {
+        await neonDataRequest(CLOUD_COLLECTION_TABLES[collection], { operation: 'insert', payload: row });
+        return { ...localValue, syncStatus: 'synced' };
+    } catch (error) {
+        if (!isConnectivityError(error)) throw error;
+        const queued = await queueCloudRecord(userId, collection, row, localValue).catch((queueError) => {
+            console.error('Offline queue write failed:', queueError);
+            return null;
+        });
+        if (!queued) throw error;
+        return queued;
+    }
+};
+
+// Reads merge records still waiting to sync, and fall back to the last copy
+// fetched on this device when the network is unavailable.
+const readCloudCollection = async (userId, collection, fetchRows, mapRows) => {
+    const owner = cloudOwner(userId);
+    const cacheKey = `cloud-cache:${owner}:${collection}`;
+    let rows;
+    try {
+        rows = await fetchRows();
+        if (isIndexedDbAvailable()) setMetadata(cacheKey, rows).catch(() => {});
+    } catch (error) {
+        if (!isConnectivityError(error) || !isIndexedDbAvailable()) throw error;
+        rows = await getMetadata(cacheKey).catch(() => null);
+        if (!Array.isArray(rows)) throw error;
+    }
+    const mapped = await mapRows(rows);
+    if (!isIndexedDbAvailable()) return mapped;
+    const pending = await listRecords(owner, collection).catch(() => []);
+    const ids = new Set(mapped.map((item) => String(item.id)));
+    return [...pending.filter((item) => !ids.has(String(item.id))), ...mapped];
+};
+
+/** Clears cached cloud snapshots (not pending records) when a user signs out. */
+export const clearCloudReadCache = async (userId) => {
+    if (!userId || !isIndexedDbAvailable()) return;
+    await Promise.all(Object.keys(CLOUD_COLLECTION_TABLES).map((collection) => (
+        setMetadata(`cloud-cache:${cloudOwner(userId)}:${collection}`, null).catch(() => {})
+    )));
+};
 
 export const STORAGE_COLLECTION_KEYS = {
     STORAGE_KEY,
@@ -247,11 +314,26 @@ const hydrateScanHistoryRow = async (row = {}) => {
     return fromScanHistoryRow(row, { imageUrl, leafImageUrl });
 };
 
+const optionalText = (value, max = 200) => {
+    const text = value == null ? '' : String(value).trim();
+    return text ? text.slice(0, max) : null;
+};
+
+// Structured myGAP record fields. Quantity is recorded exactly as the farmer
+// entered it; the app never calculates or suggests chemical dosages.
+export const LOGBOOK_DETAIL_FIELDS = ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator'];
+
 export const toLogbookRow = (log = {}, userId) => ({
     id: String(log.id ?? crypto.randomUUID()),
     user_id: userId,
     type: log.type || 'pesticide',
     notes: log.notes || '',
+    activity_date: optionalText(log.activity_date ?? log.activityDate, 10),
+    plot_id: optionalText(log.plot_id ?? log.plotId, 200),
+    crop: optionalText(log.crop),
+    product_used: optionalText(log.product_used ?? log.productUsed),
+    quantity: optionalText(log.quantity, 100),
+    operator: optionalText(log.operator, 120),
     created_at: log.timestamp || log.created_at || new Date().toISOString(),
 });
 
@@ -260,6 +342,8 @@ export const fromLogbookRow = (row = {}) => ({
     timestamp: row.created_at,
     type: row.type,
     notes: row.notes,
+    ...Object.fromEntries(LOGBOOK_DETAIL_FIELDS.map((field) => [field, row[field] ?? null])),
+    ...(row.syncStatus ? { syncStatus: row.syncStatus } : {}),
 });
 
 export const toDailyNoteRow = (note = {}, userId) => {
@@ -618,12 +702,11 @@ export const saveLogEntry = async (logEntry, userId = null) => {
     if (isCloudUser(userId)) {
         const newLog = toLogbookRow(logEntry, userId);
         try {
-            await neonDataRequest('mygap_logs', { operation: 'insert', payload: newLog });
+            return await writeCloudRecord(userId, 'logbook', newLog, fromLogbookRow(newLog));
         } catch (error) {
             console.error('saveLogEntry error:', error);
             return null;
         }
-        return { ...newLog, timestamp: newLog.created_at };
     }
 
     const logs = getLogbook();
@@ -635,7 +718,7 @@ export const saveLogEntry = async (logEntry, userId = null) => {
 
 export const getLogbook = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('mygap_logs', userId, options).then((rows) => rows.map(fromLogbookRow));
+        return readCloudCollection(userId, 'logbook', () => fetchAllUserRows('mygap_logs', userId, options), (rows) => rows.map(fromLogbookRow));
     }
     const logs = safeRead(LOGBOOK_KEY, []);
     return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
@@ -645,14 +728,25 @@ export const getLogbook = (userId = null, options = {}) => {
 
 export const saveChecklistState = async (state, userId = null) => {
     if (isCloudUser(userId)) {
+        const updatedAt = new Date().toISOString();
         try {
             await neonDataRequest('mygap_checklist', {
                 operation: 'upsert',
-                payload: { user_id: userId, state, updated_at: new Date().toISOString() },
+                payload: { user_id: userId, state, updated_at: updatedAt },
             });
         } catch (error) {
-            console.error('saveChecklistState error:', error);
-            return false;
+            if (!isConnectivityError(error) || !isIndexedDbAvailable()) {
+                console.error('saveChecklistState error:', error);
+                return false;
+            }
+            try {
+                const owner = cloudOwner(userId);
+                await putRecord({ owner, collection: 'checklist', id: 'checklist:current', value: { state, updated_at: updatedAt } });
+                await queueSyncOperation({ owner, collection: 'checklist', recordId: 'current', type: 'update', payload: { state, updated_at: updatedAt } });
+            } catch (queueError) {
+                console.error('saveChecklistState offline queue error:', queueError);
+                return false;
+            }
         }
         return true;
     }
@@ -672,12 +766,19 @@ export const saveChecklistState = async (state, userId = null) => {
 
 export const getChecklistState = (userId = null) => {
     if (isCloudUser(userId)) {
-        return fetchNeonRows('mygap_checklist', { limit: 1 })
-            .then(([row]) => row?.state ?? {})
-            .catch((error) => {
-                console.error('getChecklistState error:', error);
-                return {};
-            });
+        const pendingChecklist = () => (isIndexedDbAvailable()
+            ? getRecord(cloudOwner(userId), 'checklist:current').catch(() => null)
+            : Promise.resolve(null));
+        return pendingChecklist().then((pending) => {
+            // A change saved offline is newer than anything on the server.
+            if (pending?.state) return pending.state;
+            return fetchNeonRows('mygap_checklist', { limit: 1 })
+                .then(([row]) => row?.state ?? {})
+                .catch((error) => {
+                    console.error('getChecklistState error:', error);
+                    return {};
+                });
+        });
     }
     return safeRead(CHECKLIST_KEY, {});
 };
@@ -715,12 +816,11 @@ export const saveDailyNote = async (entry, userId = null) => {
 
     if (isCloudUser(userId)) {
         try {
-            await neonDataRequest('daily_notes', { operation: 'insert', payload: toDailyNoteRow(newNote, userId) });
+            return await writeCloudRecord(userId, 'notes', toDailyNoteRow(newNote, userId), newNote);
         } catch (error) {
             console.error('saveDailyNote error:', error);
             return null;
         }
-        return newNote;
     }
 
     const existing = safeRead(NOTES_KEY, []);
@@ -732,7 +832,7 @@ export const saveDailyNote = async (entry, userId = null) => {
 
 export const getDailyNotes = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('daily_notes', userId, options).then((rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
+        return readCloudCollection(userId, 'notes', () => fetchAllUserRows('daily_notes', userId, options), (rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
     }
     const notes = safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);
     return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
@@ -756,12 +856,11 @@ export const savePlot = async (plot, userId = null) => {
 
     if (isCloudUser(userId)) {
         try {
-            await neonDataRequest('plots', { operation: 'insert', payload: toPlotRow(newPlot, userId) });
+            return await writeCloudRecord(userId, 'plots', toPlotRow(newPlot, userId), newPlot);
         } catch (error) {
             console.error('savePlot error:', error);
             return null;
         }
-        return newPlot;
     }
 
     const existing = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
@@ -773,7 +872,7 @@ export const savePlot = async (plot, userId = null) => {
 
 export const getPlots = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('plots', userId, options).then((rows) => rows.map(normalizeStoredPlot));
+        return readCloudCollection(userId, 'plots', () => fetchAllUserRows('plots', userId, options), (rows) => rows.map(normalizeStoredPlot));
     }
     const plots = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
     return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0

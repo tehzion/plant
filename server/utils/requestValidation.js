@@ -62,6 +62,7 @@ export const validateApiRequest = (req, _res, next) => {
                 break;
             case '/feedback':
                 text(body.scanId, 'scanId', 100, true);
+                text(body.feedbackToken, 'feedbackToken', 200);
                 if (body.rating != null && (!Number.isInteger(body.rating) || body.rating < 1 || body.rating > 5)) throw fail('rating must be 1–5');
                 if (body.wasCorrect != null && typeof body.wasCorrect !== 'boolean') throw fail('wasCorrect must be boolean');
                 for (const field of ['comment', 'correction', 'note']) text(body[field], field, 4000);

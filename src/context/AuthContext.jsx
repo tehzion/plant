@@ -200,8 +200,14 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
+        const signedOutUserId = user?.id;
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
+        // Drop cached cloud copies on shared devices; records still waiting to
+        // sync are kept so they upload at the next sign-in.
+        if (signedOutUserId) {
+            import('../utils/localStorage').then(({ clearCloudReadCache }) => clearCloudReadCache(signedOutUserId)).catch(() => {});
+        }
         setUser(null);
     };
 

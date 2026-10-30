@@ -36,7 +36,12 @@ const MyGapPage = () => {
 
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
     const [isAddingLog, setIsAddingLog] = useState(false);
-    const [newLog, setNewLog] = useState({ type: 'pesticide', notes: '' });
+    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: new Date().toISOString().slice(0, 10), plot_id: '', crop: '', product_used: '', quantity: '', operator: '' });
+    const [newLog, setNewLog] = useState(emptyLog);
+    const label = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
 
     // PHI Calculator State
     const [phiDays, setPhiDays] = useState('');
@@ -57,7 +62,10 @@ const MyGapPage = () => {
         if (entry) {
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
-            setNewLog({ type: 'pesticide', notes: '' });
+            setNewLog(emptyLog());
+            if (entry.syncStatus === 'pending') {
+                notify({ type: 'info', title: label('assessment.sync.savedOnDeviceTitle', 'Saved on this device'), message: label('assessment.sync.savedOnDevice', 'This record will sync automatically when you are back online.') });
+            }
         } else {
             notify({ type: 'error', title: t('common.error'), message: t('common.error') });
         }
@@ -277,9 +285,18 @@ const MyGapPage = () => {
             });
         } else {
             for (const log of reportLogs) {
-                const dateLabel = new Date(log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
+                const dateLabel = new Date(log.activity_date || log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
                 const typeLabel = rt(`mygap.${log.type}Log`).split(' ')[0];
-                const notesHeight = renderer.measureTextHeight(log.notes || '-', pageWidth - 36, { fontSize: 9 });
+                const reportLabel = (key, fallback) => { const value = rt(key); return value && value !== key ? value : fallback; };
+                const details = [
+                    log.plot_id && `${reportLabel('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
+                    log.crop && `${reportLabel('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
+                    log.product_used && `${reportLabel('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
+                    log.quantity && `${reportLabel('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
+                    log.operator && `${reportLabel('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
+                ].filter(Boolean).join(' | ');
+                const body = [details, log.notes].filter(Boolean).join('\n') || '-';
+                const notesHeight = renderer.measureTextHeight(body, pageWidth - 36, { fontSize: 9 });
                 const cardHeight = notesHeight + 18;
 
                 checkPageBreak(cardHeight + 4);
@@ -299,7 +316,7 @@ const MyGapPage = () => {
                     color: lightText,
                     align: 'right',
                 });
-                await renderer.drawText(log.notes || '-', 18, flow.yPos + 11, {
+                await renderer.drawText(body, 18, flow.yPos + 11, {
                     maxWidth: pageWidth - 36,
                     fontSize: 9,
                     color: darkColor,
@@ -531,6 +548,44 @@ const MyGapPage = () => {
                                         <option value="irrigation">{t('mygap.irrigationLog')}</option>
                                     </select>
                                 </div>
+                                <div className="mygap-log-details">
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-date">{label('assessment.mygap.activityDate', 'Activity date')}</label>
+                                        <input id="mygap-log-date" type="date" value={newLog.activity_date} max={new Date().toISOString().slice(0, 10)}
+                                            onChange={(e) => setNewLog({ ...newLog, activity_date: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-plot">{label('assessment.mygap.plot', 'Farm or plot')}</label>
+                                        <input id="mygap-log-plot" type="text" maxLength={120} value={newLog.plot_id}
+                                            onChange={(e) => setNewLog({ ...newLog, plot_id: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-crop">{label('assessment.mygap.crop', 'Crop')}</label>
+                                        <input id="mygap-log-crop" type="text" maxLength={120} value={newLog.crop}
+                                            onChange={(e) => setNewLog({ ...newLog, crop: e.target.value })} />
+                                    </div>
+                                    {['pesticide', 'fertilizer'].includes(newLog.type) && (
+                                        <>
+                                            <div className="form-group">
+                                                <label htmlFor="mygap-log-product">{label('assessment.mygap.productUsed', 'Product used')}</label>
+                                                <input id="mygap-log-product" type="text" maxLength={200} value={newLog.product_used}
+                                                    onChange={(e) => setNewLog({ ...newLog, product_used: e.target.value })} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label htmlFor="mygap-log-quantity">{label('assessment.mygap.quantity', 'Quantity you used')}</label>
+                                                <input id="mygap-log-quantity" type="text" maxLength={100} value={newLog.quantity}
+                                                    aria-describedby="mygap-log-quantity-hint"
+                                                    onChange={(e) => setNewLog({ ...newLog, quantity: e.target.value })} />
+                                                <small id="mygap-log-quantity-hint" className="field-hint">{label('assessment.mygap.quantityHint', 'Record what you actually applied. Always follow the product label.')}</small>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-operator">{label('assessment.mygap.operator', 'Done by')}</label>
+                                        <input id="mygap-log-operator" type="text" maxLength={120} value={newLog.operator}
+                                            onChange={(e) => setNewLog({ ...newLog, operator: e.target.value })} />
+                                    </div>
+                                </div>
                                 <div className="form-group">
                                     <label htmlFor="mygap-log-notes">{t('mygap.logNotes')}</label>
                                     <textarea
@@ -566,9 +621,23 @@ const MyGapPage = () => {
                                                 {t(`mygap.${log.type}Log`).split(' ')[0]}
                                             </span>
                                             <span className="log-date">
-                                                {new Date(log.timestamp).toLocaleDateString()}
+                                                {new Date(log.activity_date || log.timestamp).toLocaleDateString()}
                                             </span>
                                         </div>
+                                        {log.syncStatus === 'pending' && (
+                                            <span className="log-sync-badge">{label('assessment.sync.savedOnDeviceShort', 'Saved on device')}</span>
+                                        )}
+                                        {[log.plot_id, log.crop, log.product_used, log.quantity, log.operator].some(Boolean) && (
+                                            <p className="log-details">
+                                                {[
+                                                    log.plot_id && `${label('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
+                                                    log.crop && `${label('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
+                                                    log.product_used && `${label('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
+                                                    log.quantity && `${label('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
+                                                    log.operator && `${label('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
+                                                ].filter(Boolean).join(' · ')}
+                                            </p>
+                                        )}
                                         <p className="log-notes">{log.notes}</p>
                                     </div>
                                 ))

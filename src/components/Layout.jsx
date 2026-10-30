@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import Footer from './Footer';
 import BottomNav from './BottomNav';
+import SyncStatusBanner from './SyncStatusBanner';
 
 function Layout({ children }) {
     const location = useLocation();
@@ -14,6 +15,7 @@ function Layout({ children }) {
         <div className={`app ${isLegalPage || isScanFlow ? 'app--without-bottom-nav' : ''}`}>
             <a href="#main-content" className="skip-link">Skip to content</a>
             {!isLegalPage && <AppHeader isHome={isHome} />}
+            {!isLegalPage && <SyncStatusBanner />}
             <main className="main-content" id="main-content">
                 {children}
             </main>

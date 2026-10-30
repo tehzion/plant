@@ -105,6 +105,13 @@ export const useScanLogic = () => {
             dispatch({ type: 'START_ANALYSIS' });
 
             const analysisTask = async () => {
+                // AI disease assessment runs on the server; there is no local
+                // model. Fail fast with a clear message instead of a timeout.
+                if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                    const offlineError = new Error('ANALYSIS_OFFLINE');
+                    offlineError.code = 'ANALYSIS_OFFLINE';
+                    throw offlineError;
+                }
                 dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 0 });
                 const [treeQuality, leafQuality] = await Promise.all([
                     analyzeLocalImageQuality(currentState.selectedImage),
@@ -194,7 +201,12 @@ export const useScanLogic = () => {
                     IMAGE_NOT_PLANT: t('home.errorImageNotPlantLike') || 'The image does not look like a clear plant photo. Please try again.',
                 };
                 const errorCode = err.code || err.message || '';
-                const errorMessage = err.message === 'NOT_A_PLANT'
+                const offlineMessage = t('assessment.offlineScanMessage') !== 'assessment.offlineScanMessage'
+                    ? t('assessment.offlineScanMessage')
+                    : 'AI disease checks need an internet connection. Your photos were not sent. You can still save farm and myGAP records offline.';
+                const errorMessage = errorCode === 'ANALYSIS_OFFLINE'
+                    ? offlineMessage
+                    : err.message === 'NOT_A_PLANT'
                     ? t('home.errorNotPlant')
                     : isTimeoutError(err)
                         ? (t('home.errorAnalysisTimeout') || 'Analysis is taking too long on the current connection. Please try again in a moment.')

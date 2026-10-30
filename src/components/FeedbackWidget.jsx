@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, MessageSquareWarning, Send } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { showToast } from '../utils/toast';
+import { getNeonAccessToken } from '../utils/neonApi.js';
 import './FeedbackWidget.css';
 
 const ISSUE_TYPES = [
@@ -35,13 +36,18 @@ const FeedbackWidget = ({ scanId, scan }) => {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
+      // The server only accepts feedback from the scan's own device (signed
+      // feedback token) or from the signed-in account that saved the scan.
+      const accessToken = await getNeonAccessToken().catch(() => '');
       const response = await fetch(`${apiUrl}/api/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           scanId,
+          feedbackToken: scan?.feedbackToken || undefined,
           rating: wasCorrect ? 5 : 2,
           comment: wasCorrect ? 'correct' : 'needs_correction',
           wasCorrect,

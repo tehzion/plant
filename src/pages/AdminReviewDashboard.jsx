@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { fetchAdminReviewSummary } from '../utils/adminAnalytics.js';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ExpertReviewPanel from '../components/ExpertReviewPanel';
 import './AdminReviewDashboard.css';
 
 const formatDate = (value) => {
@@ -152,6 +153,8 @@ const AdminReviewDashboard = () => {
                         <StatCard icon={ExternalLink} label="Checkout intent" value={counts.checkoutClicks || 0} />
                         <StatCard icon={BarChart3} label="Lead conversion" value={conversionRate} tone="success" />
                     </section>
+
+                    <ExpertReviewPanel />
 
                     <section className="admin-grid">
                         <div className="admin-panel admin-panel--wide">

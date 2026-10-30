@@ -12,6 +12,7 @@ import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
+import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
@@ -19,10 +20,13 @@ import { syncOperation } from './services/syncService.js';
 import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
+import { partitionByEligibility } from './services/productEligibility.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
+import { createScanCapability, hashIdentity, verifyScanCapability } from './utils/scanCapability.js';
+import { classifyAnalysisFailure } from './utils/analysisErrors.js';
 import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
 import path from 'path';
@@ -442,6 +446,21 @@ app.post('/api/ask', async (req, res, next) => {
 });
 
 // Feedback Endpoint
+// Farmer feedback is accepted only from the identity that produced the scan:
+// either the signed scan capability returned by /api/analyze, or a signed-in
+// account that owns the saved scan. This keeps anonymous callers from
+// contaminating another farmer's assessment evidence.
+const resolveFeedbackAttribution = async (req, scanId) => {
+    const ownerHash = verifyScanCapability(scanId, req.body?.feedbackToken);
+    if (ownerHash) return { source: 'farmer', verifiedBy: 'scan_capability', submitterHash: ownerHash };
+    if (getBearerToken(req) && !verifyOrderSession(getBearerToken(req))) {
+        const user = await verifyAuthenticatedUser(req);
+        const owned = await getUserRow('scan_history', user.id, scanId).catch(() => null);
+        if (owned) return { source: 'farmer', verifiedBy: 'account', submitterHash: hashIdentity(`user:${user.id}`) };
+    }
+    return null;
+};
+
 app.post('/api/feedback', async (req, res, next) => {
     try {
         const {
@@ -460,6 +479,14 @@ app.post('/api/feedback', async (req, res, next) => {
             return res.status(400).json({ error: 'scanId and either rating or wasCorrect are required' });
         }
 
+        const attribution = await resolveFeedbackAttribution(req, String(scanId));
+        if (!attribution) {
+            return res.status(403).json({
+                error: 'FEEDBACK_NOT_AUTHORISED',
+                message: 'Feedback can only be sent from the device or account that ran this scan.',
+            });
+        }
+
         const success = await logFeedback({
             scanId,
             rating,
@@ -470,7 +497,7 @@ app.post('/api/feedback', async (req, res, next) => {
             correctDisease,
             issueType,
             note,
-        });
+        }, { ...attribution, receivedAt: new Date().toISOString() });
 
         if (success) {
             res.json({ message: 'Feedback received' });
@@ -514,15 +541,18 @@ app.post('/api/analyze', async (req, res, next) => {
         // 1. Generate Image Hash for Caching
         const cacheKey = buildAnalysisCacheKey(req.body);
         const scanId = req.body.scanId || crypto.randomUUID();
+        const callerIdentity = req.aiIdentity || `ip:${req.ip || 'unknown'}`;
+        const ownerHash = hashIdentity(callerIdentity);
+        const feedbackToken = createScanCapability(scanId, callerIdentity);
 
         // 2. Check Cache
         const cachedResult = aiCache.get(cacheKey);
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
-            logTrainingData({ id: scanId, treeImage: mainImage, leafImage, category,
+            logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category,
                 result: cachedResult, metadata: { language, location, imageQuality, cached: true } })
                 .catch(err => console.error('Data logging failed:', err.message));
-            return res.json({ ...cachedResult, id: scanId, cached: true });
+            return res.json({ ...cachedResult, id: scanId, feedbackToken, cached: true });
         }
         console.log('🧠 Image Analysis Cache MISS - Processing...');
 
@@ -566,27 +596,30 @@ app.post('/api/analyze', async (req, res, next) => {
             console.warn('⚠️ Both PlantNet and Backup Model failed to identify species');
         }
 
-        // 5. Analyze Health (configured OpenAI primary model)
-
-        const analysisResult = await withStageTimeout(
-            (signal) => analyzeWithGPT4Mini(
-                plantNetResult,
-                mainImage,
-                leafImage,
-                category,
-                language,
-                location,
-                imageQuality,
-                { signal },
-            ),
-            Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
-            null,
-            requestController.signal,
-        );
-        if (!analysisResult) {
-            const timeoutError = new Error('Analysis timed out. Please try again with a clearer photo.');
-            timeoutError.status = 504;
-            throw timeoutError;
+        // 5. Analyze Health (configured OpenAI primary model). Provider and
+        // response failures are classified instead of being reported as
+        // timeouts, so farmers see an accurate next step.
+        let analysisResult;
+        try {
+            analysisResult = await withAbortableTimeout(
+                (signal) => analyzeWithGPT4Mini(
+                    plantNetResult,
+                    mainImage,
+                    leafImage,
+                    category,
+                    language,
+                    location,
+                    imageQuality,
+                    { signal },
+                ),
+                Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
+                { signal: requestController.signal, timeoutMessage: 'AI pipeline stage timed out' },
+            );
+        } catch (analysisError) {
+            if (requestController.signal.aborted) throw analysisError;
+            const failure = classifyAnalysisFailure(analysisError, language);
+            console.warn(JSON.stringify({ event: 'analysis_failed', requestId: req.requestId, code: failure.code, status: failure.status }));
+            return res.status(failure.status).json({ error: failure.code, message: failure.message, retryable: failure.retryable, requestId: req.requestId });
         }
 
         const finalResult = {
@@ -604,6 +637,7 @@ app.post('/api/analyze', async (req, res, next) => {
         // Fix: Pass single object as expected by dataCollector.js
         logTrainingData({
             id: scanId,
+            ownerHash,
             treeImage: mainImage,
             leafImage: leafImage,
             category,
@@ -623,9 +657,7 @@ app.post('/api/analyze', async (req, res, next) => {
             }
         }).catch(err => console.error('Data logging failed:', err));
 
-        res.json({ ...finalResult, id: scanId });
-
-        // ... (previous code)
+        res.json({ ...finalResult, id: scanId, feedbackToken });
 
     } catch (error) {
         if (requestController.signal.aborted) {
@@ -748,14 +780,25 @@ app.post('/api/products/search', async (req, res, next) => {
         const rawTreatment = finalizeList(treatmentProducts);
         const rawFertilizers = finalizeList(fertilizerProducts);
         const rawSupplements = finalizeList(supplementProducts);
-        const finalTreatment = sectionPolicy.showDiseaseProducts
-            ? enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules)
-            : [];
+        // Keyword matches alone never make a treatment recommendation: each
+        // product also passes basic purpose, crop, restriction and label
+        // checks. Unverified matches are returned separately as catalogue
+        // discovery so the UI can present them without implying suitability.
+        const treatmentSplit = partitionByEligibility(
+            sectionPolicy.showDiseaseProducts ? enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules) : [],
+            diagnosis, 'treatment', targetLanguage,
+        );
+        const nutritionList = (products, role) => {
+            const split = partitionByEligibility(products, diagnosis, role, targetLanguage);
+            return [...split.eligible, ...split.discovery.map(({ discoveryOnly: _discoveryOnly, ...product }) => product)];
+        };
+        const finalTreatment = treatmentSplit.eligible;
+        const catalogueDiscovery = treatmentSplit.discovery.slice(0, 4);
         const finalFertilizers = sectionPolicy.showNutritionProducts
-            ? enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules)
+            ? nutritionList(enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules), 'fertilizer')
             : [];
         const finalSupplements = sectionPolicy.showNutritionProducts
-            ? enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules)
+            ? nutritionList(enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules), 'supplement')
             : [];
         
         // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
@@ -797,6 +840,12 @@ app.post('/api/products/search', async (req, res, next) => {
             fertilizers: finalFertilizers,
             supplements: finalSupplements,
             otherPopular: otherPopular,
+            catalogueDiscovery,
+            eligibilitySummary: {
+                eligibleTreatments: finalTreatment.length,
+                discoveryOnly: treatmentSplit.discovery.length,
+                excludedAsUnsuitable: treatmentSplit.excluded,
+            },
             reasoning: recommendation.reasoning,
             fallbackMeta,
             recommendationIntent,
@@ -1077,6 +1126,31 @@ app.get('/api/admin/review-summary', async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+});
+
+// Expert review workflow (approved reviewers only). Reviews are stored as
+// separate attributed records; the original AI assessment is never modified.
+app.get('/api/expert/cases', async (req, res, next) => {
+    try {
+        await verifyReviewerRequest(req);
+        res.json(await listReviewQueue({ status: req.query.status, days: req.query.days, limit: req.query.limit }));
+    } catch (error) { next(error); }
+});
+
+app.get('/api/expert/cases/:scanId', async (req, res, next) => {
+    try {
+        await verifyReviewerRequest(req);
+        res.json(await getReviewCase(req.params.scanId));
+    } catch (error) { next(error); }
+});
+
+app.post('/api/expert/cases/:scanId/reviews', async (req, res, next) => {
+    try {
+        const reviewer = await verifyReviewerRequest(req);
+        const review = await submitExpertReview(reviewer, req.params.scanId, req.body);
+        console.log(JSON.stringify({ event: 'expert_review_recorded', requestId: req.requestId, verdict: review.verdict }));
+        res.status(201).json({ review });
+    } catch (error) { next(error); }
 });
 
 // Global Error Handler

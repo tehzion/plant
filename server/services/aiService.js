@@ -1,6 +1,7 @@
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { assessScanDecision, getScanSectionPolicy, isNoIssueDiagnosis, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+import { buildStructuredAssessment, normalizeAlternativeConditions, redactDosageInstructions, resolveConfidenceLevel } from '../../shared/diseaseAssessment.js';
 export { SCAN_RESULT_STATES };
 import OpenAI from 'openai';
 import FormData from 'form-data';
@@ -1656,25 +1657,11 @@ export function normalizePredictiveRiskResult(result = {}) {
     return normalized;
 }
 
-const normalizeDifferentialDiagnoses = (differentials = []) => {
-    if (!Array.isArray(differentials)) return [];
-    return differentials
-        .map((entry) => {
-            if (!entry) return null;
-            if (typeof entry === 'string') {
-                return { name: entry, likelihood: null, reason: '' };
-            }
-            const name = entry.name || entry.disease || entry.diagnosis;
-            if (!name) return null;
-            return {
-                name,
-                likelihood: Number.isFinite(Number(entry.likelihood)) ? clampConfidence(entry.likelihood) : null,
-                reason: entry.reason || entry.why || '',
-            };
-        })
-        .filter(Boolean)
-        .slice(0, 3);
-};
+// Keeps the legacy { name, likelihood, reason } shape the UI and PDF already
+// read, while adding the comparison fields used by the structured assessment.
+const normalizeDifferentialDiagnoses = (differentials = [], primaryName = '') => (
+    normalizeAlternativeConditions(differentials, { primaryName })
+);
 
 const normalizeDiagnosticEvidence = (evidence = {}, language = 'en') => ({
     leafAgeAffected: evidence.leafAgeAffected || evidence.leaf_location || translateText(language, {
@@ -2268,7 +2255,13 @@ Rules:
 - Never increase disease confidence only because PlantNet species confidence is high.
 - Do not state any species is confirmed unless the species context says it is confirmed.
 - If species context is weak or conflicts with the user-selected category, use it only as a hypothesis and rely on visible symptoms.
-- Use ranked differentials when a single diagnosis is not secure.
+- Compare visually similar conditions. In differentialDiagnoses list 0-3 OTHER conditions that remain genuinely plausible from the visible evidence (for example fungal vs bacterial leaf spot, nutrient deficiency, environmental stress). Never pad the list to reach three, never repeat the primary diagnosis, and return an empty list when nothing else is plausible.
+- For every alternative give: supportingEvidence (visible features consistent with it), weakeningEvidence (visible features that argue against it) and distinguishingFeatures (what a farmer could check to tell it apart from the primary diagnosis).
+- Use standard, consistent disease names (e.g. "Early Blight", "Septoria Leaf Spot", "Anthracnose"). Put the causal organism in scientificName only when the visible evidence clearly supports it; otherwise leave it empty.
+- Express confidence with confidenceLevel: high, medium, low or insufficient_evidence. diagnosisConfidence is an estimate, not a calibrated probability.
+- Explanations must be short statements of observable evidence for the farmer. Do not narrate step-by-step internal reasoning.
+- If confidence is low or insufficient_evidence: set needsMoreEvidence true, list additionalInformationNeeded (specific extra photos or observations) and up to 3 followUpQuestions, and do not suggest chemical treatment.
+- Do not claim certainty that a photo cannot provide; say "consistent with" or "suggests" rather than "confirmed".
 - If image quality is weak, set requiresRetake to true and explain why.
 - If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
 - Set resultState conservatively as one of: confident_treatment, needs_closer_photo, possible_nutrient_issue, possible_pest, expert_review_needed, healthy.
@@ -2305,7 +2298,9 @@ Return STRICT JSON:
   },
   "diagnosis_assessment": {
     "plantType": "Common crop name (Scientific name if known)",
-    "primaryDiagnosis": "short label",
+    "primaryDiagnosis": "short standard disease or condition name",
+    "primaryScientificName": "causal organism if supported, else empty",
+    "confidenceLevel": "high | medium | low | insufficient_evidence",
     "healthStatus": "healthy or unhealthy",
     "severity": "mild | moderate | severe",
     "diagnosisConfidence": 0,
@@ -2317,8 +2312,20 @@ Return STRICT JSON:
     "needsMoreEvidence": false,
     "abstainReason": "",
     "differentialDiagnoses": [
-      { "name": "alternative diagnosis", "likelihood": 42, "reason": "why this remains possible" }
+      {
+        "name": "alternative condition",
+        "scientificName": "",
+        "category": "fungal_disease | bacterial_disease | viral_disease | pest_damage | nutrient_deficiency | environmental_stress",
+        "confidenceLevel": "medium | low",
+        "likelihood": 30,
+        "reason": "one-line summary of why it remains possible",
+        "supportingEvidence": ["visible feature consistent with it"],
+        "weakeningEvidence": ["visible feature that argues against it"],
+        "distinguishingFeatures": ["what to check to tell it apart from the primary diagnosis"]
+      }
     ],
+    "additionalInformationNeeded": ["specific extra photo or observation"],
+    "followUpQuestions": ["short question for the farmer"],
     "diagnosticEvidence": {
       "leafAgeAffected": "older/newer/mixed/unclear",
       "lesionShape": "round/angular/diffuse/none/unclear",
@@ -2412,6 +2419,10 @@ Rules for nutritionalIssues:
 - Use "status": "possible" when fungal or other disease signs are primary but nutrient stress may also be contributing. In that case keep "hasDeficiency": false, fill "possibleNutrients", and add concise "reasoning".
 - Use "status": "none" when there is no meaningful nutrient signal.
 - Do not label a possible overlap as a confirmed deficiency.
+
+Rules for chemical advice:
+- Never state pesticide or fungicide dosages, mixing rates, spray intervals or pre-harvest intervals. Say to follow the registered product label and local DOA guidance instead.
+- Only mention chemical control when the diagnosis is confident; otherwise focus on inspection, sanitation and expert confirmation.
 
 Rules for uncertain pest findings:
 - If the diagnosis is suspected pest infestation, keep recommendations practical but cautious: inspect affected surfaces, isolate/mark affected plants, clean or remove heavily infested material where appropriate, and only recommend registered crop-safe pest products after field confirmation.
@@ -2542,7 +2553,11 @@ export const mergeDiagnosisResult = ({
         diseaseCategory: normalizeDiseaseCategory(diagnosisAssessment.diseaseCategory || diagnosisAssessment.pathogenType || ''),
         symptoms: normalizeArray(diagnosisAssessment.symptoms),
         additionalNotes: diagnosisAssessment.additionalNotes || buildGeneralDiagnosisFallback(language),
-        differentialDiagnoses: normalizeDifferentialDiagnoses(diagnosisAssessment.differentialDiagnoses),
+        differentialDiagnoses: normalizeDifferentialDiagnoses(diagnosisAssessment.differentialDiagnoses, diagnosisAssessment.primaryDiagnosis),
+        primaryScientificName: typeof diagnosisAssessment.primaryScientificName === 'string' ? diagnosisAssessment.primaryScientificName.trim() : '',
+        confidenceLevel: diagnosisAssessment.confidenceLevel || '',
+        additionalInformationNeeded: normalizeArray(diagnosisAssessment.additionalInformationNeeded).slice(0, 4),
+        followUpQuestions: normalizeArray(diagnosisAssessment.followUpQuestions).slice(0, 3),
         diagnosticEvidence: normalizeDiagnosticEvidence(diagnosisAssessment.diagnosticEvidence, language),
         needsMoreEvidence: Boolean(diagnosisAssessment.needsMoreEvidence || requiresRetake || validationIssues.length),
         abstainReason: diagnosisAssessment.abstainReason || '',
@@ -2610,6 +2625,8 @@ export const mergeDiagnosisResult = ({
     filtered.resultState = deriveScanResultState(filtered);
     filtered.treatmentEligible = assessScanDecision(filtered).treatmentEligible;
     if (!filtered.treatmentEligible) filtered.treatments = [];
+    filtered.treatments = redactDosageInstructions(filtered.treatments, language);
+    filtered.immediateActions = redactDosageInstructions(filtered.immediateActions, language);
     if (assessScanDecision(filtered).needsReview) {
         const copy = getScanQualityCopy(language);
         if (isNoIssueDiagnosis(filtered.disease)) {
@@ -2620,7 +2637,53 @@ export const mergeDiagnosisResult = ({
         filtered.prevention = [];
     }
 
-    return ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
+    const finalResult = ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
+    const finalDecision = assessScanDecision(finalResult);
+    finalResult.confidenceLevel = resolveConfidenceLevel({
+        score: finalResult.diagnosisConfidence,
+        reported: finalResult.confidenceLevel,
+        requiresRetake: finalDecision.requiresRetake,
+        needsReview: finalDecision.needsReview,
+    });
+    finalResult.structuredAssessment = buildStructuredAssessment(finalResult, {
+        language,
+        hasLeafImage: Boolean(imageQuality?.leaf),
+    });
+    return finalResult;
+};
+
+// Issues that make a diagnosis response unusable. Softer gaps (missing
+// evidence, unusual severity) are handled by the policy as "needs review".
+const CRITICAL_STAGE_ISSUES = new Set(['missing_diagnosis', 'missing_capture_assessment', 'missing_diagnosis_label']);
+export const MAX_DIAGNOSIS_ATTEMPTS = 2;
+
+/**
+ * Calls the diagnosis model at most MAX_DIAGNOSIS_ATTEMPTS times. A second
+ * attempt is made only when the first reply is malformed or structurally
+ * unusable, and it asks the model to repair its own JSON. Paid calls are never
+ * repeated without a bound.
+ */
+export const runDiagnosisStageWithRetry = async (baseMessages, callModel, { maxAttempts = MAX_DIAGNOSIS_ATTEMPTS } = {}) => {
+    let messages = baseMessages;
+    let lastIssues = [];
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const response = await callModel(messages);
+        const raw = response?.choices?.[0]?.message?.content || '';
+        let stage = null;
+        try { stage = parseOpenAIJson(raw, 'diagnosis stage'); } catch { stage = null; }
+        lastIssues = stage ? validateDiagnosisStage(stage).filter((issue) => CRITICAL_STAGE_ISSUES.has(issue)) : ['malformed_json'];
+        if (!lastIssues.length) return { stage, response, attempts: attempt };
+        console.warn(JSON.stringify({ event: 'diagnosis_response_invalid', attempt, issues: lastIssues }));
+        messages = [
+            ...baseMessages,
+            { role: 'assistant', content: String(raw).slice(0, 4000) },
+            { role: 'user', content: `Your previous reply could not be used (${lastIssues.join(', ')}). Reply again with ONLY the JSON object in the requested schema, including capture_assessment and diagnosis_assessment.primaryDiagnosis.` },
+        ];
+    }
+    const error = new Error(`Diagnosis response was unusable after ${maxAttempts} attempts: ${lastIssues.join(', ')}`);
+    error.code = 'AI_RESPONSE_INVALID';
+    error.status = 502;
+    throw error;
 };
 
 export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation, imageQuality = null, options = {}) {
@@ -2661,8 +2724,10 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         });
 
         const diagnosisMessages = createModelMessagesWithImages(diagnosisPrompt, treeImage, leafImage, speciesContext);
-        const diagnosisResponse = await callOpenAIJson(diagnosisMessages, 2600, options);
-        const stageOne = parseOpenAIJson(diagnosisResponse.choices[0].message.content, 'diagnosis stage');
+        const { stage: stageOne, response: diagnosisResponse, attempts: diagnosisAttempts } = await runDiagnosisStageWithRetry(
+            diagnosisMessages,
+            (messages) => callOpenAIJson(messages, 2600, options),
+        );
 
         const provisional = mergeDiagnosisResult({
             stageOne,
@@ -2724,7 +2789,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             imageQuality,
         });
 
-        finalResult.analysisMetadata = { policyVersion: 3, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, generatedAt: new Date().toISOString() };
+        finalResult.analysisMetadata = { policyVersion: 4, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
         console.log('Analysis complete');
         return finalResult;
 
@@ -2801,6 +2866,8 @@ const buildResultLocalizationPayload = (result = {}) => ({
         bestPractices: Array.isArray(result.healthyCarePlan?.bestPractices) ? result.healthyCarePlan.bestPractices : normalizeArray(result.healthyCarePlan?.bestPractices),
     },
     differentialDiagnoses: Array.isArray(result.differentialDiagnoses) ? result.differentialDiagnoses : [],
+    additionalInformationNeeded: normalizeArray(result.additionalInformationNeeded),
+    followUpQuestions: normalizeArray(result.followUpQuestions),
     diagnosticEvidence: result.diagnosticEvidence || null,
     nutritionalIssues: result.nutritionalIssues || null,
 });
@@ -2845,6 +2912,19 @@ const mergeLocalizedResult = (baseResult = {}, localized = {}, language = 'en') 
             ...baseResult.nutritionalIssues,
             ...localized.nutritionalIssues,
         };
+    }
+
+    for (const field of ['additionalInformationNeeded', 'followUpQuestions']) {
+        if (Array.isArray(localized[field])) next[field] = normalizeArray(localized[field]);
+    }
+
+    // The structured assessment is derived from the fields above, so rebuild
+    // it rather than leaving it in the original language.
+    if (baseResult.structuredAssessment) {
+        next.structuredAssessment = buildStructuredAssessment(next, {
+            language,
+            hasLeafImage: Boolean(baseResult.leafImage || baseResult.leaf_image_url || baseResult.leaf_image_path),
+        });
     }
 
     return next;
@@ -3190,6 +3270,7 @@ const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatme
     const curatedContext = buildDiseaseProductRuleContext(diagnosisInfo, recommendationRole, diseaseProductRules);
 
     pushWeightedTerm(weighted, diagnosisInfo.disease, recommendationRole === 'treatment' ? 22 : 10);
+    pushWeightedTerm(weighted, diagnosisInfo.primaryScientificName, recommendationRole === 'treatment' ? 18 : 6);
     pushWeightedTerm(weighted, diagnosisInfo.pathogenType, recommendationRole === 'treatment' ? 18 : 7);
     pushWeightedTerm(weighted, diagnosisInfo.diseaseCategory, recommendationRole === 'treatment' ? 18 : 7);
     curatedContext.productTags.forEach((tag) => pushWeightedTerm(weighted, tag, recommendationRole === 'treatment' ? 34 : 22));

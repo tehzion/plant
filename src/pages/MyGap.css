@@ -576,3 +576,10 @@
         transition: none;
     }
 }
+
+/* Structured logbook fields (date, plot, crop, product, quantity, operator) */
+.mygap-log-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 12px; }
+.mygap-log-details input { min-height: 44px; }
+.field-hint { display: block; margin-top: 4px; font-size: .8rem; color: var(--color-text-secondary); }
+.log-details { margin: 6px 0 0; font-size: .85rem; color: var(--color-text-secondary); line-height: 1.45; }
+.log-sync-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; background: #eff6ff; color: #1e3a8a; font-size: .75rem; font-weight: 700; }

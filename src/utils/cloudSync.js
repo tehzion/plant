@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js';
 import { flushSyncQueue } from './syncQueue.js';
+import { deleteRecord } from './indexedDbStorage.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -11,6 +12,12 @@ export const flushAuthenticatedSyncQueue = async (userId, options = {}) => {
     return flushSyncQueue({
         owner: `user:${userId}`,
         ...options,
+        // Once the server has the record, drop the on-device pending copy.
+        onSynced: async (operation) => {
+            if (operation.type === 'create' || operation.type === 'update') {
+                await deleteRecord(`user:${userId}`, operation.collection === 'checklist' ? 'checklist:current' : operation.recordId).catch(() => {});
+            }
+        },
         send: async (operation) => {
             const response = await fetch(`${API_URL}/api/sync`, {
                 method: 'POST',

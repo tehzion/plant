@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { queryNeon } from '../utils/neonDatabase.js';
+import { foldOptionalColumns, isUndefinedColumnError, OPTIONAL_COLUMNS } from '../utils/optionalColumns.js';
 
 const DATASETS = Object.freeze({
     profiles: {
@@ -14,7 +15,7 @@ const DATASETS = Object.freeze({
     },
     mygap_logs: {
         table: 'mygap_logs', owner: 'user_id', key: 'id',
-        fields: ['id', 'type', 'notes', 'created_at'], order: 'created_at',
+        fields: ['id', 'type', 'notes', 'activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'created_at'], order: 'created_at',
     },
     mygap_checklist: {
         table: 'mygap_checklist', owner: 'user_id', key: 'user_id',
@@ -91,32 +92,88 @@ export const getUserRow = async (table, userId, id) => {
     return result.rows[0] || null;
 };
 
+// A record ID that already belongs to another account must never be updated
+// or revealed. The message is deliberately generic so IDs cannot be probed.
+const ownershipConflict = () => Object.assign(new Error('This record ID is already in use.'), { status: 409, code: 'RECORD_ID_CONFLICT' });
+
+const recordIdFor = (config, payload = {}) => {
+    const value = payload?.[config.key];
+    if (value == null || value === '') return null;
+    if (typeof value !== 'string' && typeof value !== 'number') throw Object.assign(new Error('Record ID must be text.'), { status: 400 });
+    const id = String(value);
+    if (id.length > 200) throw Object.assign(new Error('Record ID is too long.'), { status: 400 });
+    return id;
+};
+
 export const insertUserRow = async (table, userId, payload = {}, { upsert = false } = {}) => {
     const config = datasetFor(table);
-    const fields = writeFields(config, payload);
-    if (config.owner !== config.key && !fields.some(({ field }) => field === config.key)) {
-        fields.unshift({ field: config.key, value: payload[config.key] || crypto.randomUUID() });
+    if (!userId) throw Object.assign(new Error('Sign-in is required.'), { status: 401 });
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw Object.assign(new Error('Record payload must be an object.'), { status: 400 });
+    // The owner column always comes from the verified session, never the body.
+    const fields = writeFields(config, payload).filter(({ field }) => field !== config.owner);
+    if (config.owner !== config.key) {
+        const suppliedId = recordIdFor(config, payload);
+        const withoutKey = fields.filter(({ field }) => field !== config.key);
+        fields.length = 0;
+        fields.push({ field: config.key, value: suppliedId || crypto.randomUUID() }, ...withoutKey);
     }
     fields.unshift({ field: config.owner, value: userId });
     const uniqueFields = [...new Map(fields.map((entry) => [entry.field, entry])).values()];
-    if (!uniqueFields.length) throw Object.assign(new Error('No data to save.'), { status: 400 });
     const columns = uniqueFields.map(({ field }) => identifier(field));
     const values = uniqueFields.map(({ value }) => value);
     const placeholders = values.map((_, index) => `$${index + 1}`);
+    const tableName = identifier(config.table);
+    const ownerColumn = identifier(config.owner);
+    // The owner predicate turns a cross-user key collision into "no row
+    // returned" instead of silently updating someone else's record.
     const conflict = upsert
         ? ` on conflict (${identifier(config.key)}) do update set ${uniqueFields
             .filter(({ field }) => field !== config.key && field !== config.owner)
-            .map(({ field }) => `${identifier(field)} = excluded.${identifier(field)}`).join(', ') || `${identifier(config.owner)} = excluded.${identifier(config.owner)}`}`
+            .map(({ field }) => `${identifier(field)} = excluded.${identifier(field)}`).join(', ') || `${ownerColumn} = excluded.${ownerColumn}`}
+            where ${tableName}.${ownerColumn} = excluded.${ownerColumn}`
         : '';
+    let result;
+    try {
+        result = await queryNeon(
+            `insert into public.${tableName} (${columns.join(', ')}) values (${placeholders.join(', ')})${conflict} returning *`,
+            values,
+        );
+    } catch (error) {
+        if (error?.code === '23505') throw ownershipConflict();
+        const optional = OPTIONAL_COLUMNS[config.table] || [];
+        if (isUndefinedColumnError(error) && uniqueFields.some(({ field }) => optional.includes(field))) {
+            const folded = foldOptionalColumns(config.table, Object.fromEntries(uniqueFields.map(({ field, value }) => [field, value])));
+            return insertUserRow(table, userId, folded, { upsert });
+        }
+        throw error;
+    }
+    const row = result.rows[0] || null;
+    if (!row || row[config.owner] !== userId) throw ownershipConflict();
+    return row;
+};
+
+export const findForeignRecordIds = async (table, userId, ids = []) => {
+    const config = datasetFor(table);
+    const unique = [...new Set(ids.filter((id) => id != null && id !== '').map(String))];
+    if (!unique.length || config.owner === config.key) return [];
     const result = await queryNeon(
-        `insert into public.${identifier(config.table)} (${columns.join(', ')}) values (${placeholders.join(', ')})${conflict} returning *`,
-        values,
+        `select ${identifier(config.key)} as id from public.${identifier(config.table)}
+         where ${identifier(config.key)} = any($1::text[]) and ${identifier(config.owner)} <> $2`,
+        [unique, userId],
     );
-    return result.rows[0] || null;
+    return (result.rows || []).map((row) => String(row.id));
 };
 
 export const bulkInsertUserRows = async (table, userId, rows = [], { upsert = false } = {}) => {
     if (!Array.isArray(rows) || rows.length > 500) throw Object.assign(new Error('Bulk write is limited to 500 records.'), { status: 400 });
+    const config = datasetFor(table);
+    if (rows.some((row) => !row || typeof row !== 'object' || Array.isArray(row))) {
+        throw Object.assign(new Error('Each bulk record must be an object.'), { status: 400 });
+    }
+    // Reject the whole batch before writing anything so a single foreign ID
+    // cannot leave a half-imported account behind.
+    const foreign = await findForeignRecordIds(table, userId, rows.map((row) => recordIdFor(config, row)));
+    if (foreign.length) throw ownershipConflict();
     const saved = [];
     for (const row of rows) saved.push(await insertUserRow(table, userId, row, { upsert }));
     return saved;

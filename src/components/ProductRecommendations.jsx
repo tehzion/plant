@@ -298,6 +298,7 @@ const ProductRecommendations = ({
         fertilizers: products.fertilizers || [],
         supplements: products.supplements || [],
         otherPopular: [],
+        catalogueDiscovery: [],
       };
     }
     return products;
@@ -558,7 +559,9 @@ const ProductRecommendations = ({
     const hasImage = Boolean(product.image);
     const packageSize = product.count || product.packageSize || '';
     const isLocalCatalogItem = typeof product.id === 'string' && product.id.startsWith('local-');
-    const canSelectForCheckout = isWooProductId(product.id) && Boolean(storeUrl) && product.inStock !== false && product.purchasable !== false;
+    // Catalogue-discovery items are informational: they are not confirmed as a
+    // treatment for this scan, so they are never pre-selected for checkout.
+    const canSelectForCheckout = !product.discoveryOnly && isWooProductId(product.id) && Boolean(storeUrl) && product.inStock !== false && product.purchasable !== false;
     const canAddToCart = Boolean(product.cartUrl) && product.inStock !== false && product.purchasable !== false;
 
     // Helper to translate if it looks like a key
@@ -590,6 +593,7 @@ const ProductRecommendations = ({
       : [];
     const ingredientList = matchedActiveIngredients.length > 0 ? matchedActiveIngredients : activeIngredients;
     const cautionNote = translateIfNeeded(product.cautionNote);
+    const recommendationReason = translateIfNeeded(product.recommendationReason);
 
     return (
       <div
@@ -679,8 +683,16 @@ const ProductRecommendations = ({
                   </span>
                 )}
               </div>
-              {matchReason && (
+              {recommendationReason && (
+                <p className="product-match-reason">
+                  <strong>{getLabel(t, 'assessment.whySuggested', 'Why suggested')}:</strong> {recommendationReason}
+                </p>
+              )}
+              {matchReason && !recommendationReason && (
                 <p className="product-match-reason">{matchReason}</p>
+              )}
+              {product.discoveryOnly && (
+                <p className="product-rule-caution">{getLabel(t, 'assessment.discoveryCardNote', 'Not confirmed for this result. Check the label for your crop before use.')}</p>
               )}
               {ingredientList.length > 0 && (
                 <p className="product-active-ingredients">
@@ -848,6 +860,21 @@ const ProductRecommendations = ({
 
           <div className="products-grid">
             {processedProducts.diseaseControl.map((product, index) => renderProductCard(product, index))}
+          </div>
+        </div>
+      )}
+
+      {/* Catalogue discovery: keyword matches that failed a suitability check */}
+      {processedProducts.catalogueDiscovery?.length > 0 && (
+        <div className="product-section product-section--discovery app-surface">
+          <div className="section-header-centered">
+            <h3 className="section-title">{getLabel(t, 'assessment.discoveryTitle', 'Other catalogue products to ask about')}</h3>
+          </div>
+          <p className="section-subtitle">
+            {getLabel(t, 'assessment.discoveryNote', 'These are not confirmed treatments for this result. Check that the label covers your crop and problem, and ask an expert before use.')}
+          </p>
+          <div className="products-grid">
+            {processedProducts.catalogueDiscovery.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}

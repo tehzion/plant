@@ -35,11 +35,15 @@ const ensureLocalDataset = async () => {
     await fs.promises.mkdir(IMAGES_DIR, { recursive: true });
 };
 
-const uploadAuditImage = async (value, scanId, suffix) => {
+// Objects live under a per-owner prefix so a caller who reuses someone else's
+// scan ID writes to a different path instead of replacing their photo.
+const ownerPrefix = (ownerHash) => (ownerHash ? String(ownerHash).slice(0, 16) : 'legacy');
+
+const uploadAuditImage = async (value, scanId, suffix, ownerHash = null) => {
     if (!value) return null;
     const mime = value.match(/^data:(image\/(?:jpeg|png|webp));base64,/)?.[1] || 'image/jpeg';
     const extension = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
-    const objectPath = `training/${scanId}_${suffix}.${extension}`;
+    const objectPath = `training/${ownerPrefix(ownerHash)}/${scanId}_${suffix}.${extension}`;
     const { error } = await getAuditClient().storage.from('scan-images').upload(
         objectPath, Buffer.from(value.replace(/^data:image\/\w+;base64,/, ''), 'base64'),
         { upsert: true, contentType: mime },
@@ -65,22 +69,39 @@ export const logTrainingData = async (data) => {
         const LOG_FILE = path.join(DATASET_DIR, `data_log_${dateStr}.jsonl`);
 
         const timestamp = now.toISOString();
-        const { id, treeImage, leafImage, category, result, metadata = {} } = data;
+        const { id, treeImage, leafImage, category, result, ownerHash = null } = data;
+        const metadata = { ...(data.metadata || {}), ...(ownerHash ? { ownerHash } : {}) };
         const scanId = id || crypto.randomUUID();
         if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) throw new Error('Invalid scan ID');
 
         if (useCloudAudit()) {
+            const existing = await queryNeon(
+                "select metadata->>'ownerHash' as owner_hash from public.diagnosis_training_logs where id = $1",
+                [scanId],
+            );
+            if (existing.rows?.length && existing.rows[0].owner_hash !== (ownerHash || null)) {
+                console.warn(JSON.stringify({ event: 'audit_owner_conflict', scanId }));
+                return false;
+            }
             const [tree, leaf] = await Promise.all([
-                uploadAuditImage(treeImage, scanId, 'tree'),
-                uploadAuditImage(leafImage, scanId, 'leaf'),
+                uploadAuditImage(treeImage, scanId, 'tree', ownerHash),
+                uploadAuditImage(leafImage, scanId, 'leaf', ownerHash),
             ]);
-            await queryNeon(
+            // The owner predicate keeps a concurrent writer with a different
+            // identity from replacing an existing assessment record.
+            const written = await queryNeon(
                 `insert into public.diagnosis_training_logs(id, created_at, category, images, raw_result, metadata)
                  values ($1, $2, $3, $4, $5, $6)
                  on conflict (id) do update set created_at = excluded.created_at, category = excluded.category,
-                    images = excluded.images, raw_result = excluded.raw_result, metadata = excluded.metadata`,
-                [scanId, timestamp, category || null, { tree, leaf }, result || {}, metadata || {}],
+                    images = excluded.images, raw_result = excluded.raw_result, metadata = excluded.metadata
+                 where diagnosis_training_logs.metadata->>'ownerHash' is not distinct from excluded.metadata->>'ownerHash'
+                 returning id`,
+                [scanId, timestamp, category || null, { tree, leaf }, result || {}, metadata],
             );
+            if (!written.rows?.length) {
+                console.warn(JSON.stringify({ event: 'audit_owner_conflict', scanId }));
+                return false;
+            }
             return true;
         }
         await ensureLocalDataset();
@@ -90,7 +111,7 @@ export const logTrainingData = async (data) => {
         if (treeImage) {
             const base64Data = treeImage.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
-            const fileName = `${scanId}_tree.jpg`;
+            const fileName = `${ownerPrefix(ownerHash)}_${scanId}_tree.jpg`;
             treeImagePath = `/dataset/images/${fileName}`;
             await fs.promises.writeFile(path.join(IMAGES_DIR, fileName), buffer);
         }
@@ -99,7 +120,7 @@ export const logTrainingData = async (data) => {
         if (leafImage) {
             const base64Data = leafImage.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
-            const fileName = `${scanId}_leaf.jpg`;
+            const fileName = `${ownerPrefix(ownerHash)}_${scanId}_leaf.jpg`;
             leafImagePath = `/dataset/images/${fileName}`;
             await fs.promises.writeFile(path.join(IMAGES_DIR, fileName), buffer);
         }
@@ -143,7 +164,7 @@ export const logTrainingData = async (data) => {
         return true;
 
     } catch (error) {
-        console.error('❌ Data Collection Failed:', error);
+        console.error('❌ Data Collection Failed:', error?.message || error);
         return false; // Don't crash the app if logging fails
     }
 };
@@ -161,13 +182,16 @@ export const logTrainingData = async (data) => {
  * @param {string} feedbackData.issueType - Optional issue category
  * @param {string} feedbackData.note - Optional detailed note
  */
-export const logFeedback = async (feedbackData) => {
+export const logFeedback = async (feedbackData, attribution = null) => {
     try {
         const now = new Date();
+        // Attribution is written by the server after verifying the caller, so
+        // farmer feedback is always distinguishable from expert reviews.
+        const record = attribution ? { ...feedbackData, attribution } : feedbackData;
         if (useCloudAudit()) {
             await queryNeon(
                 'insert into public.diagnosis_feedback(scan_id, feedback, created_at) values ($1, $2, $3)',
-                [feedbackData.scanId, feedbackData, now.toISOString()],
+                [feedbackData.scanId, record, now.toISOString()],
             );
             return true;
         }
@@ -176,7 +200,7 @@ export const logFeedback = async (feedbackData) => {
         const FEEDBACK_FILE = path.join(DATASET_DIR, `feedback_log_${dateStr}.jsonl`);
 
         const feedbackEntry = {
-            ...feedbackData,
+            ...record,
             timestamp: now.toISOString()
         };
 
@@ -187,7 +211,7 @@ export const logFeedback = async (feedbackData) => {
         return true;
 
     } catch (error) {
-        console.error('❌ Feedback logging failed:', error);
+        console.error('❌ Feedback logging failed:', error?.message || error);
         return false;
     }
 };

@@ -6,6 +6,8 @@ import {
     Info,
 } from 'lucide-react';
 
+import { CONFIDENCE_LEVEL_FALLBACK_LABELS } from '../../../shared/diseaseAssessment.js';
+
 const DETAIL_ICON_MAP = {
     calendar: Calendar,
     bug: Bug,
@@ -19,8 +21,12 @@ const DiseaseResultSections = ({ normalized, t }) => {
         detailItems,
         symptomsList,
         diagnosticEvidence,
-        differentials,
+        alternatives = [],
     } = normalized;
+    const label = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
 
     return (
         <>
@@ -86,18 +92,35 @@ const DiseaseResultSections = ({ normalized, t }) => {
                 </div>
             )}
 
-            {differentials.length > 0 && (
+            {alternatives.length > 0 && (
                 <div className="differentials-section">
                     <h4 className="subsection-title">
                         <AlertTriangle size={18} className="subsection-icon" />
-                        {t('results.possibleAlternatives') || 'Possible alternatives'}
+                        {label('assessment.alternativesTitle', 'Other conditions that look similar')}
                     </h4>
-                    <ul className="symptoms-list">
-                        {differentials.map((item, index) => (
-                            <li key={`${item.name}-${index}`} className="symptom-item">
-                                <strong>{item.name}</strong>
-                                {typeof item.likelihood === 'number' ? ` (${item.likelihood}%)` : ''}
-                                {item.reason ? ` - ${item.reason}` : ''}
+                    <p className="differentials-intro">{label('assessment.alternativesIntro', 'These can look alike. Check the differences before acting.')}</p>
+                    <ul className="alternative-list">
+                        {alternatives.map((item, index) => (
+                            <li key={`${item.name}-${index}`} className="alternative-card">
+                                <div className="alternative-card__header">
+                                    <strong>{item.name}</strong>
+                                    {item.confidence_level && (
+                                        <span className={`confidence-chip confidence-chip--${item.confidence_level}`}>
+                                            {label(`assessment.confidence.${item.confidence_level}`, CONFIDENCE_LEVEL_FALLBACK_LABELS[item.confidence_level] || item.confidence_level)}
+                                        </span>
+                                    )}
+                                </div>
+                                {item.scientific_name && <em className="alternative-card__science">{item.scientific_name}</em>}
+                                {[
+                                    ['supporting_evidence', 'assessment.supports', 'Signs that fit'],
+                                    ['weakening_evidence', 'assessment.weakens', 'Signs against'],
+                                    ['distinguishing_features', 'assessment.tellApart', 'How to tell apart'],
+                                ].map(([field, key, fallback]) => (item[field]?.length > 0 && (
+                                    <div key={field} className="alternative-card__row">
+                                        <span>{label(key, fallback)}</span>
+                                        <p>{item[field].join('; ')}</p>
+                                    </div>
+                                )))}
                             </li>
                         ))}
                     </ul>
