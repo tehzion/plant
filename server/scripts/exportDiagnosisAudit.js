@@ -2,25 +2,30 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { getAuditClient } from '../utils/dataCollector.js';
+import { queryNeon } from '../utils/neonDatabase.js';
+import { hasAiImprovementConsent } from '../../shared/dataConsent.js';
 
 // Export private audit records for the existing holdout/evaluation scripts.
+// Only scans whose farmer opted in to AI improvement are exported; records
+// without a consent answer (including those created before consent existed)
+// are treated as not consented.
 const outputDir = path.resolve(process.env.DIAGNOSIS_DATA_DIR || 'server/dataset');
 await fs.mkdir(path.join(outputDir, 'images'), { recursive: true });
 
 const readAll = async (table) => {
     const rows = [];
     for (let offset = 0; ;) {
-        const { data, error, count } = await getAuditClient().from(table).select('*', { count: 'exact' })
-            .order('created_at').order('id').range(offset, offset + 499);
-        if (error) throw error;
+        const { rows: data } = await queryNeon(`select * from public.${table} order by created_at, id limit 500 offset $1`, [offset]);
         rows.push(...data);
         offset += data.length;
-        if (!data.length || (count != null ? offset >= count : data.length < 500)) return rows;
+        if (!data.length || data.length < 500) return rows;
     }
 };
 
-const scans = await readAll('diagnosis_training_logs');
-const feedback = await readAll('diagnosis_feedback');
+const allScans = await readAll('diagnosis_training_logs');
+const scans = allScans.filter((scan) => hasAiImprovementConsent(scan.metadata));
+const consentedIds = new Set(scans.map((scan) => scan.id));
+const feedback = (await readAll('diagnosis_feedback')).filter((row) => consentedIds.has(row.scan_id));
 const exportedScans = [];
 for (const scan of scans) {
     const images = {};
@@ -39,4 +44,4 @@ for (const scan of scans) {
 const writeJsonl = (file, rows) => fs.writeFile(path.join(outputDir, file), rows.map((row) => JSON.stringify(row)).join('\n') + '\n');
 await writeJsonl('data_log_cloud.jsonl', exportedScans);
 await writeJsonl('feedback_log_cloud.jsonl', feedback.map((row) => ({ ...row.feedback, timestamp: row.created_at })));
-console.log(`Exported ${scans.length} scans and ${feedback.length} feedback records to ${outputDir}`);
+console.log(`Exported ${scans.length} consented scans (of ${allScans.length}) and ${feedback.length} feedback records to ${outputDir}`);

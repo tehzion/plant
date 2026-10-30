@@ -44,6 +44,11 @@ export const validateApiRequest = (req, _res, next) => {
                 image(body.leafImage, 'leafImage');
                 text(body.category, 'category', 100);
                 text(body.location, 'location', 300);
+                if (body.dataConsent != null) {
+                    object(body.dataConsent, 'dataConsent');
+                    if (typeof body.dataConsent.aiImprovement !== 'boolean') throw fail('dataConsent.aiImprovement must be true or false');
+                    text(body.dataConsent.version, 'dataConsent.version', 40);
+                }
                 if (body.scanId != null && !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(body.scanId)) throw fail('scanId must be a UUID');
                 if (body.imageQuality != null) {
                     object(body.imageQuality, 'imageQuality');
@@ -62,6 +67,7 @@ export const validateApiRequest = (req, _res, next) => {
                 break;
             case '/feedback':
                 text(body.scanId, 'scanId', 100, true);
+                text(body.feedbackToken, 'feedbackToken', 200);
                 if (body.rating != null && (!Number.isInteger(body.rating) || body.rating < 1 || body.rating > 5)) throw fail('rating must be 1–5');
                 if (body.wasCorrect != null && typeof body.wasCorrect !== 'boolean') throw fail('wasCorrect must be boolean');
                 for (const field of ['comment', 'correction', 'note']) text(body[field], field, 4000);

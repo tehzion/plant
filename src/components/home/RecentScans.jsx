@@ -88,20 +88,21 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                         const formattedDate = formatScanDate(scanTimestamp, label('common.dateLocale', 'en-MY'));
 
                         return (
-                            <div
+                            <button
                                 key={scan.id}
+                                type="button"
                                 className="superapp-activity-card"
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); onScanClick(scan.id); } }}
                                 onClick={() => onScanClick(scan.id)}
+                                aria-label={scan.disease || t('profile.recentActivity') || 'Open scan'}
                             >
                                 <div className="superapp-activity-img-wrapper home-scan-card-media">
                                     {imageSrc ? (
                                         <img
                                             src={imageSrc}
-                                            alt={scan.disease}
+                                            alt={scan.disease || t('profile.recentActivity') || 'Plant scan'}
                                             className="superapp-activity-img"
+                                            loading="lazy"
+                                            decoding="async"
                                         />
                                     ) : (
                                         <div className="home-scan-card-fallback" aria-hidden="true">
@@ -134,7 +135,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                         </p>
                                     )}
                                 </div>
-                            </div>
+                            </button>
                         );
                     })
                 ) : (

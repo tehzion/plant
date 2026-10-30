@@ -4,9 +4,8 @@
  */
 
 import fetch from 'node-fetch';
-import fs from 'fs';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = `http://localhost:${process.env.PORT || 3002}`;
 
 console.log('🧪 Testing Dual-API Plant Detection System\n');
 

@@ -1,6 +1,6 @@
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
-﻿import { useNavigate, useParams } from 'react-router-dom';
+﻿import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -23,6 +23,8 @@ import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
 import { buildScanResultModel } from '../utils/scanResultModel.js';
 import ScanDecisionSummary, { nextScanStep } from '../components/ScanDecisionSummary.jsx';
+import TodayPlanCard from '../components/results/TodayPlanCard.jsx';
+import { fetchScanExpertReview } from '../utils/expertReview.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { confidencePercent } from '../../shared/scanResultPolicy.js';
 import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
@@ -55,13 +57,24 @@ const RESULTS_SECTION_FALLBACK = (
   </div>
 );
 
+const RESULT_TAB_KEYS = ['disease', 'care', 'nutrition', 'products'];
+
+const getResultTabIndex = (value) => {
+  const index = RESULT_TAB_KEYS.indexOf(value);
+  return index >= 0 ? index : 0;
+};
+
 const Results = () => {
-  const [activeResultTab, setActiveResultTab] = useState(0);
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const [activeResultTab, setActiveResultTab] = useState(() => getResultTabIndex(requestedTab));
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [scan, setScan] = useState(null);
+  const [recheckRequest, setRecheckRequest] = useState(null);
+  const [expertReview, setExpertReview] = useState(null);
   const [originalScan, setOriginalScan] = useState(null);
   const translationRequest = useRef(0);
   useEffect(() => { translationRequest.current++; setTranslating(false); setTranslationError(false); return () => { translationRequest.current++; }; }, [id, language]);
@@ -69,6 +82,18 @@ const Results = () => {
   const [translationError, setTranslationError] = useState(false);
   const enhancementCopy = getEnhancementCopy(language);
   const [scanLoading, setScanLoading] = useState(true);
+  useEffect(() => {
+    setActiveResultTab(getResultTabIndex(requestedTab));
+  }, [requestedTab]);
+
+  const selectResultTab = useCallback((index) => {
+    setActiveResultTab(index);
+    const nextParams = new URLSearchParams(searchParams);
+    if (index === 0) nextParams.delete('tab');
+    else nextParams.set('tab', RESULT_TAB_KEYS[index]);
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const label = useCallback((key, fallback) => {
     const translated = t(key);
     return translated && translated !== key ? translated : fallback;
@@ -88,6 +113,16 @@ const Results = () => {
         setScanLoading(false);
       });
   }, [id, user?.id]);
+
+  // Expert reviews are optional extra context; a failed or offline lookup
+  // simply leaves the badge hidden.
+  useEffect(() => {
+    if (!scan?.id) return undefined;
+    let cancelled = false;
+    setExpertReview(null);
+    fetchScanExpertReview(scan).then(review => { if (!cancelled) setExpertReview(review); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [scan?.id, scan?.feedbackToken]);
 
   const translateAnalysis = async () => {
     if (!originalScan || translating) return;
@@ -517,16 +552,17 @@ ${t('pdf.generatedBy')}
           </div>
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
-        <ScanDecisionSummary result={result} />
+        <ScanDecisionSummary result={result} expertReview={expertReview} />
+        <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
         <div className="results-next-action">
-          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { setActiveResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
+          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
             {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
           </button>
         </div>
         <div className="results-content-grid">
         {/* Tabbed Results */}
         <div id="results-diagnostics" className="results-diagnostics fade-slide-up" style={{ animationDelay: '0.1s' }}>
-          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={setActiveResultTab} />
+          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={selectResultTab} />
         </div>
 
         <aside className="results-sidebar">
@@ -615,6 +651,7 @@ ${t('pdf.generatedBy')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="map-link-small"
+                    aria-label={`${t('results.viewOnMap')}: ${locationNameValue}`}
                     title={t('results.viewOnMap')}
                   >
                     <ExternalLink size={12} />
@@ -649,7 +686,7 @@ ${t('pdf.generatedBy')}
         </details>
 
         <section className="results-followup-group">
-        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
+        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
         <div className="follow-up-card app-surface app-surface--soft">
           <div className="follow-up-icon">
             <ClipboardList size={22} />

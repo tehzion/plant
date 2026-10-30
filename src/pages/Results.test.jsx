@@ -12,6 +12,7 @@ const fetchLiveProductRecommendationsMock = vi.hoisted(() => vi.fn());
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ id: 'scan-123' }),
   useNavigate: () => navigateMock,
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
 vi.mock('../utils/localStorage', () => ({

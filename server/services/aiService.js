@@ -1,12 +1,14 @@
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { assessScanDecision, getScanSectionPolicy, isNoIssueDiagnosis, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+import { buildStructuredAssessment, normalizeAlternativeConditions, redactDosageInstructions, resolveConfidenceLevel } from '../../shared/diseaseAssessment.js';
 export { SCAN_RESULT_STATES };
 import OpenAI from 'openai';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import NodeCache from 'node-cache';
+import { withAbortableTimeout } from '../utils/requestTimeout.js';
 import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
 import {
     DEFAULT_DISEASE_PRODUCT_RULES,
@@ -1655,25 +1657,11 @@ export function normalizePredictiveRiskResult(result = {}) {
     return normalized;
 }
 
-const normalizeDifferentialDiagnoses = (differentials = []) => {
-    if (!Array.isArray(differentials)) return [];
-    return differentials
-        .map((entry) => {
-            if (!entry) return null;
-            if (typeof entry === 'string') {
-                return { name: entry, likelihood: null, reason: '' };
-            }
-            const name = entry.name || entry.disease || entry.diagnosis;
-            if (!name) return null;
-            return {
-                name,
-                likelihood: Number.isFinite(Number(entry.likelihood)) ? clampConfidence(entry.likelihood) : null,
-                reason: entry.reason || entry.why || '',
-            };
-        })
-        .filter(Boolean)
-        .slice(0, 3);
-};
+// Keeps the legacy { name, likelihood, reason } shape the UI and PDF already
+// read, while adding the comparison fields used by the structured assessment.
+const normalizeDifferentialDiagnoses = (differentials = [], primaryName = '') => (
+    normalizeAlternativeConditions(differentials, { primaryName })
+);
 
 const normalizeDiagnosticEvidence = (evidence = {}, language = 'en') => ({
     leafAgeAffected: evidence.leafAgeAffected || evidence.leaf_location || translateText(language, {
@@ -2267,7 +2255,13 @@ Rules:
 - Never increase disease confidence only because PlantNet species confidence is high.
 - Do not state any species is confirmed unless the species context says it is confirmed.
 - If species context is weak or conflicts with the user-selected category, use it only as a hypothesis and rely on visible symptoms.
-- Use ranked differentials when a single diagnosis is not secure.
+- Compare visually similar conditions. In differentialDiagnoses list 0-3 OTHER conditions that remain genuinely plausible from the visible evidence (for example fungal vs bacterial leaf spot, nutrient deficiency, environmental stress). Never pad the list to reach three, never repeat the primary diagnosis, and return an empty list when nothing else is plausible.
+- For every alternative give: supportingEvidence (visible features consistent with it), weakeningEvidence (visible features that argue against it) and distinguishingFeatures (what a farmer could check to tell it apart from the primary diagnosis).
+- Use standard, consistent disease names (e.g. "Early Blight", "Septoria Leaf Spot", "Anthracnose"). Put the causal organism in scientificName only when the visible evidence clearly supports it; otherwise leave it empty.
+- Express confidence with confidenceLevel: high, medium, low or insufficient_evidence. diagnosisConfidence is an estimate, not a calibrated probability.
+- Explanations must be short statements of observable evidence for the farmer. Do not narrate step-by-step internal reasoning.
+- If confidence is low or insufficient_evidence: set needsMoreEvidence true, list additionalInformationNeeded (specific extra photos or observations) and up to 3 followUpQuestions, and do not suggest chemical treatment.
+- Do not claim certainty that a photo cannot provide; say "consistent with" or "suggests" rather than "confirmed".
 - If image quality is weak, set requiresRetake to true and explain why.
 - If diagnosis evidence is weak or conflicting, set needsMoreEvidence to true and provide abstainReason.
 - Set resultState conservatively as one of: confident_treatment, needs_closer_photo, possible_nutrient_issue, possible_pest, expert_review_needed, healthy.
@@ -2304,7 +2298,9 @@ Return STRICT JSON:
   },
   "diagnosis_assessment": {
     "plantType": "Common crop name (Scientific name if known)",
-    "primaryDiagnosis": "short label",
+    "primaryDiagnosis": "short standard disease or condition name",
+    "primaryScientificName": "causal organism if supported, else empty",
+    "confidenceLevel": "high | medium | low | insufficient_evidence",
     "healthStatus": "healthy or unhealthy",
     "severity": "mild | moderate | severe",
     "diagnosisConfidence": 0,
@@ -2316,8 +2312,20 @@ Return STRICT JSON:
     "needsMoreEvidence": false,
     "abstainReason": "",
     "differentialDiagnoses": [
-      { "name": "alternative diagnosis", "likelihood": 42, "reason": "why this remains possible" }
+      {
+        "name": "alternative condition",
+        "scientificName": "",
+        "category": "fungal_disease | bacterial_disease | viral_disease | pest_damage | nutrient_deficiency | environmental_stress",
+        "confidenceLevel": "medium | low",
+        "likelihood": 30,
+        "reason": "one-line summary of why it remains possible",
+        "supportingEvidence": ["visible feature consistent with it"],
+        "weakeningEvidence": ["visible feature that argues against it"],
+        "distinguishingFeatures": ["what to check to tell it apart from the primary diagnosis"]
+      }
     ],
+    "additionalInformationNeeded": ["specific extra photo or observation"],
+    "followUpQuestions": ["short question for the farmer"],
     "diagnosticEvidence": {
       "leafAgeAffected": "older/newer/mixed/unclear",
       "lesionShape": "round/angular/diffuse/none/unclear",
@@ -2412,6 +2420,10 @@ Rules for nutritionalIssues:
 - Use "status": "none" when there is no meaningful nutrient signal.
 - Do not label a possible overlap as a confirmed deficiency.
 
+Rules for chemical advice:
+- Never state pesticide or fungicide dosages, mixing rates, spray intervals or pre-harvest intervals. Say to follow the registered product label and local DOA guidance instead.
+- Only mention chemical control when the diagnosis is confident; otherwise focus on inspection, sanitation and expert confirmation.
+
 Rules for uncertain pest findings:
 - If the diagnosis is suspected pest infestation, keep recommendations practical but cautious: inspect affected surfaces, isolate/mark affected plants, clean or remove heavily infested material where appropriate, and only recommend registered crop-safe pest products after field confirmation.
 - Do not return an empty or retake-only treatment plan when visible pest evidence is present.`;
@@ -2460,19 +2472,11 @@ export const createModelMessagesWithImages = (prompt, treeImage, leafImage = nul
     return messages;
 };
 
-const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
-    let timeoutId = null;
-    try {
-        return await Promise.race([
-            promise,
-            new Promise((_, reject) => {
-                timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-            }),
-        ]);
-    } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-    }
-};
+const withTimeout = (operation, timeoutMs, timeoutMessage, signal = null) => withAbortableTimeout(
+    operation,
+    timeoutMs,
+    { signal, timeoutMessage },
+);
 
 const callOpenAIJson = async (messages, maxTokens = 2400, options = {}) => {
     let model = OPENAI_PRIMARY_MODEL;
@@ -2549,7 +2553,11 @@ export const mergeDiagnosisResult = ({
         diseaseCategory: normalizeDiseaseCategory(diagnosisAssessment.diseaseCategory || diagnosisAssessment.pathogenType || ''),
         symptoms: normalizeArray(diagnosisAssessment.symptoms),
         additionalNotes: diagnosisAssessment.additionalNotes || buildGeneralDiagnosisFallback(language),
-        differentialDiagnoses: normalizeDifferentialDiagnoses(diagnosisAssessment.differentialDiagnoses),
+        differentialDiagnoses: normalizeDifferentialDiagnoses(diagnosisAssessment.differentialDiagnoses, diagnosisAssessment.primaryDiagnosis),
+        primaryScientificName: typeof diagnosisAssessment.primaryScientificName === 'string' ? diagnosisAssessment.primaryScientificName.trim() : '',
+        confidenceLevel: diagnosisAssessment.confidenceLevel || '',
+        additionalInformationNeeded: normalizeArray(diagnosisAssessment.additionalInformationNeeded).slice(0, 4),
+        followUpQuestions: normalizeArray(diagnosisAssessment.followUpQuestions).slice(0, 3),
         diagnosticEvidence: normalizeDiagnosticEvidence(diagnosisAssessment.diagnosticEvidence, language),
         needsMoreEvidence: Boolean(diagnosisAssessment.needsMoreEvidence || requiresRetake || validationIssues.length),
         abstainReason: diagnosisAssessment.abstainReason || '',
@@ -2617,6 +2625,8 @@ export const mergeDiagnosisResult = ({
     filtered.resultState = deriveScanResultState(filtered);
     filtered.treatmentEligible = assessScanDecision(filtered).treatmentEligible;
     if (!filtered.treatmentEligible) filtered.treatments = [];
+    filtered.treatments = redactDosageInstructions(filtered.treatments, language);
+    filtered.immediateActions = redactDosageInstructions(filtered.immediateActions, language);
     if (assessScanDecision(filtered).needsReview) {
         const copy = getScanQualityCopy(language);
         if (isNoIssueDiagnosis(filtered.disease)) {
@@ -2627,7 +2637,53 @@ export const mergeDiagnosisResult = ({
         filtered.prevention = [];
     }
 
-    return ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
+    const finalResult = ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);
+    const finalDecision = assessScanDecision(finalResult);
+    finalResult.confidenceLevel = resolveConfidenceLevel({
+        score: finalResult.diagnosisConfidence,
+        reported: finalResult.confidenceLevel,
+        requiresRetake: finalDecision.requiresRetake,
+        needsReview: finalDecision.needsReview,
+    });
+    finalResult.structuredAssessment = buildStructuredAssessment(finalResult, {
+        language,
+        hasLeafImage: Boolean(imageQuality?.leaf),
+    });
+    return finalResult;
+};
+
+// Issues that make a diagnosis response unusable. Softer gaps (missing
+// evidence, unusual severity) are handled by the policy as "needs review".
+const CRITICAL_STAGE_ISSUES = new Set(['missing_diagnosis', 'missing_capture_assessment', 'missing_diagnosis_label']);
+export const MAX_DIAGNOSIS_ATTEMPTS = 2;
+
+/**
+ * Calls the diagnosis model at most MAX_DIAGNOSIS_ATTEMPTS times. A second
+ * attempt is made only when the first reply is malformed or structurally
+ * unusable, and it asks the model to repair its own JSON. Paid calls are never
+ * repeated without a bound.
+ */
+export const runDiagnosisStageWithRetry = async (baseMessages, callModel, { maxAttempts = MAX_DIAGNOSIS_ATTEMPTS } = {}) => {
+    let messages = baseMessages;
+    let lastIssues = [];
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        const response = await callModel(messages);
+        const raw = response?.choices?.[0]?.message?.content || '';
+        let stage = null;
+        try { stage = parseOpenAIJson(raw, 'diagnosis stage'); } catch { stage = null; }
+        lastIssues = stage ? validateDiagnosisStage(stage).filter((issue) => CRITICAL_STAGE_ISSUES.has(issue)) : ['malformed_json'];
+        if (!lastIssues.length) return { stage, response, attempts: attempt };
+        console.warn(JSON.stringify({ event: 'diagnosis_response_invalid', attempt, issues: lastIssues }));
+        messages = [
+            ...baseMessages,
+            { role: 'assistant', content: String(raw).slice(0, 4000) },
+            { role: 'user', content: `Your previous reply could not be used (${lastIssues.join(', ')}). Reply again with ONLY the JSON object in the requested schema, including capture_assessment and diagnosis_assessment.primaryDiagnosis.` },
+        ];
+    }
+    const error = new Error(`Diagnosis response was unusable after ${maxAttempts} attempts: ${lastIssues.join(', ')}`);
+    error.code = 'AI_RESPONSE_INVALID';
+    error.status = 502;
+    throw error;
 };
 
 export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, category, language, userLocation, imageQuality = null, options = {}) {
@@ -2668,8 +2724,10 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         });
 
         const diagnosisMessages = createModelMessagesWithImages(diagnosisPrompt, treeImage, leafImage, speciesContext);
-        const diagnosisResponse = await callOpenAIJson(diagnosisMessages, 2600, options);
-        const stageOne = parseOpenAIJson(diagnosisResponse.choices[0].message.content, 'diagnosis stage');
+        const { stage: stageOne, response: diagnosisResponse, attempts: diagnosisAttempts } = await runDiagnosisStageWithRetry(
+            diagnosisMessages,
+            (messages) => callOpenAIJson(messages, 2600, options),
+        );
 
         const provisional = mergeDiagnosisResult({
             stageOne,
@@ -2706,12 +2764,14 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
 
             try {
                 const treatmentResponse = await withTimeout(
-                    callOpenAIJson(treatmentMessages, 1600, options),
+                    (signal) => callOpenAIJson(treatmentMessages, 1600, { ...options, signal }),
                     25000,
                     'Treatment enrichment timed out',
+                    options.signal,
                 );
                 stageTwo = parseOpenAIJson(treatmentResponse.choices[0].message.content, 'treatment stage');
             } catch (treatmentError) {
+                if (options.signal?.aborted) throw treatmentError;
                 console.warn('Treatment enrichment skipped:', treatmentError.message);
                 stageTwo = null;
             }
@@ -2729,7 +2789,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             imageQuality,
         });
 
-        finalResult.analysisMetadata = { policyVersion: 3, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, generatedAt: new Date().toISOString() };
+        finalResult.analysisMetadata = { policyVersion: 4, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
         console.log('Analysis complete');
         return finalResult;
 
@@ -2766,7 +2826,7 @@ const DEFAULT_CARE_PLANS = {
 /**
  * Ask general agricultural question
  */
-export async function askAI(question, language, recentNotes = [], recentAlerts = []) {
+export async function askAI(question, language, recentNotes = [], recentAlerts = [], options = {}) {
     const contextSummary = buildAskAIContextSummary(recentNotes, recentAlerts, language);
     const userPrompt = contextSummary
         ? `Farmer question:\n${question}\n\nRelevant farm context:\n${contextSummary}\n\nUse the context only when it is relevant to the answer.`
@@ -2782,7 +2842,8 @@ export async function askAI(question, language, recentNotes = [], recentAlerts =
             { role: 'user', content: userPrompt }
         ],
         maxTokens: 300,
-        temperature: 0.5
+        temperature: 0.5,
+        signal: options.signal,
     });
     return response.choices[0].message.content;
 }
@@ -2805,6 +2866,8 @@ const buildResultLocalizationPayload = (result = {}) => ({
         bestPractices: Array.isArray(result.healthyCarePlan?.bestPractices) ? result.healthyCarePlan.bestPractices : normalizeArray(result.healthyCarePlan?.bestPractices),
     },
     differentialDiagnoses: Array.isArray(result.differentialDiagnoses) ? result.differentialDiagnoses : [],
+    additionalInformationNeeded: normalizeArray(result.additionalInformationNeeded),
+    followUpQuestions: normalizeArray(result.followUpQuestions),
     diagnosticEvidence: result.diagnosticEvidence || null,
     nutritionalIssues: result.nutritionalIssues || null,
 });
@@ -2849,6 +2912,19 @@ const mergeLocalizedResult = (baseResult = {}, localized = {}, language = 'en') 
             ...baseResult.nutritionalIssues,
             ...localized.nutritionalIssues,
         };
+    }
+
+    for (const field of ['additionalInformationNeeded', 'followUpQuestions']) {
+        if (Array.isArray(localized[field])) next[field] = normalizeArray(localized[field]);
+    }
+
+    // The structured assessment is derived from the fields above, so rebuild
+    // it rather than leaving it in the original language.
+    if (baseResult.structuredAssessment) {
+        next.structuredAssessment = buildStructuredAssessment(next, {
+            language,
+            hasLeafImage: Boolean(baseResult.leafImage || baseResult.leaf_image_url || baseResult.leaf_image_path),
+        });
     }
 
     return next;
@@ -2934,9 +3010,9 @@ function ensureCarePlan(result, language) {
 }
 
 /**
- * Product recommendation engine
- * Takes disease diagnosis info + available WooCommerce tags & categories
- * Returns two separate lists: treatment tag/category IDs and nutrition tag/category IDs
+ * Deterministic product recommendation helpers
+ * Match diagnosis keywords to available WooCommerce tags & categories without
+ * sending catalog data to a second AI call.
  * @param {Object} diagnosisInfo - { disease, healthStatus, pathogenType, plantType, symptoms, treatments }
  * @param {Array} availableTags - Array of { id, name } from WooCommerce
  * @param {Array} availableCategories - Array of { id, name } from WooCommerce
@@ -3075,6 +3151,55 @@ const pushWeightedTerm = (terms, value, weight = 8) => {
         .forEach((word) => addTerm(word, Math.max(4, Math.round(weight * 0.72))));
 };
 
+const CONTROLLED_RECOMMENDATION_SYNONYMS = Object.freeze({
+    aphid: ['plant lice', 'plant louse'],
+    'plant lice': ['aphid'],
+    'plant louse': ['aphid'],
+    mealybug: ['mealy bug'],
+    'mealy bug': ['mealybug'],
+    fungal: ['fungus', 'fungicide'],
+    fungus: ['fungal', 'fungicide'],
+    fungicide: ['fungal', 'fungus'],
+    pest: ['insect', 'pest control'],
+    insect: ['pest', 'pest control'],
+    'nutrient deficiency': ['deficiency', 'plant nutrition'],
+    deficiency: ['nutrient deficiency', 'plant nutrition'],
+    fertilizer: ['plant nutrition'],
+    'plant nutrition': ['fertilizer'],
+    chilli: ['chili', 'cili'],
+    chili: ['chilli', 'cili'],
+    cili: ['chilli', 'chili'],
+    leafspot: ['leaf spot'],
+    'leaf spot': ['leafspot'],
+});
+
+const expandControlledRecommendationTerms = (terms = [], recommendationRole = 'treatment') => {
+    const expanded = new Map();
+    const add = (term, weight) => {
+        const normalized = normalizeRecommendationText(term);
+        if (!normalized || normalized.length < 3 || PRODUCT_RECOMMENDATION_STOPWORDS.has(normalized)) return;
+        expanded.set(normalized, Math.max(expanded.get(normalized) || 0, weight));
+    };
+
+    terms.forEach(({ term, weight }) => {
+        add(term, weight);
+        const aliases = CONTROLLED_RECOMMENDATION_SYNONYMS[normalizeRecommendationText(term)] || [];
+        aliases.forEach((alias) => {
+            // Keep disease-control aliases out of nutrition sections. A nutrient
+            // product must never be surfaced as a treatment through a synonym.
+            if ((recommendationRole === 'fertilizer' || recommendationRole === 'supplement')
+                && ['fungicide', 'fungal', 'fungus', 'pest', 'insect', 'pest control'].includes(normalizeRecommendationText(alias))) return;
+            if (recommendationRole === 'treatment'
+                && ['fertilizer', 'plant nutrition'].includes(normalizeRecommendationText(alias))) return;
+            add(alias, Math.max(4, Math.round(Number(weight || 0) * 0.88)));
+        });
+    });
+
+    return [...expanded.entries()]
+        .map(([term, weight]) => ({ term, weight }))
+        .sort((left, right) => right.weight - left.weight || left.term.localeCompare(right.term));
+};
+
 const getDiagnosisConfidenceValue = (diagnosisInfo = {}) => {
     const primary = Number(diagnosisInfo.diagnosisConfidence);
     if (Number.isFinite(primary)) return primary;
@@ -3145,6 +3270,7 @@ const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatme
     const curatedContext = buildDiseaseProductRuleContext(diagnosisInfo, recommendationRole, diseaseProductRules);
 
     pushWeightedTerm(weighted, diagnosisInfo.disease, recommendationRole === 'treatment' ? 22 : 10);
+    pushWeightedTerm(weighted, diagnosisInfo.primaryScientificName, recommendationRole === 'treatment' ? 18 : 6);
     pushWeightedTerm(weighted, diagnosisInfo.pathogenType, recommendationRole === 'treatment' ? 18 : 7);
     pushWeightedTerm(weighted, diagnosisInfo.diseaseCategory, recommendationRole === 'treatment' ? 18 : 7);
     curatedContext.productTags.forEach((tag) => pushWeightedTerm(weighted, tag, recommendationRole === 'treatment' ? 34 : 22));
@@ -3167,6 +3293,11 @@ const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatme
         normalizeArray(diagnosisInfo.nutritionalIssues?.deficientNutrients).forEach((item) => (
             pushWeightedTerm(weighted, item?.nutrient || item?.name || item, 18)
         ));
+
+        const maintenanceTerms = recommendationRole === 'fertilizer'
+            ? ['fertilizer', 'NPK', 'compost', 'plant nutrition']
+            : ['supplement', 'trace elements', 'seaweed', 'humic', 'booster'];
+        maintenanceTerms.forEach((term) => pushWeightedTerm(weighted, term, isHealthyProductDiagnosis(diagnosisInfo) ? 24 : 10));
     }
 
     return [...weighted.entries()]
@@ -3174,10 +3305,20 @@ const getProductSearchTerms = (diagnosisInfo = {}, recommendationRole = 'treatme
         .sort((left, right) => right.weight - left.weight);
 };
 
-const findCatalogIdsForCuratedTerms = (catalog = [], terms = [], maxCount = 4) => {
+export const extractProductRecommendationKeywords = (
+    diagnosisInfo = {},
+    recommendationRole = 'treatment',
+    diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES,
+) => expandControlledRecommendationTerms(
+    getProductSearchTerms(diagnosisInfo, recommendationRole, diseaseProductRules),
+    recommendationRole,
+).map(({ term }) => term).slice(0, 12);
+
+const findCatalogMatchesForTerms = (catalog = [], terms = [], maxCount = 4) => {
     const normalizedTerms = normalizeArray(terms)
         .map((term) => normalizeRuleText(term))
-        .filter((term) => term.length >= 3);
+        .filter((term) => term.length >= 3)
+        .filter((term, index, all) => all.indexOf(term) === index);
 
     if (normalizedTerms.length === 0) return [];
 
@@ -3188,19 +3329,30 @@ const findCatalogIdsForCuratedTerms = (catalog = [], terms = [], maxCount = 4) =
             if (!name || !Number.isInteger(id)) return null;
 
             let score = 0;
+            const matchedTerms = [];
             normalizedTerms.forEach((term) => {
-                if (name === term) score += 8;
-                else if (name.includes(term)) score += 5;
-                else if (term.includes(name) && name.length >= 4) score += 3;
+                if (name === term) {
+                    score += 8;
+                    matchedTerms.push(term);
+                } else if (name.includes(term)) {
+                    score += 5;
+                    matchedTerms.push(term);
+                } else if (term.includes(name) && name.length >= 4) {
+                    score += 3;
+                    matchedTerms.push(term);
+                }
             });
 
-            return score > 0 ? { id, score } : null;
+            return score > 0 ? { id, name: item.name, score, matchedTerms } : null;
         })
         .filter(Boolean)
-        .sort((left, right) => right.score - left.score)
-        .map((item) => item.id)
+        .sort((left, right) => right.score - left.score || left.id - right.id)
         .slice(0, maxCount);
 };
+
+const findCatalogIdsForCuratedTerms = (catalog = [], terms = [], maxCount = 4) => (
+    findCatalogMatchesForTerms(catalog, terms, maxCount).map((item) => item.id)
+);
 
 const mergeCatalogIds = (existing = [], curated = [], maxCount = 4) => {
     const merged = [];
@@ -3304,50 +3456,161 @@ export const applyCuratedProductRulesToRecommendation = (
     };
 };
 
-export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendationRole = 'treatment', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) => {
-    const searchable = normalizeRecommendationText([
-        product.name,
-        product.description,
-        ...(Array.isArray(product.tags) ? product.tags : []),
-        ...(Array.isArray(product.categories) ? product.categories : []),
-    ].filter(Boolean).join(' '));
+const PRODUCT_RECOMMENDATION_ROLE_CONFIGS = Object.freeze([
+    {
+        role: 'treatment',
+        tagField: 'treatmentTagIds',
+        categoryField: 'treatmentCategoryIds',
+        tagLimit: 4,
+        categoryLimit: 2,
+        allowed: 'showDiseaseProducts',
+    },
+    {
+        role: 'fertilizer',
+        tagField: 'fertilizerTagIds',
+        categoryField: 'fertilizerCategoryIds',
+        tagLimit: 3,
+        categoryLimit: 2,
+        allowed: 'showNutritionProducts',
+    },
+    {
+        role: 'supplement',
+        tagField: 'supplementTagIds',
+        categoryField: 'supplementCategoryIds',
+        tagLimit: 3,
+        categoryLimit: 2,
+        allowed: 'showNutritionProducts',
+    },
+]);
 
-    const terms = getProductSearchTerms(diagnosisInfo, recommendationRole, diseaseProductRules);
-    const curatedContext = buildDiseaseProductRuleContext(diagnosisInfo, recommendationRole, diseaseProductRules);
-    const matchedTerms = [];
-    let score = 0;
+export const buildKeywordProductRecommendation = (
+    diagnosisInfo = {},
+    availableTags = [],
+    availableCategories = [],
+    language = 'en',
+    diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES,
+) => {
+    const sectionPolicy = getScanSectionPolicy(diagnosisInfo);
+    const baseRecommendation = {
+        treatmentTagIds: [],
+        treatmentCategoryIds: [],
+        fertilizerTagIds: [],
+        fertilizerCategoryIds: [],
+        supplementTagIds: [],
+        supplementCategoryIds: [],
+        reasoning: '',
+    };
+    const keywordMap = {};
+    const matchedCatalog = [];
 
-    terms.forEach(({ term, weight }) => {
-        if (!term || matchedTerms.includes(term)) return;
-        if (searchable.includes(term)) {
-            matchedTerms.push(term);
-            score += weight;
+    PRODUCT_RECOMMENDATION_ROLE_CONFIGS.forEach((config) => {
+        const treatmentEvidenceAllowsProducts = config.role !== 'treatment' || canRecommendTreatmentProducts(diagnosisInfo);
+        if (!sectionPolicy[config.allowed] || !treatmentEvidenceAllowsProducts) {
+            keywordMap[config.role] = [];
+            return;
         }
+
+        const terms = expandControlledRecommendationTerms(
+            getProductSearchTerms(diagnosisInfo, config.role, diseaseProductRules),
+            config.role,
+        );
+        const keywords = terms.map(({ term }) => term).slice(0, 12);
+        keywordMap[config.role] = keywords;
+
+        const tagMatches = findCatalogMatchesForTerms(availableTags, keywords, config.tagLimit);
+        const categoryMatches = findCatalogMatchesForTerms(availableCategories, keywords, config.categoryLimit);
+        baseRecommendation[config.tagField] = tagMatches.map((item) => item.id);
+        baseRecommendation[config.categoryField] = categoryMatches.map((item) => item.id);
+
+        tagMatches.forEach((item) => matchedCatalog.push(`tag "${item.name}"`));
+        categoryMatches.forEach((item) => matchedCatalog.push(`category "${item.name}"`));
     });
 
-    const roleBoost = recommendationRole === 'treatment'
-        ? ['fungicide', 'pesticide', 'insecticide', 'bactericide', 'copper', 'disease control', 'pest control']
-        : recommendationRole === 'fertilizer'
-            ? ['fertilizer', 'baja', 'npk', 'nutrient', 'compost']
-            : ['supplement', 'trace', 'humic', 'seaweed', 'booster', 'amino'];
+    const curatedRecommendation = applyCuratedProductRulesToRecommendation(
+        baseRecommendation,
+        availableTags,
+        availableCategories,
+        diagnosisInfo,
+        diseaseProductRules,
+    );
+    const matchedKeywords = [...new Set(Object.values(keywordMap).flat())].slice(0, 8);
+    const catalogReason = matchedCatalog.length > 0
+        ? `Matched WooCommerce ${matchedCatalog.slice(0, 4).join(', ')} using ${matchedKeywords.slice(0, 4).join(', ')}.`
+        : `No direct WooCommerce tag or category match was found for ${matchedKeywords.slice(0, 4).join(', ') || 'this scan'}.`;
 
-    roleBoost.forEach((term) => {
-        if (searchable.includes(term)) score += 6;
-    });
+    return {
+        ...curatedRecommendation,
+        keywords: keywordMap,
+        searchTerms: keywordMap,
+        reasoning: [catalogReason, curatedRecommendation.reasoning]
+            .filter(Boolean)
+            .join(' '),
+        language: language === 'ms' || language === 'zh' ? language : 'en',
+    };
+};
 
+const PRODUCT_MATCH_FIELD_WEIGHTS = Object.freeze({
+    tags: 40,
+    categories: 25,
+    name: 20,
+    description: 15,
+});
+
+const normalizeProductFieldValues = (value) => normalizeArray(value)
+    .map((item) => (typeof item === 'object' ? item.name : item))
+    .map((item) => normalizeRecommendationText(item))
+    .filter(Boolean);
+
+const productFieldContainsTerm = (fieldValue, term) => {
+    const normalizedField = normalizeRecommendationText(fieldValue);
+    const normalizedTerm = normalizeRecommendationText(term);
+    if (!normalizedField || !normalizedTerm) return false;
+    return ` ${normalizedField} `.includes(` ${normalizedTerm} `);
+};
+
+export const scoreProductMatch = (product = {}, diagnosisInfo = {}, recommendationRole = 'treatment', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) => {
+    const terms = expandControlledRecommendationTerms(
+        getProductSearchTerms(diagnosisInfo, recommendationRole, diseaseProductRules),
+        recommendationRole,
+    );
+    const curatedContext = buildDiseaseProductRuleContext(diagnosisInfo, recommendationRole, diseaseProductRules);
+    const fields = {
+        tags: normalizeProductFieldValues(product.tags),
+        categories: normalizeProductFieldValues(product.categories),
+        name: normalizeProductFieldValues(product.name),
+        description: normalizeProductFieldValues(product.description),
+    };
+    const matchedFields = Object.fromEntries(Object.entries(fields).map(([field, values]) => [
+        field,
+        terms
+            .filter(({ term }) => values.some((value) => productFieldContainsTerm(value, term)))
+            .map(({ term }) => term)
+            .filter((term, index, all) => all.indexOf(term) === index)
+            .slice(0, 6),
+    ]));
+    const matchedTerms = Object.values(matchedFields).flat().filter((term, index, all) => all.indexOf(term) === index);
+    const matchScore = Math.max(0, Math.min(100, Object.entries(matchedFields).reduce(
+        (total, [field, matches]) => total + (matches.length > 0 ? PRODUCT_MATCH_FIELD_WEIGHTS[field] : 0),
+        0,
+    )));
+    const searchable = Object.values(fields).flat().join(' ');
     const matchedActiveIngredients = curatedContext.activeIngredients
-        .filter((ingredient) => searchable.includes(normalizeRecommendationText(ingredient)));
+        .filter((ingredient) => productFieldContainsTerm(searchable, ingredient));
     const uniqueMatchedTerms = matchedTerms.slice(0, 6);
-    const matchScore = Math.max(0, Math.min(100, Math.round(score)));
+    const matchedFieldSummary = Object.entries(matchedFields)
+        .filter(([, matches]) => matches.length > 0)
+        .map(([field, matches]) => `${field}: ${matches.slice(0, 2).join(', ')}`)
+        .join('; ');
     const matchReason = curatedContext.matched
-        ? `Curated ${curatedContext.primaryRule.displayName} rule matched ${uniqueMatchedTerms.slice(0, 3).join(', ') || curatedContext.productTags.slice(0, 2).join(', ')}.`
+        ? `Curated ${curatedContext.primaryRule.displayName} rule matched ${matchedFieldSummary || uniqueMatchedTerms.slice(0, 3).join(', ') || curatedContext.productTags.slice(0, 2).join(', ')}.`
         : uniqueMatchedTerms.length > 0
-            ? `Matched ${uniqueMatchedTerms.slice(0, 3).join(', ')} from the scan result.`
-            : 'Matched the WooCommerce tag or category selected for this scan.';
+            ? `Matched ${matchedFieldSummary || uniqueMatchedTerms.slice(0, 3).join(', ')} from the scan result.`
+            : 'No meaningful keyword match was found in the product metadata.';
 
     return {
         matchScore,
         matchedTerms: uniqueMatchedTerms,
+        matchedFields,
         matchReason,
         curatedRuleId: curatedContext.primaryRule?.id || '',
         curatedRuleName: curatedContext.primaryRule?.displayName || '',
@@ -3378,7 +3641,8 @@ export const enrichRecommendedProducts = (products = [], diagnosisInfo = {}, rec
             recommendationRole,
             cautionLevel: getProductCautionLevel(diagnosisInfo, recommendationRole),
         };
-    }).sort((left, right) => Number(right.matchScore || 0) - Number(left.matchScore || 0))
+    }).filter((product) => Number(product.matchScore || 0) >= 20)
+        .sort((left, right) => Number(right.matchScore || 0) - Number(left.matchScore || 0))
 );
 
 const getConsultationReason = (intent, language = 'en') => {
@@ -3442,7 +3706,7 @@ export const buildProductConsultation = (diagnosisInfo = {}, intent = PRODUCT_RE
     };
 };
 
-export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES) {
+export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES, options = {}) {
     if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
         console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');
         return {
@@ -3562,6 +3826,7 @@ Return JSON with three separate recommendation groups:
             ],
             maxTokens: 600,
             temperature: 0.3,
+            signal: options.signal,
         });
 
         const content = response.choices[0].message.content;
@@ -3624,7 +3889,7 @@ Return JSON with three separate recommendation groups:
  * 1. AI Agronomist Insights
  * Analyzes recent farm logs, alerts, and harvest data to provide weekly insights.
  */
-export async function generateAgronomistInsights(logs, alerts, harvestData, plots = [], checklistPct = 0, language = 'en') {
+export async function generateAgronomistInsights(logs, alerts, harvestData, plots = [], checklistPct = 0, language = 'en', options = {}) {
     try {
         console.log('🤖 Generating AI Agronomist Insights...');
         const summarizedPlots = summarizePlotsForAI(plots);
@@ -3660,7 +3925,8 @@ Generate the insights report in JSON format.`
                 }
             ],
             temperature: 0.3,
-            maxTokens: 500
+            maxTokens: 500,
+            signal: options.signal,
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
@@ -3675,7 +3941,7 @@ Generate the insights report in JSON format.`
  * 2. Smart Treatment SOP Generator
  * Generates an actionable standard operating procedure for a given crop disease.
  */
-export async function generateTreatmentSOP(crop, disease, severity, language = 'en') {
+export async function generateTreatmentSOP(crop, disease, severity, language = 'en', options = {}) {
     try {
         console.log(`🤖 Generating Treatment SOP for ${disease} on ${crop}...`);
         const response = await createChatCompletion({
@@ -3705,7 +3971,8 @@ Return JSON.`
                 }
             ],
             temperature: 0.2,
-            maxTokens: 400
+            maxTokens: 400,
+            signal: options.signal,
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
@@ -3720,7 +3987,7 @@ Return JSON.`
  * 3. Natural Language Activity Logging
  * Parses unstructured text into a structured mygap_logs object.
  */
-export async function parseNaturalLanguageLog(text, language = 'en') {
+export async function parseNaturalLanguageLog(text, language = 'en', options = {}) {
     try {
         console.log(`🤖 Auto-Enhance Request: "${text.substring(0, 50)}..."`);
         const response = await createChatCompletion({
@@ -3763,7 +4030,8 @@ Extract these exact fields (Return JSON):
                 }
             ],
             temperature: 0.1,
-            maxTokens: 300
+            maxTokens: 300,
+            signal: options.signal,
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
@@ -3780,7 +4048,7 @@ Extract these exact fields (Return JSON):
  * 4. Predictive Farm Risk Assessor
  * Actively monitors recent logs and active alerts to predict imminent threats.
  */
-export async function generatePredictiveRisk(plots, logs, alerts, location, language = 'en') {
+export async function generatePredictiveRisk(plots, logs, alerts, location, language = 'en', options = {}) {
     try {
         let weatherContext = "No live weather data provided.";
         const summarizedPlots = summarizePlotsForAI(plots);
@@ -3790,7 +4058,11 @@ export async function generatePredictiveRisk(plots, logs, alerts, location, lang
         if (location && location.lat && location.lng) {
             try {
                 // Fetch next 3 days weather forecast
-                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=3`);
+                const weatherRes = await withAbortableTimeout(
+                    (signal) => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=3`, { signal }),
+                    Number(process.env.WEATHER_REQUEST_TIMEOUT_MS) || 10000,
+                    { signal: options.signal, timeoutMessage: 'Weather request timed out' },
+                );
                 if (weatherRes.ok) {
                     const weatherData = await weatherRes.json();
                     weatherContext = `Live Weather Forecast (Next 3 Days - Lat: ${location.lat}, Lng: ${location.lng}):\n`;
@@ -3802,6 +4074,7 @@ export async function generatePredictiveRisk(plots, logs, alerts, location, lang
                     }
                 }
             } catch (err) {
+                if (options.signal?.aborted) throw err;
                 console.warn("Failed to fetch open-meteo weather:", err.message);
             }
         }
@@ -3846,12 +4119,14 @@ Determine if an urgent prediction banner should be shown.`
                 }
             ],
             temperature: 0.1,
-            maxTokens: 300
+            maxTokens: 300,
+            signal: options.signal,
         });
 
         const content = cleanJsonString(response.choices[0].message.content);
         return normalizePredictiveRiskResult(JSON.parse(content));
     } catch (error) {
+        if (options.signal?.aborted) throw error;
         console.error('❌ Predictive Risk Assessment failed:', error.message);
         return { hasRisk: false };
     }

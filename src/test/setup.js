@@ -6,6 +6,13 @@ vi.mock('lucide-react', () => {
     const IconStub = (props) => React.createElement('svg', props);
     const iconNames = [
         'AlertCircle',
+        'ClipboardCheck',
+        'CalendarCheck',
+        'ListChecks',
+        'Mic',
+        'MicOff',
+        'Wand2',
+        'CloudOff',
         'AlertTriangle',
         'Apple',
         'ArrowLeft',

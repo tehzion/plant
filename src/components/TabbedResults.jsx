@@ -6,9 +6,9 @@ const TabbedResults = ({ tabs, activeIndex, onTabChange }) => {
   const activeTab = activeIndex ?? internalTab;
   const setActiveTab = index => { setInternalTab(index); onTabChange?.(index); };
   const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const tabsRef = useRef(null);
-  const containerRef = useRef(null);
   const tabId = useId();
 
   const handleKeyDown = (event, index) => {
@@ -25,8 +25,10 @@ const TabbedResults = ({ tabs, activeIndex, onTabChange }) => {
 
   const checkScroll = () => {
     if (!tabsRef.current) return;
-    const { scrollLeft } = tabsRef.current;
+    const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
+    const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
     setCanScrollLeft(scrollLeft > 10);
+    setCanScrollRight(maxScrollLeft > 10 && scrollLeft < maxScrollLeft - 10);
     setHasScrolled(scrollLeft > 50);
   };
 
@@ -46,16 +48,19 @@ const TabbedResults = ({ tabs, activeIndex, onTabChange }) => {
     if (!tabsElement) return undefined;
 
     tabsElement.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
     checkScroll();
 
-    return () => tabsElement.removeEventListener('scroll', checkScroll);
+    return () => {
+      tabsElement.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
   }, []);
 
   return (
     <div className="tabbed-results">
       <div
-        ref={containerRef}
-        className={`tab-headers-container app-surface ${canScrollLeft ? 'can-scroll-left' : ''} ${hasScrolled ? 'scrolled' : ''}`}
+        className={`tab-headers-container app-surface ${canScrollLeft ? 'can-scroll-left' : ''} ${canScrollRight ? 'can-scroll-right' : ''} ${hasScrolled ? 'scrolled' : ''}`}
       >
         <div className="tab-headers" ref={tabsRef} role="tablist">
           {tabs.map((tab, index) => (

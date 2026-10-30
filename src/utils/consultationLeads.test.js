@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { insertMock, getUserMock } = vi.hoisted(() => ({
+const { insertMock, getUserMock, neonDataRequestMock } = vi.hoisted(() => ({
     insertMock: vi.fn(),
     getUserMock: vi.fn(),
+    neonDataRequestMock: vi.fn(),
 }));
+vi.mock('./neonApi.js', () => ({ neonDataRequest: neonDataRequestMock }));
 
 vi.mock('../lib/supabase', () => ({
     supabase: {
@@ -25,9 +27,11 @@ describe('consultation lead capture', () => {
     beforeEach(() => {
         localStorage.clear();
         insertMock.mockReset();
+        neonDataRequestMock.mockReset();
         getUserMock.mockReset();
         getUserMock.mockResolvedValue({ data: { user: { id: 'user-1' } } });
         insertMock.mockResolvedValue({ error: null });
+        neonDataRequestMock.mockResolvedValue({ row: {} });
     });
 
     it('builds a compact lead payload from scan and consultation context', () => {
@@ -89,8 +93,9 @@ describe('consultation lead capture', () => {
         });
 
         expect(result).toEqual({ saved: true });
-        expect(insertMock).toHaveBeenCalledTimes(1);
-        expect(insertMock.mock.calls[0][0]).toMatchObject({
+        expect(neonDataRequestMock).toHaveBeenCalledTimes(1);
+        expect(neonDataRequestMock.mock.calls[0][0]).toBe('consultation_leads');
+        expect(neonDataRequestMock.mock.calls[0][1]).toMatchObject({
             scan_id: 'scan-456',
             user_id: 'user-1',
             disease: 'Rice Blast',
@@ -99,6 +104,6 @@ describe('consultation lead capture', () => {
             contact_intent: 'whatsapp_consultation',
             recommendation_intent: 'consultation_needed',
         });
-        expect(insertMock.mock.calls[0][0].guest_id).toMatch(/^guest_/);
+        expect(neonDataRequestMock.mock.calls[0][1].guest_id).toMatch(/^guest_/);
     });
 });

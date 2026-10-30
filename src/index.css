@@ -304,6 +304,7 @@ p {
   scrollbar-width: none;
   -ms-overflow-style: none;
   scroll-snap-type: x mandatory;
+  overscroll-behavior-inline: contain;
 }
 
 .superapp-shelf-container::-webkit-scrollbar {
@@ -326,6 +327,7 @@ p {
   padding: 14px 8px 12px;
   min-height: 92px;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  touch-action: manipulation;
 }
 
 .superapp-utility-card:hover {
@@ -374,6 +376,7 @@ p {
   gap: 4px;
   scroll-snap-align: start;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  touch-action: manipulation;
 }
 
 .superapp-stat-pill-label {
@@ -400,10 +403,24 @@ p {
   scroll-snap-align: start;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .superapp-activity-card:hover {
   transform: translateY(-4px);
+}
+
+.superapp-activity-card:focus-visible,
+.superapp-utility-card:focus-visible,
+.home-location-pill:focus-visible {
+  outline: 3px solid rgba(0, 177, 79, 0.32);
+  outline-offset: 3px;
 }
 
 .superapp-activity-img-wrapper {
@@ -3011,6 +3028,14 @@ p {
   font-weight: 700;
   margin-bottom: 32px;
   font-family: var(--font-heading);
+}
+
+.loading-description {
+  max-width: 260px;
+  margin: -18px 0 24px;
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
 /* Quote Box */

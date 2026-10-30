@@ -320,6 +320,12 @@
 .home-location-pill {
   cursor: pointer;
   flex: 1;
+  align-items: flex-start;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  line-height: normal;
+  text-align: left;
 }
 
 .home-location-label {
@@ -455,6 +461,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.analysis-preview-image {
+  width: 88px;
+  height: 88px;
+  margin: -8px auto 20px;
+  border: 4px solid #ecfdf5;
+  border-radius: 22px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
 }
 
 .home-recent-empty {
@@ -976,6 +992,34 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .home-skeleton-line,
+  .home-skeleton-pill,
+  .home-skeleton-icon,
+  .home-skeleton-chip,
+  .home-skeleton-scan-media,
+  .home-recent-scans,
+  .analysis-preview-image {
+    animation: none;
+  }
+}
+
 .scan-capture-context { display: grid; gap: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 16px; }
 .scan-capture-context label { display: grid; gap: 6px; font-size: .95rem; }
 .scan-capture-context input, .scan-capture-context select { min-height: 44px; width: 100%; padding: 8px 12px; border: 1px solid #94a3b8; border-radius: 8px; background: #fff; color: #0f172a; font: inherit; }
+
+/* Desktop: the dashboard was capped at the phone-width app column (680px),
+   which squeezed the two-column hero and its three workflow steps. Give the
+   home dashboard a proper desktop width. */
+@media (min-width: 1024px) {
+  .dashboard > .container-superapp {
+    max-width: 1180px;
+    padding: 0 32px;
+  }
+
+  /* Quick actions fill the row instead of clustering at the left. */
+  .home-dashboard-stack .superapp-utility-card {
+    flex: 1 1 0;
+    min-height: 112px;
+  }
+}

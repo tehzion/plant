@@ -6,7 +6,9 @@ import { Camera, ScanEye, Sprout, ArrowLeft, Check, ArrowRight, X } from 'lucide
 import './Onboarding.css';
 
 const Onboarding = () => {
-    const { t } = useLanguage();
+    const { t, language, setLanguage } = useLanguage();
+    const chooseLanguage = t('assessment.ux.chooseLanguage');
+    const languageChoices = [['ms', 'Bahasa Malaysia'], ['en', 'English'], ['zh', '中文']];
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(0);
 
@@ -51,6 +53,20 @@ const Onboarding = () => {
                 <button className="close-btn" onClick={() => navigate('/')} aria-label={t('common.close') || 'Close'}>
                     <X size={18} />
                 </button>
+
+                {currentStep === 0 && (
+                    <fieldset className="onboarding-language">
+                        <legend>{chooseLanguage !== 'assessment.ux.chooseLanguage' ? chooseLanguage : 'Choose your language'}</legend>
+                        <div className="onboarding-language__options">
+                            {languageChoices.map(([code, name]) => (
+                                <button key={code} type="button" lang={code} aria-pressed={language === code}
+                                    className={language === code ? 'is-selected' : ''} onClick={() => setLanguage(code)}>
+                                    {name}
+                                </button>
+                            ))}
+                        </div>
+                    </fieldset>
+                )}
 
                 <div className="icon-container" style={{ background: `${steps[currentStep].color}20` }}>
                     <span className="step-icon" style={{ textShadow: `0 4px 20px ${steps[currentStep].color}60` }}>

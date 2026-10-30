@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { getNeonPool, queryNeon } from '../utils/neonDatabase.js';
+import { getServiceClient } from '../utils/supabaseAuth.js';
 
 const ADMIN_SUMMARY_DEFAULT_DAYS = 30;
 const ADMIN_SUMMARY_MAX_LIMIT = 50;
-
-let adminClient = null;
 
 const parseList = (value = '') => String(value || '')
     .split(',')
@@ -15,28 +14,13 @@ const normalizeText = (value, fallback = '') => {
     return text;
 };
 
-const getSupabaseAdminConfig = () => {
-    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-
-    if (!url || !key) return null;
-    return { url, key };
-};
+const normalizeList = (value, limit = 5) => (Array.isArray(value) ? value : [])
+    .map((item) => normalizeText(item))
+    .filter(Boolean)
+    .slice(0, limit);
 
 const getAdminClient = () => {
-    const config = getSupabaseAdminConfig();
-    if (!config) return null;
-
-    if (!adminClient) {
-        adminClient = createClient(config.url, config.key, {
-            auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-            },
-        });
-    }
-
-    return adminClient;
+    return getServiceClient();
 };
 
 const getBearerToken = (req) => {
@@ -115,6 +99,11 @@ const normalizeProductEvent = (row = {}) => ({
     recommendationRole: row.recommendation_role,
     crop: row.crop,
     disease: row.disease,
+    matchScore: Number.isFinite(Number(row.metadata?.matchScore)) ? Number(row.metadata.matchScore) : null,
+    matchedTerms: normalizeList(row.metadata?.matchedTerms),
+    matchedFields: row.metadata?.matchedFields && typeof row.metadata.matchedFields === 'object'
+        ? row.metadata.matchedFields
+        : {},
     createdAt: row.created_at,
 });
 
@@ -131,16 +120,12 @@ const topBy = (items, getKey, limit = 8) => {
         .slice(0, limit);
 };
 
-const runSelect = async (client, table, select, sinceIso, limit) => {
-    const { data, error } = await client
-        .from(table)
-        .select(select)
-        .gte('created_at', sinceIso)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-    if (error) throw error;
-    return Array.isArray(data) ? data : [];
+const runSelect = async (table, select, sinceIso, limit) => {
+    const { rows } = await queryNeon(
+        `select ${select} from public.${table} where created_at >= $1 order by created_at desc limit $2`,
+        [sinceIso, limit],
+    );
+    return Array.isArray(rows) ? rows : [];
 };
 
 export const verifyAdminRequest = async (req) => {
@@ -177,9 +162,8 @@ export const verifyAdminRequest = async (req) => {
 };
 
 export const getAdminReviewSummary = async ({ days = ADMIN_SUMMARY_DEFAULT_DAYS, limit = 20 } = {}) => {
-    const client = getAdminClient();
-    if (!client) {
-        const error = new Error('Supabase service role is not configured.');
+    if (!getNeonPool()) {
+        const error = new Error('Neon database is not configured.');
         error.status = 503;
         throw error;
     }
@@ -189,9 +173,9 @@ export const getAdminReviewSummary = async ({ days = ADMIN_SUMMARY_DEFAULT_DAYS,
     const sinceIso = new Date(Date.now() - windowDays * 86400000).toISOString();
 
     const [scanRows, leadRows, eventRows] = await Promise.all([
-        runSelect(client, 'scan_history', 'id, disease, confidence, severity, category, location_name, result_json, created_at', sinceIso, rowLimit),
-        runSelect(client, 'consultation_leads', 'id, scan_id, disease, crop, confidence, phone, recommendation_intent, source, created_at', sinceIso, rowLimit),
-        runSelect(client, 'product_events', 'id, scan_id, event_type, product_id, product_name, recommendation_intent, recommendation_role, crop, disease, created_at', sinceIso, rowLimit),
+        runSelect('scan_history', 'id, disease, confidence, severity, category, location_name, result_json, created_at', sinceIso, rowLimit),
+        runSelect('consultation_leads', 'id, scan_id, disease, crop, confidence, phone, recommendation_intent, source, created_at', sinceIso, rowLimit),
+        runSelect('product_events', 'id, scan_id, event_type, product_id, product_name, recommendation_intent, recommendation_role, crop, disease, metadata, created_at', sinceIso, rowLimit),
     ]);
 
     const recentScans = scanRows.map(normalizeRecentScan);

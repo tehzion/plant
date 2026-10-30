@@ -537,6 +537,94 @@ describe('aiService helpers', () => {
         expect(enriched[0].matchedTerms).toContain('fungicide');
     });
 
+    it('uses deterministic field weights and controlled synonyms for product matches', () => {
+        const diagnosis = {
+            disease: 'Aphid infestation',
+            pathogenType: 'pest',
+            diseaseCategory: 'pest',
+            productSearchTags: ['aphid'],
+            status: 'confirmed',
+            confidence: 92,
+            healthStatus: 'unhealthy',
+        };
+
+        const tagMatch = aiService.scoreProductMatch({ tags: ['plant lice'] }, diagnosis, 'treatment');
+        const categoryMatch = aiService.scoreProductMatch({ categories: ['Pest Control'] }, diagnosis, 'treatment');
+        const nameMatch = aiService.scoreProductMatch({ name: 'Aphid control' }, diagnosis, 'treatment');
+        const descriptionMatch = aiService.scoreProductMatch({ description: 'For plant lice on leaves' }, diagnosis, 'treatment');
+
+        expect(tagMatch.matchScore).toBe(40);
+        expect(tagMatch.matchedFields.tags).toContain('plant lice');
+        expect(categoryMatch.matchScore).toBe(25);
+        expect(nameMatch.matchScore).toBe(20);
+        expect(descriptionMatch.matchScore).toBe(15);
+    });
+
+    it('builds taxonomy selections locally without an AI recommendation call', () => {
+        const recommendation = aiService.buildKeywordProductRecommendation(
+            {
+                disease: 'Fungal leaf spot',
+                pathogenType: 'fungal',
+                diseaseCategory: 'fungal',
+                productSearchTags: ['fungicide', 'leaf spot'],
+                status: 'confirmed',
+                resultState: 'confident_treatment',
+                confidence: 92,
+                healthStatus: 'unhealthy',
+            },
+            [
+                { id: 1, name: 'Fungicide' },
+                { id: 2, name: 'Plant lice control' },
+            ],
+            [
+                { id: 10, name: 'Disease Control' },
+                { id: 20, name: 'Fertilizer' },
+            ],
+        );
+
+        expect(recommendation.treatmentTagIds).toContain(1);
+        expect(recommendation.treatmentCategoryIds).toContain(10);
+        expect(recommendation.treatmentTagIds).not.toContain(2);
+        expect(recommendation.keywords.treatment).toContain('fungicide');
+        expect(recommendation.searchTerms.treatment).toEqual(recommendation.keywords.treatment);
+        expect(recommendation.reasoning).toContain('Matched WooCommerce');
+    });
+
+    it('does not return unrelated or metadata-free products', () => {
+        const diagnosis = {
+            disease: 'Fungal leaf spot',
+            pathogenType: 'fungal',
+            status: 'confirmed',
+            confidence: 90,
+            healthStatus: 'unhealthy',
+        };
+
+        expect(aiService.enrichRecommendedProducts([
+            { id: 1, name: 'General garden gloves', description: 'Hand protection' },
+            { id: 2, tags: ['fungicide'], categories: ['Disease Control'] },
+        ], diagnosis, 'treatment').map((product) => product.id)).toEqual([2]);
+    });
+
+    it('keeps treatment taxonomy empty when the scan needs more evidence', () => {
+        const recommendation = aiService.buildKeywordProductRecommendation(
+            {
+                disease: 'Possible aphid infestation',
+                pathogenType: 'pest',
+                status: 'uncertain',
+                resultState: 'possible_pest',
+                confidence: 61,
+                needsMoreEvidence: true,
+                healthStatus: 'unhealthy',
+            },
+            [{ id: 1, name: 'Insecticide' }],
+            [{ id: 10, name: 'Pest Control' }],
+        );
+
+        expect(recommendation.treatmentTagIds).toEqual([]);
+        expect(recommendation.treatmentCategoryIds).toEqual([]);
+        expect(recommendation.keywords.treatment).toEqual([]);
+    });
+
     it('applies curated disease-product rules to WooCommerce catalog ids', () => {
         const diagnosis = {
             plantType: 'Chilli',

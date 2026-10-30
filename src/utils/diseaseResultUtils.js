@@ -66,6 +66,18 @@ export const normalizeDiseaseResult = (result, t) => {
     const differentials = Array.isArray(result.differentialDiagnoses)
         ? result.differentialDiagnoses.filter(Boolean)
         : [];
+    // Prefer the structured comparison (schema v1); older saved scans only
+    // carry the legacy { name, likelihood, reason } list.
+    const structuredAssessment = result.structuredAssessment?.assessment ? result.structuredAssessment : null;
+    const alternatives = structuredAssessment
+        ? structuredAssessment.assessment.alternative_conditions || []
+        : differentials.map((item) => (typeof item === 'string' ? { name: item } : item)).filter((item) => item?.name).map((item) => ({
+            name: item.name,
+            confidence_level: null,
+            supporting_evidence: item.reason ? [item.reason] : [],
+            weakening_evidence: [],
+            distinguishing_features: [],
+        }));
     const confidenceBreakdown = result.confidenceBreakdown || null;
     const diagnosticEvidence = result.diagnosticEvidence && ['leafAgeAffected', 'lesionShape', 'lesionBorderHalo', 'distributionPattern', 'colorPattern', 'likelyCauseCategory'].some(key => result.diagnosticEvidence[key]) ? result.diagnosticEvidence : null;
     const showIdentification = Boolean(
@@ -136,6 +148,8 @@ export const normalizeDiseaseResult = (result, t) => {
         resultState,
         stateLabel,
         differentials,
+        alternatives,
+        structuredAssessment,
         confidenceBreakdown,
         diagnosticEvidence,
         showIdentification,
@@ -146,8 +160,9 @@ export const normalizeDiseaseResult = (result, t) => {
             ? (displayTitle.match(/\(([^)]+)\)/)?.[1] || '')
             : '',
         extraDescription: extraDescription || result.additionalNotes || (healthy ? t('results.defaultHealthyReasoning') : t('results.defaultUnhealthyReasoning')),
-        showDemoModeWarning: typeof result.additionalNotes === 'string'
-            && DEMO_TERMS.some((term) => result.additionalNotes.toLowerCase().includes(term)),
+        showDemoModeWarning: Boolean(result.isDemo)
+            || (typeof result.additionalNotes === 'string'
+                && DEMO_TERMS.some((term) => result.additionalNotes.toLowerCase().includes(term))),
         detailItems,
         translatedHealthStatus: healthy
             ? t('results.healthy')

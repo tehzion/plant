@@ -39,6 +39,8 @@ describe('RecentScans', () => {
 
         expect(screen.getByText('Kuala Lumpur')).toBeInTheDocument();
         expect(screen.getByRole('img', { name: 'Leaf Blight' })).toHaveAttribute('src', 'https://example.com/scan.jpg');
+        expect(screen.getByRole('img', { name: 'Leaf Blight' })).toHaveAttribute('loading', 'lazy');
+        expect(screen.getByRole('button', { name: 'Leaf Blight' })).toBeInTheDocument();
 
         fireEvent.click(screen.getByText('Leaf Blight'));
         expect(onScanClick).toHaveBeenCalledWith('scan-1');

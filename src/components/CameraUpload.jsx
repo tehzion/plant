@@ -1,15 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Image, X } from 'lucide-react';
+import { Camera, CheckCircle2, Image, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import { compressImage } from '../utils/imageCompressor';
 import { getImageQualityGuidance } from '../utils/diseaseDetection';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import './CameraUpload.css';
 
 const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, captureRole = 'whole' }) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+    const qualityCopy = getScanQualityCopy(language);
     const { notifyError } = useNotifications();
     const [preview, setPreview] = useState(null);
+    // True once this component's own quality check accepted the photo.
+    const [qualityPassed, setQualityPassed] = useState(false);
+    const label = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
+    const stepLabel = captureRole === 'closeup'
+        ? label('assessment.ux.stepCloseup', 'Step 2 of 2: Close-up of the worst leaf (optional)')
+        : captureRole === 'whole' ? label('assessment.ux.stepWhole', 'Step 1 of 2: Whole plant') : '';
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
 
@@ -108,6 +119,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
     const validateImageQuality = async (file) => {
         try {
             const guidance = await getImageQualityGuidance(file);
+            setQualityPassed(guidance.accepted);
             if (guidance.accepted) return true;
 
             onQualityIssue?.(guidance.code || guidance.messageKey || 'IMAGE_QUALITY', captureRole);
@@ -220,12 +232,14 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
     const clearPreview = () => {
         setPreview(null);
+        setQualityPassed(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (cameraInputRef.current) cameraInputRef.current.value = '';
     };
 
     return (
-        <div className="camera-upload">
+        <div className="camera-upload" aria-describedby={`camera-upload-guidance-${captureRole}`}>
+            {stepLabel && !isCameraOpen && <p className="camera-upload-step">{stepLabel}</p>}
             {isCameraOpen ? (
                 <div className="camera-modal" ref={cameraDialogRef} role="dialog" aria-modal="true" aria-label={t('common.takePhoto')}>
                     <div className="video-container">
@@ -238,17 +252,23 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         />
                     </div>
                     <div className="camera-controls">
-                        <button onClick={stopCamera} aria-label={t('common.close')} className="btn-circle cancel">
+                        <button type="button" onClick={stopCamera} aria-label={t('common.close')} className="btn-circle cancel">
                             <X size={24} />
                         </button>
-                        <button onClick={capturePhoto} aria-label={t('common.takePhoto')} className="btn-circle large capture"></button>
+                        <button type="button" onClick={capturePhoto} aria-label={t('common.takePhoto')} className="btn-circle large capture"></button>
                         <div className="camera-controls-spacer" aria-hidden="true"></div>
                     </div>
                 </div>
             ) : preview ? (
                 <div className="preview-container fade-in">
                     <img src={preview} alt={t('common.takePhoto')} className="preview-image" />
+                    {qualityPassed && (
+                        <p className="camera-upload-quality-ok" role="status">
+                            <CheckCircle2 size={18} aria-hidden="true" /> {label('assessment.ux.photoOk', 'Photo looks clear')}
+                        </p>
+                    )}
                     <button
+                        type="button"
                         onClick={clearPreview}
                         className="btn btn-secondary mt-md display-flex-center gap-sm"
                         disabled={disabled}
@@ -260,6 +280,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                 <div className="upload-buttons">
                     {/* Camera Button */}
                     <button
+                        type="button"
                         onClick={startCamera}
                         className="btn btn-primary btn-large camera-btn"
                         disabled={disabled}
@@ -270,6 +291,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
                     {/* Gallery Button */}
                     <button
+                        type="button"
                         onClick={handleGalleryClick}
                         className="btn btn-secondary btn-large"
                         disabled={disabled}
@@ -277,6 +299,13 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         <Image size={32} className="btn-icon-large" />
                         <span>{t('common.uploadGallery')}</span>
                     </button>
+                    <div id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance">
+                        <strong>{qualityCopy.photoGuidance.tipsTitle}</strong>
+                        <p>{qualityCopy.photoGuidance.intro}</p>
+                        <ul>
+                            {qualityCopy.photoGuidance.tips.slice(0, 3).map((tip) => <li key={tip}>{tip}</li>)}
+                        </ul>
+                    </div>
                 </div>
             )}
 

@@ -5,7 +5,9 @@ import {
     ShieldCheck, Sprout, HeartHandshake, Globe, AlertTriangle, ExternalLink, RefreshCw,
     ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download
 } from 'lucide-react';
-import { saveLogEntry, saveChecklistState } from '../utils/localStorage';
+import { getLogbook, saveLogEntry, saveChecklistState } from '../utils/localStorage';
+import VoiceLogInput from '../components/VoiceLogInput';
+import { addHarvestReminder, getLogDefaults, localDateKey, rememberLogDefaults } from '../utils/farmerPrefs.js';
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
@@ -14,6 +16,7 @@ import { jsPDF } from 'jspdf';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
 import { createPdfTextRenderer } from '../utils/pdfTextRenderer';
 import { createPdfPageFlow, getPdfTranslation } from '../utils/pdfReportLayout';
+import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
 import './MyGap.css';
 
 const MyGapPage = () => {
@@ -29,17 +32,26 @@ const MyGapPage = () => {
         derivedChecklist,
         autoCheckedItems,
         checklistPct,
-        allEvents
-    } = useFarmStats({ userId: user?.id, getLocation, notify, t });
+        allEvents,
+        hasMoreData,
+    } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
     const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
     const [isAddingLog, setIsAddingLog] = useState(false);
-    const [newLog, setNewLog] = useState({ type: 'pesticide', notes: '' });
+    // Plot, crop and operator rarely change between entries, so they are
+    // remembered on this device and pre-filled.
+    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults() });
+    const [newLog, setNewLog] = useState(emptyLog);
+    const label = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
 
     // PHI Calculator State
     const [phiDays, setPhiDays] = useState('');
     const [pesticideName, setPesticideName] = useState('');
     const [phiResult, setPhiResult] = useState(null);
+    const [phiError, setPhiError] = useState('');
 
     const handleCheckToggle = async (id) => {
         const newState = { ...checklist, [id]: !checklist[id] };
@@ -52,25 +64,51 @@ const MyGapPage = () => {
         e.preventDefault();
         const entry = await saveLogEntry(newLog, user?.id ?? null);
         if (entry) {
+            rememberLogDefaults(newLog);
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
-            setNewLog({ type: 'pesticide', notes: '' });
+            setNewLog(emptyLog());
+            if (entry.syncStatus === 'pending') {
+                notify({ type: 'info', title: label('assessment.sync.savedOnDeviceTitle', 'Saved on this device'), message: label('assessment.sync.savedOnDevice', 'This record will sync automatically when you are back online.') });
+            }
         } else {
             notify({ type: 'error', title: t('common.error'), message: t('common.error') });
         }
     };
 
+    const repeatLastLog = () => {
+        const last = logs[0];
+        if (!last) return;
+        setNewLog({
+            ...emptyLog(),
+            type: last.type || 'pesticide',
+            notes: last.notes || '',
+            ...Object.fromEntries(['plot_id', 'crop', 'product_used', 'quantity', 'operator'].map((field) => [field, last[field] || ''])),
+        });
+        setIsAddingLog(true);
+    };
+
+    const saveHarvestReminder = () => {
+        if (!phiResult) return;
+        const saved = addHarvestReminder({ date: localDateKey(phiResult.date), name: phiResult.pesticideName || t('mygap.safeHarvestDate') });
+        notify({ type: saved ? 'success' : 'error', title: saved ? label('assessment.ux.harvestReminderSaved', 'Reminder saved') : t('common.error'), message: saved ? phiResult.date.toLocaleDateString() : t('common.error') });
+    };
+
     const calculatePHI = (e) => {
         e.preventDefault();
-        const days = parseInt(phiDays);
-        if (isNaN(days)) return;
+        const days = parsePHIDays(phiDays);
+        if (days === null) {
+            setPhiResult(null);
+            setPhiError(t('mygap.phiInvalid') || `Enter a whole number from 0 to ${MAX_PHI_DAYS} days.`);
+            return;
+        }
 
-        const safeDate = new Date();
-        safeDate.setDate(safeDate.getDate() + days);
+        setPhiError('');
 
         setPhiResult({
-            date: safeDate,
-            daysRemaining: days
+            date: calculateSafeHarvestDate(days),
+            daysRemaining: days,
+            pesticideName: pesticideName.trim(),
         });
     };
 
@@ -98,6 +136,7 @@ const MyGapPage = () => {
         : 0;
 
     const generateReport = async () => {
+        const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
         const doc = new jsPDF();
         const renderer = createPdfTextRenderer(doc);
         const reportLang = language || 'en';
@@ -162,7 +201,7 @@ const MyGapPage = () => {
         const totalChecks = checklistItems.length;
         const completedChecks = Object.values(derivedChecklist).filter(Boolean).length;
         const complianceRate = Math.round((completedChecks / totalChecks) * 100);
-        const totalLogs = logs.length;
+        const totalLogs = reportLogs.length;
 
         doc.setDrawColor(226, 232, 240);
         doc.setFillColor(248, 250, 252);
@@ -259,7 +298,7 @@ const MyGapPage = () => {
         flow.yPos += 8;
         await writeSectionTitle(rt('mygap.logbookSummary'));
 
-        if (logs.length === 0) {
+        if (reportLogs.length === 0) {
             await writeParagraph(rt('mygap.noLogs'), {
                 x: 14,
                 width: pageWidth - 28,
@@ -268,10 +307,19 @@ const MyGapPage = () => {
                 gapAfter: 6,
             });
         } else {
-            for (const log of logs.slice(0, 50)) {
-                const dateLabel = new Date(log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
+            for (const log of reportLogs) {
+                const dateLabel = new Date(log.activity_date || log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
                 const typeLabel = rt(`mygap.${log.type}Log`).split(' ')[0];
-                const notesHeight = renderer.measureTextHeight(log.notes || '-', pageWidth - 36, { fontSize: 9 });
+                const reportLabel = (key, fallback) => { const value = rt(key); return value && value !== key ? value : fallback; };
+                const details = [
+                    log.plot_id && `${reportLabel('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
+                    log.crop && `${reportLabel('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
+                    log.product_used && `${reportLabel('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
+                    log.quantity && `${reportLabel('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
+                    log.operator && `${reportLabel('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
+                ].filter(Boolean).join(' | ');
+                const body = [details, log.notes].filter(Boolean).join('\n') || '-';
+                const notesHeight = renderer.measureTextHeight(body, pageWidth - 36, { fontSize: 9 });
                 const cardHeight = notesHeight + 18;
 
                 checkPageBreak(cardHeight + 4);
@@ -291,7 +339,7 @@ const MyGapPage = () => {
                     color: lightText,
                     align: 'right',
                 });
-                await renderer.drawText(log.notes || '-', 18, flow.yPos + 11, {
+                await renderer.drawText(body, 18, flow.yPos + 11, {
                     maxWidth: pageWidth - 36,
                     fontSize: 9,
                     color: darkColor,
@@ -415,7 +463,7 @@ const MyGapPage = () => {
                     </div>
 
                     <div className="button-group">
-                        <a href="http://mygap.doa.gov.my/" target="_blank" rel="noopener noreferrer" className="official-link-button">
+                        <a href="https://mygap.doa.gov.my/" target="_blank" rel="noopener noreferrer" className="official-link-button">
                             {t('mygap.officialLink')}
                             <ExternalLink size={16} />
                         </a>
@@ -484,6 +532,7 @@ const MyGapPage = () => {
                     <div className="content-card">
                         <h2 className="section-title">{t('mygap.tabCalendar')}</h2>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
+                        {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
                         <ComplianceCalendar events={allEvents} />
                     </div>
                 </div>
@@ -495,19 +544,31 @@ const MyGapPage = () => {
                         <div className="section-header-row">
                             <h2 className="section-title">{t('mygap.logbookTitle')}</h2>
                             <button
+                                type="button"
                                 className="add-log-btn"
                                 onClick={() => setIsAddingLog(!isAddingLog)}
+                                aria-label={t('mygap.addLog') || 'Add activity log'}
+                                aria-expanded={isAddingLog}
                             >
                                 <Plus size={20} />
                             </button>
                         </div>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
+                        {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
+
+                        {!isAddingLog && logs.length > 0 && (
+                            <button type="button" className="btn btn-secondary mygap-repeat-btn" onClick={repeatLastLog}>
+                                {label('assessment.ux.repeatLast', 'Repeat last entry')}
+                            </button>
+                        )}
 
                         {isAddingLog && (
                             <form className="add-log-form slide-down" onSubmit={handleAddLog}>
+                                <VoiceLogInput onFill={(fields) => setNewLog((current) => ({ ...current, ...fields }))} />
                                 <div className="form-group">
-                                    <label>{t('mygap.logType')}</label>
+                                    <label htmlFor="mygap-log-type">{t('mygap.logType')}</label>
                                     <select
+                                        id="mygap-log-type"
                                         value={newLog.type}
                                         onChange={(e) => setNewLog({ ...newLog, type: e.target.value })}
                                     >
@@ -517,9 +578,48 @@ const MyGapPage = () => {
                                         <option value="irrigation">{t('mygap.irrigationLog')}</option>
                                     </select>
                                 </div>
+                                <div className="mygap-log-details">
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-date">{label('assessment.mygap.activityDate', 'Activity date')}</label>
+                                        <input id="mygap-log-date" type="date" value={newLog.activity_date} max={new Date().toISOString().slice(0, 10)}
+                                            onChange={(e) => setNewLog({ ...newLog, activity_date: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-plot">{label('assessment.mygap.plot', 'Farm or plot')}</label>
+                                        <input id="mygap-log-plot" type="text" maxLength={120} value={newLog.plot_id}
+                                            onChange={(e) => setNewLog({ ...newLog, plot_id: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-crop">{label('assessment.mygap.crop', 'Crop')}</label>
+                                        <input id="mygap-log-crop" type="text" maxLength={120} value={newLog.crop}
+                                            onChange={(e) => setNewLog({ ...newLog, crop: e.target.value })} />
+                                    </div>
+                                    {['pesticide', 'fertilizer'].includes(newLog.type) && (
+                                        <>
+                                            <div className="form-group">
+                                                <label htmlFor="mygap-log-product">{label('assessment.mygap.productUsed', 'Product used')}</label>
+                                                <input id="mygap-log-product" type="text" maxLength={200} value={newLog.product_used}
+                                                    onChange={(e) => setNewLog({ ...newLog, product_used: e.target.value })} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label htmlFor="mygap-log-quantity">{label('assessment.mygap.quantity', 'Quantity you used')}</label>
+                                                <input id="mygap-log-quantity" type="text" maxLength={100} value={newLog.quantity}
+                                                    aria-describedby="mygap-log-quantity-hint"
+                                                    onChange={(e) => setNewLog({ ...newLog, quantity: e.target.value })} />
+                                                <small id="mygap-log-quantity-hint" className="field-hint">{label('assessment.mygap.quantityHint', 'Record what you actually applied. Always follow the product label.')}</small>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="form-group">
+                                        <label htmlFor="mygap-log-operator">{label('assessment.mygap.operator', 'Done by')}</label>
+                                        <input id="mygap-log-operator" type="text" maxLength={120} value={newLog.operator}
+                                            onChange={(e) => setNewLog({ ...newLog, operator: e.target.value })} />
+                                    </div>
+                                </div>
                                 <div className="form-group">
-                                    <label>{t('mygap.logNotes')}</label>
+                                    <label htmlFor="mygap-log-notes">{t('mygap.logNotes')}</label>
                                     <textarea
+                                        id="mygap-log-notes"
                                         required
                                         value={newLog.notes}
                                         onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
@@ -542,6 +642,11 @@ const MyGapPage = () => {
                                 <div className="empty-logs">
                                     <Calendar size={48} />
                                     <p>{t('mygap.emptyLogs')}</p>
+                                    {!isAddingLog && (
+                                        <button type="button" className="btn btn-primary" onClick={() => setIsAddingLog(true)}>
+                                            {label('assessment.ux.addFirstLog', 'Add your first record')}
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 logs.map((log) => (
@@ -551,9 +656,23 @@ const MyGapPage = () => {
                                                 {t(`mygap.${log.type}Log`).split(' ')[0]}
                                             </span>
                                             <span className="log-date">
-                                                {new Date(log.timestamp).toLocaleDateString()}
+                                                {new Date(log.activity_date || log.timestamp).toLocaleDateString()}
                                             </span>
                                         </div>
+                                        {log.syncStatus === 'pending' && (
+                                            <span className="log-sync-badge">{label('assessment.sync.savedOnDeviceShort', 'Saved on device')}</span>
+                                        )}
+                                        {[log.plot_id, log.crop, log.product_used, log.quantity, log.operator].some(Boolean) && (
+                                            <p className="log-details">
+                                                {[
+                                                    log.plot_id && `${label('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
+                                                    log.crop && `${label('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
+                                                    log.product_used && `${label('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
+                                                    log.quantity && `${label('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
+                                                    log.operator && `${label('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
+                                                ].filter(Boolean).join(' · ')}
+                                            </p>
+                                        )}
                                         <p className="log-notes">{log.notes}</p>
                                     </div>
                                 ))
@@ -571,8 +690,9 @@ const MyGapPage = () => {
 
                         <form className="phi-form" onSubmit={calculatePHI}>
                             <div className="form-group">
-                                <label>{t('mygap.pesticideName')}</label>
+                                <label htmlFor="mygap-pesticide-name">{t('mygap.pesticideName')}</label>
                                 <input
+                                    id="mygap-pesticide-name"
                                     type="text"
                                     value={pesticideName}
                                     onChange={(e) => setPesticideName(e.target.value)}
@@ -580,14 +700,24 @@ const MyGapPage = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label>{t('mygap.phiDays')}</label>
+                                <label htmlFor="mygap-phi-days">{t('mygap.phiDays')}</label>
                                 <input
+                                    id="mygap-phi-days"
                                     type="number"
                                     required
+                                    min="0"
+                                    max={MAX_PHI_DAYS}
+                                    step="1"
                                     value={phiDays}
                                     onChange={(e) => setPhiDays(e.target.value)}
                                     placeholder={t('mygap.phiDaysPlaceholder')}
+                                    aria-invalid={Boolean(phiError)}
+                                    aria-describedby={phiError ? 'mygap-phi-days-error' : 'mygap-phi-days-hint'}
                                 />
+                                <small id="mygap-phi-days-hint" className="form-hint">
+                                    {t('mygap.phiRange') || `Enter a whole number from 0 to ${MAX_PHI_DAYS}.`}
+                                </small>
+                                {phiError && <p id="mygap-phi-days-error" className="form-error" role="alert">{phiError}</p>}
                             </div>
                             <button type="submit" className="btn btn-primary w-full">
                                 {t('mygap.calcSafeDate')}
@@ -603,13 +733,26 @@ const MyGapPage = () => {
                                         <h3 className="result-date">{phiResult.date.toLocaleDateString()}</h3>
                                     </div>
                                 </div>
-                                <div className="result-badge danger">
-                                    {t('mygap.daysRemaining')} {phiResult.daysRemaining}
+                                {phiResult.pesticideName && (
+                                    <p className="result-product">{t('mygap.pesticideName')}: {phiResult.pesticideName}</p>
+                                )}
+                                <div className={`result-badge ${phiResult.daysRemaining === 0 ? 'safe' : 'danger'}`}>
+                                    {phiResult.daysRemaining === 0
+                                        ? (t('mygap.safeToday') || 'No waiting period')
+                                        : `${t('mygap.daysRemaining')} ${phiResult.daysRemaining}`}
                                 </div>
-                                <p className="result-warning">
-                                    <AlertTriangle size={16} />
-                                    {t('mygap.notSafeToHarvest')}
+                                <p className={phiResult.daysRemaining === 0 ? 'result-note' : 'result-warning'}>
+                                    <AlertTriangle size={16} aria-hidden="true" />
+                                    {phiResult.daysRemaining === 0
+                                        ? (t('mygap.safeTodayNotice') || 'No waiting period was entered. Follow the product label before harvesting.')
+                                        : t('mygap.notSafeToHarvest')}
                                 </p>
+                                <p className="phi-advisory">{t('mygap.phiAdvisory') || 'Advisory only: always follow the pesticide label and local agricultural guidance.'}</p>
+                                {phiResult.daysRemaining > 0 && (
+                                    <button type="button" className="btn btn-secondary phi-reminder-btn" onClick={saveHarvestReminder}>
+                                        {label('assessment.ux.saveHarvestReminder', 'Remind me on this date')}
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

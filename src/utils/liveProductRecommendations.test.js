@@ -110,6 +110,7 @@ describe('live product recommendation payloads', () => {
           matchScore: '86',
           matchReason: 'Matched copper.',
           matchedTerms: ['copper', null, 'fungicide'],
+          matchedFields: { tags: ['copper'], categories: [], name: [], description: [] },
           curatedRuleId: 'fungal_leaf_spot_anthracnose',
           curatedRuleName: 'Fungal leaf spot / anthracnose',
           activeIngredients: ['copper', '', 'mancozeb'],
@@ -120,6 +121,7 @@ describe('live product recommendation payloads', () => {
         },
       ],
       recommendationIntent: 'treatment_ready',
+      keywords: { treatment: ['fungicide', 'copper'], fertilizer: [], supplement: [] },
       consultation: {
         phone: '+60136667810',
         url: 'https://wa.me/60136667810',
@@ -143,6 +145,7 @@ describe('live product recommendation payloads', () => {
       cautionLevel: 'confirm_before_use',
     });
     expect(normalized.recommendationIntent).toBe('treatment_ready');
+    expect(normalized.keywords).toEqual({ treatment: ['fungicide', 'copper'], fertilizer: [], supplement: [] });
     expect(normalized.consultation.priority).toBe('secondary');
   });
 

@@ -35,6 +35,10 @@ vi.mock('../utils/toast', () => ({
   showToast: showToastMock,
 }));
 
+vi.mock('../utils/neonApi.js', () => ({
+  getNeonAccessToken: vi.fn(async () => ''),
+}));
+
 describe('FeedbackWidget', () => {
   beforeEach(() => {
     showToastMock.mockReset();
@@ -45,7 +49,7 @@ describe('FeedbackWidget', () => {
   });
 
   it('submits structured correction feedback', async () => {
-    render(<FeedbackWidget scanId="scan-1" scan={{ plantType: 'Banana', disease: 'Leaf Spot' }} />);
+    render(<FeedbackWidget scanId="scan-1" scan={{ plantType: 'Banana', disease: 'Leaf Spot', feedbackToken: 'v1.token' }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Needs correction' }));
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'wrong_disease' } });
@@ -68,5 +72,17 @@ describe('FeedbackWidget', () => {
     expect(payload.wasCorrect).toBe(false);
     expect(payload.issueType).toBe('wrong_disease');
     expect(payload.correctDisease).toBe('Potassium deficiency');
+    // Feedback attribution: the scan capability travels with the submission.
+    expect(payload.feedbackToken).toBe('v1.token');
+    expect(request.headers.Authorization).toBeUndefined();
+  });
+
+  it('explains why feedback cannot be sent for an older scan instead of failing', async () => {
+    global.fetch = vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) }));
+    render(<FeedbackWidget scanId="old-scan" scan={{ disease: 'Leaf Spot' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Looks correct' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit review' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('not available for scans saved before');
+    expect(showToastMock).not.toHaveBeenCalledWith(expect.anything(), 'error');
   });
 });

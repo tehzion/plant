@@ -1,21 +1,18 @@
-import { getServiceClient } from '../utils/supabaseAuth.js';
+import { getNeonPool, queryNeon } from '../utils/neonDatabase.js';
 
 const localClaims = new Map();
 
 export const claimAnalysis = async ({ identity, scanId }) => {
     const key = `${identity}:${scanId}`;
-    const client = getServiceClient();
-    if (client) {
-        try {
-            const { data, error } = await client.rpc('claim_ai_analysis', {
-                p_identity_key: identity,
-                p_scan_id: scanId,
-            });
-            if (!error) return Boolean(data);
-            console.warn(JSON.stringify({ event: 'ai_idempotency_fallback', message: error.message }));
-        } catch (error) {
-            console.warn(JSON.stringify({ event: 'ai_idempotency_fallback', message: error.message }));
-        }
+    if (getNeonPool()) {
+        const { rows } = await queryNeon(
+            `insert into public.ai_analysis_requests(identity_key, scan_id, status, created_at, updated_at)
+             values ($1, $2, 'processing', now(), now())
+             on conflict (identity_key, scan_id) do nothing
+             returning identity_key`,
+            [identity, scanId],
+        );
+        return rows.length > 0;
     }
     if (localClaims.has(key)) return false;
     localClaims.set(key, true);
@@ -25,10 +22,9 @@ export const claimAnalysis = async ({ identity, scanId }) => {
 export const releaseAnalysis = async ({ identity, scanId }) => {
     const key = `${identity}:${scanId}`;
     localClaims.delete(key);
-    const client = getServiceClient();
-    if (!client) return;
+    if (!getNeonPool()) return;
     try {
-        await client.rpc('release_ai_analysis', { p_identity_key: identity, p_scan_id: scanId });
+        await queryNeon('delete from public.ai_analysis_requests where identity_key = $1 and scan_id = $2', [identity, scanId]);
     } catch (error) {
         console.warn(JSON.stringify({ event: 'ai_idempotency_release_failed', message: error.message }));
     }

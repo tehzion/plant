@@ -69,13 +69,19 @@ const HeroSection = ({
         <div className="dashboard-header home-hero-shell">
             <div className="hero-content home-hero-content">
                 <div className="greeting-container">
-                    <h1 className="greeting home-hero-greeting">
+                    <h2 className="greeting home-hero-greeting">
                         {greeting}, {t('common.farmer')}!
-                    </h1>
+                    </h2>
                 </div>
 
                 <div className="superapp-shelf-container home-hero-shelf">
-                    <div className="superapp-stat-pill home-location-pill" onClick={onLocationClick}>
+                    <button
+                        type="button"
+                        className="superapp-stat-pill home-location-pill"
+                        onClick={onLocationClick}
+                        aria-busy={isLocating}
+                        aria-label={`${t('common.location') || 'Location'}: ${resolvedLocation}`}
+                    >
                         <span className="superapp-stat-pill-label home-location-label">
                             <MapPin size={12} strokeWidth={2.5} />
                             {t('common.location') || 'Location'}
@@ -83,7 +89,7 @@ const HeroSection = ({
                         <span className="superapp-stat-pill-value home-location-value">
                             {resolvedLocation}
                         </span>
-                    </div>
+                    </button>
 
                     <div className="superapp-stat-pill home-weather-pill">
                         <span className="superapp-stat-pill-label">

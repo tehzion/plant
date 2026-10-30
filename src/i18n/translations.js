@@ -16,6 +16,7 @@ import onboardingTranslations from './translations/onboarding.js';
 import termsTranslations from './translations/terms.js';
 import feedbackTranslations from './translations/feedback.js';
 import privacyTranslations from './translations/privacy.js';
+import assessmentTranslations from './translations/assessment.js';
 import { scanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const translationSections = [
@@ -43,6 +44,7 @@ const translationSections = [
     termsTranslations,
     feedbackTranslations,
     privacyTranslations,
+    assessmentTranslations,
 ];
 
 const mergeTranslationSections = (...sections) => {

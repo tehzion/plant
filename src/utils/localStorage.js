@@ -1,7 +1,9 @@
 import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
-import { dataUrlToBlob, enqueueOperation, isIndexedDbAvailable, putPhoto, putRecord, deleteRecord } from './indexedDbStorage.js';
+import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
+import { fetchNeonRows, neonDataRequest, neonDataRowRequest } from './neonApi.js';
+import { queueSyncOperation } from './syncQueue.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -14,7 +16,7 @@ const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
 // Keep demo data in its own namespace so it can never be imported into a real
 // account's guest migration. Guest mode keeps the historical keys for
-// backwards compatibility; authenticated data is stored in Supabase.
+// backwards compatibility; authenticated data is stored through the Neon API.
 let storageNamespace = 'guest';
 const namespacedKey = (key) => storageNamespace === 'guest' ? key : `${storageNamespace}::${key}`;
 
@@ -48,6 +50,72 @@ const persistIndexedGuestRecord = async (collection, value, revision = 0) => {
     }
 };
 
+
+// ─── Signed-in offline support ───────────────────────────────────────────────
+// Signed-in records normally go straight to Neon. When the network is down the
+// record is kept on this device and queued for /api/sync instead of being lost.
+const CLOUD_COLLECTION_TABLES = { logbook: 'mygap_logs', notes: 'daily_notes', plots: 'plots' };
+const cloudOwner = (userId) => `user:${userId}`;
+
+export const isConnectivityError = (error) => (
+    error instanceof TypeError
+    || (typeof navigator !== 'undefined' && navigator.onLine === false)
+    || [408, 429, 500, 502, 503, 504].includes(Number(error?.status))
+);
+
+const queueCloudRecord = async (userId, collection, row, localValue) => {
+    if (!isIndexedDbAvailable()) return null;
+    const owner = cloudOwner(userId);
+    const { user_id: _ownerFromClient, ...payload } = row;
+    const value = { ...localValue, syncStatus: 'pending' };
+    await putRecord({ owner, collection, id: String(row.id), value });
+    await queueSyncOperation({ owner, collection, recordId: String(row.id), type: 'create', payload });
+    return value;
+};
+
+const writeCloudRecord = async (userId, collection, row, localValue) => {
+    try {
+        await neonDataRequest(CLOUD_COLLECTION_TABLES[collection], { operation: 'insert', payload: row });
+        return { ...localValue, syncStatus: 'synced' };
+    } catch (error) {
+        if (!isConnectivityError(error)) throw error;
+        const queued = await queueCloudRecord(userId, collection, row, localValue).catch((queueError) => {
+            console.error('Offline queue write failed:', queueError);
+            return null;
+        });
+        if (!queued) throw error;
+        return queued;
+    }
+};
+
+// Reads merge records still waiting to sync, and fall back to the last copy
+// fetched on this device when the network is unavailable.
+const readCloudCollection = async (userId, collection, fetchRows, mapRows) => {
+    const owner = cloudOwner(userId);
+    const cacheKey = `cloud-cache:${owner}:${collection}`;
+    let rows;
+    try {
+        rows = await fetchRows();
+        if (isIndexedDbAvailable()) setMetadata(cacheKey, rows).catch(() => {});
+    } catch (error) {
+        if (!isConnectivityError(error) || !isIndexedDbAvailable()) throw error;
+        rows = await getMetadata(cacheKey).catch(() => null);
+        if (!Array.isArray(rows)) throw error;
+    }
+    const mapped = await mapRows(rows);
+    if (!isIndexedDbAvailable()) return mapped;
+    const pending = await listRecords(owner, collection).catch(() => []);
+    const ids = new Set(mapped.map((item) => String(item.id)));
+    return [...pending.filter((item) => !ids.has(String(item.id))), ...mapped];
+};
+
+/** Clears cached cloud snapshots (not pending records) when a user signs out. */
+export const clearCloudReadCache = async (userId) => {
+    if (!userId || !isIndexedDbAvailable()) return;
+    await Promise.all(Object.keys(CLOUD_COLLECTION_TABLES).map((collection) => (
+        setMetadata(`cloud-cache:${cloudOwner(userId)}:${collection}`, null).catch(() => {})
+    )));
+};
 
 export const STORAGE_COLLECTION_KEYS = {
     STORAGE_KEY,
@@ -246,11 +314,26 @@ const hydrateScanHistoryRow = async (row = {}) => {
     return fromScanHistoryRow(row, { imageUrl, leafImageUrl });
 };
 
+const optionalText = (value, max = 200) => {
+    const text = value == null ? '' : String(value).trim();
+    return text ? text.slice(0, max) : null;
+};
+
+// Structured myGAP record fields. Quantity is recorded exactly as the farmer
+// entered it; the app never calculates or suggests chemical dosages.
+export const LOGBOOK_DETAIL_FIELDS = ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator'];
+
 export const toLogbookRow = (log = {}, userId) => ({
     id: String(log.id ?? crypto.randomUUID()),
     user_id: userId,
     type: log.type || 'pesticide',
     notes: log.notes || '',
+    activity_date: optionalText(log.activity_date ?? log.activityDate, 10),
+    plot_id: optionalText(log.plot_id ?? log.plotId, 200),
+    crop: optionalText(log.crop),
+    product_used: optionalText(log.product_used ?? log.productUsed),
+    quantity: optionalText(log.quantity, 100),
+    operator: optionalText(log.operator, 120),
     created_at: log.timestamp || log.created_at || new Date().toISOString(),
 });
 
@@ -259,6 +342,8 @@ export const fromLogbookRow = (row = {}) => ({
     timestamp: row.created_at,
     type: row.type,
     notes: row.notes,
+    ...Object.fromEntries(LOGBOOK_DETAIL_FIELDS.map((field) => [field, row[field] ?? null])),
+    ...(row.syncStatus ? { syncStatus: row.syncStatus } : {}),
 });
 
 export const toDailyNoteRow = (note = {}, userId) => {
@@ -329,16 +414,13 @@ export const getProfileInfo = async (userId = null) => {
     const fallback = normalizeProfileInfo(safeRead(localKey, {}));
 
     if (isCloudUser(userId)) {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('name, contact, crops, member_since')
-            .eq('user_id', userId)
-            .maybeSingle();
-        if (error) {
+        try {
+            const [data] = await fetchNeonRows('profiles', { limit: 1 });
+            return data ? normalizeProfileInfo(data) : fallback;
+        } catch (error) {
             console.error('getProfileInfo error:', error);
             return fallback;
         }
-        return data ? normalizeProfileInfo(data) : fallback;
     }
 
     return fallback;
@@ -349,17 +431,19 @@ export const saveProfileInfo = async (profileInfo = {}, userId = null) => {
     const localSaved = userId ? safeWrite(`profile_info_${userId}`, normalized).ok : false;
 
     if (isCloudUser(userId)) {
-        const { error } = await supabase
-            .from('profiles')
-            .upsert({
+        try {
+            await neonDataRequest('profiles', {
+                operation: 'upsert',
+                payload: {
                 user_id: userId,
                 name: normalized.name,
                 contact: normalized.contact,
                 crops: normalized.crops,
                 member_since: normalized.memberSince,
                 updated_at: new Date().toISOString(),
-            }, { onConflict: 'user_id' });
-        if (error) {
+                },
+            });
+        } catch (error) {
             console.error('saveProfileInfo error:', error);
             return false;
         }
@@ -430,10 +514,11 @@ export const saveScan = async (scanData, userId = null) => {
             const imagePath = mainUpload?.path || null;
             const leafImagePath = leafUpload?.path || null;
             const row = toScanHistoryRow(scanData, userId, id, imageUrl, leafImageUrl, imagePath, leafImagePath);
-            const { error } = await supabase.from('scan_history').insert(row);
-            if (error) {
+            try {
+                await neonDataRequest('scan_history', { operation: 'insert', payload: row });
+            } catch (error) {
                 const paths = [imagePath, leafImagePath].filter(Boolean);
-                if (paths.length) await supabase.storage.from('scan-images').remove(paths);
+                if (paths.length && supabase?.storage?.from) await supabase.storage.from('scan-images').remove(paths);
                 throw error;
             }
             return {
@@ -446,7 +531,7 @@ export const saveScan = async (scanData, userId = null) => {
                 leaf_image_path: leafImagePath,
             };
         } catch (error) {
-            console.error('Supabase saveScan error:', error);
+            console.error('Neon saveScan error:', error);
             throw error;
         }
     }
@@ -468,17 +553,18 @@ export const saveScan = async (scanData, userId = null) => {
     return newScan;
 };
 
-export const fetchAllUserRows = async (table, userId) => {
+export const fetchAllUserRows = async (table, userId, { limit = null } = {}) => {
     const rows = [];
     const pageSize = 500;
+    const maxRows = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : null;
     for (let offset = 0; ;) {
-        const { data, error, count } = await supabase.from(table).select('*', { count: 'exact' })
-            .eq('user_id', userId).order('created_at', { ascending: false })
-            .order('id', { ascending: false }).range(offset, offset + pageSize - 1);
-        if (error) throw error;
+        const batchSize = maxRows ? Math.min(pageSize, maxRows - offset) : pageSize;
+        if (batchSize <= 0) return rows.slice(0, maxRows);
+        const data = await fetchNeonRows(table, { limit: batchSize, offset });
         rows.push(...(data || []));
         offset += data?.length || 0;
-        if (!data?.length || (count != null ? offset >= count : data.length < pageSize)) return rows;
+        if (maxRows && rows.length >= maxRows) return rows.slice(0, maxRows);
+        if (!data?.length || data.length < batchSize) return rows;
     }
 };
 
@@ -499,11 +585,14 @@ export const fetchScanHistoryPage = async (userId, { cursor = null, limit = 20 }
     return { ...payload, rows };
 };
 
-export const getScanHistory = (userId = null) => {
+export const getScanHistory = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('scan_history', userId).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
+        return fetchAllUserRows('scan_history', userId, options).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
     }
-    return safeRead(STORAGE_KEY, []);
+    const history = safeRead(STORAGE_KEY, []);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? history.slice(0, Number(options.limit))
+        : history;
 };
 
 export const getScanById = (id, userId = null) => {
@@ -513,18 +602,13 @@ export const getScanById = (id, userId = null) => {
     };
 
     if (isCloudUser(userId)) {
-        return supabase
-            .from('scan_history')
-            .select('*')
-            .eq('id', id)
-            .eq('user_id', userId)
-            .single()
-            .then(({ data, error }) => {
+        return neonDataRowRequest('scan_history', id, { operation: 'get' })
+            .then(({ row }) => {
                 // A cloud account must never fall back to the shared guest
                 // namespace. A failed lookup can otherwise reveal another
                 // user's local record on a shared device.
-                if (error || !data) return null;
-                return hydrateScanHistoryRow(data);
+                if (!row) return null;
+                return hydrateScanHistoryRow(row);
             })
             .catch(() => null);
     }
@@ -533,15 +617,17 @@ export const getScanById = (id, userId = null) => {
 
 export const deleteScan = async (id, userId = null) => {
     if (isCloudUser(userId)) {
-        const { data: row, error: readError } = await supabase.from('scan_history').select('image_path,leaf_image_path').eq('id', id).eq('user_id', userId).maybeSingle();
-        if (readError) return false;
-        const { error } = await supabase.from('scan_history').delete().eq('id', id).eq('user_id', userId);
-        if (error) {
+        let row;
+        try {
+            row = (await neonDataRowRequest('scan_history', id, { operation: 'get' })).row;
+            if (!row) return false;
+            await neonDataRowRequest('scan_history', id, { operation: 'delete' });
+        } catch (error) {
             console.error('deleteScan error:', error);
             return false;
         }
         const paths = [row?.image_path, row?.leaf_image_path].filter(Boolean);
-        if (paths.length) await supabase.storage.from('scan-images').remove(paths);
+        if (paths.length && supabase?.storage?.from) await supabase.storage.from('scan-images').remove(paths);
         return true;
     }
     if (isIndexedDbAvailable() && storageNamespace !== 'demo') {
@@ -560,18 +646,20 @@ export const deleteScan = async (id, userId = null) => {
 
 export const clearAllScans = async (userId = null) => {
     if (isCloudUser(userId)) {
-        const { data: rows, error: readError } = await supabase.from('scan_history').select('image_path,leaf_image_path').eq('user_id', userId);
-        if (readError) return false;
-        const { error } = await supabase.from('scan_history').delete().eq('user_id', userId);
-        if (error) {
+        try {
+            const rows = await fetchAllUserRows('scan_history', userId);
+            for (let index = 0; index < rows.length; index += 20) {
+                await Promise.all(rows.slice(index, index + 20).map((row) => neonDataRowRequest('scan_history', row.id, { operation: 'delete' })));
+            }
+            const paths = rows.flatMap((row) => [row.image_path, row.leaf_image_path]).filter(Boolean);
+            for (let index = 0; index < paths.length; index += 100) {
+                if (supabase?.storage?.from) await supabase.storage.from('scan-images').remove(paths.slice(index, index + 100));
+            }
+            return true;
+        } catch (error) {
             console.error('clearAllScans error:', error);
             return false;
         }
-        const paths = (rows || []).flatMap((row) => [row.image_path, row.leaf_image_path]).filter(Boolean);
-        for (let index = 0; index < paths.length; index += 100) {
-            await supabase.storage.from('scan-images').remove(paths.slice(index, index + 100));
-        }
-        return true;
     }
     try {
         localStorage.removeItem(namespacedKey(STORAGE_KEY));
@@ -613,12 +701,12 @@ export const getGroupedScans = async (userId = null) => {
 export const saveLogEntry = async (logEntry, userId = null) => {
     if (isCloudUser(userId)) {
         const newLog = toLogbookRow(logEntry, userId);
-        const { error } = await supabase.from('mygap_logs').insert(newLog);
-        if (error) {
+        try {
+            return await writeCloudRecord(userId, 'logbook', newLog, fromLogbookRow(newLog));
+        } catch (error) {
             console.error('saveLogEntry error:', error);
             return null;
         }
-        return { ...newLog, timestamp: newLog.created_at };
     }
 
     const logs = getLogbook();
@@ -628,21 +716,37 @@ export const saveLogEntry = async (logEntry, userId = null) => {
     return safeWrite(LOGBOOK_KEY, logs).ok ? newLog : null;
 };
 
-export const getLogbook = (userId = null) => {
+export const getLogbook = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('mygap_logs', userId).then((rows) => rows.map(fromLogbookRow));
+        return readCloudCollection(userId, 'logbook', () => fetchAllUserRows('mygap_logs', userId, options), (rows) => rows.map(fromLogbookRow));
     }
-    return safeRead(LOGBOOK_KEY, []);
+    const logs = safeRead(LOGBOOK_KEY, []);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? logs.slice(0, Number(options.limit))
+        : logs;
 };
 
 export const saveChecklistState = async (state, userId = null) => {
     if (isCloudUser(userId)) {
-        const { error } = await supabase
-            .from('mygap_checklist')
-            .upsert({ user_id: userId, state, updated_at: new Date().toISOString() });
-        if (error) {
-            console.error('saveChecklistState error:', error);
-            return false;
+        const updatedAt = new Date().toISOString();
+        try {
+            await neonDataRequest('mygap_checklist', {
+                operation: 'upsert',
+                payload: { user_id: userId, state, updated_at: updatedAt },
+            });
+        } catch (error) {
+            if (!isConnectivityError(error) || !isIndexedDbAvailable()) {
+                console.error('saveChecklistState error:', error);
+                return false;
+            }
+            try {
+                const owner = cloudOwner(userId);
+                await putRecord({ owner, collection: 'checklist', id: 'checklist:current', value: { state, updated_at: updatedAt } });
+                await queueSyncOperation({ owner, collection: 'checklist', recordId: 'current', type: 'update', payload: { state, updated_at: updatedAt } });
+            } catch (queueError) {
+                console.error('saveChecklistState offline queue error:', queueError);
+                return false;
+            }
         }
         return true;
     }
@@ -662,18 +766,19 @@ export const saveChecklistState = async (state, userId = null) => {
 
 export const getChecklistState = (userId = null) => {
     if (isCloudUser(userId)) {
-        return supabase
-            .from('mygap_checklist')
-            .select('state')
-            .eq('user_id', userId)
-            .maybeSingle()
-            .then(({ data, error }) => {
-                if (error) {
+        const pendingChecklist = () => (isIndexedDbAvailable()
+            ? getRecord(cloudOwner(userId), 'checklist:current').catch(() => null)
+            : Promise.resolve(null));
+        return pendingChecklist().then((pending) => {
+            // A change saved offline is newer than anything on the server.
+            if (pending?.state) return pending.state;
+            return fetchNeonRows('mygap_checklist', { limit: 1 })
+                .then(([row]) => row?.state ?? {})
+                .catch((error) => {
                     console.error('getChecklistState error:', error);
                     return {};
-                }
-                return data?.state ?? {};
-            });
+                });
+        });
     }
     return safeRead(CHECKLIST_KEY, {});
 };
@@ -710,12 +815,12 @@ export const saveDailyNote = async (entry, userId = null) => {
     });
 
     if (isCloudUser(userId)) {
-        const { error } = await supabase.from('daily_notes').insert(toDailyNoteRow(newNote, userId));
-        if (error) {
+        try {
+            return await writeCloudRecord(userId, 'notes', toDailyNoteRow(newNote, userId), newNote);
+        } catch (error) {
             console.error('saveDailyNote error:', error);
             return null;
         }
-        return newNote;
     }
 
     const existing = safeRead(NOTES_KEY, []);
@@ -725,11 +830,14 @@ export const saveDailyNote = async (entry, userId = null) => {
     return writeResult.ok ? newNote : null;
 };
 
-export const getDailyNotes = (userId = null) => {
+export const getDailyNotes = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('daily_notes', userId).then((rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
+        return readCloudCollection(userId, 'notes', () => fetchAllUserRows('daily_notes', userId, options), (rows) => Promise.all(rows.map(hydrateDailyNoteRow)));
     }
-    return safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);
+    const notes = safeRead(NOTES_KEY, []).map(normalizeLegacyDailyNote);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? notes.slice(0, Number(options.limit))
+        : notes;
 };
 
 export const savePlot = async (plot, userId = null) => {
@@ -747,12 +855,12 @@ export const savePlot = async (plot, userId = null) => {
     });
 
     if (isCloudUser(userId)) {
-        const { error } = await supabase.from('plots').insert(toPlotRow(newPlot, userId));
-        if (error) {
+        try {
+            return await writeCloudRecord(userId, 'plots', toPlotRow(newPlot, userId), newPlot);
+        } catch (error) {
             console.error('savePlot error:', error);
             return null;
         }
-        return newPlot;
     }
 
     const existing = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
@@ -762,11 +870,14 @@ export const savePlot = async (plot, userId = null) => {
     return writeResult.ok ? newPlot : null;
 };
 
-export const getPlots = (userId = null) => {
+export const getPlots = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('plots', userId).then((rows) => rows.map(normalizeStoredPlot));
+        return readCloudCollection(userId, 'plots', () => fetchAllUserRows('plots', userId, options), (rows) => rows.map(normalizeStoredPlot));
     }
-    return safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
+    const plots = safeRead(PLOTS_KEY, []).map(normalizeStoredPlot);
+    return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
+        ? plots.slice(0, Number(options.limit))
+        : plots;
 };
 
 // ─── Guest Identity & Orders ──────────────────────────────────────────────────
@@ -802,8 +913,9 @@ export const getLocalOrders = () => safeRead(ORDERS_KEY, []);
 
 export const deletePlot = async (id, userId = null) => {
     if (isCloudUser(userId)) {
-        const { error } = await supabase.from('plots').delete().eq('id', id).eq('user_id', userId);
-        if (error) {
+        try {
+            await neonDataRowRequest('plots', id, { operation: 'delete' });
+        } catch (error) {
             console.error('deletePlot error:', error);
             return false;
         }
@@ -831,6 +943,28 @@ export const seedDemoData = (userId, data) => {
         if (existing.length === 0) {
             const normalized = normalizeFn ? items.map(normalizeFn) : items;
             safeWrite(key, normalized);
+            return;
+        }
+
+        // Demo records are intentionally illustrative. Keep any locally added
+        // records, but make sure the prepared scenarios remain available and do
+        // not carry stale, fabricated confidence values from an older seed.
+        if (userId === 'demo-user-123' && key === STORAGE_KEY) {
+            const preparedById = new Map(items.map(item => [item.id, item]));
+            const merged = [...existing];
+            preparedById.forEach((prepared, id) => {
+                const index = merged.findIndex(item => item.id === id);
+                if (index === -1) {
+                    merged.push(prepared);
+                    return;
+                }
+                merged[index] = {
+                    ...merged[index],
+                    isDemo: true,
+                    confidence: prepared.confidence ?? null,
+                };
+            });
+            if (JSON.stringify(merged) !== JSON.stringify(existing)) safeWrite(key, merged);
         }
     };
 

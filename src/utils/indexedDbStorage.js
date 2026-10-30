@@ -100,12 +100,28 @@ export const getPhoto = async (owner, id) => {
     return result?.blob ?? null;
 };
 
+/** A pending operation for the same record and action is updated, not duplicated. */
+export const findQueuedDuplicate = (operations = [], { collection, recordId, type }) => (operations || [])
+    .find((row) => row.state === 'pending' && row.collection === collection && row.recordId === recordId && row.type === type) || null;
+
 export const enqueueOperation = async ({ owner, recordId, collection, type, expectedRevision = 0, payload = null }) => {
     if (!owner || !recordId || !['create', 'update', 'delete'].includes(type)) throw new Error('Invalid sync operation');
-    const operation = { id: crypto.randomUUID(), owner, recordId, collection, type, expectedRevision, payload, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString() };
+    // Saving the same record twice while offline keeps a single queued
+    // operation with the latest payload instead of sending duplicates.
+    const existing = findQueuedDuplicate(
+        await transaction(STORES.pendingOps, 'readonly', (store) => requestResult(store.index('owner').getAll(owner))),
+        { collection, recordId, type },
+    );
+    const operation = existing
+        ? { ...existing, payload, expectedRevision, updatedAt: new Date().toISOString() }
+        : { id: crypto.randomUUID(), owner, recordId, collection, type, expectedRevision, payload, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString() };
     await transaction(STORES.pendingOps, 'readwrite', (store) => store.put(operation));
     return operation;
 };
+
+export const listOperations = async (owner) => (
+    (await transaction(STORES.pendingOps, 'readonly', (store) => requestResult(store.index('owner').getAll(owner)))) || []
+);
 
 export const listPendingOperations = async (owner) => {
     const rows = await transaction(STORES.pendingOps, 'readonly', (store) => requestResult(store.index('owner').getAll(owner)));

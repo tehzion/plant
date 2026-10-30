@@ -4,8 +4,10 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import {
   ScanLine, AlertCircle, Leaf, ChevronDown, X
 } from 'lucide-react';
-import { getScanHistory } from '../utils/localStorage';
+import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
+import { DEMO_SCANS } from '../utils/demoData';
 import CameraUpload from '../components/CameraUpload';
+import DataConsentToggle from '../components/DataConsentToggle';
 import PlantCategorySelector from '../components/PlantCategorySelector';
 import FarmScaleSelector from '../components/FarmScaleSelector';
 import ProgressStepper from '../components/ProgressStepper';
@@ -21,8 +23,10 @@ import { useAuth } from '../context/AuthContext';
 
 // UI Components
 import HeroSection from '../components/home/HeroSection';
+import EventProductHero from '../components/home/EventProductHero';
 import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
+import DueReminders from '../components/home/DueReminders';
 import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
@@ -30,7 +34,7 @@ import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
 import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
-import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
+import { isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
   const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
@@ -100,6 +104,7 @@ const Home = () => {
     onConfirm: null
   });
   const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
+  const [analysisPreviewUrl, setAnalysisPreviewUrl] = useState('');
   const [photoQualityIssue, setPhotoQualityIssue] = useState(null);
 
   const steps = [
@@ -113,7 +118,11 @@ const Home = () => {
     if (viewMode === 'dashboard') {
       // Refresh scan history whenever dashboard is active or scan completes
       const fetchHistory = async () => {
-        const history = await Promise.resolve(getScanHistory(user?.id ?? null));
+        if (user?.id === 'demo-user-123') {
+          seedDemoData(user.id, { scans: DEMO_SCANS });
+        }
+        const historyPage = await Promise.resolve(fetchScanHistoryPage(user?.id ?? null, { limit: 20 }));
+        const history = Array.isArray(historyPage?.rows) ? historyPage.rows : [];
         if (!isMounted.current) return;
         setRecentScans(history.slice(0, 4));
         setDueScans(history.filter(scan => isFollowUpDue(scan)));
@@ -201,6 +210,27 @@ const Home = () => {
     const interval = setInterval(updateElapsed, 1000);
     return () => clearInterval(interval);
   }, [loading, currentStep, scanStartTime]);
+
+  useEffect(() => {
+    if (!selectedImage) {
+      setAnalysisPreviewUrl('');
+      return undefined;
+    }
+
+    if (typeof selectedImage === 'string') {
+      setAnalysisPreviewUrl(selectedImage);
+      return undefined;
+    }
+
+    if (!(selectedImage instanceof Blob)) {
+      setAnalysisPreviewUrl('');
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImage);
+    setAnalysisPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedImage]);
 
   const analysisStatusHint = useMemo(() => {
     if (!(loading && currentStep === 3)) return '';
@@ -334,7 +364,7 @@ const Home = () => {
     });
   };
 
-  const showHomeSkeleton = viewMode === 'dashboard' && (!historyLoaded || !weatherResolved);
+  const showHomeSkeleton = viewMode === 'dashboard' && !historyLoaded;
 
   const renderHomeSkeleton = () => (
     <div className="home-dashboard-skeleton" aria-hidden="true">
@@ -351,7 +381,7 @@ const Home = () => {
           <div className="home-skeleton-line home-skeleton-line-title"></div>
         </div>
         <div className="home-skeleton-actions">
-          {Array.from({ length: 3 }).map((_, index) => (
+          {Array.from({ length: 5 }).map((_, index) => (
             <div key={`action-${index}`} className="home-skeleton-action-card app-surface">
               <div className="home-skeleton-icon"></div>
               <div className="home-skeleton-line home-skeleton-line-label"></div>
@@ -433,39 +463,50 @@ const Home = () => {
         />
         <div className="container-superapp">
           {showHomeSkeleton ? (
-            renderHomeSkeleton()
+            <>
+              <EventProductHero
+                onScan={handleStartScan}
+                showDemoScenarios={user?.id === 'demo-user-123'}
+                onDemoScenario={(scenarioId) => navigate(`/results/${scenarioId}`)}
+              />
+              {renderHomeSkeleton()}
+            </>
           ) : (
             <>
-          <HeroSection
-            greeting={getGreeting()}
-            locationName={locationName}
-            isLocating={isLocating}
-            onLocationClick={handleLocationClick}
-            weatherTemp={weatherTemp}
-            weatherIcon={weatherIcon}
-            weatherError={weatherError}
-          />
+              <HeroSection
+                greeting={getGreeting()}
+                locationName={locationName}
+                isLocating={isLocating}
+                onLocationClick={handleLocationClick}
+                weatherTemp={weatherTemp}
+                weatherIcon={weatherIcon}
+                weatherError={weatherError}
+              />
 
-          <div className="home-dashboard-stack">
-            <ActionGrid onScan={handleStartScan} />
-            {dueScans.length > 0 && <section className="app-surface home-followups">
-              <h3>{getUiCopy(language).due}</h3>
-              {dueScans.slice(0, 5).map(scan => <button className="btn btn-secondary" key={scan.id} onClick={() => navigate(`/results/${scan.id}`)}>{scan.disease} · {scan.followUp.nextCheckDate}</button>)}
-              <button className="home-section-link" onClick={() => navigate('/history')}>{t('home.seeAll')}</button>
-            </section>}
-          <RecentScans
-            scans={recentScans}
-            onSeeAll={() => navigate('/history')}
-            onScanClick={(id) => navigate(`/results/${id}`)}
-          />
+              {/* Follow-up checks and harvest dates that are due, shown before the promo banner. */}
+              <DueReminders scans={dueScans} onOpenScan={(id) => navigate(`/results/${id}`)} />
 
-          {/* Farming Notices — logged-in users only */}
-          {user && forecast.length > 0 && (
-            <FarmingNotices forecast={forecast} />
-          )}
+              <EventProductHero
+                onScan={handleStartScan}
+                showDemoScenarios={user?.id === 'demo-user-123'}
+                onDemoScenario={(scenarioId) => navigate(`/results/${scenarioId}`)}
+              />
 
-            <DailyTips />
-          </div>
+              <div className="home-dashboard-stack">
+                <ActionGrid onScan={handleStartScan} />
+                <RecentScans
+                  scans={recentScans}
+                  onSeeAll={() => navigate('/history')}
+                  onScanClick={(id) => navigate(`/results/${id}`)}
+                />
+
+                {/* Farming Notices — logged-in users only */}
+                {user && forecast.length > 0 && (
+                  <FarmingNotices forecast={forecast} />
+                )}
+
+                <DailyTips />
+              </div>
             </>
           )}
         </div>
@@ -494,13 +535,23 @@ const Home = () => {
         {loading ? (
           <div className="loading-overlay">
             <div className="loading-card">
+              {analysisPreviewUrl && (
+                <img
+                  src={analysisPreviewUrl}
+                  alt={t('home.step1Title') || 'Plant photo'}
+                  className="analysis-preview-image"
+                />
+              )}
               <div className="loading-spinner-circle"></div>
 
               <h2 className="loading-title" role="status" aria-live="polite" aria-atomic="true">
-                {analyzingStep === 0 && (t('home.stepProcessing') || t('home.stepSmart'))}
-                {analyzingStep === 1 && t('onboarding.step2Title')}
-                {analyzingStep === 2 && t('home.generating')}
+                {[
+                  t('home.loadingReviewingImage'),
+                  t('home.loadingVisibleSymptoms'),
+                  t('home.loadingCarePlan'),
+                ][Math.min(Math.max(analyzingStep, 0), 2)]}
               </h2>
+              <p className="loading-description">{t('home.analyzingDesc')}</p>
 
               <div className="quote-box">
                 <span className="quote-icon-left">"</span>
@@ -663,6 +714,8 @@ const Home = () => {
                       selectedCategory={selectedCategory}
                     />
                   </div>
+
+                  <DataConsentToggle disabled={loading} />
 
                   <div className="step-actions">
                     <button className="btn btn-secondary" onClick={scanActions.prevStep}>{t('common.back')}</button>

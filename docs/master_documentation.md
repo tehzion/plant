@@ -13,7 +13,7 @@ Welcome to the **Tehzion Plant** intelligence suite. This document provides a hi
 The application is built on a modern, high-performance web stack designed for reliability and speed:
 
 - **Frontend**: React 18, Vite (for ultra-fast bundling), and Vanilla CSS / Tailwind (hybrid).
-- **Identity & Persistence**: Supabase (Cloud) + Encrypted LocalStorage (Offline-First).
+- **Identity**: Supabase Auth. **Persistence**: Neon Postgres + Encrypted LocalStorage (Offline-First). **Media**: private Supabase Storage.
 - **Core Intelligence**: 
   - **OpenAI GPT-4o-mini**: Advanced plant pathology analysis, natural language parsing, and risk prediction.
   - **PlantNet API**: Global species identification.
@@ -29,7 +29,7 @@ Our unique **Guest-First** architecture ensures that farmers can use all feature
 - **LocalStorage**: Your scan history, farm plots, and MyGAP logs are stored locally using **AES-256 encryption**.
 - **Privacy**: No personal data is required; the app tracks orders via metadata linking.
 
-### B. Account Mode (Supabase)
+### B. Account Mode (Supabase Auth + Neon)
 - **Centralized Sync**: Logging in (via Email or Google) migrates all local guest data to the cloud.
 - **Cross-Device Access**: Farm data is synchronized across mobile and desktop.
 - **Verification**: Verified Farmer badges are issued to users who complete their professional profiles.
@@ -64,7 +64,7 @@ Not just a store, but a contextual aid.
 
 ## 📅 Roadmap: What's Next?
 - **Phase 2**: Native in-app checkouts and regional spray window alerts.
-- **Phase 3**: Full Supabase cloud-sync activation and community disease-mapping heatmaps.
+- **Phase 3**: Community disease-mapping heatmaps and richer Neon-backed farm analytics.
 
 > [!TIP]
 > **Pro Tip**: Use the **AI Agronomist** (Overview Tab) to get a weekly summary of your farm's health without reading through dozens of log entries.

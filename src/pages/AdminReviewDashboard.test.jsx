@@ -14,6 +14,12 @@ vi.mock('../utils/adminAnalytics.js', () => ({
     fetchAdminReviewSummary: fetchAdminReviewSummaryMock,
 }));
 
+vi.mock('../utils/expertReview.js', () => ({
+    fetchReviewQueue: vi.fn(async () => ({ cases: [] })),
+    fetchReviewCase: vi.fn(),
+    submitReview: vi.fn(),
+}));
+
 vi.mock('../components/LoadingSpinner', () => ({
     default: () => <div>Loading</div>,
 }));

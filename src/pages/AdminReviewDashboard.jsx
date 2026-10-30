@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { fetchAdminReviewSummary } from '../utils/adminAnalytics.js';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ExpertReviewPanel from '../components/ExpertReviewPanel';
 import './AdminReviewDashboard.css';
 
 const formatDate = (value) => {
@@ -153,6 +154,8 @@ const AdminReviewDashboard = () => {
                         <StatCard icon={BarChart3} label="Lead conversion" value={conversionRate} tone="success" />
                     </section>
 
+                    <ExpertReviewPanel />
+
                     <section className="admin-grid">
                         <div className="admin-panel admin-panel--wide">
                             <div className="admin-panel-header">
@@ -261,6 +264,7 @@ const AdminReviewDashboard = () => {
                                                 <th>Product</th>
                                                 <th>Crop</th>
                                                 <th>Disease</th>
+                                                <th>Match</th>
                                                 <th>Time</th>
                                             </tr>
                                         </thead>
@@ -271,6 +275,11 @@ const AdminReviewDashboard = () => {
                                                     <td>{event.productName}</td>
                                                     <td>{event.crop}</td>
                                                     <td>{event.disease}</td>
+                                                    <td>
+                                                        {event.matchScore != null
+                                                            ? `${Math.round(event.matchScore)}%`
+                                                            : event.matchedTerms?.slice(0, 2).join(', ') || '—'}
+                                                    </td>
                                                     <td>{formatDate(event.createdAt)}</td>
                                                 </tr>
                                             ))}

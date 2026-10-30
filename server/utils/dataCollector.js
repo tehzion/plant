@@ -4,6 +4,8 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { queryNeon } from './neonDatabase.js';
+import { normalizeDataConsent } from '../../shared/dataConsent.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +36,15 @@ const ensureLocalDataset = async () => {
     await fs.promises.mkdir(IMAGES_DIR, { recursive: true });
 };
 
-const uploadAuditImage = async (value, scanId, suffix) => {
+// Objects live under a per-owner prefix so a caller who reuses someone else's
+// scan ID writes to a different path instead of replacing their photo.
+const ownerPrefix = (ownerHash) => (ownerHash ? String(ownerHash).slice(0, 16) : 'legacy');
+
+const uploadAuditImage = async (value, scanId, suffix, ownerHash = null) => {
     if (!value) return null;
     const mime = value.match(/^data:(image\/(?:jpeg|png|webp));base64,/)?.[1] || 'image/jpeg';
     const extension = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
-    const objectPath = `training/${scanId}_${suffix}.${extension}`;
+    const objectPath = `training/${ownerPrefix(ownerHash)}/${scanId}_${suffix}.${extension}`;
     const { error } = await getAuditClient().storage.from('scan-images').upload(
         objectPath, Buffer.from(value.replace(/^data:image\/\w+;base64,/, ''), 'base64'),
         { upsert: true, contentType: mime },
@@ -64,20 +70,44 @@ export const logTrainingData = async (data) => {
         const LOG_FILE = path.join(DATASET_DIR, `data_log_${dateStr}.jsonl`);
 
         const timestamp = now.toISOString();
-        const { id, treeImage, leafImage, category, result, metadata = {} } = data;
+        const { id, category, result, ownerHash = null } = data;
+        // Photos are kept only when the farmer opted in; the assessment text
+        // is kept either way and carries the consent answer with it.
+        const dataConsent = normalizeDataConsent(data.dataConsent);
+        const treeImage = dataConsent.aiImprovement ? data.treeImage : null;
+        const leafImage = dataConsent.aiImprovement ? data.leafImage : null;
+        const metadata = { ...(data.metadata || {}), dataConsent, ...(ownerHash ? { ownerHash } : {}) };
         const scanId = id || crypto.randomUUID();
         if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) throw new Error('Invalid scan ID');
 
         if (useCloudAudit()) {
+            const existing = await queryNeon(
+                "select metadata->>'ownerHash' as owner_hash from public.diagnosis_training_logs where id = $1",
+                [scanId],
+            );
+            if (existing.rows?.length && existing.rows[0].owner_hash !== (ownerHash || null)) {
+                console.warn(JSON.stringify({ event: 'audit_owner_conflict', scanId }));
+                return false;
+            }
             const [tree, leaf] = await Promise.all([
-                uploadAuditImage(treeImage, scanId, 'tree'),
-                uploadAuditImage(leafImage, scanId, 'leaf'),
+                uploadAuditImage(treeImage, scanId, 'tree', ownerHash),
+                uploadAuditImage(leafImage, scanId, 'leaf', ownerHash),
             ]);
-            const { error } = await getAuditClient().from('diagnosis_training_logs').upsert({
-                id: scanId, created_at: timestamp, category,
-                images: { tree, leaf }, raw_result: result, metadata,
-            }, { onConflict: 'id' });
-            if (error) throw error;
+            // The owner predicate keeps a concurrent writer with a different
+            // identity from replacing an existing assessment record.
+            const written = await queryNeon(
+                `insert into public.diagnosis_training_logs(id, created_at, category, images, raw_result, metadata)
+                 values ($1, $2, $3, $4, $5, $6)
+                 on conflict (id) do update set created_at = excluded.created_at, category = excluded.category,
+                    images = excluded.images, raw_result = excluded.raw_result, metadata = excluded.metadata
+                 where diagnosis_training_logs.metadata->>'ownerHash' is not distinct from excluded.metadata->>'ownerHash'
+                 returning id`,
+                [scanId, timestamp, category || null, { tree, leaf }, result || {}, metadata],
+            );
+            if (!written.rows?.length) {
+                console.warn(JSON.stringify({ event: 'audit_owner_conflict', scanId }));
+                return false;
+            }
             return true;
         }
         await ensureLocalDataset();
@@ -87,7 +117,7 @@ export const logTrainingData = async (data) => {
         if (treeImage) {
             const base64Data = treeImage.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
-            const fileName = `${scanId}_tree.jpg`;
+            const fileName = `${ownerPrefix(ownerHash)}_${scanId}_tree.jpg`;
             treeImagePath = `/dataset/images/${fileName}`;
             await fs.promises.writeFile(path.join(IMAGES_DIR, fileName), buffer);
         }
@@ -96,7 +126,7 @@ export const logTrainingData = async (data) => {
         if (leafImage) {
             const base64Data = leafImage.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
-            const fileName = `${scanId}_leaf.jpg`;
+            const fileName = `${ownerPrefix(ownerHash)}_${scanId}_leaf.jpg`;
             leafImagePath = `/dataset/images/${fileName}`;
             await fs.promises.writeFile(path.join(IMAGES_DIR, fileName), buffer);
         }
@@ -140,7 +170,7 @@ export const logTrainingData = async (data) => {
         return true;
 
     } catch (error) {
-        console.error('❌ Data Collection Failed:', error);
+        console.error('❌ Data Collection Failed:', error?.message || error);
         return false; // Don't crash the app if logging fails
     }
 };
@@ -158,14 +188,17 @@ export const logTrainingData = async (data) => {
  * @param {string} feedbackData.issueType - Optional issue category
  * @param {string} feedbackData.note - Optional detailed note
  */
-export const logFeedback = async (feedbackData) => {
+export const logFeedback = async (feedbackData, attribution = null) => {
     try {
         const now = new Date();
+        // Attribution is written by the server after verifying the caller, so
+        // farmer feedback is always distinguishable from expert reviews.
+        const record = attribution ? { ...feedbackData, attribution } : feedbackData;
         if (useCloudAudit()) {
-            const { error } = await getAuditClient().from('diagnosis_feedback').insert({
-                scan_id: feedbackData.scanId, feedback: feedbackData, created_at: now.toISOString(),
-            });
-            if (error) throw error;
+            await queryNeon(
+                'insert into public.diagnosis_feedback(scan_id, feedback, created_at) values ($1, $2, $3)',
+                [feedbackData.scanId, record, now.toISOString()],
+            );
             return true;
         }
         await ensureLocalDataset();
@@ -173,7 +206,7 @@ export const logFeedback = async (feedbackData) => {
         const FEEDBACK_FILE = path.join(DATASET_DIR, `feedback_log_${dateStr}.jsonl`);
 
         const feedbackEntry = {
-            ...feedbackData,
+            ...record,
             timestamp: now.toISOString()
         };
 
@@ -184,7 +217,39 @@ export const logFeedback = async (feedbackData) => {
         return true;
 
     } catch (error) {
-        console.error('❌ Feedback logging failed:', error);
+        console.error('❌ Feedback logging failed:', error?.message || error);
         return false;
     }
+};
+
+/**
+ * Withdraw consent for one scan: delete its stored photos and mark the record
+ * as not consented. The assessment text stays for the audit window. Callers
+ * must have verified that the requester ran or owns the scan.
+ * @returns {Promise<{ removed: number }|null>} null when no record exists
+ */
+export const withdrawTrainingImages = async (scanId) => {
+    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(String(scanId || ''))) throw new Error('Invalid scan ID');
+    const withdrawn = { ...normalizeDataConsent(null), withdrawnAt: new Date().toISOString() };
+    if (useCloudAudit()) {
+        const { rows } = await queryNeon('select images from public.diagnosis_training_logs where id = $1', [scanId]);
+        if (!rows?.length) return null;
+        const paths = Object.values(rows[0].images || {}).filter(Boolean);
+        if (paths.length) {
+            const { error } = await getAuditClient().storage.from('scan-images').remove(paths);
+            if (error) throw error;
+        }
+        await queryNeon(
+            `update public.diagnosis_training_logs
+             set images = $2, metadata = coalesce(metadata, '{}'::jsonb) || jsonb_build_object('dataConsent', $3::jsonb)
+             where id = $1`,
+            [scanId, { tree: null, leaf: null }, withdrawn],
+        );
+        return { removed: paths.length };
+    }
+    // Local development dataset: images are named <owner>_<scanId>_<kind>.jpg.
+    const files = await fs.promises.readdir(IMAGES_DIR).catch(() => []);
+    const matches = files.filter((name) => name.endsWith(`_${scanId}_tree.jpg`) || name.endsWith(`_${scanId}_leaf.jpg`));
+    await Promise.all(matches.map((name) => fs.promises.unlink(path.join(IMAGES_DIR, name))));
+    return { removed: matches.length };
 };

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getGuestId } from './localStorage';
+import { neonDataRequest } from './neonApi.js';
 
 export const PRODUCT_EVENT_TYPES = Object.freeze({
     PRODUCT_CLICK: 'product_click',
@@ -26,6 +27,14 @@ const normalizeList = (value) => {
         .map((item) => normalizeText(item))
         .filter(Boolean)
         .slice(0, 5);
+};
+
+const normalizeMatchedFields = (value) => {
+    if (!value || typeof value !== 'object') return {};
+    return Object.fromEntries(['tags', 'categories', 'name', 'description'].map((field) => [
+        field,
+        normalizeList(value[field]),
+    ]));
 };
 
 const getSupabaseUserId = async () => {
@@ -64,6 +73,7 @@ export const buildProductEventPayload = ({
         matchScore: normalizeNumber(product.matchScore),
         cautionLevel: normalizeText(product.cautionLevel) || null,
         matchedTerms: normalizeList(product.matchedTerms),
+        matchedFields: normalizeMatchedFields(product.matchedFields),
         selectedProductIds: normalizeList(metadata.selectedProductIds),
         productCount: normalizeNumber(metadata.productCount),
     },
@@ -92,14 +102,7 @@ export const saveProductEvent = async ({
             metadata,
         });
 
-        const { error } = await supabase
-            .from('product_events')
-            .insert(payload);
-
-        if (error) {
-            console.warn('Product event capture failed:', error.message);
-            return { saved: false, error };
-        }
+        await neonDataRequest('product_events', payload, { authRequired: false });
 
         return { saved: true };
     } catch (error) {

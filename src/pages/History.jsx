@@ -12,6 +12,7 @@ import './History.css';
 import { getUiCopy, isFollowUpDue } from '../utils/uiCopy.js';
 import { assessScanDecision } from '../../shared/scanResultPolicy.js';
 import { getStandardizedStatus } from '../utils/statusUtils.js';
+import FarmTimeline from '../components/FarmTimeline.jsx';
 
 const HistorySkeleton = () => {
     const skeletonCards = Array.from({ length: 3 }, (_, index) => (
@@ -58,6 +59,11 @@ const History = () => {
     const { t, language } = useLanguage();
     const copy = getUiCopy(language);
     const [filters, setFilters] = useState({ search: '', crop: '', status: '', date: '', sort: 'newest' });
+    const [view, setView] = useState('scans');
+    const viewLabel = (key, fallback) => {
+        const value = t(key);
+        return value && value !== key ? value : fallback;
+    };
     const navigate = useNavigate();
     const { state: scanState } = useScanContext();
     const { user } = useAuth();
@@ -202,6 +208,11 @@ const History = () => {
                     )}
                 </div>
 
+                <div className="history-view-tabs" role="tablist">
+                    <button type="button" role="tab" aria-selected={view === 'scans'} onClick={() => setView('scans')}>{viewLabel('assessment.ux.scansTab', 'Scans')}</button>
+                    <button type="button" role="tab" aria-selected={view === 'timeline'} onClick={() => setView('timeline')}>{viewLabel('assessment.ux.timelineTab', 'Farm timeline')}</button>
+                </div>
+                {view === 'timeline' ? <FarmTimeline scans={scans} /> : <>
                 {hasScans && <section className="history-filters app-surface">
                     <label>{copy.search}<input type="search" value={filters.search} onChange={e => changeFilter('search', e.target.value)} /></label>
                     <label>{copy.crop}<select value={filters.crop} onChange={e => changeFilter('crop', e.target.value)}><option value="">{copy.all}</option>{crops.map(crop => <option key={crop}>{crop}</option>)}</select></label>
@@ -328,6 +339,7 @@ const History = () => {
                         )}
                     </div>
                 )}
+                </>}
             </div>
 
             <CustomModal

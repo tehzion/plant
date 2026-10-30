@@ -314,6 +314,25 @@
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
 }
 
+.product-recommendations-intro {
+  padding: 4px 4px 0;
+}
+
+.product-recommendations-intro h3 {
+  margin: 0;
+  color: #14532d;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.product-recommendations-intro p {
+  max-width: 680px;
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
 .suppliers-info-section {
   margin-top: 32px;
   margin-bottom: 32px;
@@ -552,6 +571,72 @@
   color: #166534;
   font-weight: 700;
   margin: 0;
+}
+
+.product-price--unavailable {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.product-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.product-meta-chip,
+.product-availability {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.product-meta-chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(203, 213, 225, 0.92);
+  color: #475569;
+  background: #f8fafc;
+}
+
+.product-meta-chip--category {
+  color: #1e3a8a;
+  background: #eff6ff;
+  border-color: rgba(147, 197, 253, 0.7);
+}
+
+.product-meta-chip--tag {
+  color: #6b21a8;
+  background: #faf5ff;
+  border-color: rgba(216, 180, 254, 0.72);
+}
+
+.product-availability--in_stock {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid rgba(134, 239, 172, 0.72);
+}
+
+.product-availability--out_of_stock {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid rgba(252, 165, 165, 0.72);
+}
+
+.product-availability--on_backorder {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid rgba(251, 191, 36, 0.64);
 }
 
 .product-description {
@@ -844,3 +929,10 @@
     gap: 20px;
   }
 }
+
+.product-label-details { margin-top: 6px; }
+.product-label-details summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; color: var(--color-text-primary); }
+.product-label-details summary { list-style: none; justify-content: space-between; }
+.product-label-details summary::-webkit-details-marker { display: none; }
+.product-label-details summary::after { content: '▾'; color: #475569; }
+.product-label-details[open] summary::after { transform: rotate(180deg); }

@@ -1,6 +1,6 @@
 /**
  * One-time migration: reads existing localStorage data and bulk-inserts it
- * into Supabase on the user's first login. Runs silently in background.
+ * into Neon on the user's first login. Runs silently in background.
  *
  * Guard: sets localStorage key `plant_migrated_{userId}` after success
  * so it never runs again for that user.
@@ -8,6 +8,7 @@
 
 import { supabase } from '../lib/supabase';
 import { uploadPrivateImage } from './privateImageStorage.js';
+import { neonDataRequest, neonDataRowRequest } from './neonApi.js';
 import {
     getScanHistory,
     getLogbook,
@@ -57,7 +58,7 @@ const migrateLocalData = async (userId) => {
     const snapshots = new Map([STORAGE_KEY, LOGBOOK_KEY, CHECKLIST_KEY, DAILY_NOTES_KEY, PLOTS_KEY]
         .map((key) => [key, localStorage.getItem(key)]));
 
-    console.log('🌱 Running one-time localStorage → Supabase migration...');
+    console.log('🌱 Running one-time localStorage → Neon migration...');
 
     const errors = [];
 
@@ -67,61 +68,96 @@ const migrateLocalData = async (userId) => {
         console.warn(`Migration: ${label} error`, error.message || error);
     };
 
+    const canMigrateRows = async (table, ids) => {
+        const uniqueIds = [...new Set(ids.filter(Boolean).map(String))];
+        if (uniqueIds.length === 0) return true;
+        try {
+            const results = await Promise.all(uniqueIds.map((id) => neonDataRowRequest(table, id, { operation: 'get' })));
+            const data = results.map((result) => result.row).filter(Boolean);
+            if (data.length) {
+                const conflict = new Error(`${table} already contains ${data.length} record(s); migration paused to preserve local data.`);
+                conflict.code = 'MIGRATION_ID_CONFLICT';
+                recordError(`${table} ownership preflight`, conflict);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            recordError(`${table} ownership preflight`, error);
+            return false;
+        }
+    };
+
+    const verifyMigratedRows = async (table, ids, userId) => {
+        const uniqueIds = [...new Set(ids.filter(Boolean).map(String))];
+        if (uniqueIds.length === 0) return;
+        const results = await Promise.all(uniqueIds.map((id) => neonDataRowRequest(table, id, { operation: 'get' })));
+        const verified = new Set(results.map((result) => result.row).filter((row) => row?.user_id === userId).map((row) => String(row.id)));
+        if (verified.size !== uniqueIds.length) {
+            throw new Error(`${table} verification did not confirm every migrated record; local data was retained.`);
+        }
+    };
+
     try {
         // ── 1. Scan history ───────────────────────────────────────────────────
         const localScans = getScanHistory(); // synchronous, no userId
-        if (localScans.length > 0) {
+        if (localScans.length > 0 && await canMigrateRows('scan_history', localScans.map((scan) => scan.id))) {
             const rows = await Promise.all(localScans.map(scan => migrateScanImages(scan, userId)));
 
             // Insert-only migration: an ID collision must never update a row
             // that belongs to another account.
-            const { error: scanErr } = await supabase
-                .from('scan_history')
-                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
-
-            recordError('scan_history', scanErr);
+            try {
+                await neonDataRequest('scan_history', { operation: 'bulk-upsert', rows });
+                try { await verifyMigratedRows('scan_history', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('scan_history verification', error); }
+            } catch (error) {
+                recordError('scan_history', error);
+            }
         }
 
         // ── 2. Logbook ────────────────────────────────────────────────────────
         const localLogs = getLogbook(); // synchronous, no userId
-        if (localLogs.length > 0) {
+        if (localLogs.length > 0 && await canMigrateRows('mygap_logs', localLogs.map((log) => log.id))) {
             const rows = localLogs.map(log => toLogbookRow(log, userId));
 
-            const { error: logErr } = await supabase
-                .from('mygap_logs')
-                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
-
-            recordError('mygap_logs', logErr);
+            try {
+                await neonDataRequest('mygap_logs', { operation: 'bulk-upsert', rows });
+                try { await verifyMigratedRows('mygap_logs', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('mygap_logs verification', error); }
+            } catch (error) {
+                recordError('mygap_logs', error);
+            }
         }
 
         // ── 3. Checklist ──────────────────────────────────────────────────────
         const localChecklist = getChecklistState(); // synchronous, no userId
         if (Object.keys(localChecklist).length > 0) {
-            const { error: clErr } = await supabase
-                .from('mygap_checklist')
-                .upsert({ user_id: userId, state: localChecklist, updated_at: new Date().toISOString() });
-
-            recordError('mygap_checklist', clErr);
+            try {
+                await neonDataRequest('mygap_checklist', { operation: 'upsert', payload: { user_id: userId, state: localChecklist, updated_at: new Date().toISOString() } });
+            } catch (error) { recordError('mygap_checklist', error); }
         }
 
-        // ── 4. Daily Notes ───────────────────────────────────────────────────
-        const localNotes = getDailyNotes();
-        if (localNotes.length > 0) {
-            const rows = localNotes.map(note => toDailyNoteRow(note, userId));
-            const { error: noteErr } = await supabase
-                .from('daily_notes')
-                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
-            recordError('daily_notes', noteErr);
-        }
-
-        // ── 5. Farm Plots ─────────────────────────────────────────────────────
+        // ── 4. Farm Plots ─────────────────────────────────────────────────────
+        // Plots are migrated before notes so future database integrity checks
+        // can safely validate note.plot_id references.
         const localPlots = getPlots();
-        if (localPlots.length > 0) {
+        if (localPlots.length > 0 && await canMigrateRows('plots', localPlots.map((plot) => plot.id))) {
             const rows = localPlots.map(plot => toPlotRow(plot, userId));
-            const { error: plotErr } = await supabase
-                .from('plots')
-                .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
-            recordError('plots', plotErr);
+            try {
+                await neonDataRequest('plots', { operation: 'bulk-upsert', rows });
+                try { await verifyMigratedRows('plots', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('plots verification', error); }
+            } catch (error) { recordError('plots', error); }
+        }
+
+        // ── 5. Daily Notes ───────────────────────────────────────────────────
+        const localNotes = getDailyNotes();
+        if (localNotes.length > 0 && await canMigrateRows('daily_notes', localNotes.map((note) => note.id))) {
+            const rows = localNotes.map(note => toDailyNoteRow(note, userId));
+            try {
+                await neonDataRequest('daily_notes', { operation: 'bulk-upsert', rows });
+                try { await verifyMigratedRows('daily_notes', rows.map((row) => row.id), userId); }
+                catch (error) { recordError('daily_notes verification', error); }
+            } catch (error) { recordError('daily_notes', error); }
         }
 
         // ── 6. Profile info ──────────────────────────────────────────────────
@@ -156,9 +192,12 @@ const migrateLocalData = async (userId) => {
     }
 };
 
-export const migrateLocalStorageToSupabase = (userId) => {
+export const migrateLocalStorageToNeon = (userId) => {
     if (inFlight.has(userId)) return inFlight.get(userId);
     const task = migrateLocalData(userId).finally(() => inFlight.delete(userId));
     inFlight.set(userId, task);
     return task;
 };
+
+// Compatibility export for older integrations; the implementation is Neon-backed.
+export const migrateLocalStorageToSupabase = migrateLocalStorageToNeon;

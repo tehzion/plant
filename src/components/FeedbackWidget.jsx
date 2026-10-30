@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, MessageSquareWarning, Send } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { showToast } from '../utils/toast';
+import { getNeonAccessToken } from '../utils/neonApi.js';
 import './FeedbackWidget.css';
 
 const ISSUE_TYPES = [
@@ -22,6 +23,13 @@ const FeedbackWidget = ({ scanId, scan }) => {
   const [correctCrop, setCorrectCrop] = useState('');
   const [correctDisease, setCorrectDisease] = useState('');
   const [note, setNote] = useState('');
+  // Set when the server refuses feedback for this scan (older scans have no
+  // feedback token), so the farmer gets an explanation instead of a retry loop.
+  const [blockedMessage, setBlockedMessage] = useState('');
+  const label = (key, fallback) => {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  };
 
   const issueOptions = useMemo(() => ISSUE_TYPES.map((value) => ({
     value,
@@ -35,13 +43,18 @@ const FeedbackWidget = ({ scanId, scan }) => {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
+      // The server only accepts feedback from the scan's own device (signed
+      // feedback token) or from the signed-in account that saved the scan.
+      const accessToken = await getNeonAccessToken().catch(() => '');
       const response = await fetch(`${apiUrl}/api/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           scanId,
+          feedbackToken: scan?.feedbackToken || undefined,
           rating: wasCorrect ? 5 : 2,
           comment: wasCorrect ? 'correct' : 'needs_correction',
           wasCorrect,
@@ -52,6 +65,13 @@ const FeedbackWidget = ({ scanId, scan }) => {
           correction: note.trim() || undefined,
         }),
       });
+
+      if (response.status === 403) {
+        setBlockedMessage(scan?.feedbackToken
+          ? label('assessment.ux.feedbackNotAllowed', 'Feedback can only be sent from the phone or account that ran this scan.')
+          : label('assessment.ux.feedbackUnavailable', 'Feedback is not available for scans saved before the latest update.'));
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('feedback_failed');
@@ -66,6 +86,15 @@ const FeedbackWidget = ({ scanId, scan }) => {
       setIsSubmitting(false);
     }
   };
+
+  if (blockedMessage) {
+    return (
+      <div className="feedback-widget" role="status">
+        <MessageSquareWarning size={18} />
+        <span>{blockedMessage}</span>
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (

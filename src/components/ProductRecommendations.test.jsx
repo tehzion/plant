@@ -58,6 +58,11 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.productPlanSaveFailed': 'Could not prepare draft',
             'results.consultationFirstCheckoutHint': 'Consultation first',
             'results.whyTheseProducts': 'Selection note',
+            'results.recommendedPlantCareProducts': 'Recommended Plant-Care Products',
+            'results.recommendedPlantCareProductsDesc': 'Matched using scan keywords and product metadata.',
+            'results.category': 'Category',
+            'results.priceUnavailable': 'Price unavailable',
+            'results.inStock': 'In stock',
             'results.noProductsFound': 'No products found',
             'results.noProductsDesc': 'No products description',
             'results.noDiseaseControlProducts': 'No disease-control products recommended',
@@ -140,6 +145,10 @@ describe('ProductRecommendations', () => {
                         activeIngredients: ['copper', 'mancozeb'],
                         matchedActiveIngredients: ['copper'],
                         cautionNote: 'Use only crop-registered fungicides.',
+                        categories: ['Disease Control'],
+                        tags: ['fungicide'],
+                        availability: 'in_stock',
+                        inStock: true,
                         recommendationRole: 'treatment',
                         cautionLevel: 'standard',
                     },
@@ -315,13 +324,18 @@ describe('ProductRecommendations', () => {
         );
 
         expect(await screen.findByText('Copper Guard')).toBeInTheDocument();
-        expect(screen.getByText('Match 88%')).toBeInTheDocument();
+        // The keyword match score is no longer shown as if it were a quality rating.
+        expect(screen.queryByText(/Match 88%/)).not.toBeInTheDocument();
         expect(screen.getByText('Matched fungicide from the scan result.')).toBeInTheDocument();
         expect(screen.getByText(/Active ingredient to check: copper/i)).toBeInTheDocument();
         expect(screen.getByText('Use only crop-registered fungicides.')).toBeInTheDocument();
         expect(screen.getByText('Strong match')).toBeInTheDocument();
         expect(screen.getByText('Need help choosing?')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+        expect(screen.getByText('Recommended Plant-Care Products')).toBeInTheDocument();
+        expect(screen.getByText('In stock')).toBeInTheDocument();
+        expect(screen.getAllByText(/Category: Disease Control/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Tag: fungicide/i).length).toBeGreaterThan(0);
     });
 
     it('opens WooCommerce checkout for recommended products', async () => {

@@ -8,6 +8,7 @@ import {
   isNetworkUnavailableError,
   isTimeoutError,
 } from './networkRequest.js';
+import { getDataConsent } from './dataConsent';
 // In local dev, we might need localhost:3002 if not using a proxy.
 const API_URL = import.meta.env.VITE_API_URL || '';
 const HEALTH_URL = `${API_URL}/api/health`;
@@ -298,7 +299,8 @@ export const analyzePlantDisease = async (
     leafImage: leafImageBase64,
     language,
     location,
-    imageQuality
+    imageQuality,
+    dataConsent: getDataConsent()
   };
 
   try {

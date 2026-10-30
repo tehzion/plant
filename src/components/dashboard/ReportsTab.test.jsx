@@ -2,6 +2,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ReportsTab from './ReportsTab.jsx';
 
+const fetchReportSummaryMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../../utils/reportSummary.js', () => ({
+    fetchReportSummary: (...args) => fetchReportSummaryMock(...args),
+}));
+
 const t = (key) => ({
     'common.dateLocale': 'en-MY',
     'profile.allPlots': 'All Plots',
@@ -122,5 +128,34 @@ describe('ReportsTab', () => {
         );
 
         expect(await screen.findByText('Need more harvest data')).toBeInTheDocument();
+    });
+
+    it('warns when the server report is capped', async () => {
+        fetchReportSummaryMock.mockResolvedValueOnce({
+            scanStates: { healthy: 1, diseased: 0, uncertain: 0 },
+            totals: { harvestKg: '0.00', revenue: '0.00', expenses: '0.00' },
+            truncated: true,
+        });
+
+        render(
+            <ReportsTab
+                t={t}
+                stats={{ total: 0, healthy: 0, diseases: 0 }}
+                checklistPct={0}
+                alerts={[]}
+                acknowledgedIds={[]}
+                notes={[]}
+                plots={[]}
+                onGenerateInsights={vi.fn()}
+                generatingInsights={false}
+                generatingInsightsScopeKey={null}
+                aiInsights={null}
+                onSelectAlert={vi.fn()}
+                relDate={() => 'Today'}
+                userId="user-a"
+            />,
+        );
+
+        expect(await screen.findByText(/limited to a safe record cap/i)).toBeInTheDocument();
     });
 });

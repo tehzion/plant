@@ -9,23 +9,33 @@ import crypto from 'crypto';
 import { buildAnalysisCacheKey } from './utils/analysisCache.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
-import { logTrainingData, logFeedback } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, recommendProductTags, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
+import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
-import { getBearerToken, getServiceClient, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
+import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
+import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
+import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
 import { syncOperation } from './services/syncService.js';
 import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
+import { partitionByEligibility } from './services/productEligibility.js';
 import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
+import { withAbortableTimeout } from './utils/requestTimeout.js';
+import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
+import { createScanCapability, hashIdentity, verifyScanCapability } from './utils/scanCapability.js';
+import { classifyAnalysisFailure } from './utils/analysisErrors.js';
+import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Load environment variables
+// Load environment variables. Neon pulls local development credentials into
+// .env.local; hosted environments continue to provide env vars directly.
+dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,17 +63,16 @@ app.use((req, res, next) => {
     next();
 });
 
-const withStageTimeout = async (promise, timeoutMs, fallbackValue = null) => {
-    let timeoutId = null;
+const withStageTimeout = async (operation, timeoutMs, fallbackValue = null, parentSignal = null) => {
     try {
-        return await Promise.race([
-            promise,
-            new Promise((resolve) => {
-                timeoutId = setTimeout(() => resolve(fallbackValue), timeoutMs);
-            }),
-        ]);
-    } finally {
-        if (timeoutId) clearTimeout(timeoutId);
+        return await withAbortableTimeout(operation, timeoutMs, {
+            signal: parentSignal,
+            timeoutMessage: 'AI pipeline stage timed out',
+        });
+    } catch (error) {
+        if (parentSignal?.aborted) throw error;
+        console.warn('AI pipeline stage skipped:', error.message);
+        return fallbackValue;
     }
 };
 
@@ -161,6 +170,71 @@ app.get('/api/health', (req, res) => {
             }
         })
     });
+});
+
+app.get('/api/neon/health', async (req, res) => {
+    const database = await checkNeonDatabase();
+    res.status(database.connected ? 200 : 503).json(database);
+});
+
+const optionalAuthenticatedUser = async (req) => {
+    if (!getBearerToken(req)) return null;
+    return verifyAuthenticatedUser(req);
+};
+
+// Neon is the application database. These routes deliberately keep the
+// database credential on the server and enforce ownership after Supabase Auth
+// verifies the bearer token. Supabase remains responsible only for Auth and
+// private image Storage.
+app.get('/api/data/:table', async (req, res, next) => {
+    try {
+        if (!getDatasetNames().includes(req.params.table)) return res.status(404).json({ error: 'Data collection not found.' });
+        const user = await verifyAuthenticatedUser(req);
+        const result = await listUserRows(req.params.table, user.id, req.query);
+        res.json({ rows: result.rows, data: result.rows, count: result.count });
+    } catch (error) { next(error); }
+});
+
+app.post('/api/data/:table', async (req, res, next) => {
+    try {
+        const { table } = req.params;
+        if (getTelemetryDatasetNames().includes(table)) {
+            const user = await optionalAuthenticatedUser(req);
+            const row = await insertTelemetryRow(table, req.body?.payload || req.body, {
+                userId: user?.id || null,
+                guestId: req.body?.guest_id || req.body?.payload?.guest_id || null,
+            });
+            return res.status(201).json({ row, data: row });
+        }
+        if (!getDatasetNames().includes(table)) return res.status(404).json({ error: 'Data collection not found.' });
+        const user = await verifyAuthenticatedUser(req);
+        const operation = req.body?.operation || 'insert';
+        const payload = req.body?.payload || req.body;
+        if (operation === 'bulk-upsert') {
+            const rows = await bulkInsertUserRows(table, user.id, req.body?.rows || [], { upsert: true });
+            return res.status(201).json({ rows, data: rows });
+        }
+        const row = await insertUserRow(table, user.id, payload, { upsert: operation === 'upsert' });
+        res.status(201).json({ row, data: row });
+    } catch (error) { next(error); }
+});
+
+app.post('/api/data/:table/:id', async (req, res, next) => {
+    try {
+        const { table, id } = req.params;
+        if (!getDatasetNames().includes(table)) return res.status(404).json({ error: 'Data collection not found.' });
+        const user = await verifyAuthenticatedUser(req);
+        const operation = req.body?.operation || 'update';
+        const payload = req.body?.payload || req.body;
+        const row = operation === 'get'
+            ? await getUserRow(table, user.id, id)
+            : operation === 'delete'
+            ? await deleteUserRow(table, user.id, id)
+            : await updateUserRow(table, user.id, id, payload);
+        if (operation === 'get' && !row) return res.json({ row: null, data: null });
+        if (!row) return res.status(404).json({ error: 'Record not found.' });
+        res.json({ row, data: row });
+    } catch (error) { next(error); }
 });
 
 app.use('/api/', limiter);
@@ -304,6 +378,11 @@ app.use(aiRoutes, (req, res, next) => {
 
 // General AI Question Endpoint (Cached)
 app.post('/api/ask', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('AI request deadline exceeded')), Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000);
+    const abortOnDisconnect = () => requestController.abort(new Error('AI request cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const {
             question,
@@ -342,7 +421,11 @@ app.post('/api/ask', async (req, res, next) => {
         console.log(`🧠 Cache MISS for question: "${question.substring(0, 30)}..." - Calling OpenAI...`);
 
         // 3. Call Service
-        const answer = await askAI(question, language, recentNotes, recentAlerts);
+        const answer = await withAbortableTimeout(
+            (signal) => askAI(question, language, recentNotes, recentAlerts, { signal }),
+            Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000,
+            { signal: requestController.signal, timeoutMessage: 'AI question timed out' },
+        );
 
         // 4. Save to Cache (7 Days = 604800 seconds)
         const result = { answer, timestamp: Date.now() };
@@ -351,11 +434,53 @@ app.post('/api/ask', async (req, res, next) => {
         res.json({ ...result, cached: false });
 
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('AI request timed out or was cancelled. Please try again.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // Feedback Endpoint
+// Farmer feedback is accepted only from the identity that produced the scan:
+// either the signed scan capability returned by /api/analyze, or a signed-in
+// account that owns the saved scan. This keeps anonymous callers from
+// contaminating another farmer's assessment evidence.
+const resolveFeedbackAttribution = async (req, scanId) => {
+    const ownerHash = verifyScanCapability(scanId, req.body?.feedbackToken);
+    if (ownerHash) return { source: 'farmer', verifiedBy: 'scan_capability', submitterHash: ownerHash };
+    if (getBearerToken(req) && !verifyOrderSession(getBearerToken(req))) {
+        const user = await verifyAuthenticatedUser(req);
+        const owned = await getUserRow('scan_history', user.id, scanId).catch(() => null);
+        if (owned) return { source: 'farmer', verifiedBy: 'account', submitterHash: hashIdentity(`user:${user.id}`) };
+    }
+    return null;
+};
+
+// Withdraw consent for one scan's photos. Same proof of ownership as
+// feedback; the assessment text is kept, only the photos are deleted.
+app.post('/api/scans/:scanId/withdraw-photos', async (req, res, next) => {
+    try {
+        const scanId = String(req.params.scanId || '');
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) return res.status(400).json({ error: 'Invalid scan ID' });
+        if (!await resolveFeedbackAttribution(req, scanId)) {
+            return res.status(403).json({
+                error: 'WITHDRAWAL_NOT_AUTHORISED',
+                message: 'Photos can only be withdrawn from the device or account that ran this scan.',
+            });
+        }
+        const result = await withdrawTrainingImages(scanId);
+        res.json({ withdrawn: true, removedPhotos: result?.removed || 0 });
+    } catch (error) {
+        next(error);
+    }
+});
+
 app.post('/api/feedback', async (req, res, next) => {
     try {
         const {
@@ -374,6 +499,14 @@ app.post('/api/feedback', async (req, res, next) => {
             return res.status(400).json({ error: 'scanId and either rating or wasCorrect are required' });
         }
 
+        const attribution = await resolveFeedbackAttribution(req, String(scanId));
+        if (!attribution) {
+            return res.status(403).json({
+                error: 'FEEDBACK_NOT_AUTHORISED',
+                message: 'Feedback can only be sent from the device or account that ran this scan.',
+            });
+        }
+
         const success = await logFeedback({
             scanId,
             rating,
@@ -384,7 +517,7 @@ app.post('/api/feedback', async (req, res, next) => {
             correctDisease,
             issueType,
             note,
-        });
+        }, { ...attribution, receivedAt: new Date().toISOString() });
 
         if (success) {
             res.json({ message: 'Feedback received' });
@@ -415,7 +548,8 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // Fix: Extract treeImage/leafImage to match Frontend Payload (src/utils/diseaseDetection.js)
         // Fallback to 'image' for backward compatibility
-        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null } = req.body;
+        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null, dataConsent = null } = req.body;
+        const analysisStartedAt = Date.now();
 
         const mainImage = treeImage || image;
 
@@ -428,37 +562,42 @@ app.post('/api/analyze', async (req, res, next) => {
         // 1. Generate Image Hash for Caching
         const cacheKey = buildAnalysisCacheKey(req.body);
         const scanId = req.body.scanId || crypto.randomUUID();
+        const callerIdentity = req.aiIdentity || `ip:${req.ip || 'unknown'}`;
+        const ownerHash = hashIdentity(callerIdentity);
+        const feedbackToken = createScanCapability(scanId, callerIdentity);
 
         // 2. Check Cache
         const cachedResult = aiCache.get(cacheKey);
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
-            logTrainingData({ id: scanId, treeImage: mainImage, leafImage, category,
-                result: cachedResult, metadata: { language, location, imageQuality, cached: true } })
+            logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category, dataConsent,
+                result: cachedResult, metadata: { language, location, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
                 .catch(err => console.error('Data logging failed:', err.message));
-            return res.json({ ...cachedResult, id: scanId, cached: true });
+            return res.json({ ...cachedResult, id: scanId, feedbackToken, cached: true });
         }
         console.log('🧠 Image Analysis Cache MISS - Processing...');
 
         // 3. Identify Species
         let plantNetResult = await withStageTimeout(
-            identifyPlantWithPlantNet(mainImage, {
+            (signal) => identifyPlantWithPlantNet(mainImage, {
                 leafImage,
                 category,
                 imageQuality,
-                signal: requestController.signal,
+                signal,
             }),
             12000,
             null,
+            requestController.signal,
         );
         let identificationSource = 'PlantNet';
 
         // 4. Fallback Identification (GPT Vision)
         if (!plantNetResult) {
             const gptVisionResult = await withStageTimeout(
-                identifyPlantWithGPTVision(mainImage, category, { signal: requestController.signal }),
+                (signal) => identifyPlantWithGPTVision(mainImage, category, { signal }),
                 12000,
                 null,
+                requestController.signal,
             );
             if (gptVisionResult) {
                 if (gptVisionResult.isPlant === false) {
@@ -478,26 +617,30 @@ app.post('/api/analyze', async (req, res, next) => {
             console.warn('⚠️ Both PlantNet and Backup Model failed to identify species');
         }
 
-        // 5. Analyze Health (configured OpenAI primary model)
-
-        const analysisResult = await withStageTimeout(
-            analyzeWithGPT4Mini(
-                plantNetResult,
-                mainImage,
-                leafImage,
-                category,
-                language,
-                location,
-                imageQuality,
-                { signal: requestController.signal },
-            ),
-            Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
-            null,
-        );
-        if (!analysisResult) {
-            const timeoutError = new Error('Analysis timed out. Please try again with a clearer photo.');
-            timeoutError.status = 504;
-            throw timeoutError;
+        // 5. Analyze Health (configured OpenAI primary model). Provider and
+        // response failures are classified instead of being reported as
+        // timeouts, so farmers see an accurate next step.
+        let analysisResult;
+        try {
+            analysisResult = await withAbortableTimeout(
+                (signal) => analyzeWithGPT4Mini(
+                    plantNetResult,
+                    mainImage,
+                    leafImage,
+                    category,
+                    language,
+                    location,
+                    imageQuality,
+                    { signal },
+                ),
+                Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
+                { signal: requestController.signal, timeoutMessage: 'AI pipeline stage timed out' },
+            );
+        } catch (analysisError) {
+            if (requestController.signal.aborted) throw analysisError;
+            const failure = classifyAnalysisFailure(analysisError, language);
+            console.warn(JSON.stringify({ event: 'analysis_failed', requestId: req.requestId, code: failure.code, status: failure.status }));
+            return res.status(failure.status).json({ error: failure.code, message: failure.message, retryable: failure.retryable, requestId: req.requestId });
         }
 
         const finalResult = {
@@ -515,9 +658,11 @@ app.post('/api/analyze', async (req, res, next) => {
         // Fix: Pass single object as expected by dataCollector.js
         logTrainingData({
             id: scanId,
+            ownerHash,
             treeImage: mainImage,
             leafImage: leafImage,
             category,
+            dataConsent,
             result: finalResult,
             metadata: {
                 language,
@@ -531,12 +676,11 @@ app.post('/api/analyze', async (req, res, next) => {
                 requestId: req.requestId,
                 model: finalResult.analysisMetadata?.model || null,
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
+                durationMs: Date.now() - analysisStartedAt,
             }
         }).catch(err => console.error('Data logging failed:', err));
 
-        res.json({ ...finalResult, id: scanId });
-
-        // ... (previous code)
+        res.json({ ...finalResult, id: scanId, feedbackToken });
 
     } catch (error) {
         if (requestController.signal.aborted) {
@@ -570,6 +714,11 @@ app.post('/api/results/localize', async (req, res, next) => {
 
 // WooCommerce Products Search Endpoint (GPT-5-mini Powered)
 app.post('/api/products/search', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Product recommendation deadline exceeded')), Number(process.env.PRODUCT_REQUEST_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Product recommendation cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { diagnosis, language = 'en' } = req.body;
         const targetLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
@@ -591,8 +740,8 @@ app.post('/api/products/search', async (req, res, next) => {
         
         // 1. Fetch all available WooCommerce tags AND categories in parallel
         const [availableTags, availableCategories, diseaseProductRules] = await Promise.all([
-            getAllTags(),
-            getAllCategories(),
+            getAllTags({ signal: requestController.signal }),
+            getAllCategories({ signal: requestController.signal }),
             getDiseaseProductRules(),
         ]);
         
@@ -607,9 +756,17 @@ app.post('/api/products/search', async (req, res, next) => {
             });
         }
         
-        // 2. Ask GPT to pick the best tags & categories
-        console.log(`🛒 AI Recommendation: Analyzing diagnosis for "${diagnosis.disease}"...`);
-        const recommendation = await recommendProductTags(diagnosis, availableTags, availableCategories, targetLanguage, diseaseProductRules);
+        // 2. Match diagnosis keywords to the store taxonomy locally. Product
+        // recommendations are deterministic and explainable; diagnosis AI is
+        // intentionally kept separate from catalog matching.
+        console.log(`🛒 Catalog Recommendation: Matching keywords for "${diagnosis.disease}"...`);
+        const recommendation = buildKeywordProductRecommendation(
+            diagnosis,
+            availableTags,
+            availableCategories,
+            targetLanguage,
+            diseaseProductRules,
+        );
         const sectionPolicy = getScanSectionPolicy(diagnosis);
         const treatmentAllowed = canRecommendTreatmentProducts(diagnosis) && sectionPolicy.showDiseaseProducts;
         const safeRecommendation = {
@@ -624,9 +781,9 @@ app.post('/api/products/search', async (req, res, next) => {
         
         // 3. Fetch products for each category in parallel
         const [treatmentProducts, fertilizerProducts, supplementProducts] = await Promise.all([
-            getProductsByTagIds(safeRecommendation.treatmentTagIds, safeRecommendation.treatmentCategoryIds),
-            getProductsByTagIds(safeRecommendation.fertilizerTagIds, safeRecommendation.fertilizerCategoryIds),
-            getProductsByTagIds(safeRecommendation.supplementTagIds, safeRecommendation.supplementCategoryIds),
+            getProductsByTagIds(safeRecommendation.treatmentTagIds, safeRecommendation.treatmentCategoryIds, { signal: requestController.signal, searchTerms: safeRecommendation.searchTerms?.treatment || [] }),
+            getProductsByTagIds(safeRecommendation.fertilizerTagIds, safeRecommendation.fertilizerCategoryIds, { signal: requestController.signal, searchTerms: safeRecommendation.searchTerms?.fertilizer || [] }),
+            getProductsByTagIds(safeRecommendation.supplementTagIds, safeRecommendation.supplementCategoryIds, { signal: requestController.signal, searchTerms: safeRecommendation.searchTerms?.supplement || [] }),
         ]);
         
         // 4. Group and deduplicate
@@ -646,14 +803,25 @@ app.post('/api/products/search', async (req, res, next) => {
         const rawTreatment = finalizeList(treatmentProducts);
         const rawFertilizers = finalizeList(fertilizerProducts);
         const rawSupplements = finalizeList(supplementProducts);
-        const finalTreatment = sectionPolicy.showDiseaseProducts
-            ? enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules)
-            : [];
+        // Keyword matches alone never make a treatment recommendation: each
+        // product also passes basic purpose, crop, restriction and label
+        // checks. Unverified matches are returned separately as catalogue
+        // discovery so the UI can present them without implying suitability.
+        const treatmentSplit = partitionByEligibility(
+            sectionPolicy.showDiseaseProducts ? enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules) : [],
+            diagnosis, 'treatment', targetLanguage,
+        );
+        const nutritionList = (products, role) => {
+            const split = partitionByEligibility(products, diagnosis, role, targetLanguage);
+            return [...split.eligible, ...split.discovery.map(({ discoveryOnly: _discoveryOnly, ...product }) => product)];
+        };
+        const finalTreatment = treatmentSplit.eligible;
+        const catalogueDiscovery = treatmentSplit.discovery.slice(0, 4);
         const finalFertilizers = sectionPolicy.showNutritionProducts
-            ? enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules)
+            ? nutritionList(enrichRecommendedProducts(rawFertilizers, diagnosis, 'fertilizer', diseaseProductRules), 'fertilizer')
             : [];
         const finalSupplements = sectionPolicy.showNutritionProducts
-            ? enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules)
+            ? nutritionList(enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules), 'supplement')
             : [];
         
         // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
@@ -695,16 +863,33 @@ app.post('/api/products/search', async (req, res, next) => {
             fertilizers: finalFertilizers,
             supplements: finalSupplements,
             otherPopular: otherPopular,
+            catalogueDiscovery,
+            eligibilitySummary: {
+                eligibleTreatments: finalTreatment.length,
+                discoveryOnly: treatmentSplit.discovery.length,
+                excludedAsUnsuitable: treatmentSplit.excluded,
+            },
             reasoning: recommendation.reasoning,
             fallbackMeta,
             recommendationIntent,
             consultation,
             curatedRules: recommendation.curatedRules || [],
+            keywords: recommendation.keywords || {},
             storeUrl: getStoreUrl()
         });
     } catch (error) {
-        console.error('❌ Product search failed:', error);
-        res.status(500).json({ error: 'Failed to search products' });
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('Product recommendations timed out or were cancelled.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else {
+            console.error('❌ Product search failed:', error);
+            res.status(500).json({ error: 'Failed to search products' });
+        }
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
@@ -724,15 +909,10 @@ app.post('/api/orders/recovery-requests', async (req, res, next) => {
             return res.status(400).json({ error: 'Enter a valid order number.' });
         }
         if (!explanation) return res.status(400).json({ error: 'A short explanation is required.' });
-        const client = getServiceClient();
-        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
-        const { error } = await client.from('order_recovery_requests').insert({
-            order_id: orderNumber,
-            requester_user_id: user.id,
-            explanation,
-            status: 'pending',
-        });
-        if (error) throw error;
+        await queryNeon(
+            'insert into public.order_recovery_requests(order_id, requester_user_id, explanation, status) values ($1, $2, $3, $4)',
+            [orderNumber, user.id, explanation, 'pending'],
+        );
         res.status(202).json({ message: 'Your request was received and will be reviewed by the store team.' });
     } catch (error) { next(error); }
 });
@@ -808,74 +988,53 @@ app.get('/api/orders/:orderId', async (req, res, next) => {
 app.get('/api/admin/order-recovery-requests', async (req, res, next) => {
     try {
         await verifyAdminRequest(req);
-        const client = getServiceClient();
-        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
         const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : null;
-        let query = client.from('order_recovery_requests')
-            .select('id,order_id,requester_user_id,explanation,status,reviewer_user_id,reviewed_at,verification_note,created_at')
-            .order('created_at', { ascending: false }).limit(100);
-        if (status) query = query.eq('status', status);
-        const { data, error } = await query;
-        if (error) throw error;
-        res.json(Array.isArray(data) ? data : []);
+        const params = [];
+        let sql = 'select id,order_id,requester_user_id,explanation,status,reviewer_user_id,reviewed_at,verification_note,created_at from public.order_recovery_requests';
+        if (status) { params.push(status); sql += ' where status = $1'; }
+        sql += ` order by created_at desc limit ${status ? '$2' : '$1'}`;
+        params.push(100);
+        const { rows } = await queryNeon(sql, params);
+        res.json(Array.isArray(rows) ? rows : []);
     } catch (error) { next(error); }
 });
 
 app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, res, next) => {
     try {
         const reviewer = await verifyAdminRequest(req);
-        const client = getServiceClient();
-        if (!client) return res.status(503).json({ error: 'Order recovery is temporarily unavailable.' });
         const decision = String(req.body?.decision || '').toLowerCase();
         const note = String(req.body?.verificationNote || '').trim().slice(0, 1000);
         if (!['approved', 'rejected'].includes(decision) || !note) {
             return res.status(400).json({ error: 'A decision and verification note are required.' });
         }
-        if (typeof client.rpc === 'function') {
-            const { data, error } = await client.rpc('approve_order_recovery', {
-                p_request_id: req.params.requestId,
-                p_reviewer_user_id: reviewer.id,
-                p_decision: decision,
-                p_verification_note: note,
-            });
-            if (error) {
-                error.status = error.code === '23505' ? 409 : error.code === 'P0002' ? 404 : error.code === '22023' ? 400 : 500;
-                throw error;
+        const result = await withNeonTransaction(async (client) => {
+            const requestResult = await client.query(
+                'select id,order_id,requester_user_id,status from public.order_recovery_requests where id = $1 for update',
+                [req.params.requestId],
+            );
+            const request = requestResult.rows[0];
+            if (!request || request.status !== 'pending') return null;
+            if (decision === 'approved') {
+                const existingResult = await client.query('select id,user_id from public.order_refs where order_id = $1 for update', [request.order_id]);
+                const existing = existingResult.rows[0];
+                if (existing?.user_id && existing.user_id !== request.requester_user_id) {
+                    const conflict = new Error('This order already belongs to another account.');
+                    conflict.status = 409;
+                    throw conflict;
+                }
+                if (existing?.id) {
+                    await client.query('update public.order_refs set user_id = $1, guest_id = null where id = $2', [request.requester_user_id, existing.id]);
+                } else {
+                    await client.query('insert into public.order_refs(id,order_id,user_id,guest_id) values ($1,$2,$3,null)', [`recovered-${request.order_id}`, request.order_id, request.requester_user_id]);
+                }
             }
-            return res.json(data || { status: decision });
-        }
-        const { data: request, error: requestError } = await client.from('order_recovery_requests')
-            .select('id,order_id,requester_user_id,status').eq('id', req.params.requestId).maybeSingle();
-        if (requestError) throw requestError;
-        if (!request || request.status !== 'pending') return res.status(404).json({ error: 'Recovery request not found.' });
-        if (decision === 'approved') {
-            const { data: existing, error: existingError } = await client.from('order_refs')
-                .select('id,user_id').eq('order_id', request.order_id).maybeSingle();
-            if (existingError) throw existingError;
-            if (existing?.user_id && existing.user_id !== request.requester_user_id) {
-                return res.status(409).json({ error: 'This order already belongs to another account.' });
-            }
-            let refResult;
-            if (existing?.id) {
-                refResult = await client.from('order_refs').update({ user_id: request.requester_user_id, guest_id: null }).eq('id', existing.id);
-            } else {
-                refResult = await client.from('order_refs').insert({
-                    id: `recovered-${request.order_id}`,
-                    order_id: request.order_id,
-                    user_id: request.requester_user_id,
-                    guest_id: null,
-                });
-            }
-            const { error: refError } = refResult;
-            if (refError) throw refError;
-        }
-        const { error } = await client.from('order_recovery_requests').update({
-            status: decision,
-            reviewer_user_id: reviewer.id,
-            reviewed_at: new Date().toISOString(),
-            verification_note: note,
-        }).eq('id', request.id).eq('status', 'pending');
-        if (error) throw error;
+            await client.query(
+                'update public.order_recovery_requests set status = $1, reviewer_user_id = $2, reviewed_at = now(), verification_note = $3 where id = $4 and status = $5',
+                [decision, reviewer.id, note, request.id, 'pending'],
+            );
+            return { status: decision };
+        });
+        if (!result) return res.status(404).json({ error: 'Recovery request not found.' });
         res.json({ status: decision });
     } catch (error) { next(error); }
 });
@@ -886,54 +1045,90 @@ app.post('/api/admin/order-recovery-requests/:requestId/decision', async (req, r
 
 // 1. AI Agronomist Insights
 app.post('/api/farm/insights', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm insight deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm insight cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { logs, alerts, harvestData, plots, checklistPct, language = 'en' } = req.body;
         if (!logs || !Array.isArray(logs)) {
             return res.status(400).json({ error: 'logs array is required' });
         }
-        const insights = await generateAgronomistInsights(logs, alerts, harvestData, plots, checklistPct, language);
+        const insights = await generateAgronomistInsights(logs, alerts, harvestData, plots, checklistPct, language, { signal: requestController.signal });
         res.json(insights);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm insights timed out or were cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // 2. Smart Treatment SOP Generator
 app.post('/api/farm/sop', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm SOP deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm SOP cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { crop, disease, severity, language = 'en' } = req.body;
         if (!crop || !disease) {
             return res.status(400).json({ error: 'crop and disease are required' });
         }
-        const sop = await generateTreatmentSOP(crop, disease, severity, language);
+        const sop = await generateTreatmentSOP(crop, disease, severity, language, { signal: requestController.signal });
         res.json(sop);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm SOP generation timed out or was cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // 3. Natural Language Activity Logging
 app.post('/api/farm/parse-log', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm log parsing deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm log parsing cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { text, language = 'en' } = req.body;
         if (!text) {
             return res.status(400).json({ error: 'text is required' });
         }
-        const parsedData = await parseNaturalLanguageLog(text, language);
+        const parsedData = await parseNaturalLanguageLog(text, language, { signal: requestController.signal });
         res.json(parsedData);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm log parsing timed out or was cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
 // 4. Predictive Farm Risk Assessor
 app.post('/api/farm/predict', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Farm prediction deadline exceeded')), Number(process.env.FARM_AI_TIMEOUT_MS) || 90000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Farm prediction cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
     try {
         const { plots, logs, alerts, location, language = 'en' } = req.body;
-        const risk = await generatePredictiveRisk(plots, logs, alerts, location, language);
+        const risk = await generatePredictiveRisk(plots, logs, alerts, location, language, { signal: requestController.signal });
         res.json(risk);
     } catch (error) {
-        next(error);
+        if (requestController.signal.aborted) { const timeoutError = new Error('Farm risk prediction timed out or was cancelled.'); timeoutError.status = 504; next(timeoutError); } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
     }
 });
 
@@ -955,6 +1150,33 @@ app.get('/api/admin/review-summary', async (req, res, next) => {
         next(error);
     }
 });
+
+// Expert review workflow (approved reviewers only). Reviews are stored as
+// separate attributed records; the original AI assessment is never modified.
+app.get('/api/expert/cases', async (req, res, next) => {
+    try {
+        await verifyReviewerRequest(req);
+        res.json(await listReviewQueue({ status: req.query.status, days: req.query.days, limit: req.query.limit }));
+    } catch (error) { next(error); }
+});
+
+app.get('/api/expert/cases/:scanId', async (req, res, next) => {
+    try {
+        await verifyReviewerRequest(req);
+        res.json(await getReviewCase(req.params.scanId));
+    } catch (error) { next(error); }
+});
+
+app.post('/api/expert/cases/:scanId/reviews', async (req, res, next) => {
+    try {
+        const reviewer = await verifyReviewerRequest(req);
+        const review = await submitExpertReview(reviewer, req.params.scanId, req.body);
+        console.log(JSON.stringify({ event: 'expert_review_recorded', requestId: req.requestId, verdict: review.verdict }));
+        res.status(201).json({ review });
+    } catch (error) { next(error); }
+});
+
+registerFarmerReviewRoutes(app);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -999,14 +1221,21 @@ if (!process.env.VERCEL) {
 }
 
 // Global Process Error Handlers (Critical for stability)
-process.on('uncaughtException', (error) => {
-    console.error('🔥 CRITICAL: Uncaught Exception:', error);
-    // In production, you might want to exit here, but for now we log it to prevent silent failures
-    // process.exit(1); 
-});
+// An uncaught exception or unhandled rejection can leave the process in an
+// unknown state. Let the platform replace it in production, while keeping
+// local development and tests observable without terminating the runner.
+const handleFatalProcessError = (event, error) => {
+    console.error(JSON.stringify({
+        event,
+        message: error?.message || String(error),
+        stack: error?.stack,
+    }));
+    if (process.env.NODE_ENV === 'production') {
+        setImmediate(() => process.exit(1));
+    }
+};
 
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('🔥 CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
-});
+process.on('uncaughtException', (error) => handleFatalProcessError('uncaught_exception', error));
+process.on('unhandledRejection', (reason) => handleFatalProcessError('unhandled_rejection', reason));
 
 export default app;

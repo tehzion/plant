@@ -269,7 +269,6 @@ const ProductRecommendations = ({
   const diagnosisState = diagnosis.resultState || diagnosis.status || (diagnosis.requiresRetake ? 'retake_required' : diagnosis.needsMoreEvidence ? 'uncertain' : 'likely');
   const isHealthyDiagnosis = diagnosis.resultState === 'healthy' || diagnosis.healthStatus === 'healthy';
   const isNutritionPrimaryDiagnosis = Boolean(diagnosis.sectionPolicy?.nutritionPrimary);
-  const canShowDiseaseConsultation = !isNutritionMode && !isHealthyDiagnosis && !isNutritionPrimaryDiagnosis;
 
   const retryProducts = () => {
     setRequestAttempt((value) => value + 1);
@@ -299,6 +298,7 @@ const ProductRecommendations = ({
         fertilizers: products.fertilizers || [],
         supplements: products.supplements || [],
         otherPopular: [],
+        catalogueDiscovery: [],
       };
     }
     return products;
@@ -312,6 +312,7 @@ const ProductRecommendations = ({
       ...(processedProducts.fertilizers || []),
       ...(processedProducts.supplements || []),
     ]
+      .filter((product) => product.inStock !== false && product.purchasable !== false)
       .map((product) => product.id)
       .filter((productId) => {
         if (!isWooProductId(productId)) return false;
@@ -332,6 +333,14 @@ const ProductRecommendations = ({
   );
 
   const activeConsultation = consultation || fallbackConsultation;
+  const nutritionNeedsConsultation = isNutritionMode && (
+    isNutritionPrimaryDiagnosis
+    || ['uncertain', 'needs_review', 'retake_required'].includes(diagnosisState)
+    || activeConsultation?.priority === 'primary'
+  );
+  const canShowDiseaseConsultation = !isHealthyDiagnosis && (
+    (!isNutritionMode && !isNutritionPrimaryDiagnosis) || nutritionNeedsConsultation
+  );
 
   const openConsultationUrl = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -421,7 +430,7 @@ const ProductRecommendations = ({
             </a>
           </div>
         </div>
-        {canShowDiseaseConsultation && renderConsultationPanel({
+        {!isHealthyDiagnosis && (canShowDiseaseConsultation || isNutritionMode) && renderConsultationPanel({
           primary: true,
           reason: getLabel(t, 'results.productsErrorConsultationDesc', 'The live catalog could not load. Send this scan to our agronomy team for product guidance.'),
         })}
@@ -436,9 +445,16 @@ const ProductRecommendations = ({
                        !processedProducts.supplements?.length && 
                        !processedProducts.otherPopular?.length;
   const intent = processedProducts.recommendationIntent || recommendationIntent;
-  const consultationIsPrimary = !isNutritionMode && !isHealthyDiagnosis && !isNutritionPrimaryDiagnosis && (hasNoProducts
-    || [PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY, PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED].includes(intent)
-    || activeConsultation?.priority === 'primary');
+  const consultationIsPrimary = !isHealthyDiagnosis && (
+    (!isNutritionMode && !isNutritionPrimaryDiagnosis && (
+      hasNoProducts
+      || [PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY, PRODUCT_RECOMMENDATION_INTENTS.CONSULTATION_NEEDED].includes(intent)
+      || activeConsultation?.priority === 'primary'
+    ))
+    || (isNutritionMode && (
+      hasNoProducts || activeConsultation?.priority === 'primary'
+    ))
+  );
   const showCautiousProductNotice = !isNutritionMode && !hasNoProducts
     && processedProducts.diseaseControl?.length > 0
     && !['confirmed', 'healthy', 'confident_treatment'].includes(diagnosisState);
@@ -537,11 +553,16 @@ const ProductRecommendations = ({
 
   const renderProductCard = (product, index) => {
     const isSelected = selectedProductIds.has(product.id);
-    const isFertilizer = product.name?.toLowerCase().includes('baja') || product.name?.toLowerCase().includes('fertilizer') || product.categories?.some(c => c.toLowerCase().includes('fertilizer'));
+    const categoryNames = Array.isArray(product.categories) ? product.categories.filter(Boolean).map((value) => String(value)) : [];
+    const tagNames = Array.isArray(product.tags) ? product.tags.filter(Boolean).map((value) => String(value)) : [];
+    const isFertilizer = product.name?.toLowerCase().includes('baja') || product.name?.toLowerCase().includes('fertilizer') || categoryNames.some(c => c.toLowerCase().includes('fertilizer'));
     const hasImage = Boolean(product.image);
     const packageSize = product.count || product.packageSize || '';
     const isLocalCatalogItem = typeof product.id === 'string' && product.id.startsWith('local-');
-    const canSelectForCheckout = isWooProductId(product.id) && Boolean(storeUrl);
+    // Catalogue-discovery items are informational: they are not confirmed as a
+    // treatment for this scan, so they are never pre-selected for checkout.
+    const canSelectForCheckout = !product.discoveryOnly && isWooProductId(product.id) && Boolean(storeUrl) && product.inStock !== false && product.purchasable !== false;
+    const canAddToCart = Boolean(product.cartUrl) && product.inStock !== false && product.purchasable !== false;
 
     // Helper to translate if it looks like a key
     const translateIfNeeded = (val) => {
@@ -551,9 +572,16 @@ const ProductRecommendations = ({
 
     const productName = translateIfNeeded(product.name);
     const productDesc = sanitizeProductDescription(translateIfNeeded(product.description));
+    const hasPrice = product.price !== null && product.price !== undefined && String(product.price).trim() !== '';
+    const availabilityKey = product.availability === 'in_stock' || product.inStock === true
+      ? 'inStock'
+      : product.availability === 'out_of_stock' || product.inStock === false
+        ? 'outOfStock'
+        : product.availability === 'on_backorder'
+          ? 'onBackorder'
+          : '';
+    const availabilityLabel = availabilityKey ? getLabel(t, `results.${availabilityKey}`, availabilityKey.replaceAll('_', ' ')) : '';
     const cautionLabel = getCautionLabel(t, product.cautionLevel);
-    const matchScore = Number(product.matchScore);
-    const hasMatchScore = Number.isFinite(matchScore) && matchScore > 0;
     const matchReason = translateIfNeeded(product.matchReason);
     const activeIngredients = Array.isArray(product.activeIngredients)
       ? product.activeIngredients.map(translateIfNeeded).filter(Boolean).slice(0, 4)
@@ -563,16 +591,28 @@ const ProductRecommendations = ({
       : [];
     const ingredientList = matchedActiveIngredients.length > 0 ? matchedActiveIngredients : activeIngredients;
     const cautionNote = translateIfNeeded(product.cautionNote);
+    const recommendationReason = translateIfNeeded(product.recommendationReason);
 
     return (
       <div
         key={product.id || index}
         className={`product-card-wrapper ${isSelected ? 'selected' : ''} ${canSelectForCheckout ? '' : 'product-card-wrapper--informational'}`}
         onClick={() => toggleProductSelection(product.id)}
+        onKeyDown={(event) => {
+          if (!canSelectForCheckout || event.target.closest('a,button')) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleProductSelection(product.id);
+          }
+        }}
+        role={canSelectForCheckout ? 'button' : undefined}
+        tabIndex={canSelectForCheckout ? 0 : undefined}
+        aria-pressed={canSelectForCheckout ? isSelected : undefined}
+        aria-label={canSelectForCheckout ? `${productName} ${isSelected ? 'selected' : 'not selected'}` : undefined}
       >
         <div className="product-image-container">
            {hasImage ? (
-              <img src={product.image} alt={productName} className="product-image" />
+              <img src={product.image} alt={productName} className="product-image" loading="lazy" decoding="async" />
            ) : (
               <div className={`product-image-placeholder ${isFertilizer ? 'product-image-placeholder--fertilizer' : 'product-image-placeholder--treatment'}`}>
                 <div className="product-image-placeholder-content">
@@ -600,38 +640,70 @@ const ProductRecommendations = ({
         <div className="product-content">
           <div className="product-info-top">
             <h4 className="product-name" title={productName}>{productName}</h4>
-            <p className="product-price">RM {product.price || '0.00'}</p>
+            <p className={`product-price ${hasPrice ? '' : 'product-price--unavailable'}`}>
+              {hasPrice ? `RM ${product.price}` : getLabel(t, 'results.priceUnavailable', 'Price unavailable')}
+            </p>
           </div>
+
+          {(categoryNames.length > 0 || tagNames.length > 0 || availabilityLabel) && (
+            <div className="product-meta-row">
+              {categoryNames.slice(0, 1).map((category) => (
+                <span className="product-meta-chip product-meta-chip--category" key={`category-${category}`} title={`${getLabel(t, 'results.category', 'Category')}: ${category}`}>
+                  {getLabel(t, 'results.category', 'Category')}: {category}
+                </span>
+              ))}
+              {tagNames.slice(0, 1).map((tag) => (
+                <span className="product-meta-chip product-meta-chip--tag" key={`tag-${tag}`} title={`Tag: ${tag}`}>
+                  Tag: {tag}
+                </span>
+              ))}
+              {availabilityLabel && (
+                <span className={`product-availability product-availability--${availabilityKey}`}>
+                  {availabilityLabel}
+                </span>
+              )}
+            </div>
+          )}
 
           <p className="product-description">{productDesc}</p>
 
-          {(hasMatchScore || matchReason || cautionLabel) && (
+          {(recommendationReason || matchReason || cautionLabel || product.discoveryOnly) && (
             <div className="product-match-summary">
-              <div className="product-match-pills">
-                {hasMatchScore && (
-                  <span className="product-match-pill">
-                    {getLabel(t, 'results.productMatchScore', 'Match')} {Math.round(matchScore)}%
-                  </span>
-                )}
-                {cautionLabel && (
+              {cautionLabel && (
+                <div className="product-match-pills">
                   <span className={`product-match-pill product-match-pill--${product.cautionLevel}`}>
                     {cautionLabel}
                   </span>
-                )}
-              </div>
-              {matchReason && (
-                <p className="product-match-reason">{matchReason}</p>
+                </div>
               )}
-              {ingredientList.length > 0 && (
-                <p className="product-active-ingredients">
-                  <Pill size={13} />
-                  <span>
-                    {getLabel(t, 'results.activeIngredientToCheck', 'Active ingredient to check')}: {ingredientList.join(', ')}
-                  </span>
+              {recommendationReason && (
+                <p className="product-match-reason">
+                  <strong>{getLabel(t, 'assessment.whySuggested', 'Why suggested')}:</strong> {recommendationReason}
                 </p>
               )}
-              {cautionNote && (
-                <p className="product-rule-caution">{cautionNote}</p>
+              {matchReason && !recommendationReason && (
+                <p className="product-match-reason">{matchReason}</p>
+              )}
+              {product.discoveryOnly && (
+                <p className="product-rule-caution">{getLabel(t, 'assessment.discoveryCardNote', 'Not confirmed for this result. Check the label for your crop before use.')}</p>
+              )}
+              {/* The keyword match score is an internal ranking signal, not a
+                  quality rating, so it is no longer shown to farmers. */}
+              {(ingredientList.length > 0 || cautionNote) && (
+                <details className="product-label-details" onClick={(event) => event.stopPropagation()}>
+                  <summary>{getLabel(t, 'assessment.ux.labelDetails', 'Label details')}</summary>
+                  {ingredientList.length > 0 && (
+                    <p className="product-active-ingredients">
+                      <Pill size={13} />
+                      <span>
+                        {getLabel(t, 'results.activeIngredientToCheck', 'Active ingredient to check')}: {ingredientList.join(', ')}
+                      </span>
+                    </p>
+                  )}
+                  {cautionNote && (
+                    <p className="product-rule-caution">{cautionNote}</p>
+                  )}
+                </details>
               )}
             </div>
           )}
@@ -639,7 +711,7 @@ const ProductRecommendations = ({
           <div className="product-actions">
             {product.cartUrl || product.permalink ? (
               <a
-                href={product.cartUrl || product.permalink}
+                href={(canAddToCart ? product.cartUrl : product.permalink) || product.cartUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="add-to-cart-button"
@@ -649,7 +721,7 @@ const ProductRecommendations = ({
                 }}
               >
                 <ShoppingCart size={14} />
-                <span>{product.cartUrl ? (t('results.addToCart') || 'Add to Cart') : (t('results.viewProduct') || 'View Product')}</span>
+                <span>{canAddToCart ? (t('results.addToCart') || 'Add to Cart') : (t('results.viewProduct') || 'View Product')}</span>
               </a>
             ) : (
               <button
@@ -675,6 +747,12 @@ const ProductRecommendations = ({
 
   return (
     <div className="product-recommendations-container">
+      {!hasNoProducts && (
+        <div className="product-recommendations-intro">
+          <h3>{getLabel(t, 'results.recommendedPlantCareProducts', 'Recommended Plant-Care Products')}</h3>
+          <p>{getLabel(t, 'results.recommendedPlantCareProductsDesc', 'These live-store products were matched using the scan keywords and WooCommerce product metadata.')}</p>
+        </div>
+      )}
       {/* AI Reasoning Explainer */}
       {reasoning && !hasNoProducts && (
         <div className="product-note-banner product-note-banner--selection app-surface">
@@ -765,7 +843,7 @@ const ProductRecommendations = ({
         </div>
       )}
 
-      {canShowDiseaseConsultation && !consultationIsPrimary && renderConsultationPanel({
+      {(canShowDiseaseConsultation || (isNutritionMode && hasNoProducts)) && !consultationIsPrimary && renderConsultationPanel({
         primary: false,
         compact: true,
       })}
@@ -782,6 +860,21 @@ const ProductRecommendations = ({
 
           <div className="products-grid">
             {processedProducts.diseaseControl.map((product, index) => renderProductCard(product, index))}
+          </div>
+        </div>
+      )}
+
+      {/* Catalogue discovery: keyword matches that failed a suitability check */}
+      {processedProducts.catalogueDiscovery?.length > 0 && (
+        <div className="product-section product-section--discovery app-surface">
+          <div className="section-header-centered">
+            <h3 className="section-title">{getLabel(t, 'assessment.discoveryTitle', 'Other catalogue products to ask about')}</h3>
+          </div>
+          <p className="section-subtitle">
+            {getLabel(t, 'assessment.discoveryNote', 'These are not confirmed treatments for this result. Check that the label covers your crop and problem, and ask an expert before use.')}
+          </p>
+          <div className="products-grid">
+            {processedProducts.catalogueDiscovery.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}

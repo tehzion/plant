@@ -64,8 +64,8 @@ export const AuthProvider = ({ children }) => {
         const migrateForUser = async (currentUser) => {
             if (!currentUser) return;
             try {
-                const { migrateLocalStorageToSupabase } = await import('../utils/migrations');
-                await migrateLocalStorageToSupabase(currentUser.id);
+                const { migrateLocalStorageToNeon } = await import('../utils/migrations');
+                await migrateLocalStorageToNeon(currentUser.id);
                 const { flushAuthenticatedSyncQueue } = await import('../utils/cloudSync.js');
                 await flushAuthenticatedSyncQueue(currentUser.id);
             } catch (e) {
@@ -74,11 +74,16 @@ export const AuthProvider = ({ children }) => {
         };
 
         // ── Supabase email/password auth path ─────────────────────────────────
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            const currentUser = session?.user ?? null;
-            setUser(currentUser);
-            migrateForUser(currentUser);
-        });
+        supabase.auth.getSession()
+            .then(({ data: { session } }) => {
+                const currentUser = session?.user ?? null;
+                setUser(currentUser);
+                migrateForUser(currentUser);
+            })
+            .catch((error) => {
+                console.warn('Supabase session initialization failed; continuing in guest mode:', error.message);
+                setUser(null);
+            });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, session) => {
@@ -195,8 +200,14 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
+        const signedOutUserId = user?.id;
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
+        // Drop cached cloud copies on shared devices; records still waiting to
+        // sync are kept so they upload at the next sign-in.
+        if (signedOutUserId) {
+            import('../utils/localStorage').then(({ clearCloudReadCache }) => clearCloudReadCache(signedOutUserId)).catch(() => {});
+        }
         setUser(null);
     };
 
