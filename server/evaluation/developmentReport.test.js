@@ -45,3 +45,11 @@ describe('paired comparisons',()=>{
         expect(()=>compareDevelopmentRuns([row('a'),row('a',{runId:'candidate',originalLabel:'healthy'})],'baseline','candidate')).toThrow();
     });
 });
+
+describe('treatment scoring crop names',()=>{
+    it('does not invent incorrect treatment when the model appends a scientific name',()=>{
+        const p={...row('a').prediction,plantType:'Apple (Malus domestica)'};
+        const report=summarizeDevelopment([row('a',{prediction:p})]);
+        expect(report.overall.cropCorrect).toBe(1);expect(report.overall.incorrectTreatment).toBe(0);
+    });
+});

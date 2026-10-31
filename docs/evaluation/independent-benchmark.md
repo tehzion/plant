@@ -22,7 +22,7 @@ Local files are private and git-ignored:
 - `server/dataset/independent-holdout-20261031/split.json`
 - `server/dataset/independent-holdout-20261031/blind-review.json`
 
-Status: **awaiting_independent_review**. No new provider assessments were run. No database writes or production changes were made.
+Status: **awaiting_independent_review**. No provider assessments were run during this reservation step. Subsequent development-only comparisons are documented in `development-experiments.md`; the reserved images remain excluded. No database writes or production changes were made.
 
 ## Review procedure
 

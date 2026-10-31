@@ -13,7 +13,7 @@ node server/evaluation/reportDevelopmentResults.js server/dataset/NEW_DEVELOPMEN
 
 The report includes numerator/denominator pairs, first-choice and top-three dataset agreement, completion, end-to-end first-choice agreement including failures, review/retake rates, missed disease, treatment eligibility on mismatches, raw falsely healthy labels, timing and reported cost coverage. JSON also contains case-level error and safety lists. Uncertain named diagnoses stay in the agreement denominator; uncertainty is a separate operational measure. Failed calls stay in completion and end-to-end denominators. Missing cost and latency are not treated as zero.
 
-Reference matching uses existing heuristic label aliases; those mappings are not independent expert labels. Crop names use explicit source naming equivalents (corn/maize, bell pepper, cherry). Safety metrics reapply the current shared decision policy to stored predictions, so they do not reconstruct what an earlier version displayed or recommended. Treatment eligibility does not mean a treatment was administered or clinically appropriate. Costs in historical exports may be unavailable.
+Reference matching uses existing heuristic label aliases; those mappings are not independent expert labels. Crop names use explicit source naming equivalents (corn/maize, bell pepper, cherry) and strip appended scientific-name qualifiers for comparison. Safety metrics reapply the current shared decision policy to stored predictions, so they do not reconstruct what an earlier version displayed or recommended. Treatment eligibility does not mean a treatment was administered or clinically appropriate. Costs in historical exports may be unavailable.
 
 ## Paired model and retrieval experiments
 
@@ -36,7 +36,7 @@ Every run uses an exclusive private directory with a frozen plan, source hashes,
 
 Feature extraction uses macOS `sips` to decode checksum-verified local images into 32×32 BMP thumbnails. It combines colour histograms and spatial colour averages, then ranks Euclidean distance. It requires no model call or added package. This is a deliberately simple visual baseline, not a disease-aware embedding model.
 
-The first experiment allowed cross-crop references as a negative control. Inspection found unrelated crops among the closest colour matches. The subsequent implementation filters by the farmer-stated crop using explicit source naming equivalents before visual ranking. Neither the query's disease label nor its diagnosis prediction participates in retrieval ranking. The selected references' public labels are supplied to the model as **unverified comparison examples**, separately identified from the query.
+The first experiment allowed cross-crop references as an exploratory visual-only baseline. Inspection found unrelated crops among the closest colour matches. The subsequent implementation filters by the farmer-stated crop using explicit source naming equivalents before visual ranking. Neither the query's disease label nor its diagnosis prediction participates in retrieval ranking. The selected references' public labels are supplied to the model as **unverified comparison examples**, separately identified from the query.
 
 Both versions exclude the query, identical checksums, known related groups, known withheld images and very similar average hashes. The index contains development images only. Average hashes do not prove absence of near duplicates; absent plant/farm provenance remains a limitation. The image index is not cleared for an independent benchmark or production retrieval. The existing reference-label and rights-review limitations remain recorded in the source inventory.
 
@@ -53,3 +53,5 @@ The regression suite covers failed-request denominators, healthy labels with cro
 The safety contract requires review and blocks disease products for contradictory healthy/diseased labels, explicit unknown health, weak evidence, explicit review flags, retakes, poor photos, failed schema validation, absent tomato/potato blight comparisons and subtle signs on allegedly healthy leaves. It also checks that complete supported confident and healthy cases remain usable. A detected gap was fixed in the shared policy: `needsReview` and `expertReviewRequired` now block treatment eligibility.
 
 Keep the 100 reserved images out of all development experiments. Existing older generic batch runners do not enforce this new planner's allowlist; use this planner for these comparisons. Do not choose a production model or enable retrieval based on eight selected development images. Independent expert-reviewed evaluation remains the release evidence needed for those decisions.
+
+Measured results and the adoption decision are recorded in `development-results-20261031.md`.
