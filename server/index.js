@@ -1,3 +1,4 @@
+import { checkDecisionShadow } from './services/decisionShadowService.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
@@ -739,6 +740,27 @@ app.post('/api/analyze', async (req, res, next) => {
             analysisLanguage: language,
         };
 
+        // Optional research checker: server-only audit data, never result or cache content.
+        let decisionShadow;
+        try {
+            const shadow = await trackAiUsage(() => checkDecisionShadow({
+                prediction: finalResult, treeImage: mainImage, leafImage, crop: cropHint,
+                dataConsent, signal: requestController.signal,
+            }));
+            decisionShadow = { ...shadow.result, aiUsage: shadow.usage };
+        } catch {
+            decisionShadow = { status: 'unavailable', reason: 'checker_failed' };
+        }
+
+        if (decisionShadow.status !== 'skipped') {
+            console.log(JSON.stringify({ event: 'decision_shadow', requestId: req.requestId,
+                status: decisionShadow.status, reason: decisionShadow.reason || null,
+                wouldAddReview: decisionShadow.wouldAddReview ?? null,
+                durationMs: decisionShadow.durationMs ?? null, costUsd: decisionShadow.costUsd ?? null }));
+        }
+
+        if (requestController.signal.aborted) throw new Error('Analysis request cancelled');
+
         // 6. Cache Result (24 Hours)
         cacheResult(cacheKey, finalResult, 86400);
 
@@ -767,6 +789,7 @@ app.post('/api/analyze', async (req, res, next) => {
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
                 durationMs: Date.now() - analysisStartedAt,
                 aiUsage: analysisUsage,
+                decisionShadow,
             }
         }).catch(err => console.error('Data logging failed:', err));
         console.log(JSON.stringify({ event: 'analysis_usage', requestId: req.requestId, model: finalResult.analysisMetadata?.model || null, ...analysisUsage }));

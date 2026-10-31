@@ -1,3 +1,4 @@
+import { canonicalCrop } from './cropNames.js';
 import { describe,it,expect } from 'vitest';
 import { planDevelopmentExperiment,buildReferenceContent,ExperimentBudget } from './developmentExperiments.js';
 import { retrieveReferences,bmpFeatures } from './visualRetrieval.js';
@@ -43,5 +44,13 @@ describe('crop-matched reference retrieval',()=>{
         const candidates=[{...images[1],crop:'Tomato'},{...images[2],crop:'Corn'}];
         const refs=retrieveReferences(query,candidates,{allowedChecksums:images.map(i=>i.checksum)});
         expect(refs.map(r=>r.checksum)).toEqual(['2']);
+    });
+});
+
+describe('display crop naming equivalents',()=>{
+    it('recognizes common names followed by scientific binomials',()=>{
+        expect(canonicalCrop('Tomato (Solanum lycopersicum)')).toBe('tomato');
+        expect(canonicalCrop('Bell pepper (Capsicum annuum)')).toBe(canonicalCrop('Pepper, bell'));
+        expect(canonicalCrop('Corn (maize)')).toBe(canonicalCrop('Maize'));
     });
 });
