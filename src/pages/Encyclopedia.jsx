@@ -6,6 +6,7 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import { Search } from 'lucide-react';
 import './Encyclopedia.css';
 import { getUiCopy } from '../utils/uiCopy.js';
+import { setAssistantPageTopic } from '../utils/assistantContext.js';
 
 const Encyclopedia = () => {
   const { t, label, language } = useLanguage();
@@ -41,6 +42,13 @@ const Encyclopedia = () => {
   const categories = useMemo(() => ['all', ...getCategories().sort((a, b) => {
     return getCategoryLabel(a).toLowerCase().localeCompare(getCategoryLabel(b).toLowerCase());
   })], [t, label]);
+
+  // The assistant's starter questions name the category being browsed.
+  const selectedCategoryLabel = selectedCategory === 'all' ? null : getCategoryLabel(selectedCategory);
+  useEffect(() => {
+    setAssistantPageTopic(selectedCategoryLabel);
+    return () => setAssistantPageTopic(null);
+  }, [selectedCategoryLabel]);
 
   const filteredDiseases = useMemo(() => {
     const baseDiseases = selectedCategory !== 'all'

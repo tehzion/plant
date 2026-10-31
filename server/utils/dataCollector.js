@@ -253,3 +253,36 @@ export const withdrawTrainingImages = async (scanId) => {
     await Promise.all(matches.map((name) => fs.promises.unlink(path.join(IMAGES_DIR, name))));
     return { removed: matches.length };
 };
+
+/**
+ * Log a farmer's thumbs up or down on a floating-assistant answer, so wrong or
+ * unhelpful answers can be found and the assistant's instructions improved.
+ * @param {{rating: 'up'|'down', question: string, answer: string, language: string, page?: string, scanStatus?: string|null}} feedback
+ */
+export const logAssistantFeedback = async (feedback) => {
+    const record = {
+        rating: feedback.rating,
+        language: feedback.language || 'en',
+        question: feedback.question,
+        answer: feedback.answer,
+        page: feedback.page || null,
+        scanStatus: feedback.scanStatus || null,
+    };
+    try {
+        const now = new Date();
+        if (shouldUseCloudAudit()) {
+            await queryNeon(
+                'insert into public.assistant_feedback(rating, language, question, answer, page, scan_status, created_at) values ($1, $2, $3, $4, $5, $6, $7)',
+                [record.rating, record.language, record.question, record.answer, record.page, record.scanStatus, now.toISOString()],
+            );
+            return true;
+        }
+        await ensureLocalDataset();
+        const file = path.join(DATASET_DIR, `assistant_feedback_${now.toISOString().split('T')[0]}.jsonl`);
+        await fs.promises.appendFile(file, JSON.stringify({ ...record, timestamp: now.toISOString() }) + '\n');
+        return true;
+    } catch (error) {
+        console.error('❌ Assistant feedback logging failed:', error?.message || error);
+        return false;
+    }
+};

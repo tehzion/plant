@@ -48,14 +48,12 @@
 
 .scale-button:hover:not(:disabled) {
   border-color: var(--color-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(74, 124, 44, 0.1);
 }
 
 .scale-button.selected {
   border-color: var(--color-primary);
   background: var(--color-bg-primary);
-  box-shadow: 0 4px 12px rgba(74, 124, 44, 0.15);
+  box-shadow: none;
 }
 
 .scale-button:disabled {
@@ -72,7 +70,7 @@
   justify-content: center;
   height: 50px;
   width: 50px;
-  background: #f3f4f6;
+  background: #f2efe9;
   border-radius: 50%;
 }
 

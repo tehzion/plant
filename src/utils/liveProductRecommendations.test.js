@@ -123,8 +123,8 @@ describe('live product recommendation payloads', () => {
       recommendationIntent: 'treatment_ready',
       keywords: { treatment: ['fungicide', 'copper'], fertilizer: [], supplement: [] },
       consultation: {
-        phone: '+60136667810',
-        url: 'https://wa.me/60136667810',
+        phone: '+60146193328',
+        url: 'https://wa.me/60146193328',
         message: 'Scan ID: scan-1',
         label: 'Contact us for consultation',
         priority: 'secondary',
@@ -162,7 +162,7 @@ describe('live product recommendation payloads', () => {
 
     const decodedUrl = decodeURIComponent(consultation.url);
     expect(consultation.priority).toBe('primary');
-    expect(consultation.phone).toBe('+60136667810');
+    expect(consultation.phone).toBe('+60146193328');
     expect(decodedUrl).toContain('scan-789');
     expect(decodedUrl).toContain('Papaya');
     expect(decodedUrl).toContain('Mealybug');

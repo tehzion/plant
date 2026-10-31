@@ -1,14 +1,14 @@
 .farm-timeline { display: grid; gap: 12px; }
-.farm-timeline__intro { margin: 0; color: #475569; }
+.farm-timeline__intro { margin: 0; color: #4c514b; }
 .farm-timeline__plot { padding: 14px 16px; }
 .farm-timeline__plot h3 { margin: 0 0 8px; font-size: 1.05rem; }
 .farm-timeline__plot ol { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--color-border); display: grid; gap: 10px; }
 .farm-timeline__event, .farm-timeline__event a { display: grid; gap: 2px; color: var(--color-text-primary); text-decoration: none; }
 .farm-timeline__event a { min-height: 44px; }
-.farm-timeline__kind { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #475569; }
-.farm-timeline__kind--scan { color: #1d4ed8; }
-.farm-timeline__kind--log { color: #15803d; }
-.farm-timeline__date { font-size: .82rem; color: #475569; }
+.farm-timeline__kind { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #4c514b; }
+.farm-timeline__kind--scan { color: #3f5c6c; }
+.farm-timeline__kind--log { color: #2e6b3f; }
+.farm-timeline__date { font-size: .82rem; color: #4c514b; }
 .farm-timeline__detail { font-size: .9rem; line-height: 1.4; overflow-wrap: anywhere; }
 .farm-timeline__empty { padding: 16px; }
 .history-view-tabs { display: flex; gap: 8px; margin: 12px 0; }

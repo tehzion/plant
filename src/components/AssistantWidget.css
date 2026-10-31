@@ -1,9 +1,11 @@
-/* Floating assistant. The button reuses the bottom-nav scan button styling
-   (green gradient, white ring, shine) so the two read as one family. */
+/* Floating assistant. On phones the button is a quiet white circle so it does
+   not compete with the green Scan button in the bottom nav, and the panel
+   opens as a bottom sheet. On desktop the button is a labelled pill and the
+   panel floats above it. */
 .assistant-widget {
     position: fixed;
     right: 16px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 118px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
     z-index: 1001;
     display: flex;
     flex-direction: column;
@@ -17,77 +19,81 @@
 }
 
 .assistant-fab {
-    width: 58px;
-    height: 58px;
-    border: none;
-    border-radius: 50%;
+    min-width: 52px;
+    height: 52px;
+    padding: 0;
+    border: 1.5px solid var(--color-brand-border);
+    border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #22c55e 0%, #16a34a 52%, #166534 100%);
-    color: #fff;
-    box-shadow: 0 12px 24px rgba(22, 197, 94, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.94);
-    position: relative;
-    overflow: hidden;
+    gap: 8px;
+    background: #fff;
+    color: #22522f;
+    box-shadow: 0 8px 20px rgba(31, 35, 32, 0.14), 0 2px 6px rgba(46, 107, 63, 0.1);
     cursor: pointer;
-    transition: transform 0.18s ease;
-}
-
-.assistant-fab::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    background-size: 200% 100%;
-    animation: shine 3s infinite linear;
-    pointer-events: none;
-}
-
-.assistant-fab:hover {
-    transform: translateY(-1px) scale(1.02);
+    font-family: inherit;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .assistant-fab:active {
-    transform: scale(0.92);
+    transform: scale(0.94);
     transition: transform 0.1s ease-out;
 }
 
 .assistant-fab:focus-visible {
-    outline: 3px solid #166534;
-    outline-offset: 4px;
+    outline: 3px solid #22522f;
+    outline-offset: 3px;
+}
+
+.assistant-fab-label {
+    display: none;
+    font-size: 0.92rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.assistant-backdrop {
+    display: none;
 }
 
 .assistant-panel {
-    width: min(380px, calc(100vw - 32px));
-    max-height: min(560px, calc(100vh - 220px));
+    width: min(400px, calc(100vw - 32px));
+    max-height: min(620px, calc(100vh - 120px));
     display: flex;
     flex-direction: column;
-    border-radius: 24px;
+    border-radius: var(--radius-xl);
     background: #fff;
-    border: 1px solid rgba(21, 128, 61, 0.12);
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16), 0 6px 16px rgba(21, 128, 61, 0.08);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 20px 44px rgba(31, 35, 32, 0.18), 0 6px 16px rgba(46, 107, 63, 0.08);
     overflow: hidden;
+    animation: assistant-rise 0.18s ease-out;
+}
+
+@keyframes assistant-rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
 }
 
 .assistant-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px 14px 12px 16px;
-    background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
-    border-bottom: 1px solid rgba(21, 128, 61, 0.1);
+    padding: 14px 10px 12px 16px;
+    background: #f1f4ee;
+    border-bottom: 1px solid rgba(46, 107, 63, 0.1);
 }
 
 .assistant-avatar {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     flex: none;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    background: linear-gradient(180deg, #22c55e 0%, #16a34a 52%, #166534 100%);
+    background: #3d7a4c;
 }
 
 .assistant-heading {
@@ -97,20 +103,20 @@
 
 .assistant-heading h2 {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 800;
-    color: #14532d;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #183d23;
 }
 
 .assistant-heading p {
     margin: 2px 0 0;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--color-text-secondary);
 }
 
-.assistant-close {
-    width: 40px;
-    height: 40px;
+.assistant-icon-button {
+    width: 44px;
+    height: 44px;
     flex: none;
     border: none;
     border-radius: 50%;
@@ -122,23 +128,81 @@
     cursor: pointer;
 }
 
-.assistant-close:hover {
+.assistant-icon-button:hover:not(:disabled) {
     background: var(--color-brand-mist);
-    color: #166534;
+    color: #22522f;
 }
 
+.assistant-icon-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.assistant-icon-button:focus-visible {
+    outline: 3px solid #22522f;
+    outline-offset: -3px;
+}
+
+/* Three equal shortcuts that always fit, so none is cut off at the edge. */
 .assistant-quick {
     display: flex;
     gap: 6px;
     padding: 10px 12px;
-    overflow-x: auto;
     border-bottom: 1px solid var(--color-border-light);
+}
+
+.assistant-quick .assistant-chip {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    padding: 6px 10px;
+}
+
+.assistant-quick .assistant-chip svg {
+    flex: none;
+}
+
+.assistant-chip-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Which scan the conversation is about. */
+.assistant-scan {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--color-brand-mist);
+    border-bottom: 1px solid var(--color-border-light);
+    color: #22522f;
+    font-size: 0.82rem;
+}
+
+.assistant-scan svg {
+    flex: none;
+}
+
+.assistant-scan-label {
+    flex: none;
+    font-weight: 700;
+}
+
+.assistant-scan-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-primary);
 }
 
 .assistant-messages {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 14px 12px;
+    overscroll-behavior: contain;
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -147,35 +211,87 @@
 
 .assistant-message {
     max-width: 88%;
-    padding: 10px 12px;
-    border-radius: 16px;
-    font-size: 0.9rem;
-    line-height: 1.45;
+    padding: 10px 13px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    line-height: 1.5;
 }
 
 .assistant-message p {
     margin: 0;
     white-space: pre-wrap;
+    color: inherit;
 }
 
 .assistant-message--bot {
     align-self: flex-start;
     background: #fff;
-    border: 1px solid rgba(21, 128, 61, 0.12);
+    border: 1px solid rgba(46, 107, 63, 0.12);
     color: var(--color-text-primary);
     border-bottom-left-radius: 6px;
 }
 
 .assistant-message--user {
     align-self: flex-end;
-    background: #166534;
+    background: #22522f;
     color: #fff;
     border-bottom-right-radius: 6px;
 }
 
-.assistant-message--pending p {
-    color: var(--color-text-secondary);
-    font-style: italic;
+/* Starter questions: full-width, easy to tap, clearly separate from links. */
+.assistant-starters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.assistant-starter {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--color-brand-border);
+    background: #fff;
+    color: #183d23;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.assistant-starter:hover {
+    background: var(--color-brand-mist);
+}
+
+.assistant-starter:focus-visible,
+.assistant-chip:focus-visible {
+    outline: 3px solid #22522f;
+    outline-offset: 2px;
+}
+
+.assistant-typing {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 2px;
+}
+
+.assistant-typing span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2e6b3f;
+    opacity: 0.35;
+    animation: assistant-typing 1.2s infinite ease-in-out;
+}
+
+.assistant-typing span:nth-child(2) { animation-delay: 0.15s; }
+.assistant-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes assistant-typing {
+    0%, 80%, 100% { opacity: 0.35; transform: none; }
+    40% { opacity: 1; transform: translateY(-3px); }
 }
 
 .assistant-links {
@@ -187,15 +303,16 @@
 
 .assistant-chip {
     display: inline-flex;
+    flex: none;
     align-items: center;
-    gap: 5px;
-    min-height: 34px;
-    padding: 6px 12px;
+    gap: 6px;
+    min-height: 38px;
+    padding: 6px 13px;
     border-radius: 999px;
     border: 1px solid var(--color-brand-border);
     background: var(--color-brand-mist);
-    color: #166534;
-    font-size: 0.8rem;
+    color: #22522f;
+    font-size: 0.84rem;
     font-weight: 700;
     text-decoration: none;
     white-space: nowrap;
@@ -204,20 +321,20 @@
 }
 
 .assistant-chip:hover {
-    background: #dcfce7;
+    background: #e3ece1;
 }
 
 .assistant-chip--whatsapp {
-    border-color: #a7f3d0;
+    border-color: #cfdccd;
 }
 
 .assistant-section-label {
     margin: 10px 0 6px !important;
     font-size: 0.74rem;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #166534;
+    color: #22522f;
 }
 
 .assistant-products {
@@ -228,10 +345,11 @@
 
 .assistant-product {
     display: grid;
-    grid-template-columns: 40px 1fr auto;
+    grid-template-columns: 44px 1fr auto;
     grid-template-areas: 'img name view' 'img price view';
     column-gap: 10px;
     align-items: center;
+    min-height: 56px;
     padding: 8px;
     border-radius: 12px;
     border: 1px solid var(--color-border);
@@ -242,30 +360,30 @@
 
 .assistant-product img {
     grid-area: img;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 8px;
     object-fit: cover;
 }
 
 .assistant-product-name {
     grid-area: name;
-    font-size: 0.82rem;
+    font-size: 0.86rem;
     font-weight: 700;
     line-height: 1.3;
 }
 
 .assistant-product-price {
     grid-area: price;
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     color: var(--color-text-secondary);
 }
 
 .assistant-product-view {
     grid-area: view;
-    font-size: 0.78rem;
-    font-weight: 800;
-    color: #166534;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #22522f;
 }
 
 .assistant-form {
@@ -273,28 +391,31 @@
     gap: 8px;
     padding: 10px 12px 6px;
     border-top: 1px solid var(--color-border-light);
+    background: #fff;
 }
 
 .assistant-form input {
     flex: 1;
     min-width: 0;
-    min-height: 44px;
-    padding: 0 14px;
+    min-height: 48px;
+    padding: 0 16px;
     border-radius: 999px;
     border: 1px solid var(--color-border);
+    background: #faf8f4;
     font-size: 16px;
     font-family: inherit;
 }
 
 .assistant-form input:focus {
     outline: none;
-    border-color: #16a34a;
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+    background: #fff;
+    border-color: #2e6b3f;
+    box-shadow: 0 0 0 3px rgba(46, 107, 63, 0.15);
 }
 
 .assistant-send {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     flex: none;
     border: none;
     border-radius: 50%;
@@ -302,27 +423,107 @@
     align-items: center;
     justify-content: center;
     color: #fff;
-    background: linear-gradient(180deg, #22c55e 0%, #16a34a 52%, #166534 100%);
+    background: #3d7a4c;
     cursor: pointer;
 }
 
 .assistant-send:disabled {
-    opacity: 0.45;
+    background: #d3cec4;
     cursor: default;
+}
+
+.assistant-send:focus-visible {
+    outline: 3px solid #22522f;
+    outline-offset: 2px;
 }
 
 .assistant-disclaimer {
     margin: 0;
-    padding: 0 14px 10px;
-    font-size: 0.7rem;
-    color: var(--color-text-light);
+    padding: 0 16px 10px;
+    font-size: 0.72rem;
+    color: var(--color-text-secondary);
+    background: #fff;
 }
 
-/* Desktop has no bottom nav, so the button sits in the corner. */
+/* Phones: bottom sheet over a dimmed page; the header X closes it. */
+@media (max-width: 768px) {
+    .assistant-widget.is-open {
+        z-index: 1100;
+    }
+
+    .assistant-widget.is-open .assistant-fab {
+        display: none;
+    }
+
+    .assistant-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(31, 35, 32, 0.4);
+        animation: assistant-fade 0.18s ease-out;
+    }
+
+    .assistant-panel {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: min(88dvh, 760px);
+        max-height: none;
+        border-radius: 24px 24px 0 0;
+        border-bottom: none;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: #fff;
+        animation: assistant-sheet 0.22s ease-out;
+    }
+
+    .assistant-header {
+        position: relative;
+        padding-top: 20px;
+    }
+
+    /* Grab handle, decorative. */
+    .assistant-header::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        width: 40px;
+        height: 4px;
+        margin-left: -20px;
+        border-radius: 999px;
+        background: #d3cec4;
+    }
+}
+
+@keyframes assistant-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes assistant-sheet {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+}
+
+/* Desktop has no bottom nav: labelled pill in the corner. */
 @media (min-width: 769px) {
     .assistant-widget {
         right: 24px;
         bottom: 24px;
+    }
+
+    .assistant-fab:not(.is-open) {
+        padding: 0 20px 0 16px;
+        background: #ffffff;
+        border-color: var(--color-border-strong);
+        color: var(--color-primary-dark);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .assistant-fab-label {
+        display: inline;
     }
 }
 
@@ -332,8 +533,47 @@
 
 @media (prefers-reduced-motion: reduce) {
     .assistant-fab,
-    .assistant-fab::after {
+    .assistant-panel,
+    .assistant-backdrop,
+    .assistant-typing span {
         animation: none;
         transition: none;
     }
+}
+
+/* Thumbs up/down under each answer, quiet until used. */
+.assistant-rating {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin: 6px -6px -4px;
+}
+
+.assistant-rating-button {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.assistant-rating-button:hover {
+    background: var(--color-brand-mist);
+    color: #22522f;
+}
+
+.assistant-rating-button:focus-visible {
+    outline: 3px solid #22522f;
+    outline-offset: -3px;
+}
+
+.assistant-rating-thanks {
+    padding: 0 6px;
+    font-size: 0.78rem;
+    color: var(--color-text-secondary);
 }

@@ -25,6 +25,13 @@ describe('API input validation', () => {
         expect(validate('/feedback', { scanId: 'scan', rating: 6 }).status).toBe(400);
         expect(validate('/feedback', { scanId: 'scan', wasCorrect: 'yes' }).status).toBe(400);
     });
+    it('accepts only a well-formed vote on an assistant answer', () => {
+        expect(validate('/assistant-feedback', { rating: 'up', question: 'Why yellow?', answer: 'Check nitrogen.', page: 'home' })).toBeUndefined();
+        expect(validate('/assistant-feedback', { rating: 5, answer: 'Check nitrogen.' }).status).toBe(400);
+        expect(validate('/assistant-feedback', { rating: 'down' }).status).toBe(400);
+        expect(validate('/assistant-feedback', { rating: 'down', answer: 'x'.repeat(3001) }).status).toBe(400);
+        expect(validate('/assistant-feedback', { rating: 'down', answer: 'ok', scanStatus: 'cured' }).status).toBe(400);
+    });
     it('rejects invalid order quantities and excessive non-image payloads', () => {
         expect(validate('/orders', { items: [{ productId: 1, quantity: -1 }] }).status).toBe(400);
         expect(validate('/farm/predict', { logs: ['x'.repeat(256 * 1024)] }).status).toBe(413);

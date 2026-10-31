@@ -144,7 +144,7 @@ describe('adminAnalyticsService', () => {
                 disease: 'No clear disease detected',
                 crop: 'Kelapa',
                 confidence: 45,
-                phone: '+60136667810',
+                phone: '+60146193328',
                 recommendation_intent: 'support_only',
                 source: 'product_recommendations',
                 created_at: '2026-08-01T01:05:00.000Z',

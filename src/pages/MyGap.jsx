@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import {
@@ -22,12 +23,12 @@ import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/p
 import './MyGap.css';
 
 const MYGAP_TABS = [
-    { id: 'guide', Icon: BookOpen, labelKey: 'nav.about' },
-    { id: 'checklist', Icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
     { id: 'logbook', Icon: FileText, labelKey: 'mygap.tabLogbook' },
+    { id: 'checklist', Icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
     { id: 'farm', Icon: Tractor, labelKey: 'mygap.tabFarm' },
     { id: 'calendar', Icon: Calendar, labelKey: 'mygap.tabCalendar' },
     { id: 'phi', Icon: Calculator, labelKey: 'mygap.tabPhi' },
+    { id: 'guide', Icon: BookOpen, labelKey: 'nav.about' },
 ];
 
 const MyGapPage = () => {
@@ -50,7 +51,11 @@ const MyGapPage = () => {
         plots,
     } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
-    const [activeTab, setActiveTab] = useState('guide');
+    const [searchParams] = useSearchParams();
+    // Records are the daily task, so the log opens first; ?tab= deep-links a tab.
+    const [activeTab, setActiveTab] = useState(() => (
+        MYGAP_TABS.some((tab) => tab.id === searchParams.get('tab')) ? searchParams.get('tab') : 'logbook'
+    ));
     // Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
     const handleTabKey = (event) => {
         const ids = MYGAP_TABS.map((tab) => tab.id);
@@ -264,10 +269,10 @@ const MyGapPage = () => {
         }
     };
 
-    if (dataLoading) return <div role="status">{t('common.loading')}</div>;
-    if (dataError) return <div role="alert">
+    if (dataLoading) return <div className="mygap-page-container mygap-state" role="status"><span className="loading-spinner-circle" aria-hidden="true" />{t('common.loading')}</div>;
+    if (dataError) return <div className="mygap-page-container mygap-state" role="alert">
         <p>{t('profile.dataLoadFailed')}</p>
-        <button type="button" onClick={reloadData}>{t('common.retry')}</button>
+        <button type="button" className="btn btn-primary" onClick={reloadData}>{t('common.retry')}</button>
     </div>;
     return (
         <div className="mygap-page-container">
@@ -285,17 +290,18 @@ const MyGapPage = () => {
                 </div>
             )}
 
-            <div className="tabs-container" role="tablist">
+            <div className="tabs-container" role="tablist" aria-label={t('mygap.title')}>
                 {MYGAP_TABS.map(({ id, Icon, labelKey }) => (
                     <button
                         key={id}
+                        type="button"
                         role="tab" aria-selected={activeTab === id} aria-controls="mygap-panel" id={`mygap-tab-${id}`}
                         tabIndex={activeTab === id ? 0 : -1}
                         onKeyDown={handleTabKey}
                         className={`tab-btn ${activeTab === id ? 'active' : ''}`}
                         onClick={() => setActiveTab(id)}
                     >
-                        <Icon size={18} />
+                        <Icon size={18} aria-hidden="true" />
                         <span>{t(labelKey)}</span>
                     </button>
                 ))}
@@ -423,12 +429,12 @@ const MyGapPage = () => {
                             <h2 className="section-title">{t('mygap.logbookTitle')}</h2>
                             <button
                                 type="button"
-                                className="add-log-btn"
+                                className="btn btn-primary mygap-add-record"
                                 onClick={() => (isAddingLog ? setIsAddingLog(false) : openAddForm(emptyLog()))}
-                                aria-label={t('mygap.addLog') || 'Add activity log'}
                                 aria-expanded={isAddingLog}
                             >
-                                <Plus size={20} />
+                                <Plus size={18} aria-hidden="true" />
+                                {t('mygap.addLog') || 'Add activity log'}
                             </button>
                         </div>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>

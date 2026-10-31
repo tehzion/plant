@@ -20,7 +20,9 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "dev:evaluation-server": "node server/evaluation/startEvaluationServer.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "benchmark:regression": "vitest run server/evaluation shared/scanResultPolicy.test.js server/services/diseaseAssessment.test.js server/services/productEligibility.test.js",
+    "benchmark:development": "node server/evaluation/runDevelopmentExperiment.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",
