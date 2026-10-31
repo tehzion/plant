@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
     buildKeywordProductRecommendation: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
     getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
-    isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(),
+    isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(), saveSnapshot: vi.fn(async () => true),
 }));
 vi.mock('./services/aiService.js', () => ({
     identifyPlantWithPlantNet: mocks.identify, identifyPlantWithGPTVision: mocks.identifyGpt, analyzeWithGPT4Mini: mocks.analyze,
@@ -27,6 +27,7 @@ vi.mock('./services/wooCommerceService.js', () => ({
 }));
 vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, withdrawTrainingImages: mocks.withdrawImages }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
+vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) => ({ ...(await importOriginal()), saveRecommendationSnapshot: mocks.saveSnapshot }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
 let app;
 let processListeners;
@@ -332,5 +333,22 @@ describe('product search section grouping', () => {
         expect(body.catalogueDiscovery[0]).toMatchObject({ discoveryOnly: true, eligibility: { status: 'needs_verification' } });
         expect(body.eligibilitySummary).toEqual({ eligibleTreatments: 1, discoveryOnly: 1, excludedAsUnsuitable: 1 });
         expect(JSON.stringify(body)).not.toContain('Glyphosate');
+    });
+
+    it('records the shown products on the scan only for a valid scan capability', async () => {
+        const { createScanCapability } = await import('./utils/scanCapability.js');
+        const diagnosis = { disease: 'Healthy Plant', resultState: 'healthy', healthStatus: 'healthy' };
+        const feedbackToken = createScanCapability('scan-shown-1', 'guest:abc');
+
+        await invoke('/api/products/search', { body: { diagnosis, language: 'en', scanId: 'scan-shown-1', feedbackToken } });
+        expect(mocks.saveSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+            scanId: 'scan-shown-1',
+            snapshot: expect.objectContaining({ fertilizer: [expect.objectContaining({ id: 102 })] }),
+        }));
+
+        mocks.saveSnapshot.mockClear();
+        await invoke('/api/products/search', { body: { diagnosis, language: 'en', scanId: 'scan-other', feedbackToken } });
+        await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
+        expect(mocks.saveSnapshot).not.toHaveBeenCalled();
     });
 });

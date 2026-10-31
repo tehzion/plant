@@ -2,6 +2,7 @@ import { buildScanResultModel } from './scanResultModel.js';
 import jsPDF from 'jspdf';
 import { getScanResultState, isHealthy } from './statusUtils';
 import { containsComplexPdfText, createPdfTextRenderer } from './pdfTextRenderer';
+import { drawBrandFooters, drawBrandHeader, loadBrandLogo } from './pdfReportLayout';
 import { getNutrientNames, normalizeNutritionalIssues } from './nutritionUtils.js';
 import { getDiagnosisStatusLabel } from './diagnosisStatusLabels.js';
 import { confidencePercent, getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
@@ -237,17 +238,20 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             marginBottom = 8,
         } = options;
 
-        const textHeight = renderer.measureTextHeight(title, width - 8, { fontSize, fontStyle: 'bold' });
+        // Boxed titles are inset; plain titles line up with the body text.
+        const inset = fillColor ? 4 : 0;
+        const textHeight = renderer.measureTextHeight(title, width - (inset * 2), { fontSize, fontStyle: 'bold' });
         const blockHeight = textHeight + (paddingY * 2);
-        checkPageBreak(blockHeight + marginBottom);
+        // Leave room for the first lines after the title so it never sits alone at a page end.
+        checkPageBreak(blockHeight + marginBottom + 18);
 
         if (fillColor) {
             doc.setFillColor(...fillColor);
             doc.roundedRect(x, yPos, width, blockHeight, 2, 2, 'F');
         }
 
-        await renderer.drawText(title, x + 4, yPos + paddingY, {
-            maxWidth: width - 8,
+        await renderer.drawText(title, x + inset, yPos + paddingY, {
+            maxWidth: width - (inset * 2),
             fontSize,
             fontStyle: 'bold',
             color: textColor,
@@ -341,36 +345,14 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         return value;
     };
 
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, 45, 'F');
-    doc.setFillColor(255, 255, 255);
-    doc.circle(25, 22, 12, 'F');
-    doc.setFillColor(...primaryColor);
-    doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
-    doc.fill();
-
-    await renderer.drawText('KANB Agropreneur Nasional', 42, 14, {
-        maxWidth: 90,
-        fontSize: 16,
-        fontStyle: 'bold',
-        color: [255, 255, 255],
-    });
-    await renderer.drawText(t('pdf.title').toUpperCase(), 42, 24, {
-        maxWidth: 90,
-        fontSize: 12,
-        color: [255, 255, 255],
-    });
-
     const localeString = t('common.dateLocale') || 'en-MY';
-    const reportDateText = `${t('pdf.reportDate')}: ${new Date().toLocaleDateString(localeString)}`;
-    await renderer.drawText(reportDateText, pageWidth - 74, 18, {
-        maxWidth: 60,
-        fontSize: 10,
-        color: [255, 255, 255],
-        align: 'right',
+    yPos = await drawBrandHeader({
+        doc,
+        renderer,
+        title: t('pdf.title'),
+        dateText: `${t('pdf.reportDate')}: ${new Date().toLocaleDateString(localeString)}`,
+        logo: await loadBrandLogo(),
     });
-
-    yPos = 56;
 
     const treeImage = await resolvePdfImageData(scanData.image || scanData.image_url);
     const leafImage = await resolvePdfImageData(scanData.leafImage || scanData.leaf_image_url);
@@ -424,22 +406,26 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         ? `${speciesName}${speciesConfidence ? ` (${speciesConfidence})` : ''}${speciesContext?.confirmed === false ? ` - ${label('results.unconfirmed', 'unconfirmed')}` : ''}`
         : '';
     const needsConfirmation = scanData.needsReview;
-    const statusColor = healthy ? primaryColor : unhealthyColor;
+    const firmDiagnosis = ['confirmed', 'confident_treatment', 'high_confidence'].includes(String(diagnosisState || '').toLowerCase()) && !needsConfirmation;
+    const statusColor = healthy ? primaryColor : firmDiagnosis ? unhealthyColor : warningColor;
+    const bannerText = getDiagnosisStatusLabel(t, diagnosisState).toUpperCase();
+    const bannerTextHeight = renderer.measureTextHeight(bannerText, pageWidth - 36, { fontSize: 15, fontStyle: 'bold' });
+    const bannerHeight = Math.max(14, bannerTextHeight + 6);
     doc.setFillColor(...statusColor);
-    doc.roundedRect(14, yPos, pageWidth - 28, 18, 3, 3, 'F');
+    doc.roundedRect(14, yPos, pageWidth - 28, bannerHeight, 3, 3, 'F');
     await renderer.drawText(
-        getDiagnosisStatusLabel(t, diagnosisState).toUpperCase(),
+        bannerText,
         18,
-        yPos + 4,
+        yPos + (bannerHeight - bannerTextHeight) / 2,
         {
             maxWidth: pageWidth - 36,
-            fontSize: 16,
+            fontSize: 15,
             fontStyle: 'bold',
             color: [255, 255, 255],
             align: 'center',
         },
     );
-    yPos += 28;
+    yPos += bannerHeight + 10;
 
     await writeSectionTitle(t('pdf.analysisDetails'), {
         textColor: darkColor,
@@ -475,7 +461,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         metadataRows.push([t('common.location'), formatLocationValue(scanData, t)]);
     }
     if (!healthy && scanData.disease) {
-        metadataRows.push([t('results.diagnosis') || t('results.disease'), diagnosisDisplayLabel]);
+        metadataRows.push([label('results.diagnosis', t('results.disease')), diagnosisDisplayLabel]);
     }
     if (diagnosisState && diagnosisState !== 'healthy') {
         metadataRows.push([label('results.diagnosisStatus', 'Diagnosis status'), diagnosisStatusLabel]);
@@ -487,7 +473,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         metadataRows.push([t('results.fungusSpecies'), scanData.fungusType]);
     }
     if (!sectionPolicy.nutritionPrimary && scanData.pathogenType) {
-        metadataRows.push([t('results.pathogen'), scanData.pathogenType]);
+        metadataRows.push([label('results.pathogenType', 'Pathogen type'), scanData.pathogenType]);
     }
 
     const labelWidth = 58;
@@ -523,7 +509,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
 
     const summaryRows = [
         [label('results.diagnosisStatus', 'Diagnosis status'), diagnosisStatusLabel],
-        [label('results.diagnosis', 'Diagnosis'), diagnosisDisplayLabel],
+        [label('results.diagnosis', t('results.disease')), diagnosisDisplayLabel],
         [label('results.plantType', 'Plant type'), speciesContextText],
     ];
     const summaryBody = healthy
@@ -612,7 +598,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
             const reason = item.reason || item.reasoning || item.notes;
             return [
                 name,
-                likelihood ? `(${likelihood})` : '',
+                likelihood ? `(${formatConfidenceValue(likelihood) || likelihood})` : '',
                 reason ? `- ${reason}` : '',
             ].filter(Boolean).join(' ');
         })
@@ -663,8 +649,8 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
 
     if (!healthy) {
         await writeSectionTitle(t('pdf.treatmentPlan').toUpperCase(), {
-            fillColor: [254, 242, 242],
-            textColor: unhealthyColor,
+            fillColor: firmDiagnosis ? [254, 242, 242] : warningFill,
+            textColor: firmDiagnosis ? unhealthyColor : warningColor,
             fontSize: 12,
             marginBottom: 8,
         });
@@ -942,24 +928,7 @@ export const generatePDFReport = async (scanData, inputLanguage = 'en', translat
         marginBottom: 8,
     });
 
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let pageIndex = 1; pageIndex <= pageCount; pageIndex += 1) {
-        doc.setPage(pageIndex);
-        doc.setDrawColor(226, 232, 240);
-        doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
-
-        await renderer.drawText(t('pdf.generatedBy'), 14, pageHeight - 12, {
-            maxWidth: 90,
-            fontSize: 8,
-            color: lightText,
-        });
-        await renderer.drawText(`${pageLabel} ${pageIndex} ${ofLabel} ${pageCount}`, pageWidth - 44, pageHeight - 12, {
-            maxWidth: 30,
-            fontSize: 8,
-            color: lightText,
-            align: 'right',
-        });
-    }
+    await drawBrandFooters({ doc, renderer, leftText: t('pdf.generatedBy'), pageLabel, ofLabel });
 
     const fileName = `plant-analysis-${sanitizeFileStem(scanData.plantType)}-${Date.now()}.pdf`;
     doc.save(fileName);

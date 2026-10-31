@@ -311,7 +311,7 @@ export const normalizeProductRecommendationsResponse = (data = {}) => ({
     storeUrl: normalizeText(data?.storeUrl),
 });
 
-export const fetchLiveProductRecommendations = async ({ plantType = '', disease = '', scanResult = {}, language = 'en' } = {}) => {
+export const fetchLiveProductRecommendations = async ({ plantType = '', disease = '', scanResult = {}, language = 'en', scanId = '', feedbackToken = '' } = {}) => {
     const diagnosis = buildProductDiagnosisPayload({ plantType, disease, scanResult });
     const targetLanguage = normalizeLanguage(language);
     const requestMessages = getProductRequestMessages(targetLanguage);
@@ -328,7 +328,12 @@ export const fetchLiveProductRecommendations = async ({ plantType = '', disease 
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ diagnosis, language: targetLanguage }),
+                // scanId + feedbackToken let the server record what this scan was shown.
+                body: JSON.stringify({
+                    diagnosis,
+                    language: targetLanguage,
+                    ...(scanId && feedbackToken ? { scanId, feedbackToken } : {}),
+                }),
             },
             {
                 timeoutMs: 15000,

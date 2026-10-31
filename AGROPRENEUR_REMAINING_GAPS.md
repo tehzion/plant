@@ -7,7 +7,7 @@
 | Gap | Why it matters | Recommended next action |
 |---|---|---|
 | ~~Migration 0002 not applied~~ Done | Verified 31 Oct 2026: `diagnosis_expert_reviews` and the new `mygap_logs` columns exist on the production Neon project. | — |
-| Ownership fix not verified on real Postgres | Tests used an in-memory emulation. | On a Neon branch with two test accounts, attempt single and bulk upserts on each other's IDs over HTTP; expect 409 and unchanged rows. |
+| ~~Ownership fix not verified on real Postgres~~ Done | Verified 31 Oct 2026 on Neon branch `ownership-check-2026-10-31` using the exact SQL `neonDataService` generates: another user's upsert returned no row (→ 409), plain insert hit `plots_pkey` (→ 409), the bulk pre-check found the foreign ID (whole batch rejected), update and delete affected 0 rows, the owner's row stayed unchanged, and the owner could still update it. | — |
 | Reviewer configuration | Workflow is closed until configured. | Set `EXPERT_REVIEWER_EMAILS`; confirm `ORDER_ACCESS_SECRET` (or `SCAN_CAPABILITY_SECRET`) is ≥ 32 chars in production. |
 | Release approval | No deployment was performed. | Review the diff, then commit and deploy with explicit approval. |
 
@@ -19,7 +19,7 @@
 | Alternative-condition quality is unmeasured. | Have reviewers mark whether the correct diagnosis appeared among the alternatives; track that rate. |
 | Product eligibility is text-based, not a registration lookup. | Add a curated per-product table (registration number, registered crops, target pests/diseases, label URL) maintained by the partner; prefer it over listing text. |
 | Real catalogue listings may lack crop/label details, sending most items to "discovery". | Audit the live WooCommerce listings and improve descriptions/tags; measure the eligible/discovery split. |
-| Recommended products are not stored per scan, so reviewers see only products the farmer clicked plus ones they add manually. | Store the recommendation set server-side, bound to the scan capability, so experts review exactly what was shown. |
+| ~~Recommended products are not stored per scan~~ Fixed: the product list shown is saved on the scan's audit record (owner-verified) and seeds the expert review form. | Store the recommendation set server-side, bound to the scan capability, so experts review exactly what was shown. |
 | Expert corrections are not shown to the farmer. | Add an optional "Reviewed by an expert" note on the farmer's result when a review exists (needs a privacy/consent decision). |
 | No reviewer assignment. | If volume grows, add an `assigned_reviewer` column; current design is a shared queue. |
 | Legacy guest scans have no feedback token. | Accept as a one-time limitation, or offer feedback through a support channel for older scans. |
@@ -44,7 +44,7 @@
 | Admin and expert screens are English only. | Translate if non-English reviewers are expected. |
 | myGAP coverage vs official requirements not verified; no certification or government integration. | Map fields to the official myGAP checklist with DOA/an auditor; keep "preparation aid" wording. |
 | PDPA assessment for images, location and feedback not done. | Qualified legal review; document retention for audit images and reviews. |
-| Performance, cost per assessment and latency not measured. | Server analysis time is now recorded per scan, and `npm run audit:metrics -- 30` reports median and 95th-percentile time plus the consent opt-in rate for a period (read-only). Run it after deployment for real figures; AI cost per scan is still not reported. |
+| Performance, cost per assessment and latency not measured. | `npm run audit:metrics -- 30` now reports time, AI tokens and OpenRouter cost per scan plus the consent opt-in rate (read-only). Run it after a few days of real traffic. |
 | Farmer usability not observed. | Short field sessions with farmers in ms/en/zh, focusing on the comparison cards and offline banner. |
 | Workbox runtime caching of API GETs not configured. | Not needed now — reads fall back to the IndexedDB cache. |
 
@@ -75,7 +75,7 @@
 | ~~P1~~ Fixed | AI abort signals were sent as a JSON body field (`"signal": {}`), so timed-out requests kept running and billing tokens. | Signal is now passed as a request option. |
 | ~~P1~~ Fixed | No end-to-end check that each disease maps to the right product class. | `server/services/productRecommendationMatrix.test.js` covers every curated rule plus healthy, retake and nutrient cases. |
 | ~~P1~~ Fixed | ~170 lines of unused AI product matcher (`recommendProductTags`). | Removed; product matching is rule-based only. |
-| P1 | No error tracking (Sentry or similar) and AI cost per scan is not recorded. | Add Sentry on server and client; log OpenRouter `usage` per call into the audit record. |
+| ~~P1~~ Fixed | No error tracking and no AI cost per scan. | Opt-in Sentry (server + browser, scrubbed) via `SENTRY_DSN` / `VITE_SENTRY_DSN`; token usage and OpenRouter cost are stored per scan and reported by `npm run audit:metrics`. |
 | P1 | `aiService.js` is ~3,900 lines. | Split into diagnosis, ask, farm-insights and products modules. |
-| P1 | No linter in CI. | Add ESLint flat config and a `lint` step to `ci.yml`. |
+| P1 (partly fixed) | No linter in CI. | `npm run lint` added (it found a myGAP PDF crash and duplicate keys, now fixed). The `ci.yml` step must be added by a maintainer: the Claude GitHub App lacks `workflows` permission. 88 warnings (mostly unused variables) remain. |
 | P2 | `.env.production` is tracked although `.gitignore` excludes it (public keys only). | Untrack once the `VITE_*` values are set in the host's build environment. |

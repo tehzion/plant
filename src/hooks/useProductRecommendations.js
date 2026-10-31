@@ -36,14 +36,16 @@ export const useProductRecommendations = ({
   scanResult = {},
   language = 'en',
   enabled = true,
+  scanId = '',
+  feedbackToken = '',
 } = {}) => {
   const diagnosis = useMemo(
     () => buildProductDiagnosisPayload({ plantType, disease, scanResult }),
     [plantType, disease, scanResult],
   );
   const key = useMemo(
-    () => createProductRecommendationsKey(diagnosis, language),
-    [diagnosis, language],
+    () => `${createProductRecommendationsKey(diagnosis, language)}|${scanId}`,
+    [diagnosis, language, scanId],
   );
   const diagnosisRef = useRef(diagnosis);
   diagnosisRef.current = diagnosis;
@@ -61,8 +63,10 @@ export const useProductRecommendations = ({
       scanResult: currentDiagnosis,
       language,
       key,
+      scanId,
+      feedbackToken,
     }, { force });
-  }, [enabled, key, language]);
+  }, [enabled, key, language, scanId, feedbackToken]);
 
   useEffect(() => {
     let cancelled = false;
