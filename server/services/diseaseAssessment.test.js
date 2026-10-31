@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { assessScanDecision } from '../../shared/scanResultPolicy.js';
 import { redactDosageInstructions, validateStructuredAssessment } from '../../shared/diseaseAssessment.js';
 
 const openai = vi.hoisted(() => ({ create: vi.fn() }));
@@ -119,7 +120,14 @@ describe('low-confidence handling', () => {
 
 describe('treatment safety', () => {
     it('replaces model-generated dosages and spray intervals with label guidance', () => {
-        const result = merge({ diagnosisConfidence: 92, confidenceLevel: 'high', resultState: 'confident_treatment' });
+        // Treatment needs the Early Blight look-alikes to have been compared (see the look-alike safety rule).
+        const result = merge({ diagnosisConfidence: 92, confidenceLevel: 'high', resultState: 'confident_treatment',
+            differentialDiagnoses: [
+                { name: 'Late Blight', category: 'fungal_disease', confidenceLevel: 'low', likelihood: 15,
+                    weakeningEvidence: ['No water-soaked lesions'], distinguishingFeatures: ['Late blight spreads fast with pale greasy margins'] },
+                { name: 'Leaf Mold', category: 'fungal_disease', confidenceLevel: 'low', likelihood: 10,
+                    weakeningEvidence: ['No velvety growth underneath'], distinguishingFeatures: ['Leaf mold shows olive growth on the underside'] },
+            ] });
         expect(result.treatmentEligible).toBe(true);
         expect(result.treatments).toEqual(['Spray mancozeb at the rate on the registered product label at the interval on the label']);
         expect(redactDosageInstructions(['Semburan 20 ml per 10 liter setiap 14 hari'], 'ms')[0])
@@ -189,5 +197,30 @@ describe('stored result localisation', () => {
         expect(assessment.alternative_conditions[0]).toMatchObject({ name: 'Bintik Daun Septoria', distinguishing_features: ['bintik kecil berpusat kelabu'] });
         expect(assessment.follow_up_questions).toEqual(['Bilakah simptom bermula?']);
         expect(validateStructuredAssessment(localized.structuredAssessment)).toEqual([]);
+    });
+});
+
+describe('unsure healthy verdict', () => {
+    const healthy = (overrides) => merge({
+        primaryDiagnosis: 'No Issues', primaryScientificName: '', healthStatus: 'healthy', severity: 'mild',
+        diseaseCategory: 'healthy', pathogenType: 'None', symptoms: ['Even green colour'], additionalNotes: 'The leaf looks healthy.',
+        diagnosticEvidence: { evidenceFor: ['No disease lesions are visible'], evidenceAgainst: ['No spots or powdery film'] },
+        differentialDiagnoses: [], ...overrides,
+    }, { stageTwo: null });
+    it('tells the farmer what to check instead of reporting no issues', () => {
+        const result = healthy({ confidenceLevel: 'high', diagnosisConfidence: 74 });
+        expect(result.abstainReason).toMatch(/not certain.*mites/);
+        expect(assessScanDecision(result).healthy).toBe(false);
+    });
+    it('passes reported subtle signs through and holds back an unclear one', () => {
+        const result = healthy({ confidenceLevel: 'high', diagnosisConfidence: 90, subtleSigns: { paleStippling: 'Unclear', powderyFilm: 'absent', other: 'present' } });
+        expect(result.subtleSigns).toEqual({ paleStippling: 'unclear', powderyFilm: 'absent' });
+        expect(result.abstainReason).toMatch(/not certain/);
+        expect(assessScanDecision(result).healthy).toBe(false);
+    });
+    it('keeps a high-confidence healthy verdict', () => {
+        const result = healthy({ confidenceLevel: 'high', diagnosisConfidence: 90 });
+        expect(result.abstainReason || '').toBe('');
+        expect(assessScanDecision(result).healthy).toBe(true);
     });
 });

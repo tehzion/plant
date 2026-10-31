@@ -18,7 +18,9 @@ const scanReducer = (state, action) => {
         case 'SET_LEAF_IMAGE':
             return { ...state, selectedLeafImage: action.payload, error: '', errorCode: '' };
         case 'SET_CATEGORY':
-            return { ...state, selectedCategory: action.payload, error: '', errorCode: '' };
+            return { ...state, selectedCategory: action.payload, selectedCrop: action.payload === state.selectedCategory ? state.selectedCrop : '', error: '', errorCode: '' };
+        case 'SET_CROP':
+            return { ...state, selectedCrop: action.payload || '' };
         case 'SET_SCALE':
             return { ...state, selectedScale: action.payload };
         case 'SET_QUANTITY':
@@ -61,6 +63,7 @@ const initialScanState = {
     selectedImage: null,
     selectedLeafImage: null,
     selectedCategory: '',
+    selectedCrop: '',
     selectedScale: 'personal',
     scaleQuantity: 1,
     currentStep: 1,
@@ -86,6 +89,7 @@ export const useScanLogic = () => {
         const handleImageCapture = (file) => dispatchAction('SET_IMAGE', file);
         const handleLeafImageCapture = (file) => dispatchAction('SET_LEAF_IMAGE', file);
         const setCategory = (cat) => dispatchAction('SET_CATEGORY', cat);
+        const setCrop = (crop) => dispatchAction('SET_CROP', crop);
         const setScale = (scale) => dispatchAction('SET_SCALE', scale);
         const setQuantity = (qty) => dispatchAction('SET_QUANTITY', qty);
         const nextStep = () => dispatchAction('NEXT_STEP');
@@ -153,7 +157,8 @@ export const useScanLogic = () => {
                     leafImageBase64,
                     language,
                     locationName || 'Malaysia',
-                    { tree: treeQuality, leaf: leafQuality, ...(currentState.captureContext ? { context: currentState.captureContext } : {}) }
+                    { tree: treeQuality, leaf: leafQuality, ...(currentState.captureContext ? { context: currentState.captureContext } : {}) },
+                    { crop: currentState.selectedCrop || '' }
                 );
 
                 dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
@@ -170,8 +175,9 @@ export const useScanLogic = () => {
                     captureContext: currentState.captureContext || null,
                     healthStatus: standardizedHealthStatus,
                     disease: result.disease,
-                    plantType: result.plantType || currentState.selectedCategory,
+                    plantType: result.plantType || currentState.selectedCrop || currentState.selectedCategory,
                     category: currentState.selectedCategory || 'Vegetables',
+                    crop: currentState.selectedCrop || null,
                     farmScale: currentState.selectedScale,
                     scaleQuantity: currentState.scaleQuantity,
                     location: location,
@@ -246,6 +252,7 @@ export const useScanLogic = () => {
             handleImageCapture,
             handleLeafImageCapture,
             setCategory,
+            setCrop,
             setScale,
             setQuantity,
             nextStep,
