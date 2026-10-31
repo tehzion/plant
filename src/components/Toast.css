@@ -19,7 +19,7 @@
   font-size: 0.95rem;
   min-width: 280px;
   border: 2px solid var(--toast-border, transparent);
-  background: var(--toast-bg, #10b981);
+  background: var(--toast-bg, #3d7a4c);
 }
 
 .toast-icon {

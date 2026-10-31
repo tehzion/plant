@@ -2,7 +2,7 @@
 import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
-    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), withdrawImages: vi.fn(),
+    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), logAssistantFeedback: vi.fn(), withdrawImages: vi.fn(),
     buildKeywordProductRecommendation: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
     getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
@@ -13,6 +13,7 @@ vi.mock('./services/aiService.js', () => ({
     askAI: vi.fn(), buildKeywordProductRecommendation: mocks.buildKeywordProductRecommendation, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
     parseNaturalLanguageLog: vi.fn(), generatePredictiveRisk: vi.fn(), localizeStoredAnalysisResult: vi.fn(),
     canRecommendTreatmentProducts: mocks.canRecommendTreatmentProducts, enrichRecommendedProducts: mocks.enrichRecommendedProducts, getProductRecommendationIntent: mocks.getProductRecommendationIntent,
+    normalizeFarmerCrop: (value) => (typeof value === 'string' ? value.trim() : ''),
     buildProductConsultation: mocks.buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS: {
         SUPPORT_ONLY: 'support_only',
         CONSULTATION_NEEDED: 'consultation_needed',
@@ -25,7 +26,7 @@ vi.mock('./services/wooCommerceService.js', () => ({
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
     getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
 }));
-vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, withdrawTrainingImages: mocks.withdrawImages }));
+vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, logAssistantFeedback: mocks.logAssistantFeedback, withdrawTrainingImages: mocks.withdrawImages }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
 vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) => ({ ...(await importOriginal()), saveRecommendationSnapshot: mocks.saveSnapshot }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
@@ -82,6 +83,19 @@ describe('order route ownership', () => {
         mocks.createOrder.mockResolvedValue(order(1, 'owner'));
         await invoke('/api/orders', { body: { items: [{ productId: 1, quantity: 1 }], guestId: 'other' }, orderSession: { guestId: 'owner' } });
         expect(mocks.createOrder).toHaveBeenCalledWith(expect.objectContaining({ guestId: 'owner' }));
+    });
+});
+describe('assistant answer feedback', () => {
+    it('records a vote without spending the AI quota and reports a storage failure', async () => {
+        expect(app._router.stack.find((layer) => layer.route?.path === '/api/assistant-feedback')).toBeDefined();
+        mocks.logAssistantFeedback.mockResolvedValue(true);
+        const body = { rating: 'down', question: 'Why yellow?', answer: 'Check nitrogen.', language: 'ms', page: 'home', scanStatus: null };
+        const ok = await invoke('/api/assistant-feedback', { body });
+        expect(mocks.logAssistantFeedback).toHaveBeenCalledWith(body);
+        expect(ok.json).toHaveBeenCalledWith({ message: 'Feedback received' });
+        mocks.logAssistantFeedback.mockResolvedValue(false);
+        const failed = await invoke('/api/assistant-feedback', { body });
+        expect(failed.status).toHaveBeenCalledWith(500);
     });
 });
 describe('diagnosis cache and feedback identity', () => {
@@ -193,6 +207,15 @@ describe('AI provider failure handling', () => {
         expect(mocks.logTraining).toHaveBeenCalledOnce();
         expect(mocks.analyze.mock.calls[0][0]).toMatchObject({ source: 'GPT-Vision' });
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ identificationSource: 'GPT-Vision' }));
+    });
+
+    it('uses a farmer-stated crop instead of the broad category as the crop hint', async () => {
+        mocks.identify.mockResolvedValueOnce(null);
+        mocks.identifyGpt.mockResolvedValueOnce({ isPlant: true, scientificName: 'Solanum lycopersicum', confidence: 60 });
+        await invoke('/api/analyze', { body: { treeImage: 'farmer-crop', category: 'Vegetables', crop: 'Tomato', language: 'en' } });
+        expect(mocks.identifyGpt.mock.calls[0][1]).toBe('Tomato');
+        expect(mocks.analyze.mock.calls[0][3]).toBe('Tomato');
+        expect(mocks.logTraining.mock.calls[0][0]).toMatchObject({ category: 'Vegetables', metadata: expect.objectContaining({ farmerCrop: 'Tomato' }) });
     });
 
     it('aborts a timed-out PlantNet request and performs one fallback assessment', async () => {

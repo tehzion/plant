@@ -3,7 +3,7 @@ import { fetchJsonWithTimeout } from './networkRequest.js';
 
 const PRODUCT_RECOMMENDATIONS_CACHE_PREFIX = 'kanb.productRecommendations.v2';
 const PRODUCT_RECOMMENDATIONS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-export const PRODUCT_CONSULTATION_WHATSAPP = '+60136667810';
+export const PRODUCT_CONSULTATION_WHATSAPP = '+60146193328';
 
 export const PRODUCT_RECOMMENDATION_INTENTS = Object.freeze({
     TREATMENT_READY: 'treatment_ready',

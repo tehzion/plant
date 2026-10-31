@@ -4,7 +4,7 @@ import { resolveAiProvider } from './aiProvider.js';
 // Increment whenever diagnosis prompts or normalization rules change.
 export const ANALYSIS_VERSION = '3';
 
-export const buildAnalysisCacheKey = ({ treeImage, image, leafImage, category, language = 'en', location, imageQuality }) => {
+export const buildAnalysisCacheKey = ({ treeImage, image, leafImage, category, crop, language = 'en', location, imageQuality }) => {
     const ai = resolveAiProvider();
     const context = {
         version: ANALYSIS_VERSION,
@@ -14,6 +14,7 @@ export const buildAnalysisCacheKey = ({ treeImage, image, leafImage, category, l
         mainImage: treeImage || image,
         leafImage: leafImage || null,
         category: category || null,
+        crop: crop || null,
         language,
         location: location || null,
         imageQuality: imageQuality || null,

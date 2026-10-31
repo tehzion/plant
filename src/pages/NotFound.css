@@ -1,8 +1,7 @@
 .not-found-page {
     min-height: calc(100vh - 70px);
     background:
-        radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 28%),
-        linear-gradient(180deg, #f0fdf4 0%, #ffffff 40%);
+        #f1f4ee;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -17,13 +16,13 @@
 
 .error-card {
     background: white;
-    border-radius: 24px;
+    border-radius: 12px;
     padding: 48px 32px;
     text-align: center;
     width: 100%;
     max-width: 480px;
-    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
-    border: 1px solid rgba(0, 177, 79, 0.1);
+    box-shadow: none;
+    border: 1px solid rgba(46, 107, 63, 0.1);
 }
 
 .error-kicker {
@@ -31,10 +30,10 @@
     margin-bottom: 20px;
     padding: 6px 12px;
     border-radius: 999px;
-    background: #ecfdf3;
-    color: #15803d;
+    background: #eef3ec;
+    color: #2e6b3f;
     font-size: 0.75rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -53,7 +52,7 @@
 
 .error-code {
     font-size: 4rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--color-primary);
     margin: 0 0 -20px;
     line-height: 1;
@@ -65,7 +64,7 @@
 
 .error-title {
     font-size: 1.75rem;
-    color: #1f2937;
+    color: #262a26;
     font-weight: 700;
     margin: 16px 0 12px;
     position: relative;
@@ -74,7 +73,7 @@
 }
 
 .error-message {
-    color: #6b7280;
+    color: #5c615a;
     line-height: 1.6;
     margin-bottom: 32px;
     font-size: 1.05rem;

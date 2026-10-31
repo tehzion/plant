@@ -3,7 +3,7 @@
   gap: 16px;
   padding: 18px;
   margin: 0 0 18px;
-  border: 1px solid rgba(34, 197, 94, 0.22);
+  border: 1px solid rgba(46, 107, 63, 0.22);
 }
 
 .scan-photo-guidance__heading {
@@ -18,8 +18,8 @@
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
-  color: #166534;
-  background: #dcfce7;
+  color: #22522f;
+  background: #e3ece1;
   border-radius: 12px;
 }
 
@@ -29,13 +29,13 @@
 }
 
 .scan-photo-guidance h3 {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #1f2320);
   font-size: 1rem;
 }
 
 .scan-photo-guidance__heading p {
   margin-top: 4px;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, #4c514b);
   font-size: 0.9rem;
   line-height: 1.45;
 }
@@ -46,7 +46,7 @@
   min-width: 36px;
   min-height: 36px;
   margin-left: auto;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, #4c514b);
   background: transparent;
   border: 0;
   border-radius: 8px;
@@ -55,8 +55,8 @@
 
 .scan-photo-guidance__dismiss:hover,
 .scan-photo-guidance__dismiss:focus-visible {
-  color: var(--text-primary, #0f172a);
-  background: rgba(15, 23, 42, 0.08);
+  color: var(--text-primary, #1f2320);
+  background: rgba(31, 35, 32, 0.08);
 }
 
 .scan-photo-guidance__examples {
@@ -76,16 +76,16 @@
 
 .scan-photo-guidance__example.is-active {
   border-color: rgba(22, 101, 52, 0.42);
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.08);
+  box-shadow: 0 0 0 2px rgba(46, 107, 63, 0.08);
 }
 
 .scan-photo-guidance__example strong {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #1f2320);
   font-size: 0.88rem;
 }
 
 .scan-photo-guidance__example > span {
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, #4c514b);
   font-size: 0.78rem;
   line-height: 1.35;
 }
@@ -97,8 +97,8 @@
   justify-content: center;
   min-height: 76px;
   overflow: hidden;
-  color: #166534;
-  background: linear-gradient(145deg, #ecfdf5, #dcfce7);
+  color: #22522f;
+  background: #eef3ec;
   border-radius: 9px;
 }
 
@@ -126,17 +126,17 @@
   bottom: 12px;
   left: 20%;
   height: 3px;
-  background: #86efac;
+  background: #b9cdb9;
   border-radius: 999px;
 }
 
 .scan-photo-guidance__illustration--close {
   gap: 9px;
-  color: #15803d;
+  color: #2e6b3f;
 }
 
 .scan-photo-guidance__illustration--close svg:first-child {
-  color: #166534;
+  color: #22522f;
 }
 
 .scan-photo-guidance__tips {
@@ -145,7 +145,7 @@
 }
 
 .scan-photo-guidance__tips strong {
-  color: var(--text-primary, #0f172a);
+  color: var(--text-primary, #1f2320);
   font-size: 0.88rem;
 }
 
@@ -162,7 +162,7 @@
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  color: var(--text-secondary, #475569);
+  color: var(--text-secondary, #4c514b);
   font-size: 0.82rem;
   line-height: 1.4;
 }
@@ -170,7 +170,7 @@
 .scan-photo-guidance__tips li svg {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: #15803d;
+  color: #2e6b3f;
 }
 
 .scan-photo-guidance__hint {

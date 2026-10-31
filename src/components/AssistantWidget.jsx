@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Mail, MessageCircle, MessageSquareText, RotateCcw, ScanLine, Send, ShoppingBag, X } from 'lucide-react';
+import { BookOpen, Leaf, Mail, MessageCircle, MessageSquareText, RotateCcw, ScanLine, Send, ShoppingBag, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { sendAssistantMessage, STORE_URL } from '../utils/assistantService.js';
+import { sendAssistantFeedback, sendAssistantMessage, STORE_URL } from '../utils/assistantService.js';
+import { getAssistantState, subscribeAssistant } from '../utils/assistantContext.js';
+import { clearSavedChat, loadSavedChat, saveChat } from '../utils/assistantChatStorage.js';
+import { buildContactOptions } from '../../shared/assistantContact.js';
 import './AssistantWidget.css';
 
 // Phones get a bottom sheet; only devices with a precise pointer get the
@@ -10,10 +13,25 @@ import './AssistantWidget.css';
 const matches = (query) => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
 const isSheetLayout = () => matches('(max-width: 768px)');
 
-const CONTACT = {
-    whatsapp: 'https://wa.me/60136667810',
-    email: 'mailto:support@smartplant.my',
+// Starter questions that fit what the scan could and could not tell.
+const SCAN_STARTERS = {
+    diagnosed: ['assistant.scanStarterFirstStep', 'assistant.scanStarterSpread', 'assistant.scanStarterRecheck'],
+    healthy: ['assistant.scanStarterKeepHealthy', 'assistant.scanStarterWatch'],
+    review: ['assistant.scanStarterCheckSigns', 'assistant.scanStarterSpread'],
+    retake: ['assistant.scanStarterBetterPhoto', 'assistant.scanStarterCheckSigns'],
 };
+
+// Starter questions for the page the farmer is on; anywhere else gets the
+// general set. A category picked in the encyclopedia is named in the questions.
+const PAGE_STARTERS = {
+    '/encyclopedia': ['assistant.encyclopediaStarterOne', 'assistant.encyclopediaStarterTwo', 'assistant.encyclopediaStarterThree'],
+    '/mygap': ['assistant.mygapStarterOne', 'assistant.mygapStarterTwo', 'assistant.mygapStarterThree'],
+    '/nutrition': ['assistant.nutritionStarterOne', 'assistant.nutritionStarterTwo', 'assistant.nutritionStarterThree'],
+};
+const TOPIC_STARTERS = ['assistant.topicStarterOne', 'assistant.topicStarterTwo', 'assistant.topicStarterThree'];
+const GENERAL_STARTERS = ['assistant.starterOne', 'assistant.starterTwo', 'assistant.starterThree'];
+
+const sameScan = (a, b) => Boolean(a && b && a.crop === b.crop && a.diagnosis === b.diagnosis && a.status === b.status);
 
 // Each assistant reply can carry links; the greeting and quick actions are local.
 const AssistantLinks = ({ message, label, onNavigate }) => (
@@ -68,13 +86,43 @@ const AssistantWidget = () => {
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : t(key) || fallback);
     const location = useLocation();
     const [open, setOpen] = useState(false);
-    const [messages, setMessages] = useState([]);
+    const [saved] = useState(loadSavedChat);
+    const [messages, setMessages] = useState(saved.messages);
     const [draft, setDraft] = useState('');
     const [pending, setPending] = useState(false);
     const listRef = useRef(null);
     const inputRef = useRef(null);
     const fabRef = useRef(null);
     const wasOpen = useRef(false);
+    const { scanContext, pageTopic, openRequest } = useSyncExternalStore(subscribeAssistant, getAssistantState, getAssistantState);
+    const contact = buildContactOptions(language);
+    // A conversation keeps the scan it started with, even after the farmer
+    // leaves the results page; a different scan starts a new conversation.
+    const [chatScan, setChatScan] = useState(saved.scan);
+    const activeScan = messages.length > 0 ? chatScan : scanContext;
+
+    // The conversation survives a page reload, so a farmer who checks the
+    // field and comes back still sees what was said.
+    useEffect(() => {
+        if (messages.length) saveChat(messages, chatScan);
+        else clearSavedChat();
+    }, [messages, chatScan]);
+
+    useEffect(() => {
+        if (scanContext && chatScan && !sameScan(scanContext, chatScan)) {
+            setMessages([]);
+            setChatScan(null);
+        }
+    }, [scanContext, chatScan]);
+
+    // Only a request made after this widget mounted opens it.
+    const seenOpenRequest = useRef(openRequest);
+    useEffect(() => {
+        if (openRequest !== seenOpenRequest.current) {
+            seenOpenRequest.current = openRequest;
+            setOpen(true);
+        }
+    }, [openRequest]);
 
     useEffect(() => {
         if (open) {
@@ -105,7 +153,9 @@ const AssistantWidget = () => {
         } else {
             list.scrollTop = list.scrollHeight;
         }
-    }, [messages, pending]);
+    // Only a new message scrolls; a vote on an old answer must not move the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [messages.length, pending]);
 
     useEffect(() => {
         if (!open) return undefined;
@@ -122,26 +172,51 @@ const AssistantWidget = () => {
         const text = question.trim();
         if (!text || pending) return;
         const history = [...messages, { role: 'user', content: text }];
+        const scan = messages.length > 0 ? chatScan : scanContext;
+        if (messages.length === 0) setChatScan(scanContext);
         setMessages(history);
         setDraft('');
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            setMessages([...history, { role: 'assistant', content: label('assistant.offline', 'You are offline.'), local: true, contact: CONTACT }]);
+            setMessages([...history, { role: 'assistant', content: label('assistant.offline', 'You are offline.'), local: true, contact }]);
             return;
         }
         setPending(true);
         try {
-            const answer = await sendAssistantMessage(history.filter((message) => !message.local), language);
+            const answer = await sendAssistantMessage(history.filter((message) => !message.local), language, scan);
             setMessages([...history, { role: 'assistant', content: answer.reply, ...answer }]);
         } catch {
-            setMessages([...history, { role: 'assistant', content: label('assistant.error', 'Sorry, please try again.'), local: true, contact: CONTACT }]);
+            setMessages([...history, { role: 'assistant', content: label('assistant.error', 'Sorry, please try again.'), local: true, contact }]);
         } finally {
             setPending(false);
         }
     };
 
     const close = () => setOpen(false);
-    const restart = () => { setMessages([]); setDraft(''); };
-    const starters = [label('assistant.starterOne', ''), label('assistant.starterTwo', ''), label('assistant.starterThree', '')].filter(Boolean);
+    const restart = () => { setMessages([]); setDraft(''); setChatScan(null); };
+
+    // One vote per answer; the vote is kept on the message so it shows after a reload.
+    const rate = (index, rating) => {
+        const answer = messages[index];
+        if (!answer || answer.rating) return;
+        const question = messages.slice(0, index).findLast((message) => message.role === 'user');
+        setMessages((current) => current.map((message, i) => (i === index ? { ...message, rating } : message)));
+        sendAssistantFeedback({
+            rating,
+            question: question?.content || '',
+            answer: answer.content,
+            language,
+            page: location.pathname.split('/')[1] || 'home',
+            scanStatus: chatScan?.status || null,
+        }).catch(() => {});
+    };
+
+    const starterKeys = activeScan
+        ? SCAN_STARTERS[activeScan.status] || SCAN_STARTERS.review
+        : location.pathname === '/encyclopedia' && pageTopic
+            ? TOPIC_STARTERS
+            : PAGE_STARTERS[location.pathname] || GENERAL_STARTERS;
+    const starters = starterKeys.map((key) => label(key, '').replace('{topic}', (pageTopic || '').toLocaleLowerCase())).filter(Boolean);
+    const scanTitle = activeScan && [activeScan.crop, activeScan.diagnosis].filter(Boolean).join(' · ');
 
     return (
         <div className={`assistant-widget ${open ? 'is-open' : ''}`}>
@@ -166,19 +241,27 @@ const AssistantWidget = () => {
 
                     <nav className="assistant-quick" aria-label={label('assistant.title', 'KANB Assistant')}>
                         <a href={STORE_URL} target="_blank" rel="noreferrer" className="assistant-chip">
-                            <ShoppingBag size={14} aria-hidden="true" /> {label('assistant.quickStore', 'Browse store')}
+                            <ShoppingBag size={14} aria-hidden="true" /> <span className="assistant-chip-text">{label('assistant.quickStore', 'Browse store')}</span>
                         </a>
                         <Link to="/encyclopedia" className="assistant-chip" onClick={close}>
-                            <BookOpen size={14} aria-hidden="true" /> {label('assistant.quickEncyclopedia', 'Encyclopedia')}
+                            <BookOpen size={14} aria-hidden="true" /> <span className="assistant-chip-text">{label('assistant.quickEncyclopedia', 'Encyclopedia')}</span>
                         </Link>
-                        <a href={CONTACT.whatsapp} target="_blank" rel="noreferrer" className="assistant-chip assistant-chip--whatsapp">
-                            <MessageCircle size={14} aria-hidden="true" /> {label('assistant.quickContact', 'Contact us')}
+                        <a href={contact.whatsapp} target="_blank" rel="noreferrer" className="assistant-chip assistant-chip--whatsapp">
+                            <MessageCircle size={14} aria-hidden="true" /> <span className="assistant-chip-text">{label('assistant.quickContact', 'Contact us')}</span>
                         </a>
                     </nav>
 
+                    {scanTitle && (
+                        <div className="assistant-scan">
+                            <Leaf size={14} aria-hidden="true" />
+                            <span className="assistant-scan-label">{label('assistant.scanAbout', 'About your scan')}</span>
+                            <span className="assistant-scan-name">{scanTitle}</span>
+                        </div>
+                    )}
+
                     <div className="assistant-messages" ref={listRef} aria-live="polite">
                         <div className="assistant-message assistant-message--bot">
-                            <p>{label('assistant.greeting', 'Hi! How can I help?')}</p>
+                            <p>{activeScan ? label('assistant.scanGreeting', 'Ask me anything about this scan result.') : label('assistant.greeting', 'Hi! How can I help?')}</p>
                         </div>
                         {messages.length === 0 && starters.length > 0 && (
                             <div className="assistant-starters">
@@ -191,6 +274,22 @@ const AssistantWidget = () => {
                             <div key={index} className={`assistant-message assistant-message--${message.role === 'user' ? 'user' : 'bot'}`}>
                                 <p>{message.content}</p>
                                 {message.role === 'assistant' && <AssistantLinks message={message} label={label} onNavigate={close} />}
+                                {message.role === 'assistant' && !message.local && (
+                                    <div className="assistant-rating">
+                                        {message.rating ? (
+                                            <span className="assistant-rating-thanks" role="status">{label('assistant.ratingThanks', 'Thanks for your feedback')}</span>
+                                        ) : (
+                                            <>
+                                                <button type="button" className="assistant-rating-button" onClick={() => rate(index, 'up')} aria-label={label('assistant.ratingUp', 'Helpful answer')} title={label('assistant.ratingUp', 'Helpful answer')}>
+                                                    <ThumbsUp size={15} aria-hidden="true" />
+                                                </button>
+                                                <button type="button" className="assistant-rating-button" onClick={() => rate(index, 'down')} aria-label={label('assistant.ratingDown', 'Not helpful')} title={label('assistant.ratingDown', 'Not helpful')}>
+                                                    <ThumbsDown size={15} aria-hidden="true" />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {pending && (

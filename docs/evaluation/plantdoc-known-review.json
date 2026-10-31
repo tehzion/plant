@@ -1,0 +1,9 @@
+{
+  "995ada04ba135f89218ddc3f": {
+    "reviewer": "POC visual inspection documented in agricultural_dataset_poc_report.md",
+    "embeddedLabel": true,
+    "composite": true,
+    "unsuitable": true,
+    "note": "PILOT-19: printed disease labels and multi-image composite; excluded from the original valid POC sample."
+  }
+}

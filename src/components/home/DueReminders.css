@@ -6,4 +6,4 @@
 button.due-reminders__item { cursor: pointer; }
 .due-reminders__done { min-height: 48px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--color-border); background: var(--color-bg-card); font: inherit; font-weight: 700; cursor: pointer; }
 .due-reminders__enable { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.due-reminders__message { margin: 0; font-size: .9rem; color: #475569; }
+.due-reminders__message { margin: 0; font-size: .9rem; color: #4c514b; }

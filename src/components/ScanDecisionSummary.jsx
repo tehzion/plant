@@ -36,29 +36,27 @@ const ScanDecisionSummary = ({ result, expertReview = null }) => {
             : label('assessment.ux.expertUncertain', 'The expert needs more information to confirm this result.');
     const summaryLabel = result.healthy ? t('results.healthy') : copy.primary;
     return <section className={`scan-decision app-surface scan-decision--${result.tone}`} aria-label={summaryLabel}>
+        {/* Order a farmer reads in: which crop, what it probably is, how sure. */}
+        <p className="scan-decision__crop">
+            <span>{t('results.plantType')}</span>
+            <strong>{plantLabel}</strong>
+            {['uncertain', 'unknown'].includes(plantStatus) && <small className="scan-decision__plant-uncertain">{label('assessment.plantUncertain', 'Plant type not certain')}</small>}
+        </p>
         <div className="scan-decision__header">
-            <div>
-                <p className="scan-decision__eyebrow">
-                    {result.isDemo ? t('results.demoModeTitle') : summaryLabel}
-                </p>
-                <h2>{result.disease || t('results.unknownDisease')}</h2>
-                <p className="scan-decision-status">{getDiagnosisStatusLabel(t, result.resultState)}</p>
-            </div>
-            <span className={`scan-decision__state scan-decision__state--${result.tone}`} aria-hidden="true">
-                {result.healthy ? '01' : result.requiresRetake ? '03' : '02'}
-            </span>
+            <p className="scan-decision__eyebrow">
+                {result.isDemo ? t('results.demoModeTitle') : summaryLabel}
+            </p>
+            <h2>{result.disease || t('results.unknownDisease')}</h2>
+            <p className="scan-decision-status">{getDiagnosisStatusLabel(t, result.resultState)}</p>
         </div>
         <div className="scan-decision__meta" role="list">
-            <div role="listitem"><span>{t('results.plantType')}</span><strong>{plantLabel}
-                {['uncertain', 'unknown'].includes(plantStatus) && <small className="scan-decision__plant-uncertain">{label('assessment.plantUncertain', 'Plant type not certain')}</small>}
-            </strong></div>
-            <div role="listitem"><span>{t('results.severity')}</span><strong>{severityLabel}</strong></div>
             {confidenceLevel ? (
                 <div role="listitem"><span>{label('assessment.confidenceLabel', 'How sure')}</span><strong>
                     <span className={`confidence-chip confidence-chip--${confidenceLevel}`}>{label(`assessment.confidence.${confidenceLevel}`, CONFIDENCE_LEVEL_FALLBACK_LABELS[confidenceLevel] || confidenceLevel)}</span>
                     {hasScore && <small> {Math.round(Number(result.confidence))}% {t('results.estimate') || 'estimate'}</small>}
                 </strong></div>
             ) : hasScore && <div role="listitem"><span>{t('results.confidence')}</span><strong>{Math.round(Number(result.confidence))}% <small>{t('results.estimate') || 'estimate'}</small></strong></div>}
+            <div role="listitem"><span>{t('results.severity')}</span><strong>{severityLabel}</strong></div>
         </div>
         {expertReview && (
             <div className={`scan-decision__expert scan-decision__expert--${expertReview.verdict}`} role="note">

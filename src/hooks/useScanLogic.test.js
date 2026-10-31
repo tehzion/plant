@@ -72,6 +72,7 @@ describe('useScanLogic', () => {
             expect.objectContaining({
                 tree: expect.objectContaining({ requiresRetake: false }),
             }),
+            { crop: '' },
         );
         expect(storageMocks.saveScan).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -81,6 +82,25 @@ describe('useScanLogic', () => {
             }),
             'user-1',
         );
+    });
+
+    it('sends a farmer-stated crop and clears it when the category changes', async () => {
+        const { result } = renderHook(() => useScanLogic());
+        const image = new File(['leaf'], 'leaf.jpg', { type: 'image/jpeg' });
+        act(() => { result.current.actions.setCategory('Vegetables'); result.current.actions.setCrop('Tomato'); });
+        expect(result.current.state.selectedCrop).toBe('Tomato');
+        act(() => result.current.actions.setCategory('Fruits'));
+        expect(result.current.state.selectedCrop).toBe('');
+        act(() => { result.current.actions.setCategory('Vegetables'); result.current.actions.setCrop('Tomato'); });
+
+        await act(async () => {
+            await result.current.actions.performAnalyze(null, 'Malaysia', { selectedImage: image });
+        });
+
+        expect(diseaseDetectionMocks.analyzePlantDisease).toHaveBeenCalledWith(
+            'data:image/jpeg;base64,ok', 'Vegetables', null, 'en', 'Malaysia', expect.any(Object), { crop: 'Tomato' },
+        );
+        expect(storageMocks.saveScan).toHaveBeenCalledWith(expect.objectContaining({ category: 'Vegetables', crop: 'Tomato' }), 'user-1');
     });
 
     it('explains that AI assessment needs connectivity and sends nothing while offline', async () => {

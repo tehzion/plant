@@ -23,7 +23,7 @@
     display: block;
     color: #0f8a52;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0;
     margin-bottom: 6px;
@@ -80,7 +80,7 @@
     border: 1px solid #d9e1ec;
     background: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 12px 30px rgba(23, 32, 51, 0.08);
+    box-shadow: none;
 }
 
 .admin-access-card {
@@ -108,7 +108,7 @@
     border-radius: 8px;
     background: #0f8a52;
     color: #ffffff;
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
 }
 
@@ -153,8 +153,8 @@
     border-radius: 8px;
     display: grid;
     place-items: center;
-    color: #2563eb;
-    background: #eff6ff;
+    color: #3f5c6c;
+    background: #f0f3f4;
     flex: 0 0 auto;
 }
 
@@ -172,7 +172,7 @@
     display: block;
     color: #677489;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .admin-stat strong {
@@ -191,7 +191,7 @@
     border: 1px solid #d9e1ec;
     background: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 10px 26px rgba(23, 32, 51, 0.07);
+    box-shadow: none;
     overflow: hidden;
 }
 
@@ -217,7 +217,7 @@
 
 .admin-panel-header span {
     color: #0f8a52;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .admin-table-wrap {
@@ -248,7 +248,7 @@
 
 .admin-table a {
     color: #0f766e;
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
 }
 
@@ -258,10 +258,10 @@
     min-height: 24px;
     padding: 3px 8px;
     border-radius: 999px;
-    background: #f1f5f9;
-    color: #334155;
+    background: #f2efe9;
+    color: #3a3f3a;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .admin-list,
@@ -296,7 +296,7 @@
 
 .admin-list-item a {
     color: #0f766e;
-    font-weight: 800;
+    font-weight: 700;
     text-decoration: none;
 }
 
@@ -376,3 +376,263 @@
 .evaluation-panel button:focus-visible, .evaluation-panel input:focus-visible, .evaluation-panel select:focus-visible, .evaluation-panel textarea:focus-visible { outline: 3px solid #226b42; outline-offset: 2px; }
 .evaluation-pagination { display: flex; gap: 12px; align-items: center; }
 .evaluation-image { display: block; max-width: min(100%, 360px); max-height: 360px; object-fit: contain; margin: 12px 0; }
+
+/* ===================================
+   Admin & evaluation: shared palette, compact controls, quiet tables.
+   Disagreements get a left rule and a muted tint, not a loud colour.
+   =================================== */
+.admin-page {
+    color: var(--color-text-primary);
+}
+
+.admin-eyebrow {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: none;
+}
+
+.admin-header h1 {
+    font-size: var(--font-size-3xl);
+}
+
+.admin-header p,
+.admin-access-card p {
+    color: var(--color-text-secondary);
+}
+
+.admin-primary-link {
+    background: var(--color-primary);
+}
+
+.admin-error {
+    color: var(--color-warning-ink);
+    border-color: var(--color-warning-border);
+    background: var(--color-warning-bg);
+}
+
+.admin-panel,
+.admin-stat,
+.admin-access-card,
+.admin-loading {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: none;
+}
+
+.admin-panel {
+    padding-bottom: 16px;
+}
+
+.admin-panel > :not(.admin-panel-header):not(.admin-table-wrap) {
+    margin-left: 16px;
+    margin-right: 16px;
+}
+
+.admin-panel-header h2 {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+}
+
+.admin-panel-header p {
+    margin: 2px 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.admin-stat-icon {
+    border-radius: var(--radius-md);
+    background: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+}
+
+/* Controls: every button, select and field in the admin area looks the same. */
+.admin-page button,
+.admin-page select,
+.admin-page input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.admin-page textarea {
+    font: inherit;
+    font-size: var(--font-size-sm);
+    min-height: 40px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: #ffffff;
+    color: var(--color-text-primary);
+}
+
+.admin-page input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.admin-page textarea,
+.admin-page select {
+    padding: 8px 10px;
+    width: 100%;
+    max-width: 420px;
+}
+
+.admin-header-actions select {
+    width: auto;
+}
+
+.admin-page textarea {
+    min-height: 88px;
+}
+
+.admin-page button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-page button:hover:not(:disabled) {
+    background: var(--color-bg-subtle);
+}
+
+.admin-page button[type=submit] {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #ffffff;
+    width: fit-content;
+}
+
+.admin-page button[type=submit]:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+}
+
+.admin-page button:disabled {
+    color: var(--color-text-light);
+    background: var(--color-bg-subtle);
+    cursor: not-allowed;
+}
+
+.admin-page input[type=checkbox],
+.admin-page input[type=radio] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+}
+
+.evaluation-form label,
+.evaluation-label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+/* Checkbox rows read left to right instead of stacking. */
+.evaluation-form label:has(> input[type=checkbox]) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    min-height: 40px;
+}
+
+.evaluation-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 12px 16px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.evaluation-pagination .evaluation-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.evaluation-pagination .evaluation-label select {
+    width: auto;
+}
+
+.evaluation-metrics div {
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-subtle);
+    border-color: var(--color-border-light);
+}
+
+.evaluation-metrics span {
+    font-size: var(--font-size-xs);
+}
+
+/* Tables */
+.admin-table th {
+    background: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.admin-table td {
+    font-size: var(--font-size-sm);
+    vertical-align: top;
+}
+
+.admin-table tbody tr:hover {
+    background: var(--color-bg-subtle);
+}
+
+.admin-row--differs td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-moderate);
+}
+
+.admin-row--differs {
+    background: #fcf8f1;
+}
+
+.admin-agreement {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-agreement--match {
+    color: var(--color-primary-dark);
+    border-color: var(--color-primary-border);
+}
+
+.admin-agreement--different_or_unclear {
+    color: var(--color-warning-ink);
+    border-color: var(--color-warning-border);
+    background: var(--color-warning-bg);
+}
+
+.admin-agreement--uncertain_or_review,
+.admin-agreement--unassessed {
+    color: var(--color-text-secondary);
+}
+
+.admin-status-pill {
+    border-radius: var(--radius-sm);
+}
+
+@media (max-width: 640px) {
+    .admin-header {
+        flex-direction: column;
+    }
+
+    .admin-header h1 {
+        font-size: var(--font-size-2xl);
+    }
+
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .expert-review__layout {
+        grid-template-columns: 1fr;
+    }
+}

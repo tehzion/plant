@@ -48,7 +48,7 @@ describe('consultation lead capture', () => {
                 productSearchTags: ['fungicide'],
             },
             consultation: {
-                phone: '+60136667810',
+                phone: '+60146193328',
                 priority: 'secondary',
                 reason: 'Confirm before use.',
             },
@@ -64,7 +64,7 @@ describe('consultation lead capture', () => {
             disease: 'Leaf Spot',
             crop: 'Durian',
             confidence: 88.4,
-            phone: '+60136667810',
+            phone: '+60146193328',
             contact_intent: 'whatsapp_consultation',
             recommendation_intent: 'treatment_ready',
             severity: 'moderate',
@@ -85,7 +85,7 @@ describe('consultation lead capture', () => {
                 confidence: 91,
             },
             consultation: {
-                phone: '+60136667810',
+                phone: '+60146193328',
                 priority: 'primary',
                 reason: 'No safe product match.',
             },

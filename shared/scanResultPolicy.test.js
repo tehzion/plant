@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getScanSectionPolicy } from './scanResultPolicy.js';
+import { assessScanDecision, getScanSectionPolicy } from './scanResultPolicy.js';
 
 const confidentFungalScan = {
   disease: 'Fungal leaf spot',
@@ -103,4 +103,63 @@ describe('getScanSectionPolicy', () => {
     expect(policy.showNutritionProducts).toBe(false);
     expect(policy.showDiseaseProducts).toBe(false);
   });
+});
+
+describe('look-alike safety rule', () => {
+    const confident = {
+        schemaVersion: 2, status: 'high_confidence', healthStatus: 'unhealthy', diseaseCategory: 'fungal',
+        diagnosisConfidence: 90, captureAssessment: { imageQualityConfidence: 90 },
+        disease: 'Early Blight', primaryScientificName: 'Alternaria solani',
+    };
+    it('withholds treatment for tomato Early Blight when Late Blight and Leaf Mold were never weighed', () => {
+        const decision = assessScanDecision({ ...confident, plantType: 'Tomato (Solanum lycopersicum)', differentialDiagnoses: [{ name: 'Septoria Leaf Spot' }] });
+        expect(decision.treatmentEligible).toBe(false);
+        expect(decision.missingLookAlikes).toEqual(['Late Blight', 'Leaf Mold']);
+    });
+    it('allows treatment once the look-alikes were compared, including by scientific name', () => {
+        const decision = assessScanDecision({ ...confident, plantType: 'Tomato', differentialDiagnoses: [{ name: 'Late Blight' }, { name: 'Other', scientificName: 'Passalora fulva' }] });
+        expect(decision.missingLookAlikes).toEqual([]);
+        expect(decision.treatmentEligible).toBe(true);
+    });
+    it('only requires Late Blight on potato and matches Malay and Chinese names', () => {
+        expect(assessScanDecision({ ...confident, plantType: 'Kentang', disease: 'Hawar Awal', primaryScientificName: '' }).missingLookAlikes).toEqual(['Late Blight']);
+        expect(assessScanDecision({ ...confident, plantType: '番茄', disease: '晚疫病', primaryScientificName: '', differentialDiagnoses: [{ name: '早疫病' }] }).treatmentEligible).toBe(true);
+    });
+    it('leaves other crops and diseases unchanged', () => {
+        const decision = assessScanDecision({ ...confident, plantType: 'Corn (Zea mays)', disease: 'Northern Corn Leaf Blight', primaryScientificName: 'Exserohilum turcicum' });
+        expect(decision.missingLookAlikes).toEqual([]);
+        expect(decision.treatmentEligible).toBe(true);
+    });
+});
+
+describe('unsure healthy verdict', () => {
+    const noIssues = {
+        schemaVersion: 2, healthStatus: 'healthy', disease: 'No Issues', diseaseCategory: 'healthy',
+        diagnosisConfidence: 76, captureAssessment: { imageQualityConfidence: 90 },
+    };
+    it('is not shown as healthy below high confidence', () => {
+        const decision = assessScanDecision({ ...noIssues, confidenceLevel: 'medium' });
+        expect(decision.healthy).toBe(false);
+        expect(decision.treatmentEligible).toBe(false);
+        expect(decision.needsReview).toBe(true);
+    });
+    it('stays healthy at high confidence and for older scans without a level', () => {
+        expect(assessScanDecision({ ...noIssues, diagnosisConfidence: 88, confidenceLevel: 'high' }).healthy).toBe(true);
+        expect(assessScanDecision({ ...noIssues, diagnosisConfidence: 88 }).healthy).toBe(true);
+        expect(assessScanDecision({ ...noIssues, disease: 'Tiada Masalah', diagnosisConfidence: 88, confidenceLevel: 'high' }).healthy).toBe(true);
+    });
+});
+
+describe('subtle signs on a healthy verdict', () => {
+    const noIssues = {
+        schemaVersion: 2, healthStatus: 'healthy', disease: 'No Issues', diseaseCategory: 'healthy',
+        diagnosisConfidence: 88, confidenceLevel: 'high', captureAssessment: { imageQualityConfidence: 90 },
+    };
+    it('is not shown as healthy when any sign is present or unclear', () => {
+        expect(assessScanDecision({ ...noIssues, subtleSigns: { paleStippling: 'unclear', powderyFilm: 'absent' } }).healthy).toBe(false);
+        expect(assessScanDecision({ ...noIssues, subtleSigns: { powderyFilm: 'present' } }).healthy).toBe(false);
+    });
+    it('stays healthy when every reported sign is absent', () => {
+        expect(assessScanDecision({ ...noIssues, subtleSigns: { paleStippling: 'absent', powderyFilm: 'absent' } }).healthy).toBe(true);
+    });
 });
