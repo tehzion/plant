@@ -13,6 +13,7 @@ vi.mock('./services/aiService.js', () => ({
     askAI: vi.fn(), buildKeywordProductRecommendation: mocks.buildKeywordProductRecommendation, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
     parseNaturalLanguageLog: vi.fn(), generatePredictiveRisk: vi.fn(), localizeStoredAnalysisResult: vi.fn(),
     canRecommendTreatmentProducts: mocks.canRecommendTreatmentProducts, enrichRecommendedProducts: mocks.enrichRecommendedProducts, getProductRecommendationIntent: mocks.getProductRecommendationIntent,
+    normalizeFarmerCrop: (value) => (typeof value === 'string' ? value.trim() : ''),
     buildProductConsultation: mocks.buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS: {
         SUPPORT_ONLY: 'support_only',
         CONSULTATION_NEEDED: 'consultation_needed',
@@ -193,6 +194,15 @@ describe('AI provider failure handling', () => {
         expect(mocks.logTraining).toHaveBeenCalledOnce();
         expect(mocks.analyze.mock.calls[0][0]).toMatchObject({ source: 'GPT-Vision' });
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ identificationSource: 'GPT-Vision' }));
+    });
+
+    it('uses a farmer-stated crop instead of the broad category as the crop hint', async () => {
+        mocks.identify.mockResolvedValueOnce(null);
+        mocks.identifyGpt.mockResolvedValueOnce({ isPlant: true, scientificName: 'Solanum lycopersicum', confidence: 60 });
+        await invoke('/api/analyze', { body: { treeImage: 'farmer-crop', category: 'Vegetables', crop: 'Tomato', language: 'en' } });
+        expect(mocks.identifyGpt.mock.calls[0][1]).toBe('Tomato');
+        expect(mocks.analyze.mock.calls[0][3]).toBe('Tomato');
+        expect(mocks.logTraining.mock.calls[0][0]).toMatchObject({ category: 'Vegetables', metadata: expect.objectContaining({ farmerCrop: 'Tomato' }) });
     });
 
     it('aborts a timed-out PlantNet request and performs one fallback assessment', async () => {
