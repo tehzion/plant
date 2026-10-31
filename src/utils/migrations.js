@@ -16,6 +16,8 @@ import {
     getDailyNotes,
     getPlots,
     saveProfileInfo,
+    getFarmProfile,
+    saveFarmProfile,
     toDailyNoteRow,
     toLogbookRow,
     toPlotRow,
@@ -172,12 +174,22 @@ const migrateLocalData = async (userId) => {
             }
         }
 
+        // ── 7. myGAP farm profile ────────────────────────────────────────────
+        try {
+            const farmProfile = await getFarmProfile();
+            const hasFarmProfile = [farmProfile.farmName, farmProfile.farmAddress, farmProfile.mygapRef, farmProfile.certExpiry].some(Boolean)
+                || farmProfile.workers.length > 0;
+            if (hasFarmProfile) await saveFarmProfile(farmProfile, userId);
+        } catch (farmError) {
+            recordError('farm_profile', farmError);
+        }
+
         if (errors.length > 0) {
             console.warn('Migration kept localStorage because one or more cloud writes failed.', errors);
             return;
         }
 
-        // ── 7. Clear localStorage keys so data is not duplicated ──────────────
+        // ── 8. Clear localStorage keys so data is not duplicated ──────────────
         // Do not remove records created while cloud uploads were in progress.
         const changed = [...snapshots].some(([key, value]) => localStorage.getItem(key) !== value);
         if (changed) return;

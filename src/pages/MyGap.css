@@ -652,6 +652,32 @@
 .pest-checks__item > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pest-checks__action { min-height: 44px; }
 
+/* Phase 2 record types */
+.log-badge.purchase { background: #ede9fe; color: #5b21b6; }
+.log-badge.post_harvest { background: #e0f2fe; color: #075985; }
+.log-badge.training { background: #fce7f3; color: #9d174d; }
+.log-lot-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: var(--color-brand-ink); font-size: .75rem; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Certificate renewal reminder */
+.mygap-cert-banner { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; font-weight: 600; }
+.mygap-cert-banner.is-expired { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+
+/* Farm tab: profile, workers, stock */
+.farm-profile { display: grid; gap: 16px; }
+.farm-profile .section-title { display: flex; align-items: center; gap: 8px; }
+.farm-profile select, .farm-profile input { min-height: 44px; }
+.farm-profile__subtitle { display: flex; align-items: center; gap: 8px; margin: 20px 0 4px; font-size: 1rem; color: var(--color-brand-ink); }
+.farm-workers { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.farm-workers__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0 10px; align-items: end; padding: 10px; border-radius: 10px; background: var(--color-bg-secondary); }
+.farm-workers__row .log-action-btn { justify-self: start; margin-bottom: 12px; }
+.farm-profile__add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 10px 0 16px; }
+.farm-stock__scroll { overflow-x: auto; }
+.farm-stock { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.farm-stock th, .farm-stock td { padding: 8px 10px; border-bottom: 1px solid var(--color-border); text-align: right; white-space: nowrap; }
+.farm-stock th[scope="row"], .farm-stock thead th:first-child { text-align: left; white-space: normal; }
+.farm-stock thead th { color: var(--color-text-secondary); font-size: .8rem; font-weight: 700; }
+.farm-stock tr.is-negative td:last-child { color: #b45309; font-weight: 700; }
+
 /* ===================================
    myGAP layout refinements
    Left-aligned page header, underline tabs, bordered (not shadowed) cards.

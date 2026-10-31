@@ -1,17 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import {
     ShieldCheck, Sprout, HeartHandshake, Globe, AlertTriangle, ExternalLink, RefreshCw,
-    ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download, MinusCircle
+    ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download, MinusCircle, Tractor
 } from 'lucide-react';
-import { deleteLogEntry, getLogbook, saveLogEntry, saveChecklistState, updateLogEntry } from '../utils/localStorage';
+import { deleteLogEntry, getFarmProfile, getLogbook, normalizeFarmProfile, saveFarmProfile, saveLogEntry, saveChecklistState, updateLogEntry } from '../utils/localStorage';
+import FarmProfilePanel from '../components/mygap/FarmProfilePanel';
 import MyGapLogForm from '../components/mygap/MyGapLogForm';
 import MyGapLogCard from '../components/mygap/MyGapLogCard';
 import PestCheckList from '../components/mygap/PestCheckList';
-import { createLabel, fill } from '../components/mygap/mygapText.js';
-import { findPhiConflicts, NOT_APPLICABLE } from '../../shared/mygapCompliance.js';
+import { createLabel, fill, formatDay } from '../components/mygap/mygapText.js';
+import { certificateStatus, computeInputStock, findPhiConflicts, NOT_APPLICABLE, parseLocalDate } from '../../shared/mygapCompliance.js';
 import { addHarvestReminder, getLogDefaults, localDateKey, rememberLogDefaults } from '../utils/farmerPrefs.js';
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
@@ -22,11 +23,12 @@ import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/p
 import './MyGap.css';
 
 const MYGAP_TABS = [
-    { id: 'logbook', icon: FileText, labelKey: 'mygap.tabLogbook' },
-    { id: 'checklist', icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
-    { id: 'calendar', icon: Calendar, labelKey: 'mygap.tabCalendar' },
-    { id: 'phi', icon: Calculator, labelKey: 'mygap.tabPhi' },
-    { id: 'guide', icon: BookOpen, labelKey: 'nav.about' },
+    { id: 'logbook', Icon: FileText, labelKey: 'mygap.tabLogbook' },
+    { id: 'checklist', Icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
+    { id: 'farm', Icon: Tractor, labelKey: 'mygap.tabFarm' },
+    { id: 'calendar', Icon: Calendar, labelKey: 'mygap.tabCalendar' },
+    { id: 'phi', Icon: Calculator, labelKey: 'mygap.tabPhi' },
+    { id: 'guide', Icon: BookOpen, labelKey: 'nav.about' },
 ];
 
 const MyGapPage = () => {
@@ -54,6 +56,19 @@ const MyGapPage = () => {
     const [activeTab, setActiveTab] = useState(() => (
         MYGAP_TABS.some((tab) => tab.id === searchParams.get('tab')) ? searchParams.get('tab') : 'logbook'
     ));
+    // Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
+    const handleTabKey = (event) => {
+        const ids = MYGAP_TABS.map((tab) => tab.id);
+        let index = ids.indexOf(activeTab);
+        if (event.key === 'ArrowRight') index = (index + 1) % ids.length;
+        else if (event.key === 'ArrowLeft') index = (index + ids.length - 1) % ids.length;
+        else if (event.key === 'Home') index = 0;
+        else if (event.key === 'End') index = ids.length - 1;
+        else return;
+        event.preventDefault();
+        setActiveTab(ids[index]);
+        document.getElementById(`mygap-tab-${ids[index]}`)?.focus();
+    };
     const [isAddingLog, setIsAddingLog] = useState(false);
     const [editingLog, setEditingLog] = useState(null);
     // Plot, crop and operator rarely change between entries, so they are
@@ -144,6 +159,47 @@ const MyGapPage = () => {
         .filter((scan) => Date.now() - new Date(scan.timestamp || scan.created_at).getTime() <= 60 * 86400000)
         .slice(0, 5), [scanHistory]);
     const phiConflicts = useMemo(() => new Map(findPhiConflicts(logs).map((conflict) => [conflict.harvestId, conflict])), [logs]);
+    const inputStock = useMemo(() => computeInputStock(logs), [logs]);
+
+    const [farmProfile, setFarmProfile] = useState(() => normalizeFarmProfile({}));
+    const [farmProfileVersion, setFarmProfileVersion] = useState(0);
+    useEffect(() => {
+        let cancelled = false;
+        getFarmProfile(user?.id ?? null)
+            .then((profile) => { if (!cancelled) { setFarmProfile(profile); setFarmProfileVersion((version) => version + 1); } })
+            .catch((error) => console.error('Farm profile load failed:', error));
+        return () => { cancelled = true; };
+    }, [user?.id]);
+    const certificate = certificateStatus(farmProfile.certExpiry);
+
+    const handleSaveFarmProfile = async (profile) => {
+        try {
+            const saved = await saveFarmProfile(profile, user?.id ?? null);
+            setFarmProfile(saved);
+            notify({ type: 'success', title: label('mygap.profileSaved', 'Farm profile saved'), message: saved.farmName || '' });
+        } catch (error) {
+            console.error('Farm profile save failed:', error);
+            notify({ type: 'error', title: t('common.error'), message: label('mygap.correctionFailed', 'The change could not be saved. Check your connection and try again.') });
+        }
+    };
+
+    const printLotLabel = async (log) => {
+        try {
+            const { buildLotLabelPdf } = await import('../utils/lotLabelPdf');
+            const doc = await buildLotLabelPdf({
+                lotCode: log.lot_code,
+                crop: log.crop,
+                plot: log.plot_id,
+                date: formatDay(parseLocalDate(log.activity_date || log.timestamp), language),
+                farmName: farmProfile.farmName,
+                amount: log.amount != null && log.amount !== '' ? `${log.amount} ${log.unit || ''}`.trim() : '',
+            });
+            doc.save(`lot-${log.lot_code}.pdf`);
+        } catch (error) {
+            console.error('Lot label failed:', error);
+            notify({ type: 'error', title: t('common.error'), message: t('common.error') });
+        }
+    };
 
     const saveHarvestReminder = () => {
         if (!phiResult) return;
@@ -203,7 +259,7 @@ const MyGapPage = () => {
             // The PDF covers the complete logbook, not just the rows loaded on screen.
             const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
             const { buildMyGapReportPdf, mygapReportFileName } = await import('../utils/mygapReportPdf');
-            const doc = await buildMyGapReportPdf({ logs: reportLogs || logs, derivedChecklist, scans: scanHistory, language: language || 'en', translations });
+            const doc = await buildMyGapReportPdf({ logs: reportLogs || logs, derivedChecklist, scans: scanHistory, farmProfile, language: language || 'en', translations });
             doc.save(mygapReportFileName());
         } catch (error) {
             console.error('myGAP report export failed:', error);
@@ -225,14 +281,23 @@ const MyGapPage = () => {
                 <p className="page-subtitle">{t('mygap.subtitle')}</p>
             </div>
 
+            {['renewSoon', 'expired'].includes(certificate.state) && (
+                <div className={`mygap-cert-banner is-${certificate.state}`} role="status">
+                    <AlertTriangle size={18} aria-hidden="true" />
+                    <span>{certificate.state === 'expired'
+                        ? fill(label('mygap.certExpired', 'Your myGAP certificate expired on {date}. Contact your district agriculture office to renew.'), { date: formatDay(parseLocalDate(farmProfile.certExpiry), language) })
+                        : fill(label('mygap.certRenewSoon', 'Your myGAP certificate expires in {days} days. Start the renewal with your district agriculture office.'), { days: certificate.daysLeft })}</span>
+                </div>
+            )}
+
             <div className="tabs-container" role="tablist" aria-label={t('mygap.title')}>
-                {MYGAP_TABS.map(({ id, icon: Icon, labelKey }) => (
+                {MYGAP_TABS.map(({ id, Icon, labelKey }) => (
                     <button
                         key={id}
                         type="button"
                         role="tab" aria-selected={activeTab === id} aria-controls="mygap-panel" id={`mygap-tab-${id}`}
                         tabIndex={activeTab === id ? 0 : -1}
-                        onKeyDown={event => { const keys = MYGAP_TABS.map(tab => tab.id); let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
+                        onKeyDown={handleTabKey}
                         className={`tab-btn ${activeTab === id ? 'active' : ''}`}
                         onClick={() => setActiveTab(id)}
                     >
@@ -340,6 +405,12 @@ const MyGapPage = () => {
                 </div>
             )}
 
+            {activeTab === 'farm' && (
+                <div className="fade-in">
+                    <FarmProfilePanel key={farmProfileVersion} t={t} profile={farmProfile} stock={inputStock} onSave={handleSaveFarmProfile} />
+                </div>
+            )}
+
             {activeTab === 'calendar' && (
                 <div className="fade-in">
                     <div className="content-card">
@@ -383,7 +454,7 @@ const MyGapPage = () => {
 
                         {isAddingLog && (
                             <MyGapLogForm key={`add-${formKey}`} t={t} language={language} mode="add" initialValues={newLog}
-                                logs={logs} plots={plots} recentScans={recentScans}
+                                logs={logs} plots={plots} recentScans={recentScans} workers={farmProfile.workers}
                                 onSubmit={handleAddLog} onCancel={() => setIsAddingLog(false)} />
                         )}
 
@@ -406,11 +477,11 @@ const MyGapPage = () => {
                                 logs.map((log) => (editingLog?.id === log.id ? (
                                     <MyGapLogForm key={`edit-${log.id}`} t={t} language={language} mode="edit"
                                         initialValues={{ ...emptyLog(), ...Object.fromEntries(Object.entries(log).map(([field, value]) => [field, value ?? ''])) }}
-                                        logs={logs} plots={plots} recentScans={recentScans}
+                                        logs={logs} plots={plots} recentScans={recentScans} workers={farmProfile.workers}
                                         onSubmit={handleSaveCorrection} onCancel={() => setEditingLog(null)} />
                                 ) : (
                                     <MyGapLogCard key={log.id} t={t} language={language} log={log} conflict={phiConflicts.get(log.id)}
-                                        onEdit={(item) => { setIsAddingLog(false); setEditingLog(item); }} onDelete={handleDeleteLog} />
+                                        onEdit={(item) => { setIsAddingLog(false); setEditingLog(item); }} onDelete={handleDeleteLog} onPrintLabel={printLotLabel} />
                                 )))
                             )}
                         </div>
