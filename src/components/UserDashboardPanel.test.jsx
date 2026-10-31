@@ -58,6 +58,7 @@ vi.mock('lucide-react', async () => {
 });
 
 vi.mock('react-router-dom', () => ({
+    Link: ({ children, to }) => <a href={to}>{children}</a>,
     useNavigate: () => navigateMock,
     useSearchParams: () => [
         new URLSearchParams(routerMocks.searchParamsString),

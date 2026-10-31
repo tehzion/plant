@@ -92,6 +92,12 @@ it('does not mark the record when photo deletion fails, and rejects invalid IDs'
     expect(mocks.queryNeon.mock.calls.some(([text]) => text.trim().startsWith('update'))).toBe(false);
     await expect(withdrawTrainingImages('../etc')).rejects.toThrow('Invalid scan ID');
 });
+it('does not remove photos when the capability belongs to another audit owner with the same scan ID', async () => {
+    mocks.queryNeon.mockResolvedValue({ rows: [{ images: { tree: 'training/owner/scan_tree.jpg' }, metadata: { ownerHash: 'original-owner' } }] });
+    await expect(withdrawTrainingImages('scan-collision', 'other-owner')).rejects.toMatchObject({ status: 403 });
+    expect(mocks.remove).not.toHaveBeenCalled();
+});
+
 it('returns null when there is no record to withdraw', async () => {
     mocks.queryNeon.mockResolvedValue({ rows: [] });
     expect(await withdrawTrainingImages('scan-6')).toBeNull();

@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import { getGuestId, setLocalStorageNamespace } from '../utils/localStorage';
 import { migrateLegacyCollection } from '../utils/indexedDbStorage.js';
+import { setConsentAccount } from '../utils/dataConsent.js';
 
 const AuthContext = createContext(null);
 
@@ -26,6 +27,8 @@ const getAuthResetRedirectUrl = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(undefined); // undefined = loading, null = guest
     const [guestId, setGuestId] = useState(null);
+
+    useEffect(() => { setConsentAccount(user?.id).catch(() => {}); }, [user?.id]);
 
     useEffect(() => {
         // ── Demo / test account bypass ────────────────────────────────────────

@@ -1,3 +1,4 @@
+import WithdrawScanPhotos from '../components/WithdrawScanPhotos.jsx';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -555,6 +556,7 @@ ${t('pdf.generatedBy')}
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
         <ScanDecisionSummary result={result} expertReview={expertReview} />
+        <WithdrawScanPhotos key={scan.id} scan={scan} />
         <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
         <div className="results-next-action">
           <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
