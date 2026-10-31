@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Mail, MessageCircle, MessageSquareText, ScanLine, Send, ShoppingBag, X } from 'lucide-react';
+import { BookOpen, Mail, MessageCircle, MessageSquareText, RotateCcw, ScanLine, Send, ShoppingBag, X } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { sendAssistantMessage, STORE_URL } from '../utils/assistantService.js';
 import './AssistantWidget.css';
+
+// Phones get a bottom sheet; only devices with a precise pointer get the
+// input focused on open, so a phone keyboard does not cover the panel.
+const matches = (query) => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
+const isSheetLayout = () => matches('(max-width: 768px)');
 
 const CONTACT = {
     whatsapp: 'https://wa.me/60136667810',
@@ -68,14 +73,38 @@ const AssistantWidget = () => {
     const [pending, setPending] = useState(false);
     const listRef = useRef(null);
     const inputRef = useRef(null);
+    const fabRef = useRef(null);
+    const wasOpen = useRef(false);
 
     useEffect(() => {
-        if (open) inputRef.current?.focus();
+        if (open) {
+            if (matches('(pointer: fine)')) inputRef.current?.focus();
+        } else if (wasOpen.current) {
+            fabRef.current?.focus();
+        }
+        wasOpen.current = open;
+    }, [open]);
+
+    // The sheet covers the page on phones, so the page behind must not scroll.
+    useEffect(() => {
+        if (!open || !isSheetLayout()) return undefined;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = previous; };
     }, [open]);
 
     useEffect(() => {
         const list = listRef.current;
-        if (list) list.scrollTop = list.scrollHeight;
+        if (!list) return;
+        // A new answer is shown from its first line so it reads top-down;
+        // anything else (the farmer's own message, typing dots) pins to the end.
+        const last = list.lastElementChild;
+        const isAnswer = !pending && messages.at(-1)?.role === 'assistant';
+        if (isAnswer && last) {
+            list.scrollTop += last.getBoundingClientRect().top - list.getBoundingClientRect().top - 12;
+        } else {
+            list.scrollTop = list.scrollHeight;
+        }
     }, [messages, pending]);
 
     useEffect(() => {
@@ -111,10 +140,12 @@ const AssistantWidget = () => {
     };
 
     const close = () => setOpen(false);
+    const restart = () => { setMessages([]); setDraft(''); };
     const starters = [label('assistant.starterOne', ''), label('assistant.starterTwo', ''), label('assistant.starterThree', '')].filter(Boolean);
 
     return (
-        <div className="assistant-widget">
+        <div className={`assistant-widget ${open ? 'is-open' : ''}`}>
+            {open && <div className="assistant-backdrop" onClick={close} aria-hidden="true" />}
             {open && (
                 <section className="assistant-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-title">
                     <header className="assistant-header">
@@ -123,7 +154,12 @@ const AssistantWidget = () => {
                             <h2 id="assistant-title">{label('assistant.title', 'KANB Assistant')}</h2>
                             <p>{label('assistant.subtitle', 'Farm questions, products and help')}</p>
                         </div>
-                        <button type="button" className="assistant-close" onClick={close} aria-label={label('assistant.close', 'Close assistant')}>
+                        {messages.length > 0 && (
+                            <button type="button" className="assistant-icon-button" onClick={restart} disabled={pending} aria-label={label('assistant.newChat', 'New chat')} title={label('assistant.newChat', 'New chat')}>
+                                <RotateCcw size={18} />
+                            </button>
+                        )}
+                        <button type="button" className="assistant-icon-button" onClick={close} aria-label={label('assistant.close', 'Close assistant')}>
                             <X size={20} />
                         </button>
                     </header>
@@ -143,14 +179,14 @@ const AssistantWidget = () => {
                     <div className="assistant-messages" ref={listRef} aria-live="polite">
                         <div className="assistant-message assistant-message--bot">
                             <p>{label('assistant.greeting', 'Hi! How can I help?')}</p>
-                            {messages.length === 0 && (
-                                <div className="assistant-links">
-                                    {starters.map((starter) => (
-                                        <button key={starter} type="button" className="assistant-chip" onClick={() => ask(starter)}>{starter}</button>
-                                    ))}
-                                </div>
-                            )}
                         </div>
+                        {messages.length === 0 && starters.length > 0 && (
+                            <div className="assistant-starters">
+                                {starters.map((starter) => (
+                                    <button key={starter} type="button" className="assistant-starter" onClick={() => ask(starter)}>{starter}</button>
+                                ))}
+                            </div>
+                        )}
                         {messages.map((message, index) => (
                             <div key={index} className={`assistant-message assistant-message--${message.role === 'user' ? 'user' : 'bot'}`}>
                                 <p>{message.content}</p>
@@ -159,7 +195,8 @@ const AssistantWidget = () => {
                         ))}
                         {pending && (
                             <div className="assistant-message assistant-message--bot assistant-message--pending">
-                                <p>{label('assistant.thinking', 'Thinking…')}</p>
+                                <span className="assistant-typing" aria-hidden="true"><span /><span /><span /></span>
+                                <span className="sr-only">{label('assistant.thinking', 'Thinking…')}</span>
                             </div>
                         )}
                     </div>
@@ -183,13 +220,15 @@ const AssistantWidget = () => {
             )}
 
             <button
+                ref={fabRef}
                 type="button"
                 className={`assistant-fab ${open ? 'is-open' : ''}`}
                 onClick={() => setOpen((value) => !value)}
                 aria-expanded={open}
                 aria-label={open ? label('assistant.close', 'Close assistant') : label('assistant.open', 'Ask KANB assistant')}
             >
-                {open ? <X size={26} strokeWidth={2.1} /> : <MessageSquareText size={26} strokeWidth={2.05} />}
+                {open ? <X size={24} strokeWidth={2.1} aria-hidden="true" /> : <MessageSquareText size={24} strokeWidth={2.05} aria-hidden="true" />}
+                {!open && <span className="assistant-fab-label" aria-hidden="true">{label('assistant.fabLabel', 'Ask KANB')}</span>}
             </button>
         </div>
     );

@@ -26,6 +26,8 @@ const assistantTranslations = {
             starterOne: 'My leaves are turning yellow',
             starterTwo: 'Which fertiliser for durian?',
             starterThree: 'How do I track my order?',
+            newChat: 'New chat',
+            fabLabel: 'Ask KANB',
         },
     },
     ms: {
@@ -55,6 +57,8 @@ const assistantTranslations = {
             starterOne: 'Daun pokok saya menguning',
             starterTwo: 'Baja apa untuk durian?',
             starterThree: 'Bagaimana jejak pesanan saya?',
+            newChat: 'Sembang baharu',
+            fabLabel: 'Tanya KANB',
         },
     },
     zh: {
@@ -84,6 +88,8 @@ const assistantTranslations = {
             starterOne: '我的叶子变黄了',
             starterTwo: '榴莲用什么肥料？',
             starterThree: '如何追踪我的订单？',
+            newChat: '新对话',
+            fabLabel: '问 KANB',
         },
     },
 };
