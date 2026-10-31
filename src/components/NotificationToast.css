@@ -77,3 +77,55 @@
   from { transform: translate(-50%, -110%); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
 }
+
+/* Message on its own line, action underneath, so long Malay and Chinese
+   permission messages stay readable on a 390px phone. */
+.notification-toast {
+  top: max(12px, env(safe-area-inset-top));
+  border-width: 1px;
+  box-shadow: 0 6px 20px rgba(31, 35, 32, 0.12);
+}
+
+.notification-content {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 10px;
+}
+
+.notification-icon {
+  padding-top: 1px;
+}
+
+.notification-message {
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.notification-close {
+  grid-column: 3;
+  grid-row: 1;
+  width: 36px;
+  height: 36px;
+  margin: -8px -8px 0 0;
+}
+
+.notification-action {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 14px;
+  border-width: 1px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-toast {
+    animation: none;
+  }
+}

@@ -10,7 +10,9 @@ import './CameraUpload.css';
 const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, captureRole = 'whole' }) => {
     const { t, language } = useLanguage();
     const qualityCopy = getScanQualityCopy(language);
-    const { notifyError } = useNotifications();
+    const { notifyError, notifyInfo } = useNotifications();
+    // Permission messages explain where to change settings, so keep them up longer.
+    const PERMISSION_TOAST_MS = 9000;
     const [preview, setPreview] = useState(null);
     // True once this component's own quality check accepted the photo.
     const [qualityPassed, setQualityPassed] = useState(false);
@@ -46,6 +48,22 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
         return () => { document.removeEventListener('keydown', key); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
     }, [isCameraOpen]);
 
+    // A web page cannot see a denied Photos permission: the picker just comes
+    // back empty and the input fires `cancel`. Explain once per screen.
+    const galleryHintShownRef = useRef(false);
+    useEffect(() => {
+        const inputs = [fileInputRef.current, cameraInputRef.current].filter(Boolean);
+        const onCancel = () => {
+            if (galleryHintShownRef.current || typeof notifyInfo !== 'function') return;
+            galleryHintShownRef.current = true;
+            notifyInfo(label('common.galleryNoPhoto', 'No photo was selected. If your photos do not appear, allow photo access for your browser in your phone settings, then try again.'), {
+                duration: PERMISSION_TOAST_MS,
+            });
+        };
+        inputs.forEach((input) => input.addEventListener('cancel', onCancel));
+        return () => inputs.forEach((input) => input.removeEventListener('cancel', onCancel));
+    });
+
     const openFilePicker = (inputRef) => {
         if (inputRef.current) {
             inputRef.current.value = '';
@@ -77,6 +95,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
             notifyError(t('common.cameraUnsupported'), {
                 actionLabel: t('common.uploadGallery'),
                 action: openGalleryPicker,
+                duration: PERMISSION_TOAST_MS,
             });
             openGalleryPicker();
             return;
@@ -100,6 +119,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
             notifyError(t(messageKey), {
                 actionLabel: t('common.uploadGallery'),
                 action: openGalleryPicker,
+                duration: PERMISSION_TOAST_MS,
             });
             openGalleryPicker();
         }

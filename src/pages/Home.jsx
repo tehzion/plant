@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-  ScanLine, AlertCircle, Leaf, ChevronDown, X, Check
+  ScanLine, AlertCircle, Leaf, ChevronDown, X, Check, WifiOff
 } from 'lucide-react';
 import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
 import { DEMO_SCANS } from '../utils/demoData';
@@ -38,6 +38,10 @@ import { isFollowUpDue } from '../utils/uiCopy.js';
 const Home = () => {
   const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
   const { t, language } = useLanguage();
+  const label = (key, fallback) => {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  };
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -258,6 +262,8 @@ const Home = () => {
     }
     return '';
   }, [errorCode, t]);
+
+  const isConnectionFailure = errorCode === 'ANALYSIS_OFFLINE' || errorCode === 'ANALYSIS_NETWORK';
 
   // Analysis failure: SET_ERROR always sets currentStep to 3, so just check error + not loading.
   const hasAnalysisFailure = !loading && Boolean(error);
@@ -597,13 +603,15 @@ const Home = () => {
           </div>
         ) : hasAnalysisFailure ? (
           <div className="analysis-failure-shell slide-up">
-            <div className="analysis-failure-card">
-              <div className="analysis-failure-icon">
-                <AlertCircle size={30} />
+            <div className={`analysis-failure-card ${isConnectionFailure ? 'analysis-failure-card--offline' : ''}`} role="alert">
+              <div className="analysis-failure-icon" aria-hidden="true">
+                {isConnectionFailure ? <WifiOff size={24} /> : <AlertCircle size={24} />}
               </div>
               <div className="analysis-failure-copy">
-                <span className="analysis-failure-eyebrow">{t('common.error') || 'Scan needs attention'}</span>
-                <h2>{error}</h2>
+                <h2>{isConnectionFailure
+                  ? label('home.noInternetTitle', 'No internet connection')
+                  : label('home.analysisFailedTitle', 'The check could not finish')}</h2>
+                <p className="analysis-failure-message">{error}</p>
                 {errorSupportHint && <p>{errorSupportHint}</p>}
               </div>
               <div className="analysis-failure-actions">

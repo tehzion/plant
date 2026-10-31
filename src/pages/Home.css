@@ -1436,3 +1436,75 @@
 .home-dashboard-stack > * {
   min-width: 0;
 }
+
+/* Scan failure card (offline, timeout, service errors) */
+.analysis-failure-shell {
+  padding: 16px 0 24px;
+}
+
+.analysis-failure-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 14px;
+  padding: 20px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-xl);
+  background: #ffffff;
+}
+
+.analysis-failure-card--offline {
+  border-color: var(--color-warning-border);
+}
+
+.analysis-failure-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  color: var(--color-severe);
+}
+
+.analysis-failure-card--offline .analysis-failure-icon {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-ink);
+}
+
+.analysis-failure-copy h2 {
+  margin: 0 0 6px;
+  font-size: var(--font-size-lg);
+  line-height: 1.35;
+}
+
+.analysis-failure-copy p {
+  margin: 0 0 6px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.analysis-failure-copy .analysis-failure-message {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+}
+
+.analysis-failure-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .analysis-failure-actions .btn {
+    flex: 1 1 0;
+  }
+
+  .analysis-failure-actions .cancel-analysis-button {
+    flex-basis: 100%;
+    min-height: 44px;
+  }
+}
