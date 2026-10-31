@@ -13,17 +13,31 @@ const categoryCache = new NodeCache({ stdTTL: 21600 });
 const WOO_REQUEST_TIMEOUT_MS = Number(process.env.WOO_REQUEST_TIMEOUT_MS) || 15000;
 const WOO_MAX_CATALOG_PAGES = Number(process.env.WOO_MAX_CATALOG_PAGES) || 20;
 
-const sanitizeProductDescription = (value = '') => String(value)
+// WooCommerce returns names and descriptions with HTML character codes
+// (e.g. "&#8211;" for a dash). The app shows them as plain text, so they
+// are decoded once here.
+const NAMED_ENTITIES = {
+    amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+    ndash: '–', mdash: '—', hellip: '…', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+    times: '×', deg: '°', reg: '®', trade: '™', copy: '©',
+};
+const fromCodePoint = (code) => (Number.isInteger(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '');
+export const decodeHtmlEntities = (value = '') => String(value ?? '')
+    .replace(/&#(\d+);/g, (_, code) => fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => fromCodePoint(parseInt(code, 16)))
+    .replace(/&([a-z]+);/gi, (match, name) => NAMED_ENTITIES[name.toLowerCase()] ?? match);
+
+const sanitizeProductDescription = (value = '') => decodeHtmlEntities(String(value)
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+    .replace(/<[^>]+>/g, ' '))
     .replace(/\s+/g, ' ')
     .trim();
 
 const storePrice = (value, minorUnit) => value == null || value === '' ? '' : (Number(value) / (10 ** (Number.isInteger(minorUnit) ? minorUnit : 2))).toFixed(Number.isInteger(minorUnit) ? minorUnit : 2);
 const transformWooProduct = (product) => ({
     id: product.id,
-    name: product.name,
+    name: decodeHtmlEntities(product.name),
     price: product.price ?? storePrice(product.prices?.price, product.prices?.currency_minor_unit),
     regularPrice: product.regular_price ?? storePrice(product.prices?.regular_price, product.prices?.currency_minor_unit),
     salePrice: product.sale_price ?? storePrice(product.prices?.sale_price, product.prices?.currency_minor_unit),
@@ -31,9 +45,9 @@ const transformWooProduct = (product) => ({
     image: product.images?.[0]?.src || null,
     permalink: product.permalink,
     cartUrl: `${process.env.WOOCOMMERCE_URL}/cart/?add-to-cart=${product.id}`,
-    categories: product.categories?.map((category) => category.name) || [],
+    categories: product.categories?.map((category) => decodeHtmlEntities(category.name)) || [],
     categoryIds: product.categories?.map((category) => category.id) || [],
-    tags: product.tags?.map((tag) => tag.name) || [],
+    tags: product.tags?.map((tag) => decodeHtmlEntities(tag.name)) || [],
     tagIds: product.tags?.map((tag) => tag.id) || [],
     stockStatus: product.stock_status || (product.is_in_stock === true ? 'instock' : product.is_in_stock === false ? 'outofstock' : null),
     availability: product.is_in_stock === true ? 'in_stock' : product.is_in_stock === false ? 'out_of_stock' : product.stock_status === 'instock'
@@ -147,7 +161,7 @@ export const getAllTags = async ({ signal = null } = {}) => {
 
             allTags.push(...tags.map((tag) => ({
                 id: tag.id,
-                name: tag.name,
+                name: decodeHtmlEntities(tag.name),
                 count: tag.count,
             })));
 
@@ -201,7 +215,7 @@ export const getAllCategories = async ({ signal = null } = {}) => {
 
             allCategories.push(...categories.map((category) => ({
                 id: category.id,
-                name: category.name,
+                name: decodeHtmlEntities(category.name),
                 count: category.count,
                 parent: category.parent,
             })));
