@@ -38,7 +38,7 @@ export const getSyncSummary = async (owner) => {
 
 /** Queued records still on this device, oldest first, for the status banner. */
 export const listWaitingRecords = async (owner) => (owner ? await listOperations(owner) : [])
-    .map(({ id, collection, state, createdAt, lastError }) => ({ id, collection, state, createdAt, lastError: lastError || '' }))
+    .map(({ id, recordId, collection, type, payload, conflict, state, createdAt, lastError }) => ({ id, recordId, collection, type, payload, conflict, state, createdAt, lastError: lastError || '' }))
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 
 export const retryFailedSync = async (owner) => {
@@ -73,8 +73,8 @@ const runFlush = async ({ owner, send, isAuthenticated = true, onConflict = () =
                 synced += 1;
                 // Server writes are idempotent, so if the tab closes before
                 // this removal the replay is recognised as a duplicate.
-                await removeOperation(operation.id);
                 await onSynced(operation, result);
+                await removeOperation(operation.id);
             }
         } catch (error) {
             // Losing connectivity mid-flush is not a failed attempt; leave the

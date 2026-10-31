@@ -1,5 +1,6 @@
 import { queryNeon } from '../utils/neonDatabase.js';
 import { foldOptionalColumns, isUndefinedColumnError, OPTIONAL_COLUMNS } from '../utils/optionalColumns.js';
+import { syncMutation } from './syncMutationService.js';
 
 const TABLES = {
     scans: { table: 'scan_history', fields: ['id', 'disease', 'confidence', 'severity', 'category', 'scale', 'location_name', 'plot_id', 'result_json', 'image_path', 'leaf_image_path', 'created_at', 'revision'] },
@@ -45,7 +46,10 @@ const syncSingleton = async (userId, config, operation) => {
          returning user_id`,
         [userId, state, updatedAt],
     );
-    if (!result.rows.length) return { conflict: true, reason: 'newer_record_exists' };
+    if (!result.rows.length) {
+        const current = await queryNeon(`select state, updated_at from public.${identifier(config.table)} where user_id = $1`, [userId]);
+        return { conflict: true, reason: 'newer_record_exists', serverRecord: current?.rows?.[0] || null };
+    }
     return { ok: true };
 };
 
@@ -64,6 +68,9 @@ export const syncOperation = async (userId, operation = {}) => {
         throw error;
     }
     if (config.singleton) return syncSingleton(userId, config, operation).catch((error) => { throw mapDatabaseError(error); });
+    if (operation.type !== 'create' && (operation.expectedRecord || operation.collection !== 'scans')) {
+        return syncMutation(userId, operation, config, cleanPayload(operation.collection, operation.payload) || {}).catch(error => { throw mapDatabaseError(error); });
+    }
     const expectedRevision = Number.isInteger(operation.expectedRevision) ? operation.expectedRevision : null;
     try {
         if (operation.type === 'create') {

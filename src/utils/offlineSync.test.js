@@ -33,7 +33,7 @@ vi.mock('./indexedDbStorage.js', async () => {
         putPhoto: vi.fn(), dataUrlToBlob: () => null,
     };
 });
-const api = vi.hoisted(() => ({ neonDataRequest: vi.fn(), fetchNeonRows: vi.fn(), neonDataRowRequest: vi.fn() }));
+const api = vi.hoisted(() => ({ neonApiRequest: vi.fn(), neonDataRequest: vi.fn(), fetchNeonRows: vi.fn(), neonDataRowRequest: vi.fn() }));
 vi.mock('./neonApi.js', () => api);
 vi.mock('../lib/supabase', () => ({ supabase: { storage: {}, auth: { getSession: async () => ({ data: { session: { access_token: 'test' } } }) } } }));
 vi.mock('./privateImageStorage.js', () => ({ resolvePrivateImageUrl: async (_path, url) => url || '', uploadPrivateImage: vi.fn() }));
@@ -50,6 +50,22 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('offline record saving for signed-in farmers', () => {
+    it('keeps an offline correction above the cached server copy and hides a queued deletion', async () => {
+        const { getLogbook, updateLogEntry, deleteLogEntry } = await import('./localStorage.js');
+        api.fetchNeonRows.mockResolvedValue([{ id: 'log-1', type: 'fertilizer', notes: 'old', created_at: '2026-10-01T00:00:00Z' }]);
+        await getLogbook(USER);
+        setOnline(false);
+        api.neonApiRequest.mockRejectedValue(networkDown());
+        api.fetchNeonRows.mockRejectedValue(networkDown());
+        const changed = await updateLogEntry('log-1', { notes: 'corrected offline' }, 'Correct the note', USER);
+        expect(changed.syncStatus).toBe('pending');
+        expect((await getLogbook(USER))[0].notes).toBe('corrected offline');
+        expect([...idb.ops.values()][0]).toMatchObject({ expectedRecord: { notes: 'old' }, reason: 'Correct the note' });
+        await deleteLogEntry('log-1', 'Duplicate record', USER);
+        expect(await getLogbook(USER)).toEqual([]);
+        expect([...idb.ops.values()]).toHaveLength(1);
+        expect([...idb.ops.values()][0].type).toBe('delete');
+    });
     it('keeps a myGAP entry on the device and queues it when the network is down', async () => {
         setOnline(false);
         api.neonDataRequest.mockRejectedValue(networkDown());
