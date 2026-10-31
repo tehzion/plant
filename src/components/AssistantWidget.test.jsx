@@ -6,7 +6,7 @@ import AssistantWidget from './AssistantWidget.jsx';
 const api = vi.hoisted(() => ({ sendAssistantMessage: vi.fn() }));
 vi.mock('../utils/assistantService.js', () => ({ ...api, STORE_URL: 'https://store.example/products/' }));
 vi.mock('../i18n/i18n.jsx', () => ({
-    useLanguage: () => ({ language: 'ms', t: (key) => key, label: (_key, fallback) => fallback }),
+    useLanguage: () => ({ language: 'ms', t: (key) => key, label: (key, fallback) => (key === 'assistant.starterOne' ? 'My leaves are turning yellow' : fallback) }),
 }));
 
 const renderAt = (path = '/') => render(<MemoryRouter initialEntries={[path]}><AssistantWidget /></MemoryRouter>);
@@ -63,6 +63,29 @@ describe('AssistantWidget', () => {
         askQuestion('Hello');
         expect(await screen.findByText(/offline/)).toBeInTheDocument();
         expect(api.sendAssistantMessage).not.toHaveBeenCalled();
+    });
+
+    it('shows a typing indicator, then lets the farmer start a new chat', async () => {
+        let answer;
+        api.sendAssistantMessage.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+        renderAt();
+        openPanel();
+        fireEvent.click(screen.getByRole('button', { name: 'My leaves are turning yellow' }));
+        expect(screen.getByText('Thinking…')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'My leaves are turning yellow' })).not.toBeInTheDocument();
+        answer({ reply: 'Check nitrogen.' });
+        expect(await screen.findByText('Check nitrogen.')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+        expect(screen.queryByText('Check nitrogen.')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'My leaves are turning yellow' })).toBeInTheDocument();
+    });
+
+    it('closes from the dimmed backdrop and returns focus to the chat button', () => {
+        const { container } = renderAt();
+        openPanel();
+        fireEvent.click(container.querySelector('.assistant-backdrop'));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Ask KANB assistant' })).toHaveFocus();
     });
 
     it('stays out of the way during a scan', () => {
