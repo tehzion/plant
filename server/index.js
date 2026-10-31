@@ -28,6 +28,7 @@ import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
 import { createScanCapability, hashIdentity, verifyScanCapability } from './utils/scanCapability.js';
 import { classifyAnalysisFailure } from './utils/analysisErrors.js';
+import { chatWithAssistant } from './services/assistantService.js';
 import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
 import path from 'path';
@@ -290,7 +291,7 @@ app.get('/api/followups/:scanId', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
-const aiRoutes = ['/api/analyze', '/api/ask', '/api/results/localize', '/api/products/search', '/api/farm'];
+const aiRoutes = ['/api/analyze', '/api/ask', '/api/assistant', '/api/results/localize', '/api/products/search', '/api/farm'];
 app.use(aiRoutes, rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50,
@@ -436,6 +437,33 @@ app.post('/api/ask', async (req, res, next) => {
     } catch (error) {
         if (requestController.signal.aborted) {
             const timeoutError = new Error('AI request timed out or was cancelled. Please try again.');
+            timeoutError.status = 504;
+            next(timeoutError);
+        } else next(error);
+    } finally {
+        clearTimeout(requestDeadline);
+        req.removeListener?.('aborted', abortOnDisconnect);
+        res.removeListener?.('close', abortOnDisconnect);
+    }
+});
+
+// Floating help assistant: short answers that link to encyclopedia entries,
+// live store products and the support team.
+app.post('/api/assistant/chat', async (req, res, next) => {
+    const requestController = new AbortController();
+    const requestDeadline = setTimeout(() => requestController.abort(new Error('Assistant deadline exceeded')), Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000);
+    const abortOnDisconnect = () => requestController.abort(new Error('Assistant request cancelled by client'));
+    req.once?.('aborted', abortOnDisconnect);
+    res.once?.('close', abortOnDisconnect);
+    try {
+        if (!process.env.OPENAI_API_KEY) {
+            return res.status(503).json({ error: 'ASSISTANT_UNAVAILABLE', message: 'OpenAI API Key is missing on the server.' });
+        }
+        const { messages, language = 'en' } = req.body;
+        res.json(await chatWithAssistant({ messages, language, signal: requestController.signal }));
+    } catch (error) {
+        if (requestController.signal.aborted) {
+            const timeoutError = new Error('Assistant request timed out or was cancelled. Please try again.');
             timeoutError.status = 504;
             next(timeoutError);
         } else next(error);

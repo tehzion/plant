@@ -4,6 +4,7 @@ import AppHeader from './AppHeader';
 import Footer from './Footer';
 import BottomNav from './BottomNav';
 import SyncStatusBanner from './SyncStatusBanner';
+import AssistantWidget from './AssistantWidget';
 
 function Layout({ children }) {
     const location = useLocation();
@@ -21,6 +22,7 @@ function Layout({ children }) {
             </main>
             {!isLegalPage && !isScanFlow && <Footer />}
             {!isLegalPage && !isScanFlow && <BottomNav />}
+            <AssistantWidget />
         </div>
     );
 }

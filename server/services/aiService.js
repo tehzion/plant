@@ -36,7 +36,7 @@ const getOpenAIClient = () => {
     return openaiClient;
 };
 
-const OPENAI_PRIMARY_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
+export const OPENAI_PRIMARY_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
 const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
 
 // Cache product recommendations for 1 hour
@@ -54,7 +54,7 @@ const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(String(
  *   accept that parameter and will throw a 400 if it is present.
  * - All other options are forwarded unchanged.
  */
-const createChatCompletion = ({ model, messages, maxTokens, temperature, ...options }) => {
+export const createChatCompletion = ({ model, messages, maxTokens, temperature, ...options }) => {
     const request = {
         ...options,
         model,
