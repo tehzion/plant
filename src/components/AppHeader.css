@@ -161,30 +161,11 @@
     background: var(--color-primary);
 }
 
-/* Desktop counterpart of the mobile scan button: a solid pill in the nav row. */
-.app-header__nav-link--primary {
-    align-self: center;
-    min-height: 38px;
-    margin: 0 6px;
-    padding: 0 16px;
-    border-radius: var(--radius-full);
-    background: var(--color-primary);
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.app-header__nav-link--primary:hover {
-    background: var(--color-primary-dark);
-    color: #ffffff;
-}
-
-.app-header__nav-link--primary.active {
-    background: var(--color-primary-dark);
-    color: #ffffff;
-}
-
-.app-header__nav-link--primary.active::after {
-    display: none;
+/* Keyboard focus sits inside the tab, rounded, instead of a square box around it. */
+.app-header__nav-link:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -6px;
+    border-radius: var(--radius-md);
 }
 
 .app-header__nav-link--external {

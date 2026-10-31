@@ -139,7 +139,7 @@ const AppHeader = ({ isHome }) => {
                             <Link
                                 key={item.id}
                                 to={item.to}
-                                className={`app-header__nav-link ${item.primary ? 'app-header__nav-link--primary' : ''} ${active ? 'active' : ''}`}
+                                className={`app-header__nav-link ${active ? 'active' : ''}`}
                                 aria-current={active ? 'page' : undefined}
                             >
                                 <Icon size={17} aria-hidden="true" />
