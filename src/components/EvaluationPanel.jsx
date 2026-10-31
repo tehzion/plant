@@ -20,6 +20,7 @@ export default function EvaluationPanel() {
             setError('');
             const params=new URLSearchParams({limit:'20',offset:String(offset)}); if(source) params.set('source',source);
             const [a,b]=await Promise.all([api('/summary'),api(`/cases?${params}`)]);
+            if (!a?.overall?.meanDurationMs || !a?.overall?.cost || !a?.datasets) throw new Error(tr('Evaluation data is unavailable. Check access and the database migration.'));
             setSummary(a); setCases(b.cases || []);
         } catch(e) { setError(e.message); }
     };

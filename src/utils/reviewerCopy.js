@@ -196,7 +196,23 @@ needs_review|perlu semakan|待审核
 reviewed|telah disemak|已审核
 high|tinggi|高
 medium|sederhana|中
-low|rendah|低`;
+low|rendah|低
+Reference labels and AI assessments are stored separately. Labels are never sent to the AI.|Label rujukan dan penilaian AI disimpan berasingan. Label tidak dihantar kepada AI.|参考标签与 AI 评估分开保存，标签不会发送给 AI。
+PlantVillage / PlantDoc|PlantVillage / PlantDoc|PlantVillage / PlantDoc
+Healthy / diseased|Sihat / berpenyakit|健康／患病
+Review needed|Perlu semakan|需要审核
+Crops (|Tanaman (|作物（
+Disease categories (|Kategori penyakit (|病害类别（
+Agreement uses the latest completed result per image and excludes review-needed cases. Baseline POC results predate the health-status fix. Dataset labels are not expert diagnoses.|Persetujuan menggunakan hasil lengkap terkini setiap imej dan mengecualikan kes perlu semakan. Hasil POC garis dasar mendahului pembetulan status kesihatan. Label set data bukan diagnosis pakar.|一致率使用每张图像的最新已完成结果，排除待审核案例。基线结果早于健康状态修复。数据集标签不是专家诊断。
+Assessed only|Yang telah dinilai sahaja|仅已评估
+Reference (crop / label)|Rujukan (tanaman / label)|参考（作物／标签）
+AI prediction|Ramalan AI|AI 预测
+Result|Hasil|结果
+View|Lihat|查看
+Match|Sepadan|匹配
+Different|Berbeza|不同
+Unassessed|Belum dinilai|未评估
+Not assessed|Belum dinilai|未评估`;
 
 export const REVIEWER_PHRASES = Object.fromEntries(rows.split('\n').map(row => {
     const [en, ms, zh] = row.split('|');

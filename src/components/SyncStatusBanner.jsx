@@ -125,7 +125,7 @@ const SyncStatusBanner = () => {
                     ))}
                 </ul>
             )}
-            {resolutionStatus && <p role="status">{resolutionStatus}</p>}
+            {resolutionStatus && <><p role="status">{resolutionStatus}</p><button type="button" className="sync-status__retry" aria-label={label('common.close', 'Close')} onClick={() => setResolutionStatus('')}>×</button></>}
         </div>
     );
 };

@@ -2,9 +2,9 @@ import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
 import { parsePHIDays } from './phi.js';
-import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, listOperations, removeOperation, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
+import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, listOperations, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
 import { fetchNeonRows, neonApiRequest, neonDataRequest, neonDataRowRequest } from './neonApi.js';
-import { queueSyncOperation } from './syncQueue.js';
+import { queueSyncRecord } from './syncQueue.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -76,9 +76,8 @@ const queueCloudMutation = async (userId, collection, id, type, changes = {}, re
     if (!expectedRecord) throw new Error('Open this record while online before changing it offline.');
     const raw = { ...expectedRecord, ...operations.find(op => op.type === 'update')?.payload, ...changes };
     const value = collection === 'logbook' ? fromLogbookRow(raw) : collection === 'scans' ? await hydrateScanHistoryRow(raw) : collection === 'plots' ? normalizeStoredPlot(raw) : raw;
-    await queueSyncOperation({ owner, collection, recordId: String(id), type, expectedRecord, reason, payload: type === 'delete' ? null : { ...operations.find(op => op.type === 'update')?.payload, ...changes } });
-    if (type === 'delete') await Promise.all(operations.filter(op => op.type === 'update').map(op => removeOperation(op.id)));
-    await putRecord({ owner, collection, id: String(id), value: { ...value, syncStatus: 'pending', __deleted: type === 'delete' } });
+    await queueSyncRecord({ record: { owner, collection, id: String(id), value },
+        operation: { owner, collection, recordId: String(id), type, expectedRecord, reason, payload: type === 'delete' ? null : { ...operations.find(op => op.type === 'update')?.payload, ...changes } } });
     return { ...value, syncStatus: 'pending' };
 };
 
@@ -93,8 +92,7 @@ const queueCloudRecord = async (userId, collection, row, localValue) => {
     const owner = cloudOwner(userId);
     const { user_id: _ownerFromClient, ...payload } = row;
     const value = { ...localValue, syncStatus: 'pending' };
-    await putRecord({ owner, collection, id: String(row.id), value });
-    await queueSyncOperation({ owner, collection, recordId: String(row.id), type: 'create', payload });
+    await queueSyncRecord({ record: { owner, collection, id: String(row.id), value }, operation: { owner, collection, recordId: String(row.id), type: 'create', payload } });
     return value;
 };
 
@@ -928,8 +926,8 @@ export const saveChecklistState = async (state, userId = null) => {
             }
             try {
                 const owner = cloudOwner(userId);
-                await putRecord({ owner, collection: 'checklist', id: 'checklist:current', value: { state, updated_at: updatedAt } });
-                await queueSyncOperation({ owner, collection: 'checklist', recordId: 'current', type: 'update', payload: { state, updated_at: updatedAt } });
+                await queueSyncRecord({ record: { owner, collection: 'checklist', id: 'checklist:current', value: { state, updated_at: updatedAt } },
+                    operation: { owner, collection: 'checklist', recordId: 'current', type: 'update', payload: { state, updated_at: updatedAt } } });
             } catch (queueError) {
                 console.error('saveChecklistState offline queue error:', queueError);
                 return false;

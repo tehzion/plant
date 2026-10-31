@@ -17,6 +17,7 @@ const DataConsentToggle = ({ disabled = false }) => {
     }, []);
     const change = async (event) => {
         const next = event.target.checked;
+        setChecked(next);
         setSaving(true); setError(false);
         try { setChecked((await saveDataConsent(next)).aiImprovement); }
         catch { setChecked(getDataConsent().aiImprovement); setError(true); }
@@ -24,7 +25,7 @@ const DataConsentToggle = ({ disabled = false }) => {
     };
 
     return (
-        <div><label className="data-consent-toggle">
+        <div aria-busy={saving}><label className="data-consent-toggle">
             <input
                 type="checkbox"
                 checked={checked}

@@ -556,7 +556,6 @@ ${t('pdf.generatedBy')}
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
         <ScanDecisionSummary result={result} expertReview={expertReview} />
-        <WithdrawScanPhotos key={scan.id} scan={scan} />
         <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
         <div className="results-next-action">
           <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
@@ -731,6 +730,7 @@ ${t('pdf.generatedBy')}
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>
           <FeedbackWidget scanId={id} scan={scan} />
         </Suspense>
+        <WithdrawScanPhotos key={scan.id} scan={scan} />
 
 
 

@@ -19,6 +19,16 @@ vi.mock('./indexedDbStorage.js', async () => {
         listPendingOperations: async (owner) => [...idb.ops.values()].filter((op) => op.owner === owner && op.state === 'pending').sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
         updateOperation: async (op) => { idb.ops.set(op.id, op); },
         removeOperation: async (id) => { idb.ops.delete(id); },
+        saveQueuedRecord: async ({ record, operation }) => {
+            const existing = actual.findQueuedDuplicate([...idb.ops.values()].filter(op => op.owner === operation.owner), operation);
+            const op = { id: `op-${idb.ops.size + 1}`, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString(), ...existing, ...operation };
+            if (operation.type === 'delete') for (const previous of idb.ops.values()) {
+                if (previous.owner === operation.owner && previous.collection === operation.collection && previous.recordId === operation.recordId && previous.type === 'update') idb.ops.delete(previous.id);
+            }
+            idb.ops.set(op.id, op);
+            idb.records.set(key(record.owner, record.id), { ...record, value: { ...record.value, syncStatus: 'pending', __deleted: operation.type === 'delete' } });
+            return op;
+        },
         retryFailedOperations: async (owner) => {
             const failed = [...idb.ops.values()].filter((op) => op.owner === owner && op.state === 'failed');
             failed.forEach((op) => idb.ops.set(op.id, { ...op, state: 'pending', nextRetryAt: 0, lastError: null }));
@@ -167,6 +177,24 @@ describe('sync queue reliability', () => {
         const send = vi.fn(async () => ({ ok: true }));
         await Promise.all([flushSyncQueue({ owner: OWNER, send }), flushSyncQueue({ owner: OWNER, send })]);
         expect(send).toHaveBeenCalledOnce();
+    });
+
+    it('does not let another account inherit an in-flight sync promise', async () => {
+        setOnline(true);
+        await queue('note-1');
+        const { queueSyncOperation, flushSyncQueue } = await import('./syncQueue.js');
+        const otherOwner = 'user:other-account';
+        await queueSyncOperation({ owner: otherOwner, collection: 'notes', recordId: 'note-2', type: 'create', payload: {} });
+        let release;
+        let markStarted;
+        const started = new Promise(resolve => { markStarted = resolve; });
+        const first = flushSyncQueue({ owner: OWNER, send: () => new Promise(resolve => { release = resolve; markStarted(); }) });
+        await started;
+        const sendOther = vi.fn(async () => ({ ok: true }));
+        expect(await flushSyncQueue({ owner: otherOwner, send: sendOther })).toMatchObject({ synced: 1 });
+        expect(sendOther).toHaveBeenCalledOnce();
+        release({ ok: true });
+        await first;
     });
 
     it('keeps conflicts and terminal failures visible instead of discarding them', async () => {

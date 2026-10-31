@@ -19,11 +19,11 @@ export const summarizeAssessmentMetrics = (rows = []) => {
         .filter((value) => Number.isFinite(value) && value >= 0)
         .sort((a, b) => a - b);
     const costs = fresh
-        .map((row) => (row.cost_usd == null ? NaN : Number(row.cost_usd)))
+        .map((row) => (row.cost_usd == null || row.cost_usd === '' ? NaN : Number(row.cost_usd)))
         .filter((value) => Number.isFinite(value) && value >= 0)
         .sort((a, b) => a - b);
     const tokens = fresh
-        .map((row) => (row.total_tokens == null ? NaN : Number(row.total_tokens)))
+        .map((row) => (row.total_tokens == null || row.total_tokens === '' ? NaN : Number(row.total_tokens)))
         .filter((value) => Number.isFinite(value) && value >= 0)
         .sort((a, b) => a - b);
     const withConsentAnswer = rows.filter((row) => row.consent != null);

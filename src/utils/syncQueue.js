@@ -5,6 +5,7 @@ import {
     removeOperation,
     retryFailedOperations,
     updateOperation,
+    saveQueuedRecord,
 } from './indexedDbStorage.js';
 
 export const SYNC_RETRY_DELAYS_MS = [2000, 5000, 15000, 60000];
@@ -21,6 +22,12 @@ const notifySyncStatus = (owner) => {
 export const queueSyncOperation = async (operation) => {
     const queued = await enqueueOperation(operation);
     notifySyncStatus(operation.owner);
+    return queued;
+};
+
+export const queueSyncRecord = async input => {
+    const queued = await saveQueuedRecord(input);
+    notifySyncStatus(input.record.owner);
     return queued;
 };
 
@@ -47,14 +54,16 @@ export const retryFailedSync = async (owner) => {
     return count;
 };
 
-let activeFlush = null;
+const activeFlushes = new Map();
 
 // Only one flush runs at a time per tab; overlapping "online" and
 // "visibilitychange" events would otherwise send the same operation twice.
 export const flushSyncQueue = (options) => {
-    if (activeFlush) return activeFlush;
-    activeFlush = runFlush(options).finally(() => { activeFlush = null; notifySyncStatus(options?.owner); });
-    return activeFlush;
+    const owner = options?.owner;
+    if (activeFlushes.has(owner)) return activeFlushes.get(owner);
+    const flush = runFlush(options).finally(() => { activeFlushes.delete(owner); notifySyncStatus(owner); });
+    activeFlushes.set(owner, flush);
+    return flush;
 };
 
 const runFlush = async ({ owner, send, isAuthenticated = true, onConflict = () => {}, onProgress = () => {}, onSynced = () => {} }) => {
