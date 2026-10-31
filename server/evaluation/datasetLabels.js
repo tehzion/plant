@@ -41,7 +41,8 @@ export function compareCondition(label, prediction, needsReview) {
     if (needsReview) return 'uncertain_or_review';
     const ref = referenceTerms(label);
     if (ref.healthy) return prediction.healthStatus === 'healthy' ? 'match' : prediction.healthStatus === 'unhealthy' ? 'different_or_unclear' : 'unassessed';
-    const predicted = clean(prediction.disease);
+    // Labels have "leaf" stripped as a crop-ish filler word, so strip it from the prediction too.
+    const predicted = clean(prediction.disease).replace(/\bleaf\b/g, '').replace(/\s+/g, ' ');
     return ref.terms.some(term => predicted.includes(term)) ? 'match' : 'different_or_unclear';
 }
 

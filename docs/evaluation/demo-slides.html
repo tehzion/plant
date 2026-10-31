@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agropreneur Evaluation</title>
+<style>
+  :root { --green: #15803d; --ink: #10231a; --muted: #5b6b63; --line: #dfe8e2; --bg: #f4f7f5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+  .slide { display: none; width: 800px; height: 600px; padding: 48px 56px; flex-direction: column; justify-content: center; gap: 18px; }
+  .slide.active { display: flex; }
+  .kicker { color: var(--green); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 14px; }
+  h1 { margin: 0; font-size: 38px; line-height: 1.15; }
+  h2 { margin: 0; font-size: 28px; }
+  p, li { color: var(--muted); font-size: 18px; line-height: 1.45; margin: 0; }
+  ul { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 15px; font-weight: 600; }
+  .flow span { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .flow b { color: var(--green); }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .tile strong { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--muted); font-size: 14px; }
+  table { border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 16px; }
+  th, td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  th { font-size: 13px; color: var(--muted); text-transform: uppercase; }
+  .up { color: var(--green); font-weight: 700; }
+  .note { font-size: 13px; }
+</style>
+</head>
+<body>
+<section class="slide" data-slide="1">
+  <div class="kicker">KANB AI Agropreneur</div>
+  <h1>Checking AI crop diagnosis against public plant-disease datasets</h1>
+  <p>Farmers photograph a sick plant; the AI names the likely problem and safe next steps. We built a pipeline that measures how often it agrees with expert-labelled reference images, and used it to find and fix a weakness.</p>
+</section>
+<section class="slide" data-slide="2">
+  <div class="kicker">Pipeline</div>
+  <h2>Reference data and AI predictions kept separate</h2>
+  <div class="flow"><span>PlantVillage / PlantDoc</span><b>→</b><span>Object storage (checksummed)</span><b>→</b><span>Neon PostgreSQL</span><b>→</b><span>Farmer assessment API</span><b>→</b><span>Evaluation results in Neon</span><b>→</b><span>Admin dashboard</span></div>
+  <div class="tiles">
+    <div class="tile"><strong>500</strong><span>reference images (472 PlantVillage, 28 PlantDoc)</span></div>
+    <div class="tile"><strong>14</strong><span>crops · 36 dataset labels · 150 healthy / 350 diseased</span></div>
+    <div class="tile"><strong>60</strong><span>real AI assessments stored, 0 failures</span></div>
+  </div>
+  <p>Disease labels are never sent to the AI. The same endpoint farmers use performs every assessment.</p>
+</section>
+<section class="slide" data-slide="3">
+  <div class="kicker">Finding</div>
+  <h2>The AI often misidentified the crop</h2>
+  <ul>
+    <li>Farmers could only pick a broad group such as “Vegetables”.</li>
+    <li>6 of 20 test images got the wrong crop: tomato read as bean or cabbage, or “unknown crop”.</li>
+    <li>Without the right crop the AI cannot narrow its diagnosis, so it fell back to generic answers like “Leaf Spot”.</li>
+  </ul>
+  <p><b style="color:var(--ink)">Fix:</b> an optional “Which crop?” choice (in English, Malay and Chinese) that the AI treats as the farmer’s stated crop.</p>
+</section>
+<section class="slide" data-slide="4">
+  <div class="kicker">Result · same 20 images, before vs after</div>
+  <table>
+    <thead><tr><th>Measure (20 images)</th><th>Before</th><th>After</th></tr></thead>
+    <tbody>
+      <tr><td>Crop identified correctly</td><td class="n">14 (70%)</td><td class="n up">20 (100%)</td></tr>
+      <tr><td>Correct disease as top answer</td><td class="n">4 (20%)</td><td class="n up">6 (30%)</td></tr>
+      <tr><td>Correct disease in top 3</td><td class="n">7 (35%)</td><td class="n up">10 (50%)</td></tr>
+      <tr><td>Sent to expert review</td><td class="n">14</td><td class="n">13</td></tr>
+      <tr><td>Confident treatment, wrong disease</td><td class="n">2</td><td class="n">2</td></tr>
+      <tr><td>Average response time</td><td class="n">11.8 s</td><td class="n">12.3 s</td></tr>
+    </tbody>
+  </table>
+  <p class="note">AI cost for both runs: US$0.46. Small sample; dataset labels are not field-validated Malaysian accuracy. Crop is farmer-stated in the “after” run.</p>
+</section>
+<script>
+  const n = new URLSearchParams(location.search).get('slide') || '1';
+  (document.querySelector(`[data-slide="${n}"]`) || document.querySelector('.slide')).classList.add('active');
+</script>
+</body>
+</html>

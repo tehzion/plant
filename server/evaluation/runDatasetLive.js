@@ -13,6 +13,8 @@ if ((!dbFile && !process.env.DATABASE_URL) || !host || !key || !runId || process
 // instead of re-running the ten original POC cases. EVALUATION_DRY_RUN=true prints the selection only.
 const sample=Number(process.env.EVALUATION_SAMPLE || 0), dryRun=process.env.EVALUATION_DRY_RUN === 'true';
 if(!Number.isInteger(sample) || sample<0 || sample>20) throw Error('EVALUATION_SAMPLE must be 0-20');
+// EVALUATION_SEND_CROP=true sends the reference crop name as a farmer-stated crop (never the disease label).
+const sendCrop=process.env.EVALUATION_SEND_CROP === 'true';
 const apiUrl=process.env.EVALUATION_API_URL || 'http://127.0.0.1:13002';
 if(!['127.0.0.1','localhost'].includes(new URL(apiUrl).hostname)) throw Error('Assessment API must be loopback');
 const connectionString=process.env.DATABASE_URL?.trim() || (await readFile(dbFile,'utf8')).trim();
@@ -32,9 +34,13 @@ try {
  await client.connect();
  let refs;
  if(sample){
+  // EVALUATION_RERUN_OF=<run id> re-assesses exactly that run's images for a before/after comparison.
+  const rerunOf=process.env.EVALUATION_RERUN_OF || null;
   const candidates=await client.query(`select i.*, null as baseline_id, row_number() over (partition by i.source, i.original_label order by md5(i.checksum)) rn
    from public.agricultural_reference_images i where i.storage_key is not null
-   and not exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum) order by rn, md5(i.checksum)`);
+   and (case when $1::text is null then not exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum)
+        else exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum and a.run_id=$1) end)
+   order by rn, md5(i.checksum)`,[rerunOf]);
   // EVALUATION_EXCLUDE: comma-separated checksum prefixes withheld after visual review (watermarks, printed labels).
   const excluded=(process.env.EVALUATION_EXCLUDE || '').split(',').map(x=>x.trim()).filter(Boolean);
   candidates.rows=candidates.rows.filter(r=>!excluded.some(prefix=>r.checksum.startsWith(prefix)));
@@ -72,7 +78,7 @@ try {
   if(!mime)throw Error('Unsupported image');
   const start=Date.now();let payload=null,completed=false,agreement='unassessed';
   try {
-   const response=await fetch(`${apiUrl}/api/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scanId:randomUUID(),treeImage:`data:${mime};base64,${image.toString('base64')}`,category:sample?farmerCategory(item.crop):'Vegetables',language:'en',location:'Malaysia',dataConsent:{aiImprovement:false}}),signal:AbortSignal.timeout(185000)});
+   const response=await fetch(`${apiUrl}/api/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scanId:randomUUID(),treeImage:`data:${mime};base64,${image.toString('base64')}`,category:sample?farmerCategory(item.crop):'Vegetables',...(sample&&sendCrop?{crop:item.crop}:{}),language:'en',location:'Malaysia',dataConsent:{aiImprovement:false}}),signal:AbortSignal.timeout(185000)});
    payload=await response.json(); if(!response.ok || !payload.disease || !payload.plantType)throw Error(payload.error || `HTTP_${response.status}`);
    delete payload.feedbackToken;completed=true;
    // Conservative comparison: uncertain responses are never counted as incorrect.

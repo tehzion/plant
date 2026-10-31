@@ -701,6 +701,14 @@ export function assessSpeciesIdentification(plantNetResult, category = '') {
     };
 }
 
+// A specific crop the farmer states (e.g. "Tomato") is a stronger hint than a broad category.
+// Restricted to letters and simple punctuation because it is interpolated into prompts.
+export const normalizeFarmerCrop = (value) => {
+    if (typeof value !== 'string') return '';
+    const crop = value.replace(/\s+/g, ' ').trim();
+    return crop.length <= 60 && /^[\p{L}\p{M}][\p{L}\p{M} ,()'.-]*$/u.test(crop) ? crop : '';
+};
+
 const isBroadCropCategory = (category = '') => {
     const normalized = normalizeLookupText(category);
     return !normalized || [
@@ -2258,6 +2266,7 @@ Rules:
 - Never increase disease confidence only because PlantNet species confidence is high.
 - Do not state any species is confirmed unless the species context says it is confirmed.
 - If species context is weak or conflicts with the user-selected category, use it only as a hypothesis and rely on visible symptoms.
+- If the user-selected category names a specific crop (not a broad group such as Vegetables or Fruits), the farmer has stated what they grow: assume that crop unless the image clearly shows a different plant, set plantType to it, and compare against that crop's common diseases.
 - Compare visually similar conditions. In differentialDiagnoses list 0-3 OTHER conditions that remain genuinely plausible from the visible evidence (for example fungal vs bacterial leaf spot, nutrient deficiency, environmental stress). Never pad the list to reach three, never repeat the primary diagnosis, and return an empty list when nothing else is plausible.
 - For every alternative give: supportingEvidence (visible features consistent with it), weakeningEvidence (visible features that argue against it) and distinguishingFeatures (what a farmer could check to tell it apart from the primary diagnosis).
 - Use standard, consistent disease names (e.g. "Early Blight", "Septoria Leaf Spot", "Anthracnose"). Put the causal organism in scientificName only when the visible evidence clearly supports it; otherwise leave it empty.

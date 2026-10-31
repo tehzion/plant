@@ -17,12 +17,20 @@ const categories = [
   { id: 'weed-control', nameKey: 'Weed Control', translationKey: 'home.categoryWeedControl', icon: <Flower2 size={32} color="#EF4444" /> },
 ];
 
-const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
+// Broad categories get an optional specific-crop choice; the English name is sent to the API.
+const specificCrops = {
+  Vegetables: ['Tomato', 'Chilli', 'Cucumber', 'Brinjal', 'Okra', 'Cabbage', 'Mustard greens', 'Water spinach', 'Long bean', 'Potato'],
+  Fruits: ['Papaya', 'Mango', 'Citrus', 'Watermelon', 'Guava', 'Rambutan', 'Jackfruit', 'Dragon fruit'],
+};
+const cropKey = (crop) => `home.crop${crop.split(' ').map((w) => w[0].toUpperCase() + w.slice(1)).join('')}`;
+
+const PlantCategorySelector = ({ selected, onSelect, crop = '', onCropSelect, disabled }) => {
   const { t } = useLanguage();
   const handleSelect = (category) => {
     if (disabled) return;
     onSelect?.(category.nameKey);
   };
+  const crops = specificCrops[selected];
 
   return (
     <div className="category-selector">
@@ -50,6 +58,16 @@ const PlantCategorySelector = ({ selected, onSelect, disabled }) => {
           </button>
         ))}
       </div>
+      {crops && onCropSelect && (
+        <label className="crop-select">
+          <span className="crop-select-label">{t('home.cropSelectLabel')}</span>
+          <select value={crop} onChange={(event) => onCropSelect(event.target.value)} disabled={disabled}>
+            <option value="">{t('home.cropNotSure')}</option>
+            {crops.map((name) => <option key={name} value={name}>{t(cropKey(name))}</option>)}
+          </select>
+          <span className="crop-select-hint">{t('home.cropSelectHint')}</span>
+        </label>
+      )}
     </div>
   );
 };

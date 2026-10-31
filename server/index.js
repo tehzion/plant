@@ -12,7 +12,7 @@ import { isAiProviderConfigured, resolveAiProvider } from './utils/aiProvider.js
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
-import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS } from './services/aiService.js';
+import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS, normalizeFarmerCrop } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
 import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
@@ -580,6 +580,9 @@ app.post('/api/analyze', async (req, res, next) => {
         // Fix: Extract treeImage/leafImage to match Frontend Payload (src/utils/diseaseDetection.js)
         // Fallback to 'image' for backward compatibility
         const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null, dataConsent = null } = req.body;
+        // Optional farmer-stated crop; when present it replaces the broad category as the crop hint.
+        const farmerCrop = normalizeFarmerCrop(req.body.crop);
+        const cropHint = farmerCrop || category;
         const analysisStartedAt = Date.now();
 
         const mainImage = treeImage || image;
@@ -588,10 +591,10 @@ app.post('/api/analyze', async (req, res, next) => {
             return res.status(400).json({ error: 'Image (treeImage) is required' });
         }
 
-        console.log(`📸 New Analysis Request - Category: ${category}, Location: ${location || 'Not provided'}`);
+        console.log(`📸 New Analysis Request - Category: ${category}${farmerCrop ? ` (${farmerCrop})` : ''}, Location: ${location || 'Not provided'}`);
 
         // 1. Generate Image Hash for Caching
-        const cacheKey = buildAnalysisCacheKey(req.body);
+        const cacheKey = buildAnalysisCacheKey({ ...req.body, crop: farmerCrop });
         const scanId = req.body.scanId || crypto.randomUUID();
         const callerIdentity = req.aiIdentity || `ip:${req.ip || 'unknown'}`;
         const ownerHash = hashIdentity(callerIdentity);
@@ -612,7 +615,7 @@ app.post('/api/analyze', async (req, res, next) => {
         let plantNetResult = await withStageTimeout(
             (signal) => identifyPlantWithPlantNet(mainImage, {
                 leafImage,
-                category,
+                category: cropHint,
                 imageQuality,
                 signal,
             }),
@@ -625,7 +628,7 @@ app.post('/api/analyze', async (req, res, next) => {
         // 4. Fallback Identification (GPT Vision)
         if (!plantNetResult) {
             const gptVisionResult = await withStageTimeout(
-                (signal) => identifyPlantWithGPTVision(mainImage, category, { signal }),
+                (signal) => identifyPlantWithGPTVision(mainImage, cropHint, { signal }),
                 12000,
                 null,
                 requestController.signal,
@@ -658,7 +661,7 @@ app.post('/api/analyze', async (req, res, next) => {
                     plantNetResult,
                     mainImage,
                     leafImage,
-                    category,
+                    cropHint,
                     language,
                     location,
                     imageQuality,
@@ -698,6 +701,7 @@ app.post('/api/analyze', async (req, res, next) => {
             metadata: {
                 language,
                 location,
+                farmerCrop: farmerCrop || null,
                 source: identificationSource,
                 imageQuality,
                 plantNetCandidates: plantNetResult?.allMatches || [],
