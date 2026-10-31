@@ -1,7 +1,10 @@
 import { withNeonTransaction } from '../utils/neonDatabase.js';
 import { cleanCorrection, validateReason } from './mygapRecordService.js';
 
-const stable = value => JSON.stringify(value instanceof Date ? value.toISOString() : value ?? null);
+const canonical = value => value instanceof Date ? value.toISOString()
+    : Array.isArray(value) ? value.map(canonical)
+    : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value ?? null;
+const stable = value => JSON.stringify(canonical(value));
 const equal = (a, b) => stable(a) === stable(b);
 
 // Lock and compare the exact last-seen values, including fields edited on
