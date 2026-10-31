@@ -1,0 +1,31 @@
+1
+00:00:00,000 --> 00:00:05,000
+KANB AI Agropreneur: checking AI diagnosis against public plant-disease datasets
+
+2
+00:00:05,000 --> 00:00:12,000
+500 reference images in Neon; 191 real AI assessments; labels never sent to the AI
+
+3
+00:00:12,000 --> 00:00:19,000
+Finding: the AI often misread the crop, so answers were generic
+
+4
+00:00:19,000 --> 00:00:24,000
+Farmer flow: upload a photo of the affected leaf
+
+5
+00:00:24,000 --> 00:00:29,000
+New: choose Vegetables, then the exact crop (Tomato)
+
+6
+00:00:29,000 --> 00:00:36,000
+Live AI result: crop correctly identified as Tomato, with likely issue and safe steps
+
+7
+00:00:36,000 --> 00:00:45,000
+70 images assessed both ways: crop 64% to 99%, correct disease in top 3 from 41% to 54%
+
+8
+00:00:45,000 --> 00:00:55,000
+Safety: wrong confident treatments 4 of 40 to 2 of 108; missed diseases on re-test 6 of 7 to 0 of 7

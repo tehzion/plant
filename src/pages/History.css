@@ -9,6 +9,12 @@
     padding-top: 18px;
 }
 
+@media (min-width: 1024px) {
+    .history-page .history-shell { max-width: 1200px; }
+    .history-page .history-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+    .history-page .history-load-more { grid-column: 1 / -1; }
+}
+
 .history-header {
     display: flex;
     justify-content: space-between;

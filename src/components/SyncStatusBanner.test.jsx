@@ -1,15 +1,26 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import SyncStatusBanner from './SyncStatusBanner.jsx';
 
-const sync = vi.hoisted(() => ({ getSyncSummary: vi.fn(), retryFailedSync: vi.fn(), SYNC_STATUS_EVENT: 'plant-sync-status' }));
+const sync = vi.hoisted(() => ({ getSyncSummary: vi.fn(), listWaitingRecords: vi.fn(), retryFailedSync: vi.fn(), SYNC_STATUS_EVENT: 'plant-sync-status' }));
+const resolve = vi.hoisted(() => vi.fn());
+vi.mock('../utils/cloudSync.js', () => ({ resolveSyncConflict: resolve }));
 vi.mock('../utils/syncQueue.js', () => sync);
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
-vi.mock('../i18n/i18n.jsx', () => ({ useLanguage: () => ({ t: (key) => key }) }));
+vi.mock('../i18n/i18n.jsx', () => ({ useLanguage: () => ({ language: 'en', t: (key) => key }) }));
 
 afterEach(() => vi.restoreAllMocks());
 
 describe('SyncStatusBanner', () => {
+    it('lets the owner compare a conflict and explicitly choose their change', async () => {
+        sync.getSyncSummary.mockResolvedValue({ pending: 0, failed: 0, conflict: 1 });
+        sync.listWaitingRecords.mockResolvedValue([{ id: 'op-1', collection: 'logbook', type: 'update', state: 'conflict', payload: { notes: 'mine' }, conflict: { serverRecord: { notes: 'server' } } }]);
+        resolve.mockResolvedValue({});
+        render(<SyncStatusBanner />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Show waiting records' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Use my change' }));
+        await waitFor(() => expect(resolve).toHaveBeenCalledWith('user-1', 'op-1', 'mine'));
+    });
     it('stays hidden when online with nothing waiting', async () => {
         sync.getSyncSummary.mockResolvedValue({ pending: 0, failed: 0, conflict: 0 });
         const { container } = render(<SyncStatusBanner />);

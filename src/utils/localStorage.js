@@ -2,9 +2,9 @@ import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
 import { parsePHIDays } from './phi.js';
-import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
+import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, listOperations, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
 import { fetchNeonRows, neonApiRequest, neonDataRequest, neonDataRowRequest } from './neonApi.js';
-import { queueSyncOperation } from './syncQueue.js';
+import { queueSyncRecord } from './syncQueue.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
 const LOGBOOK_KEY = 'sea_plant_mygap_logbook';
@@ -55,8 +55,31 @@ const persistIndexedGuestRecord = async (collection, value, revision = 0) => {
 // ─── Signed-in offline support ───────────────────────────────────────────────
 // Signed-in records normally go straight to Neon. When the network is down the
 // record is kept on this device and queued for /api/sync instead of being lost.
-const CLOUD_COLLECTION_TABLES = { logbook: 'mygap_logs', notes: 'daily_notes', plots: 'plots' };
+const CLOUD_COLLECTION_TABLES = { scans: 'scan_history', logbook: 'mygap_logs', notes: 'daily_notes', plots: 'plots' };
 const cloudOwner = (userId) => `user:${userId}`;
+
+const mergePending = async (userId, collection, mapped) => {
+    if (!isIndexedDbAvailable()) return mapped;
+    const pending = await listRecords(cloudOwner(userId), collection).catch(() => []);
+    const ids = new Set(pending.map(item => String(item.id)));
+    return [...pending.filter(item => !item.__deleted), ...mapped.filter(item => !ids.has(String(item.id)))];
+};
+
+const queueCloudMutation = async (userId, collection, id, type, changes = {}, reason = null, source = null) => {
+    if (!isIndexedDbAvailable()) throw new Error('Offline storage is unavailable.');
+    if (collection === 'logbook' && String(reason || '').trim().length < 3) throw new Error('Give a short reason for the change.');
+    const owner = cloudOwner(userId);
+    const operations = (await listOperations(owner)).filter(op => op.collection === collection && String(op.recordId) === String(id));
+    if (operations.some(op => op.type === 'create')) throw new Error('Wait for this new record to sync before changing it.');
+    const cached = await getMetadata(`cloud-cache:${owner}:${collection}`);
+    const expectedRecord = operations[0]?.expectedRecord || source || cached?.find(row => String(row.id) === String(id));
+    if (!expectedRecord) throw new Error('Open this record while online before changing it offline.');
+    const raw = { ...expectedRecord, ...operations.find(op => op.type === 'update')?.payload, ...changes };
+    const value = collection === 'logbook' ? fromLogbookRow(raw) : collection === 'scans' ? await hydrateScanHistoryRow(raw) : collection === 'plots' ? normalizeStoredPlot(raw) : raw;
+    await queueSyncRecord({ record: { owner, collection, id: String(id), value },
+        operation: { owner, collection, recordId: String(id), type, expectedRecord, reason, payload: type === 'delete' ? null : { ...operations.find(op => op.type === 'update')?.payload, ...changes } } });
+    return { ...value, syncStatus: 'pending' };
+};
 
 export const isConnectivityError = (error) => (
     error instanceof TypeError
@@ -69,8 +92,7 @@ const queueCloudRecord = async (userId, collection, row, localValue) => {
     const owner = cloudOwner(userId);
     const { user_id: _ownerFromClient, ...payload } = row;
     const value = { ...localValue, syncStatus: 'pending' };
-    await putRecord({ owner, collection, id: String(row.id), value });
-    await queueSyncOperation({ owner, collection, recordId: String(row.id), type: 'create', payload });
+    await queueSyncRecord({ record: { owner, collection, id: String(row.id), value }, operation: { owner, collection, recordId: String(row.id), type: 'create', payload } });
     return value;
 };
 
@@ -105,9 +127,7 @@ const readCloudCollection = async (userId, collection, fetchRows, mapRows) => {
     }
     const mapped = await mapRows(rows);
     if (!isIndexedDbAvailable()) return mapped;
-    const pending = await listRecords(owner, collection).catch(() => []);
-    const ids = new Set(mapped.map((item) => String(item.id)));
-    return [...pending.filter((item) => !ids.has(String(item.id))), ...mapped];
+    return mergePending(userId, collection, mapped);
 };
 
 /** Clears cached cloud snapshots (not pending records) when a user signs out. */
@@ -659,16 +679,28 @@ export const fetchScanHistoryPage = async (userId, { cursor = null, limit = 20 }
     if (!token) throw new Error('History needs an authenticated account.');
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor) params.set('cursor', btoa(JSON.stringify(cursor)).replace(/=+$/g, '').replace(/\+/g, '-').replace(/\//g, '_'));
+    try {
     const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/history?${params}`, { headers: { Authorization: `Bearer ${token}` } });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.message || payload.error || 'Could not load history.');
+    if (!response.ok) throw Object.assign(new Error(payload.message || payload.error || 'Could not load history.'), { status: response.status });
+    if (isIndexedDbAvailable()) {
+        const key = `cloud-cache:${cloudOwner(userId)}:scans`;
+        const previous = cursor ? await getMetadata(key) || [] : [];
+        await setMetadata(key, [...new Map([...previous, ...(payload.rows || [])].map(row => [String(row.id), row])).values()]);
+    }
     const rows = await Promise.all((payload.rows || []).map(hydrateScanHistoryRow));
-    return { ...payload, rows };
+    return { ...payload, rows: await mergePending(userId, 'scans', rows) };
+    } catch (error) {
+        if (!isConnectivityError(error)) throw error;
+        const cached = await getMetadata(`cloud-cache:${cloudOwner(userId)}:scans`);
+        if (!Array.isArray(cached)) throw error;
+        return { rows: await mergePending(userId, 'scans', await Promise.all(cached.map(hydrateScanHistoryRow))), nextCursor: null, offline: true };
+    }
 };
 
 export const getScanHistory = (userId = null, options = {}) => {
     if (isCloudUser(userId)) {
-        return fetchAllUserRows('scan_history', userId, options).then((rows) => Promise.all(rows.map(hydrateScanHistoryRow)));
+        return readCloudCollection(userId, 'scans', () => fetchAllUserRows('scan_history', userId, options), rows => Promise.all(rows.map(hydrateScanHistoryRow)));
     }
     const history = safeRead(STORAGE_KEY, []);
     return Number.isFinite(Number(options.limit)) && Number(options.limit) > 0
@@ -705,6 +737,9 @@ export const deleteScan = async (id, userId = null) => {
             await neonDataRowRequest('scan_history', id, { operation: 'delete' });
         } catch (error) {
             console.error('deleteScan error:', error);
+            if (isConnectivityError(error)) {
+                try { await queueCloudMutation(userId, 'scans', id, 'delete', {}, null, row); return true; } catch { return false; }
+            }
             return false;
         }
         const paths = [row?.image_path, row?.leaf_image_path].filter(Boolean);
@@ -739,6 +774,14 @@ export const clearAllScans = async (userId = null) => {
             return true;
         } catch (error) {
             console.error('clearAllScans error:', error);
+            if (isConnectivityError(error)) {
+                try {
+                    const cached = await getMetadata(`cloud-cache:${cloudOwner(userId)}:scans`);
+                    if (!Array.isArray(cached)) return false;
+                    for (const row of cached) await queueCloudMutation(userId, 'scans', row.id, 'delete', {}, null, row);
+                    return true;
+                } catch { return false; }
+            }
             return false;
         }
     }
@@ -809,11 +852,16 @@ const pickCorrectableChanges = (changes = {}) => Object.fromEntries(
 export const updateLogEntry = async (id, changes, reason, userId = null) => {
     const picked = pickCorrectableChanges(changes);
     if (isCloudUser(userId)) {
+        try {
         const result = await neonApiRequest(`/api/mygap/logs/${encodeURIComponent(id)}/correct`, {
             method: 'POST',
             body: JSON.stringify({ changes: picked, reason }),
         });
         return fromLogbookRow(result.row || result.data || {});
+        } catch (error) {
+            if (!isConnectivityError(error)) throw error;
+            return queueCloudMutation(userId, 'logbook', id, 'update', picked, reason);
+        }
     }
     const logs = safeRead(LOGBOOK_KEY, []);
     const index = logs.findIndex((log) => String(log.id) === String(id));
@@ -835,10 +883,15 @@ export const updateLogEntry = async (id, changes, reason, userId = null) => {
 
 export const deleteLogEntry = async (id, reason, userId = null) => {
     if (isCloudUser(userId)) {
+        try {
         await neonApiRequest(`/api/mygap/logs/${encodeURIComponent(id)}/delete`, {
             method: 'POST',
             body: JSON.stringify({ reason }),
         });
+        } catch (error) {
+            if (!isConnectivityError(error)) throw error;
+            await queueCloudMutation(userId, 'logbook', id, 'delete', {}, reason);
+        }
         return true;
     }
     const logs = safeRead(LOGBOOK_KEY, []);
@@ -873,8 +926,8 @@ export const saveChecklistState = async (state, userId = null) => {
             }
             try {
                 const owner = cloudOwner(userId);
-                await putRecord({ owner, collection: 'checklist', id: 'checklist:current', value: { state, updated_at: updatedAt } });
-                await queueSyncOperation({ owner, collection: 'checklist', recordId: 'current', type: 'update', payload: { state, updated_at: updatedAt } });
+                await queueSyncRecord({ record: { owner, collection: 'checklist', id: 'checklist:current', value: { state, updated_at: updatedAt } },
+                    operation: { owner, collection: 'checklist', recordId: 'current', type: 'update', payload: { state, updated_at: updatedAt } } });
             } catch (queueError) {
                 console.error('saveChecklistState offline queue error:', queueError);
                 return false;
@@ -1049,6 +1102,9 @@ export const deletePlot = async (id, userId = null) => {
             await neonDataRowRequest('plots', id, { operation: 'delete' });
         } catch (error) {
             console.error('deletePlot error:', error);
+            if (isConnectivityError(error)) {
+                try { await queueCloudMutation(userId, 'plots', id, 'delete'); return true; } catch { return false; }
+            }
             return false;
         }
         return true;

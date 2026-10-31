@@ -1,3 +1,4 @@
+import WithdrawScanPhotos from '../components/WithdrawScanPhotos.jsx';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -729,6 +730,7 @@ ${t('pdf.generatedBy')}
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>
           <FeedbackWidget scanId={id} scan={scan} />
         </Suspense>
+        <WithdrawScanPhotos key={scan.id} scan={scan} />
 
 
 

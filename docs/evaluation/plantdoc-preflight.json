@@ -1,0 +1,378 @@
+{
+  "manifest": "server/dataset/public-evaluation/plantdoc/manifest.json",
+  "checkedAt": "2026-10-30T20:16:23.010Z",
+  "results": [
+    {
+      "imageId": "6caf2ad458a695a73f9d8909",
+      "localPath": "6caf2ad458a695a73f9d890934f38628ad47e1fc395e5219ce0ee1caf57242d8.jpg",
+      "checksum": "6caf2ad458a695a73f9d890934f38628ad47e1fc395e5219ce0ee1caf57242d8",
+      "dimensions": {
+        "width": 490,
+        "height": 392
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f91a6ba2e60144bd62175891",
+      "localPath": "f91a6ba2e60144bd62175891872170b57a3e1bfd642a7816b018b86db76257f7.jpg",
+      "checksum": "f91a6ba2e60144bd62175891872170b57a3e1bfd642a7816b018b86db76257f7",
+      "dimensions": {
+        "width": 115,
+        "height": 85
+      },
+      "status": "excluded",
+      "reasons": [
+        "resolution_too_small"
+      ],
+      "review": null
+    },
+    {
+      "imageId": "f1b4f0ef38724290a0f896de",
+      "localPath": "f1b4f0ef38724290a0f896de850871f302aa12eac89625705233f77b0bd52797.jpg",
+      "checksum": "f1b4f0ef38724290a0f896de850871f302aa12eac89625705233f77b0bd52797",
+      "dimensions": {
+        "width": 5312,
+        "height": 2988
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "0902a4df3831c69d0580f0b7",
+      "localPath": "0902a4df3831c69d0580f0b746a8ea277d317e358dcd05d5304c13ac539996e7.jpg",
+      "checksum": "0902a4df3831c69d0580f0b746a8ea277d317e358dcd05d5304c13ac539996e7",
+      "dimensions": {
+        "width": 500,
+        "height": 375
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b1572c5a942ed6485bcf2d41",
+      "localPath": "b1572c5a942ed6485bcf2d41c2b8aaa6d6a42041fc19b0f5e9f212ff8f10210c.jpg",
+      "checksum": "b1572c5a942ed6485bcf2d41c2b8aaa6d6a42041fc19b0f5e9f212ff8f10210c",
+      "dimensions": {
+        "width": 155,
+        "height": 206
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "092fd6fa8208f5c46f10899a",
+      "localPath": "092fd6fa8208f5c46f10899a8c58543949ad3ee3c7621a4e760d685bfd9f610a.jpg",
+      "checksum": "092fd6fa8208f5c46f10899a8c58543949ad3ee3c7621a4e760d685bfd9f610a",
+      "dimensions": {
+        "width": 480,
+        "height": 360
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "a5a5f34a7c50efbbbc3f680a",
+      "localPath": "a5a5f34a7c50efbbbc3f680af9f277b7a016b4e145f60b6a0eafb7de39b3bb5f.jpg",
+      "checksum": "a5a5f34a7c50efbbbc3f680af9f277b7a016b4e145f60b6a0eafb7de39b3bb5f",
+      "dimensions": {
+        "width": 351,
+        "height": 209
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "723b0d272e745f3d81f205fc",
+      "localPath": "723b0d272e745f3d81f205fc60dcfc989cb7698e3d48087aa63f904001ff9101.jpg",
+      "checksum": "723b0d272e745f3d81f205fc60dcfc989cb7698e3d48087aa63f904001ff9101",
+      "dimensions": {
+        "width": 350,
+        "height": 230
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "6e777d1b6829140e66573f91",
+      "localPath": "6e777d1b6829140e66573f918c0f1681ca4cd2979859c37435c84977153ec223.jpg",
+      "checksum": "6e777d1b6829140e66573f918c0f1681ca4cd2979859c37435c84977153ec223",
+      "dimensions": {
+        "width": 1224,
+        "height": 1632
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "d81099827be9eea9fd64d187",
+      "localPath": "d81099827be9eea9fd64d18771a60680255ea1fa9a2d2dd9247d55c97df59556.jpg",
+      "checksum": "d81099827be9eea9fd64d18771a60680255ea1fa9a2d2dd9247d55c97df59556",
+      "dimensions": {
+        "width": 432,
+        "height": 268
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "d551e7c75cb72e01ddb13abd",
+      "localPath": "d551e7c75cb72e01ddb13abdc7cc996e7727c54bb21556a552b82bebcd81f825.jpg",
+      "checksum": "d551e7c75cb72e01ddb13abdc7cc996e7727c54bb21556a552b82bebcd81f825",
+      "dimensions": {
+        "width": 432,
+        "height": 309
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "1236a199431c6c7b4798310c",
+      "localPath": "1236a199431c6c7b4798310cfb847faa4c4b9047b62149de91674989b1ed76b9.jpg",
+      "checksum": "1236a199431c6c7b4798310cfb847faa4c4b9047b62149de91674989b1ed76b9",
+      "dimensions": {
+        "width": 640,
+        "height": 480
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "64c0f7b5701e815769bad881",
+      "localPath": "64c0f7b5701e815769bad881c0834ffb3b58018233fc3af42c3a1b7968f86973.jpg",
+      "checksum": "64c0f7b5701e815769bad881c0834ffb3b58018233fc3af42c3a1b7968f86973",
+      "dimensions": {
+        "width": 2848,
+        "height": 2136
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c256a583dacb5c2747393b28",
+      "localPath": "c256a583dacb5c2747393b2820b4e5fb5aec08c54f930ad76ef3422d2153f48e.jpg",
+      "checksum": "c256a583dacb5c2747393b2820b4e5fb5aec08c54f930ad76ef3422d2153f48e",
+      "dimensions": {
+        "width": 1300,
+        "height": 1069
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b21f34ffc768f1aa57a1922e",
+      "localPath": "b21f34ffc768f1aa57a1922e87c6816b9a5556a06fd89d6d4051d59fe6410db8.jpg",
+      "checksum": "b21f34ffc768f1aa57a1922e87c6816b9a5556a06fd89d6d4051d59fe6410db8",
+      "dimensions": {
+        "width": 589,
+        "height": 540
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c53ad8d40c38debfbc0b79a8",
+      "localPath": "c53ad8d40c38debfbc0b79a87d0f3649c20b933a65f5b78a6931f59d06aad498.jpg",
+      "checksum": "c53ad8d40c38debfbc0b79a87d0f3649c20b933a65f5b78a6931f59d06aad498",
+      "dimensions": {
+        "width": 640,
+        "height": 480
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "9dd93b4217495fbb725cfdde",
+      "localPath": "9dd93b4217495fbb725cfdded86d3dc5f98955c9616fff5323be1a00df17be8b.jpg",
+      "checksum": "9dd93b4217495fbb725cfdded86d3dc5f98955c9616fff5323be1a00df17be8b",
+      "dimensions": {
+        "width": 640,
+        "height": 437
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "98d52f733e1e23c5f5059f3c",
+      "localPath": "98d52f733e1e23c5f5059f3ce57c762a1e0fc26028abf8750105d0250c29f670.jpg",
+      "checksum": "98d52f733e1e23c5f5059f3ce57c762a1e0fc26028abf8750105d0250c29f670",
+      "dimensions": {
+        "width": 448,
+        "height": 448
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "7571d72639461cc8de512dd2",
+      "localPath": "7571d72639461cc8de512dd2087c63cc1877322ae1954f7b4521756789c362c9.jpg",
+      "checksum": "7571d72639461cc8de512dd2087c63cc1877322ae1954f7b4521756789c362c9",
+      "dimensions": {
+        "width": 257,
+        "height": 378
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "3398df03c7b73de34b61da8d",
+      "localPath": "3398df03c7b73de34b61da8df99de69a7f2448b800356be6809fa9edddc6abce.jpg",
+      "checksum": "3398df03c7b73de34b61da8df99de69a7f2448b800356be6809fa9edddc6abce",
+      "dimensions": {
+        "width": 1903,
+        "height": 1444
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "d9e9aa3d8e0e58d5875c4b9b",
+      "localPath": "d9e9aa3d8e0e58d5875c4b9bb17b19327a5b004e91e20942d7a528a8c52f4eeb.jpg",
+      "checksum": "d9e9aa3d8e0e58d5875c4b9bb17b19327a5b004e91e20942d7a528a8c52f4eeb",
+      "dimensions": {
+        "width": 258,
+        "height": 300
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "98d1b4229761f914476b63c2",
+      "localPath": "98d1b4229761f914476b63c2b7c70a4bd5a23681bf9b4622b642c3dc09cac8ce.jpg",
+      "checksum": "98d1b4229761f914476b63c2b7c70a4bd5a23681bf9b4622b642c3dc09cac8ce",
+      "dimensions": {
+        "width": 500,
+        "height": 263
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f77f5a7245b8a2ff0e364069",
+      "localPath": "f77f5a7245b8a2ff0e3640693e679ac52b036ab639bbfef405d7de4ed4768536.jpg",
+      "checksum": "f77f5a7245b8a2ff0e3640693e679ac52b036ab639bbfef405d7de4ed4768536",
+      "dimensions": {
+        "width": 4000,
+        "height": 3000
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "995ada04ba135f89218ddc3f",
+      "localPath": "995ada04ba135f89218ddc3f17617e59411b63ae5167c25ded94284aeda9d7e8.jpg",
+      "checksum": "995ada04ba135f89218ddc3f17617e59411b63ae5167c25ded94284aeda9d7e8",
+      "dimensions": {
+        "width": 960,
+        "height": 774
+      },
+      "status": "excluded",
+      "reasons": [
+        "embedded_diagnosis_label",
+        "multi_image_composite",
+        "unsuitable_for_assessment"
+      ],
+      "review": {
+        "reviewer": "POC visual inspection documented in agricultural_dataset_poc_report.md",
+        "embeddedLabel": true,
+        "composite": true,
+        "unsuitable": true,
+        "note": "PILOT-19: printed disease labels and multi-image composite; excluded from the original valid POC sample."
+      }
+    },
+    {
+      "imageId": "d4ced16a63bfb55865541775",
+      "localPath": "d4ced16a63bfb55865541775dfa1311bc76c6714659af4443d9154297bf41ff0.jpg",
+      "checksum": "d4ced16a63bfb55865541775dfa1311bc76c6714659af4443d9154297bf41ff0",
+      "dimensions": {
+        "width": 3648,
+        "height": 2736
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "e75892c6833fde9fddcf03d8",
+      "localPath": "e75892c6833fde9fddcf03d8d0529863c2827c91f971ac18b92d8dc2546a769d.jpg",
+      "checksum": "e75892c6833fde9fddcf03d8d0529863c2827c91f971ac18b92d8dc2546a769d",
+      "dimensions": {
+        "width": 768,
+        "height": 1024
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "3c52144e19e95cc3d4170407",
+      "localPath": "3c52144e19e95cc3d4170407eaf729d0981b934615eaa183f7f5aa29d8ef265a.jpg",
+      "checksum": "3c52144e19e95cc3d4170407eaf729d0981b934615eaa183f7f5aa29d8ef265a",
+      "dimensions": {
+        "width": 638,
+        "height": 479
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "bfdd82a0f88aab850f5f214c",
+      "localPath": "bfdd82a0f88aab850f5f214c7104d42d4266c11400b47285563b18693b4aa9f8.jpg",
+      "checksum": "bfdd82a0f88aab850f5f214c7104d42d4266c11400b47285563b18693b4aa9f8",
+      "dimensions": {
+        "width": 800,
+        "height": 600
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "e64969c324e6981d478bfff5",
+      "localPath": "e64969c324e6981d478bfff5c9099da715e0bdd974b2ea7a7acd62fa8ee63af0.jpg",
+      "checksum": "e64969c324e6981d478bfff5c9099da715e0bdd974b2ea7a7acd62fa8ee63af0",
+      "dimensions": {
+        "width": 1060,
+        "height": 795
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "4949d0f81b7c1ec21b55e51c",
+      "localPath": "4949d0f81b7c1ec21b55e51ccbdcce34eec213d02c58f9f9121660552be6cd7c.jpg",
+      "checksum": "4949d0f81b7c1ec21b55e51ccbdcce34eec213d02c58f9f9121660552be6cd7c",
+      "dimensions": {
+        "width": 1600,
+        "height": 1200
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    }
+  ]
+}

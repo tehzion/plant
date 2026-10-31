@@ -702,6 +702,8 @@ const Home = () => {
                   <PlantCategorySelector
                     selected={selectedCategory}
                     onSelect={handleCategorySelect}
+                    crop={scanState.selectedCrop}
+                    onCropSelect={scanActions.setCrop}
                   />
 
                   <div className="scale-selection-section mt-md">

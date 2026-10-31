@@ -104,7 +104,7 @@ export const getPhoto = async (owner, id) => {
 export const findQueuedDuplicate = (operations = [], { collection, recordId, type }) => (operations || [])
     .find((row) => row.state === 'pending' && row.collection === collection && row.recordId === recordId && row.type === type) || null;
 
-export const enqueueOperation = async ({ owner, recordId, collection, type, expectedRevision = 0, payload = null }) => {
+export const enqueueOperation = async ({ owner, recordId, collection, type, expectedRevision = 0, expectedRecord = null, reason = null, payload = null }) => {
     if (!owner || !recordId || !['create', 'update', 'delete'].includes(type)) throw new Error('Invalid sync operation');
     // Saving the same record twice while offline keeps a single queued
     // operation with the latest payload instead of sending duplicates.
@@ -113,10 +113,39 @@ export const enqueueOperation = async ({ owner, recordId, collection, type, expe
         { collection, recordId, type },
     );
     const operation = existing
-        ? { ...existing, payload, expectedRevision, updatedAt: new Date().toISOString() }
-        : { id: crypto.randomUUID(), owner, recordId, collection, type, expectedRevision, payload, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString() };
+        ? { ...existing, payload, expectedRevision, expectedRecord: existing.expectedRecord || expectedRecord, reason, updatedAt: new Date().toISOString() }
+        : { id: crypto.randomUUID(), owner, recordId, collection, type, expectedRevision, expectedRecord, reason, payload, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString() };
     await transaction(STORES.pendingOps, 'readwrite', (store) => store.put(operation));
     return operation;
+};
+
+// Commit the visible local change and its replay operation together. A quota
+// or cloning failure must never queue a deletion that the UI reports as failed.
+export const saveQueuedRecord = async ({ record, operation }) => {
+    if (!record?.owner || record.owner !== operation?.owner || record.collection !== operation.collection
+        || !record.id || !operation.recordId || !['create', 'update', 'delete'].includes(operation.type)) throw new Error('Invalid queued record.');
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORES.records, STORES.pendingOps], 'readwrite');
+        const operations = tx.objectStore(STORES.pendingOps);
+        let queued;
+        tx.oncomplete = () => { db.close(); resolve(queued); };
+        tx.onabort = tx.onerror = () => { db.close(); reject(tx.error || new Error('Offline change could not be saved.')); };
+        const request = operations.index('owner').getAll(record.owner);
+        request.onsuccess = () => {
+            try {
+                const waiting = request.result.filter(row => row.state === 'pending' && row.collection === operation.collection && row.recordId === operation.recordId);
+                const existing = waiting.find(row => row.type === operation.type);
+                queued = { id: crypto.randomUUID(), state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString(), ...existing, ...operation,
+                    expectedRecord: existing?.expectedRecord || operation.expectedRecord || null,
+                    payload: operation.type === 'update' ? { ...existing?.payload, ...operation.payload } : operation.payload };
+                operations.put(queued);
+                if (operation.type === 'delete') waiting.filter(row => row.type === 'update').forEach(row => operations.delete(row.id));
+                tx.objectStore(STORES.records).put({ ...record, key: ownerKey(record.owner, record.id), updatedAt: new Date().toISOString(),
+                    value: { ...record.value, ...(operation.type === 'update' ? queued.payload : {}), syncStatus: 'pending', __deleted: operation.type === 'delete' } });
+            } catch (error) { tx.abort(); reject(error); }
+        };
+    });
 };
 
 export const listOperations = async (owner) => (

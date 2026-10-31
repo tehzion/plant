@@ -1,3 +1,4 @@
+import { useReviewerText } from '../utils/reviewerCopy.js';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -17,10 +18,10 @@ import EvaluationPanel from '../components/EvaluationPanel';
 import AgriculturalDataset from '../components/AgriculturalDataset';
 import './AdminReviewDashboard.css';
 
-const formatDate = (value) => {
+const formatDate = (value, locale = 'en-MY') => {
     if (!value) return '-';
     try {
-        return new Intl.DateTimeFormat('en-MY', {
+        return new Intl.DateTimeFormat(locale, {
             day: '2-digit',
             month: 'short',
             hour: '2-digit',
@@ -54,6 +55,7 @@ const EmptyState = ({ children }) => (
 );
 
 const AdminReviewDashboard = () => {
+    const tr = useReviewerText();
     const { user } = useAuth();
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -101,9 +103,9 @@ const AdminReviewDashboard = () => {
             <div className="admin-page admin-page--center">
                 <div className="admin-access-card">
                     <AlertTriangle size={28} />
-                    <h1>Admin sign-in required</h1>
-                    <p>Sign in with an approved team account to view scan reviews and lead analytics.</p>
-                    <Link to="/profile" className="admin-primary-link">Go to sign in</Link>
+                    <h1>{tr("Admin sign-in required")}</h1>
+                    <p>{tr("Sign in with an approved team account to view scan reviews and lead analytics.")}</p>
+                    <Link to="/profile" className="admin-primary-link">{tr("Go to sign in")}</Link>
                 </div>
             </div>
         );
@@ -113,23 +115,23 @@ const AdminReviewDashboard = () => {
         <div className="admin-page">
             <header className="admin-header">
                 <div>
-                    <span className="admin-eyebrow">KANB team</span>
-                    <h1>Review Dashboard</h1>
-                    <p>Track scan quality, consultation leads, product interest, and checkout intent.</p>
+                    <span className="admin-eyebrow">{tr("KANB team")}</span>
+                    <h1>{tr("Review Dashboard")}</h1>
+                    <p>{tr("Track scan quality, consultation leads, product interest, and checkout intent.")}</p>
                 </div>
                 <div className="admin-header-actions">
                     <select
                         value={windowDays}
                         onChange={(event) => setWindowDays(Number(event.target.value))}
-                        aria-label="Analytics window"
+                        aria-label={tr("Analytics window")}
                     >
-                        <option value={7}>Last 7 days</option>
-                        <option value={30}>Last 30 days</option>
-                        <option value={90}>Last 90 days</option>
+                        <option value={7}>{tr("Last 7 days")}</option>
+                        <option value={30}>{tr("Last 30 days")}</option>
+                        <option value={90}>{tr("Last 90 days")}</option>
                     </select>
                     <button type="button" onClick={loadSummary} disabled={loading}>
                         <RefreshCcw size={16} />
-                        <span>Refresh</span>
+                        <span>{tr("Refresh")}</span>
                     </button>
                 </div>
             </header>
@@ -148,12 +150,12 @@ const AdminReviewDashboard = () => {
             ) : (
                 <>
                     <section className="admin-stats-grid">
-                        <StatCard icon={Search} label="Recent scans" value={counts.recentScans || 0} />
-                        <StatCard icon={AlertTriangle} label="Need review" value={counts.uncertainScans || 0} tone="warning" />
-                        <StatCard icon={MessageCircle} label="Consultation leads" value={counts.consultationLeads || 0} tone="success" />
-                        <StatCard icon={MousePointerClick} label="Product clicks" value={counts.productClicks || 0} />
-                        <StatCard icon={ExternalLink} label="Checkout intent" value={counts.checkoutClicks || 0} />
-                        <StatCard icon={BarChart3} label="Lead conversion" value={conversionRate} tone="success" />
+                        <StatCard icon={Search} label={tr("Recent scans")} value={counts.recentScans || 0} />
+                        <StatCard icon={AlertTriangle} label={tr("Need review")} value={counts.uncertainScans || 0} tone="warning" />
+                        <StatCard icon={MessageCircle} label={tr("Consultation leads")} value={counts.consultationLeads || 0} tone="success" />
+                        <StatCard icon={MousePointerClick} label={tr("Product clicks")} value={counts.productClicks || 0} />
+                        <StatCard icon={ExternalLink} label={tr("Checkout intent")} value={counts.checkoutClicks || 0} />
+                        <StatCard icon={BarChart3} label={tr("Lead conversion")} value={conversionRate} tone="success" />
                     </section>
 
                     <ExpertReviewPanel />
@@ -163,7 +165,7 @@ const AdminReviewDashboard = () => {
                     <section className="admin-grid">
                         <div className="admin-panel admin-panel--wide">
                             <div className="admin-panel-header">
-                                <h2>Scans Needing Review</h2>
+                                <h2>{tr("Scans Needing Review")}</h2>
                                 <span>{summary?.uncertainScans?.length || 0}</span>
                             </div>
                             {summary?.uncertainScans?.length ? (
@@ -171,12 +173,12 @@ const AdminReviewDashboard = () => {
                                     <table className="admin-table">
                                         <thead>
                                             <tr>
-                                                <th>Scan</th>
-                                                <th>Crop</th>
-                                                <th>Disease</th>
-                                                <th>Confidence</th>
-                                                <th>Status</th>
-                                                <th>Time</th>
+                                                <th>{tr("Scan")}</th>
+                                                <th>{tr("Crop")}</th>
+                                                <th>{tr("Disease")}</th>
+                                                <th>{tr("Confidence")}</th>
+                                                <th>{tr("Status")}</th>
+                                                <th>{tr("Time")}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -187,20 +189,20 @@ const AdminReviewDashboard = () => {
                                                     <td>{scan.disease}</td>
                                                     <td>{formatPercent(scan.confidence)}</td>
                                                     <td><span className="admin-status-pill">{scan.status || 'review'}</span></td>
-                                                    <td>{formatDate(scan.createdAt)}</td>
+                                                    <td>{formatDate(scan.createdAt, tr.locale)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             ) : (
-                                <EmptyState>No uncertain scans in this window.</EmptyState>
+                                <EmptyState>{tr("No uncertain scans in this window.")}</EmptyState>
                             )}
                         </div>
 
                         <div className="admin-panel">
                             <div className="admin-panel-header">
-                                <h2>Consultation Leads</h2>
+                                <h2>{tr("Consultation Leads")}</h2>
                                 <span>{summary?.recentLeads?.length || 0}</span>
                             </div>
                             {summary?.recentLeads?.length ? (
@@ -208,19 +210,19 @@ const AdminReviewDashboard = () => {
                                     {summary.recentLeads.map((lead) => (
                                         <div className="admin-list-item" key={lead.id}>
                                             <strong>{lead.crop} · {lead.disease}</strong>
-                                            <span>{lead.recommendationIntent || 'consultation'} · {formatDate(lead.createdAt)}</span>
-                                            {lead.scanId && <Link to={`/results/${lead.scanId}`}>Open scan</Link>}
+                                            <span>{lead.recommendationIntent || 'consultation'} · {formatDate(lead.createdAt, tr.locale)}</span>
+                                            {lead.scanId && <Link to={`/results/${lead.scanId}`}>{tr("Open scan")}</Link>}
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState>No consultation leads yet.</EmptyState>
+                                <EmptyState>{tr("No consultation leads yet.")}</EmptyState>
                             )}
                         </div>
 
                         <div className="admin-panel">
                             <div className="admin-panel-header">
-                                <h2>Top Products</h2>
+                                <h2>{tr("Top Products")}</h2>
                             </div>
                             {summary?.topProducts?.length ? (
                                 <div className="admin-rank-list">
@@ -232,13 +234,13 @@ const AdminReviewDashboard = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState>No product clicks yet.</EmptyState>
+                                <EmptyState>{tr("No product clicks yet.")}</EmptyState>
                             )}
                         </div>
 
                         <div className="admin-panel">
                             <div className="admin-panel-header">
-                                <h2>Common Issues</h2>
+                                <h2>{tr("Common Issues")}</h2>
                             </div>
                             {summary?.commonDiseases?.length ? (
                                 <div className="admin-rank-list">
@@ -250,13 +252,13 @@ const AdminReviewDashboard = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState>No issue data yet.</EmptyState>
+                                <EmptyState>{tr("No issue data yet.")}</EmptyState>
                             )}
                         </div>
 
                         <div className="admin-panel admin-panel--wide">
                             <div className="admin-panel-header">
-                                <h2>Recent Product Activity</h2>
+                                <h2>{tr("Recent Product Activity")}</h2>
                                 <span>{summary?.recentProductEvents?.length || 0}</span>
                             </div>
                             {summary?.recentProductEvents?.length ? (
@@ -264,12 +266,12 @@ const AdminReviewDashboard = () => {
                                     <table className="admin-table">
                                         <thead>
                                             <tr>
-                                                <th>Event</th>
-                                                <th>Product</th>
-                                                <th>Crop</th>
-                                                <th>Disease</th>
-                                                <th>Match</th>
-                                                <th>Time</th>
+                                                <th>{tr("Event")}</th>
+                                                <th>{tr("Product")}</th>
+                                                <th>{tr("Crop")}</th>
+                                                <th>{tr("Disease")}</th>
+                                                <th>{tr("Match")}</th>
+                                                <th>{tr("Time")}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -284,14 +286,14 @@ const AdminReviewDashboard = () => {
                                                             ? `${Math.round(event.matchScore)}%`
                                                             : event.matchedTerms?.slice(0, 2).join(', ') || '—'}
                                                     </td>
-                                                    <td>{formatDate(event.createdAt)}</td>
+                                                    <td>{formatDate(event.createdAt, tr.locale)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             ) : (
-                                <EmptyState>No product activity yet.</EmptyState>
+                                <EmptyState>{tr("No product activity yet.")}</EmptyState>
                             )}
                         </div>
                     </section>

@@ -1,3 +1,4 @@
+import DataConsentToggle from './DataConsentToggle.jsx';
 import FarmOverview from './dashboard/FarmOverview.jsx';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -454,6 +455,11 @@ const UserDashboardPanel = () => {
             </div>
 
             {/* ── Tab content ──────────────────────────────────────────────── */}
+            <details className="app-surface" style={{ padding: 16, margin: '16px 0' }}>
+                <summary>{t('photoPrivacy.title')}</summary>
+                <p>{t('photoPrivacy.accountHint')}</p>
+                <DataConsentToggle />
+            </details>
             <div className="udp-tab-content fade-slide-up udp-tab-content--delayed">
                 {tab === 'overview' && (
                     <>
