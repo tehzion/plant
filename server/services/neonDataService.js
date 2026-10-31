@@ -15,7 +15,7 @@ const DATASETS = Object.freeze({
     },
     mygap_logs: {
         table: 'mygap_logs', owner: 'user_id', key: 'id',
-        fields: ['id', 'type', 'notes', 'activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'created_at'], order: 'created_at',
+        fields: ['id', 'type', 'notes', 'activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'created_at'], order: 'created_at',
     },
     mygap_checklist: {
         table: 'mygap_checklist', owner: 'user_id', key: 'user_id',

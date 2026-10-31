@@ -610,3 +610,44 @@
     min-height: 48px;
     margin-bottom: 0;
 }
+
+/* Checklist: evidence text and "not applicable" */
+.checklist-row { display: flex; flex-direction: column; gap: 6px; }
+.checklist-row .checklist-item { flex: 1; }
+.checklist-row.is-na .checklist-item { background: var(--color-bg-secondary); color: var(--color-text-secondary); }
+.checklist-evidence { font-size: .78rem; line-height: 1.35; color: var(--color-text-secondary); }
+.na-badge { align-self: flex-start; padding: 1px 8px; border-radius: 999px; background: var(--color-border-light); color: var(--color-text-secondary); font-size: .7rem; font-weight: 700; }
+.checklist-na-btn { align-self: flex-end; min-height: 36px; padding: 4px 10px; border: none; background: none; color: var(--color-primary-dark); font-size: .8rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
+@media (min-width: 640px) {
+    .checklist-row { flex-direction: row; align-items: center; }
+    .checklist-na-btn { align-self: center; flex-shrink: 0; }
+}
+
+/* Logbook: record status, warnings and corrections */
+.mygap-safe-from { color: var(--color-primary-dark); font-weight: 600; }
+.mygap-phi-warning { display: flex; gap: 10px; margin: 0 0 16px; padding: 12px; border-radius: 12px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; }
+.mygap-phi-warning p { margin: 4px 0 0; }
+.log-status-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.log-status-row .log-sync-badge { margin-top: 0; }
+.log-edited-badge { padding: 2px 8px; border-radius: 999px; background: var(--color-border-light); color: var(--color-text-secondary); font-size: .75rem; font-weight: 700; }
+.log-safe-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: var(--color-brand-mist); color: var(--color-brand-emerald); font-size: .75rem; font-weight: 700; }
+.log-warning { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; color: #b45309; font-size: .85rem; font-weight: 600; }
+.log-missing { margin: 8px 0 0; color: #b45309; font-size: .8rem; }
+.log-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; margin-top: 8px; }
+.log-action-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 4px 10px; border: none; border-radius: 8px; background: none; color: var(--color-primary-dark); font-weight: 600; cursor: pointer; }
+.log-action-btn:hover { background: var(--color-brand-mist); }
+.log-action-btn--danger { color: #b91c1c; }
+.log-action-btn--danger:hover { background: #fef2f2; }
+.log-delete-confirm { display: grid; gap: 8px; margin-top: 10px; padding: 12px; border-radius: 10px; background: #fef2f2; border: 1px solid #fecaca; }
+.log-delete-confirm p { margin: 0; color: #7f1d1d; font-size: .85rem; }
+.log-delete-confirm input { min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--color-border); font: inherit; }
+.log-delete-confirm .btn-danger { background: #b91c1c; color: #fff; border: none; }
+
+/* Pest checks from scans (myGAP 4-4) */
+.pest-checks { margin: 0 0 20px; padding: 14px; border-radius: 12px; background: var(--color-brand-mist); border: 1px solid var(--color-brand-border); }
+.pest-checks__title { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1rem; color: var(--color-brand-ink); }
+.pest-checks__subtitle { margin: 0; font-size: .85rem; line-height: 1.45; color: var(--color-text-secondary); font-weight: 400; }
+.pest-checks__list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.pest-checks__item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #fff; }
+.pest-checks__item > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pest-checks__action { min-height: 44px; }

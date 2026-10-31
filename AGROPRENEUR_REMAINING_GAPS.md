@@ -79,3 +79,20 @@
 | P1 | `aiService.js` is ~3,900 lines. | Split into diagnosis, ask, farm-insights and products modules. |
 | P1 (partly fixed) | No linter in CI. | `npm run lint` added (it found a myGAP PDF crash and duplicate keys, now fixed). The `ci.yml` step must be added by a maintainer: the Claude GitHub App lacks `workflows` permission. 88 warnings (mostly unused variables) remain. |
 | P2 | `.env.production` is tracked although `.gitignore` excludes it (public keys only). | Untrack once the `VITE_*` values are set in the host's build environment. |
+
+---
+
+## Addendum — myGAP Phase 1 (31 October 2026)
+
+Based on the DOA myGAP food-crop scheme (MS 1784, myGAP 4 record forms, 6-1 checklist). Official DOA PDFs could not be fetched from the build environment; field lists come from indexed excerpts and should be checked against the current forms.
+
+| Priority | Item | Status |
+|---|---|---|
+| ~~P0~~ Fixed | Checklist auto-ticks overstated compliance (one irrigation log ticked "clean water", one pesticide log ticked "pesticide records"). | Only items the records fully show are auto-completed (complete pesticide records; date + plot + crop on every record). Water, storage, PPE, disposal and training are manual. Items can be marked not applicable and are excluded from the percentage. Rules in `shared/mygapCompliance.js`. |
+| ~~P1~~ Fixed | Pesticide record lacked myGAP 4-5 fields. | Active ingredient, LRMP no., area treated, target pest/disease and pre-harvest interval (PHI) days; safe harvest date shown; missing fields listed per record. Migration `0003` (additive). |
+| ~~P1~~ Fixed | No pre-harvest interval check. | Harvest form warns when a waiting period is still running on that plot; early harvests are flagged in the logbook and the PDF. |
+| ~~P1~~ Fixed | Scans not used as pest monitoring (myGAP 4-4). | Recent scans listed in the logbook with "Record treatment"; scans appear as a monitoring table in the PDF. |
+| ~~P1~~ Fixed | Plots typed freely. | Plot field suggests saved plots and fills the crop. |
+| ~~P1~~ Fixed | Records could not be corrected. | Edit and delete with a required reason; signed-in corrections keep previous values in `activity_revisions`; guest records keep their history on the entry. Records still waiting to sync cannot be edited until they sync. |
+| P1 | Phase 2: purchase and stock records, harvest/sales with lot codes, workers and training, post-harvest treatment, farm profile and renewal reminder. | Open. |
+| P2 | Phase 3: map to the 17 official elements with evidence, annual internal audit, audit pack in official layouts, registered-pesticide lookup. | Open — needs DOA forms and data. |

@@ -1,8 +1,10 @@
 import { jsPDF } from 'jspdf';
 import { createPdfTextRenderer } from './pdfTextRenderer';
 import { BRAND, createPdfPageFlow, drawBrandFooters, drawBrandHeader, getPdfTranslation, loadBrandLogo } from './pdfReportLayout';
+import { checklistCompletion, findPhiConflicts, logActivityDate, MYGAP_CHECKLIST_IDS, NOT_APPLICABLE, safeHarvestDateFor } from '../../shared/mygapCompliance.js';
+import { isHealthy } from './statusUtils';
 
-export const MYGAP_CHECKLIST_IDS = ['check1', 'check2', 'check3', 'check4', 'check5', 'check6', 'check7', 'check8'];
+export { MYGAP_CHECKLIST_IDS };
 
 const PENDING_FILL = [255, 247, 237];
 const PENDING_TEXT = [180, 83, 9];
@@ -10,10 +12,11 @@ const ROW_FILL = [248, 250, 252];
 
 const dateLocaleFor = (language) => (language === 'ms' ? 'ms-MY' : language === 'zh' ? 'zh-MY' : 'en-MY');
 
-const logDate = (log) => {
-    const value = log.activity_date || log.timestamp || log.created_at;
-    const date = value ? new Date(value) : null;
-    return date && !Number.isNaN(date.getTime()) ? date : null;
+const logDate = (log) => logActivityDate(log);
+
+const parseScanDate = (scan) => {
+    const date = new Date(scan.timestamp || scan.created_at || '');
+    return Number.isNaN(date.getTime()) ? null : date;
 };
 
 const uniqueValues = (logs, field) => [...new Set(logs.map((log) => String(log[field] || '').trim()).filter(Boolean))];
@@ -24,7 +27,7 @@ export const mygapReportFileName = (now = new Date()) => `myGAP-records-${now.to
  * Builds the myGAP record report: farm summary, checklist status, the full
  * activity logbook as a table, and a signed declaration block for audits.
  */
-export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, language = 'en', translations = {}, now = new Date() } = {}) => {
+export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, scans = [], language = 'en', translations = {}, now = new Date() } = {}) => {
     const doc = new jsPDF();
     const renderer = createPdfTextRenderer(doc);
     const rt = (key, fallback = key) => {
@@ -87,12 +90,13 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, la
     flow.yPos += 4;
 
     // Summary tiles.
-    const completedChecks = MYGAP_CHECKLIST_IDS.filter((id) => derivedChecklist[id]).length;
-    const complianceRate = Math.round((completedChecks / MYGAP_CHECKLIST_IDS.length) * 100);
+    const summary = checklistCompletion(derivedChecklist);
+    const completedChecks = summary.completed;
+    const complianceRate = summary.percent;
     const pesticideCount = sortedLogs.filter((log) => log.type === 'pesticide').length;
     const tiles = [
         [rt('mygap.complianceProgress', 'Compliance progress'), `${complianceRate}%`, BRAND.primary],
-        [rt('mygap.checklistTitle', 'Checklist'), `${completedChecks}/${MYGAP_CHECKLIST_IDS.length}`, BRAND.dark],
+        [rt('mygap.checklistTitle', 'Checklist'), `${completedChecks}/${summary.applicable}`, BRAND.dark],
         [rt('mygap.logbookTitle', 'Activity logbook'), String(sortedLogs.length), BRAND.dark],
         [rt('mygap.pesticideApplications', 'Pesticide applications'), String(pesticideCount), BRAND.dark],
     ];
@@ -114,25 +118,32 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, la
     await sectionTitle(rt('mygap.checklistTitle', 'Compliance checklist'));
     const completedLabel = rt('mygap.completed', 'Completed');
     const pendingLabel = rt('common.pending', 'Pending');
+    const naLabel = rt('mygap.naLabel', 'Not applicable');
     const badgeWidth = 30;
     for (const id of MYGAP_CHECKLIST_IDS) {
-        const complete = Boolean(derivedChecklist[id]);
+        const notApplicable = derivedChecklist[id] === NOT_APPLICABLE;
+        const complete = derivedChecklist[id] === true;
         const itemLabel = rt(`mygap.${id}`, id);
         const textWidth = contentWidth - badgeWidth - 12;
         const rowHeight = Math.max(renderer.measureTextHeight(itemLabel, textWidth, { fontSize: 9.5 }), 5) + 6;
         flow.checkPageBreak(rowHeight + 2);
         doc.setFillColor(...(complete ? BRAND.primaryLight : ROW_FILL));
+        const badge = notApplicable
+            ? { fill: [241, 245, 249], border: BRAND.border, text: BRAND.muted, label: naLabel }
+            : complete
+                ? { fill: BRAND.primary, border: BRAND.primary, text: [255, 255, 255], label: completedLabel }
+                : { fill: PENDING_FILL, border: PENDING_TEXT, text: PENDING_TEXT, label: pendingLabel };
         doc.setDrawColor(...BRAND.border);
         doc.roundedRect(14, flow.yPos, contentWidth, rowHeight, 2, 2, 'FD');
         await renderer.drawText(itemLabel, 18, flow.yPos + 3, { maxWidth: textWidth, fontSize: 9.5, color: BRAND.dark });
         const badgeX = pageWidth - 14 - badgeWidth - 3;
         const badgeHeight = 6;
         const badgeY = flow.yPos + (rowHeight - badgeHeight) / 2;
-        doc.setFillColor(...(complete ? BRAND.primary : PENDING_FILL));
-        doc.setDrawColor(...(complete ? BRAND.primary : PENDING_TEXT));
+        doc.setFillColor(...badge.fill);
+        doc.setDrawColor(...badge.border);
         doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 3, 3, 'FD');
-        await renderer.drawText(complete ? completedLabel : pendingLabel, badgeX, badgeY + 1.2, {
-            maxWidth: badgeWidth, fontSize: 8, fontStyle: 'bold', color: complete ? [255, 255, 255] : PENDING_TEXT, align: 'center', lineHeight: 1.1,
+        await renderer.drawText(badge.label, badgeX, badgeY + 1.2, {
+            maxWidth: badgeWidth, fontSize: 8, fontStyle: 'bold', color: badge.text, align: 'center', lineHeight: 1.1,
         });
         flow.yPos += rowHeight + 2;
     }
@@ -140,13 +151,16 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, la
 
     // Logbook table.
     const columns = [
-        { key: 'date', label: rt('mygap.colDate', 'Date'), width: 22 },
-        { key: 'activity', label: rt('mygap.colActivity', 'Activity'), width: 22 },
-        { key: 'plot', label: rt('mygap.colPlotCrop', 'Plot / crop'), width: 34 },
-        { key: 'product', label: rt('mygap.colProduct', 'Product & quantity'), width: 38 },
-        { key: 'operator', label: rt('mygap.colOperator', 'Done by'), width: 24 },
-        { key: 'notes', label: rt('mygap.colNotes', 'Notes'), width: contentWidth - 140 },
+        { key: 'date', label: rt('mygap.colDate', 'Date'), width: 20 },
+        { key: 'activity', label: rt('mygap.colActivity', 'Activity'), width: 20 },
+        { key: 'plot', label: rt('mygap.colPlotCrop', 'Plot / crop'), width: 28 },
+        { key: 'product', label: rt('mygap.colProduct', 'Product & quantity'), width: 42 },
+        { key: 'safe', label: rt('mygap.colSafeHarvest', 'Safe harvest'), width: 20 },
+        { key: 'operator', label: rt('mygap.colOperator', 'Done by'), width: 20 },
+        { key: 'notes', label: rt('mygap.colNotes', 'Notes'), width: contentWidth - 150 },
     ];
+    const conflicts = new Map(findPhiConflicts(sortedLogs).map((conflict) => [conflict.harvestId, conflict]));
+    const fieldLine = (key, fallback, value) => (value ? `${rt(key, fallback)}: ${value}` : '');
     const cellPadding = 1.8;
     const drawTableHeader = async () => {
         const headerHeight = Math.max(...columns.map((column) => renderer.measureTextHeight(column.label, column.width - cellPadding * 2, { fontSize: 8, fontStyle: 'bold', lineHeight: 1.2 }))) + cellPadding * 2;
@@ -170,9 +184,20 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, la
                 date: formatDate(logDate(log)),
                 activity: rt(`mygap.${log.type}Log`, log.type || '-'),
                 plot: [log.plot_id, log.crop].filter(Boolean).join(' / ') || '-',
-                product: [log.product_used, log.quantity].filter(Boolean).join(' – ') || '-',
+                product: [
+                    [log.product_used, log.quantity].filter(Boolean).join(' – '),
+                    fieldLine('mygap.activeIngredient', 'Active ingredient', log.active_ingredient),
+                    fieldLine('mygap.lrmpNo', 'LRMP no.', log.registration_no),
+                    fieldLine('mygap.areaTreated', 'Area treated', log.area_treated),
+                ].filter(Boolean).join('\n') || '-',
+                safe: formatDate(safeHarvestDateFor(log)),
                 operator: log.operator || '-',
-                notes: log.notes || '-',
+                notes: [
+                    fieldLine('mygap.targetPest', 'Pest or disease treated', log.target_pest),
+                    log.notes,
+                    conflicts.has(log.id) ? rt('mygap.phiConflict', 'Harvested before the waiting period ended (safe from {date}).').replace('{date}', formatDate(conflicts.get(log.id).safeFrom)) : '',
+                    log.updated_at ? `(${rt('mygap.edited', 'Edited')})` : '',
+                ].filter(Boolean).join('\n') || '-',
             };
             const rowHeight = Math.max(...columns.map((column) => renderer.measureTextHeight(cells[column.key], column.width - cellPadding * 2, { fontSize: 8, lineHeight: 1.25 }))) + cellPadding * 2;
             if (flow.yPos + rowHeight > pageHeight - 22) {
@@ -193,6 +218,54 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, la
                     color: column.key === 'activity' ? BRAND.primaryDark : BRAND.dark,
                     fontStyle: column.key === 'activity' ? 'bold' : 'normal',
                 });
+                x += column.width;
+            }
+            doc.setDrawColor(...BRAND.border);
+            doc.line(14, flow.yPos + rowHeight, pageWidth - 14, flow.yPos + rowHeight);
+            flow.yPos += rowHeight;
+        }
+        flow.yPos += 8;
+    }
+
+    // Pest monitoring: plant scans double as monitoring records (myGAP 4-4).
+    const monitoring = [...scans]
+        .map((scan) => ({ scan, date: parseScanDate(scan) }))
+        .filter(({ date }) => date)
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 40);
+    if (monitoring.length) {
+        await sectionTitle(rt('mygap.monitoringTitle', 'Pest monitoring (from plant scans)'), 26);
+        const monitorColumns = [
+            { key: 'date', label: rt('mygap.colDate', 'Date'), width: 24 },
+            { key: 'crop', label: rt('mygap.colPlotCrop', 'Plot / crop'), width: 46 },
+            { key: 'finding', label: rt('mygap.colFinding', 'Finding'), width: contentWidth - 70 },
+        ];
+        const drawMonitorHeader = async () => {
+            doc.setFillColor(...BRAND.primary);
+            doc.rect(14, flow.yPos, contentWidth, 7, 'F');
+            let x = 14;
+            for (const column of monitorColumns) {
+                await renderer.drawText(column.label, x + cellPadding, flow.yPos + 1.6, { maxWidth: column.width - cellPadding * 2, fontSize: 8, fontStyle: 'bold', color: [255, 255, 255], lineHeight: 1.2 });
+                x += column.width;
+            }
+            flow.yPos += 7;
+        };
+        await drawMonitorHeader();
+        for (const { scan, date } of monitoring) {
+            const cells = {
+                date: formatDate(date),
+                crop: [scan.plotId || scan.plot_id, scan.category || scan.plantType].filter(Boolean).join(' / ') || '-',
+                finding: isHealthy(scan) ? rt('mygap.healthyFinding', 'No disease found') : [scan.disease, scan.severity].filter(Boolean).join(' – ') || '-',
+            };
+            const rowHeight = Math.max(...monitorColumns.map((column) => renderer.measureTextHeight(cells[column.key], column.width - cellPadding * 2, { fontSize: 8, lineHeight: 1.25 }))) + cellPadding * 2;
+            if (flow.yPos + rowHeight > pageHeight - 22) {
+                doc.addPage();
+                flow.yPos = 20;
+                await drawMonitorHeader();
+            }
+            let x = 14;
+            for (const column of monitorColumns) {
+                await renderer.drawText(cells[column.key], x + cellPadding, flow.yPos + cellPadding, { maxWidth: column.width - cellPadding * 2, fontSize: 8, lineHeight: 1.25, color: BRAND.dark });
                 x += column.width;
             }
             doc.setDrawColor(...BRAND.border);

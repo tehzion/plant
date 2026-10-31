@@ -10,6 +10,7 @@ import {
 } from '../utils/localStorage';
 import { DEMO_LOGBOOK, DEMO_NOTES, DEMO_PLOTS, DEMO_SCANS } from '../utils/demoData';
 import { predictFarmRisk } from '../utils/aiFarmService';
+import { checklistCompletion, evaluateChecklistEvidence, resolveChecklist } from '../../shared/mygapCompliance.js';
 
 const ACKNOWLEDGED_ALERTS_KEY = 'plant_ack_alerts';
 
@@ -128,28 +129,21 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key, ma
 
     const recentScans = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
 
-    const autoCheckedItems = useMemo(() => {
-        const hasPesticideLogo = notes.some(n => n.activity_type === 'spray' || (n.activity_type === 'note' && n.chemical_name))
-                               || logbook.some(l => l.type === 'pesticide');
-        const hasScoutLogs = notes.some(n => ['scout', 'inspect', 'prune'].includes(n.activity_type));
-        const hasIrrigationLogs = logbook.some(l => l.type === 'irrigation');
-        const hasTraceability = plots.length > 0 && (notes.length + logbook.length) > 5;
+    // Only items the records fully show are completed automatically; the rest
+    // stay with the farmer (see shared/mygapCompliance.js).
+    const checklistEvidence = useMemo(
+        () => evaluateChecklistEvidence({ logs: logbook, notes, scans: scanHistory }),
+        [logbook, notes, scanHistory],
+    );
 
-        return {
-            check1: hasPesticideLogo,
-            check3: hasScoutLogs,
-            check4: hasIrrigationLogs,
-            check8: hasTraceability,
-        };
-    }, [notes, logbook, plots]);
+    const autoCheckedItems = useMemo(() => Object.fromEntries(
+        Object.entries(checklistEvidence).map(([id, item]) => [id, Boolean(item.auto)]),
+    ), [checklistEvidence]);
 
-    const derivedChecklist = useMemo(() => {
-        const combined = { ...checklistState };
-        Object.keys(autoCheckedItems).forEach(key => {
-            if (autoCheckedItems[key]) combined[key] = true;
-        });
-        return combined;
-    }, [checklistState, autoCheckedItems]);
+    const derivedChecklist = useMemo(
+        () => resolveChecklist(checklistState, checklistEvidence),
+        [checklistState, checklistEvidence],
+    );
 
     const { hasLoggedToday, streak, complianceNudges } = useMemo(() => {
         // Use local date string YYYY-MM-DD
@@ -218,12 +212,8 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key, ma
         return { hasLoggedToday: hasLog, streak: currentStreak, complianceNudges: nudges };
     }, [notes, logbook, scanHistory, t]);
 
-    const checklistPct = useMemo(() => {
-        const values = Object.values(derivedChecklist);
-        if (values.length === 0) return 0;
-        // The total number of checklist items in MyGap is 8
-        return Math.round((values.filter(Boolean).length / 8) * 100);
-    }, [derivedChecklist]);
+    const checklistSummary = useMemo(() => checklistCompletion(derivedChecklist), [derivedChecklist]);
+    const checklistPct = checklistSummary.percent;
 
     const logs = useMemo(() => logbook.slice(0, 5), [logbook]);
 
@@ -346,6 +336,8 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key, ma
         setChecklistState,
         derivedChecklist,
         autoCheckedItems,
+        checklistEvidence,
+        checklistSummary,
         hasLoggedToday,
         streak,
         complianceNudges,
