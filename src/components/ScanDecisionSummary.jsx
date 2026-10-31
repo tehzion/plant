@@ -34,11 +34,12 @@ const ScanDecisionSummary = ({ result, expertReview = null }) => {
         : expertReview?.verdict === 'confirmed'
             ? label('assessment.ux.expertConfirmed', 'The expert agreed with this result.')
             : label('assessment.ux.expertUncertain', 'The expert needs more information to confirm this result.');
-    return <section className={`scan-decision app-surface scan-decision--${result.tone}`} aria-label={copy.primary}>
+    const summaryLabel = result.healthy ? t('results.healthy') : copy.primary;
+    return <section className={`scan-decision app-surface scan-decision--${result.tone}`} aria-label={summaryLabel}>
         <div className="scan-decision__header">
             <div>
                 <p className="scan-decision__eyebrow">
-                    {result.isDemo ? t('results.demoModeTitle') : copy.primary}
+                    {result.isDemo ? t('results.demoModeTitle') : summaryLabel}
                 </p>
                 <h2>{result.disease || t('results.unknownDisease')}</h2>
                 <p className="scan-decision-status">{getDiagnosisStatusLabel(t, result.resultState)}</p>

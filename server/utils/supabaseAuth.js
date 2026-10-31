@@ -33,8 +33,8 @@ export const getBearerToken = (req) => {
 };
 
 export const verifyAuthenticatedUser = async (req) => {
-    const supabase = getServiceClient();
     const token = getBearerToken(req);
+    const supabase = getServiceClient() || getAuthenticatedClient(token);
     if (!supabase || !token) {
         const error = new Error('Sign-in is required.');
         error.status = 401;

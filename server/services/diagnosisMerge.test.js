@@ -10,6 +10,25 @@ const merge = (extra = {}) => mergeDiagnosisResult({ stageOne: stage, stageTwo: 
     speciesAssessment: { confidence: 55 }, ...extra });
 
 describe('diagnosis merge safeguards', () => {
+    it('preserves an unhealthy status instead of matching healthy inside unhealthy', () => {
+        expect(merge().healthStatus).toBe('unhealthy');
+    });
+    it('sends a contradictory healthy disease diagnosis to review without treatment', () => {
+        const result = merge({ stageOne: { ...stage, diagnosis_assessment: { ...stage.diagnosis_assessment, healthStatus: 'healthy' } } });
+        expect(result.healthStatus).toBe('unknown');
+        expect(result.validationIssues).toContain('conflicting_health_status');
+        expect(result.treatmentEligible).toBe(false);
+        expect(result.treatments).toEqual([]);
+    });
+    it('keeps an explicit unknown status under review', () => {
+        const result = merge({ stageOne: { ...stage, diagnosis_assessment: { ...stage.diagnosis_assessment, healthStatus: 'unknown' } } });
+        expect(result.healthStatus).toBe('unknown');
+        expect(result.treatmentEligible).toBe(false);
+    });
+    it('retains unknown when evidence is insufficient', () => {
+        const result = merge({ stageOne: { capture_assessment: { imageQualityConfidence: 20, requiresRetake: true }, diagnosis_assessment: { primaryDiagnosis: 'No Issues', healthStatus: 'healthy', diagnosisConfidence: 20 } } });
+        expect(result.healthStatus).toBe('unknown');
+    });
     it('propagates a poor close-up into the overall retake decision', () => {
         const result = merge({ imageQuality: { tree: { qualityConfidence: 95 }, leaf: { qualityConfidence: 35, requiresRetake: true } } });
         expect(result.requiresRetake).toBe(true); expect(result.resultState).toBe('needs_closer_photo');

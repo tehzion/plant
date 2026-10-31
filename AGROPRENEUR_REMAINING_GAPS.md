@@ -69,7 +69,7 @@
 | Priority | Gap | Status / next action |
 |---|---|---|
 | P0 | One production host for the API. `vercel.json`, two Vercel projects and `render.yaml` all exist, and a workflow keeps a Render instance warm. | **Open — owner decision.** Pick Render or Vercel for the API, delete the other config, and keep env vars in one place. |
-| ~~P0~~ Fixed | OpenRouter keys were sent to api.openai.com. | `server/services/aiProvider.js` routes to OpenRouter when `OPENROUTER_API_KEY` (or an `sk-or-` key) is set and prefixes model ids with `openai/`. |
+| ~~P0~~ Fixed | OpenRouter support. | `server/utils/aiProvider.js` (PR #4): set `AI_PROVIDER=openrouter` and `OPENROUTER_API_KEY`; model ids get the `openai/` prefix. |
 | ~~P0~~ Fixed | Daily per-IP and whole-server AI caps were in-memory, so each serverless instance counted separately. | Both now use the Neon `ai_usage_counters` table, like the per-identity quota. The 60/min burst limiter is still per instance; fine on Render, approximate on Vercel. |
 | ~~P0~~ Fixed | High-severity advisories (zod, undici) via `openai@4`. | Upgraded to `openai@7` with npm overrides; no high advisories remain. Moderate ones are in build-time tooling (`vite-plugin-pwa`, `javascript-obfuscator`). |
 | ~~P1~~ Fixed | AI abort signals were sent as a JSON body field (`"signal": {}`), so timed-out requests kept running and billing tokens. | Signal is now passed as a request option. |

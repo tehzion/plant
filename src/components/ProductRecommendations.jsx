@@ -1,3 +1,4 @@
+import { STORE_URL } from '../utils/store.js';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { suppliers } from '../data/productRecommendations.js';
@@ -421,7 +422,7 @@ const ProductRecommendations = ({
               <span>{t('common.retry') || 'Try Again'}</span>
             </button>
             <a
-              href="https://www.mojosense.app/kanb/products/"
+              href={STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="add-to-cart-button add-to-cart-button--quiet"

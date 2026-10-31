@@ -55,4 +55,25 @@ describe('wooCommerceService filtered product queries', () => {
             tags: ['Fungicide'],
         });
     });
+
+    it('reads public Store API products without credentials and waits for the body', async () => {
+        vi.stubEnv('WOOCOMMERCE_CONSUMER_KEY', '');
+        vi.stubEnv('WOOCOMMERCE_CONSUMER_SECRET', '');
+        try {
+            fetchMock.mockImplementation(async (_url, options) => ({
+                ok: true, status: 200,
+                json: async () => {
+                    if (options.signal.aborted) throw Error('body was aborted');
+                    return [{ id: 702, name: 'Fertilizer', prices: { price: '11500', currency_minor_unit: 2 }, is_in_stock: true, is_purchasable: true, categories: [], tags: [] }];
+                },
+            }));
+            const products = await wooCommerceService.getProductsByTagIds([], [], { searchTerms: ['unique-fertilizer-test'] });
+            expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/wp-json/wc/store/v1/products');
+            expect(fetchMock.mock.calls[0][1].headers.Authorization).toBeUndefined();
+            expect(products[0]).toMatchObject({ id: 702, price: '115.00', inStock: true, availability: 'in_stock', purchasable: true });
+        } finally {
+            vi.stubEnv('WOOCOMMERCE_CONSUMER_KEY', 'consumer-key');
+            vi.stubEnv('WOOCOMMERCE_CONSUMER_SECRET', 'consumer-secret');
+        }
+    });
 });
