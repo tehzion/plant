@@ -32,3 +32,5 @@ server/dataset/
 *.sw?
 .vercel
 .neon
+
+build_log.txt

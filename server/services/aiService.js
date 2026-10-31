@@ -7,7 +7,6 @@ import OpenAI from 'openai';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import NodeCache from 'node-cache';
 import { withAbortableTimeout } from '../utils/requestTimeout.js';
 import { getAIClientOptions, getBaseModelName, getFallbackModel, getPrimaryModel, hasAIApiKey } from './aiProvider.js';
 import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
@@ -38,9 +37,6 @@ const getOpenAIClient = () => {
 const OPENAI_PRIMARY_MODEL = getPrimaryModel();
 const OPENAI_FALLBACK_MODEL = getFallbackModel();
 
-// Cache product recommendations for 1 hour
-const recommendationCache = new NodeCache({ stdTTL: 3600 });
-
 const usesModernCompletionLimit = (model = '') => /^(gpt-5|o\d|o[1-9]|gpt-oss)/i.test(getBaseModelName(model));
 const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(getBaseModelName(model));
 
@@ -53,7 +49,7 @@ const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(getBase
  *   accept that parameter and will throw a 400 if it is present.
  * - All other options are forwarded unchanged.
  */
-const createChatCompletion = ({ model, messages, maxTokens, temperature, ...options }) => {
+const createChatCompletion = ({ model, messages, maxTokens, temperature, signal, ...options }) => {
     const request = {
         ...options,
         model,
@@ -67,7 +63,8 @@ const createChatCompletion = ({ model, messages, maxTokens, temperature, ...opti
         request.temperature = temperature;
     }
 
-    return getOpenAIClient().chat.completions.create(request);
+    // The abort signal is a request option, not a body field.
+    return getOpenAIClient().chat.completions.create(request, signal ? { signal } : undefined);
 };
 
 const normalizePlantNetOrgan = (value) => {
@@ -3704,179 +3701,6 @@ export const buildProductConsultation = (diagnosisInfo = {}, intent = PRODUCT_RE
         reason: getConsultationReason(intent, language),
     };
 };
-
-export async function recommendProductTags(diagnosisInfo, availableTags, availableCategories = [], language = 'en', diseaseProductRules = DEFAULT_DISEASE_PRODUCT_RULES, options = {}) {
-    if ((!availableTags || availableTags.length === 0) && (!availableCategories || availableCategories.length === 0)) {
-        console.warn('⚠️ No WooCommerce tags/categories available for product recommendation.');
-        return {
-            treatmentTagIds: [],
-            treatmentCategoryIds: [],
-            fertilizerTagIds: [],
-            fertilizerCategoryIds: [],
-            supplementTagIds: [],
-            supplementCategoryIds: [],
-            reasoning: '',
-        };
-    }
-
-    const safeLanguage = language === 'ms' ? 'ms' : language === 'zh' ? 'zh' : 'en';
-    const diagnosisStatus = String(diagnosisInfo.status || '').toLowerCase();
-    const suspectedOrLikely = ['likely', 'uncertain', 'retake_required', 'possible'].includes(diagnosisStatus)
-        || Boolean(diagnosisInfo.needsMoreEvidence || diagnosisInfo.requiresRetake);
-    const diagnosticEvidence = diagnosisInfo.diagnosticEvidence && typeof diagnosisInfo.diagnosticEvidence === 'object'
-        ? diagnosisInfo.diagnosticEvidence
-        : {};
-    const cacheKey = buildProductRecommendationCacheKey(diagnosisInfo, safeLanguage);
-    const cached = recommendationCache.get(cacheKey);
-    if (cached) {
-        console.log(`Product recommendation cache HIT for ${OPENAI_PRIMARY_MODEL}: ${cacheKey}`);
-        return cached;
-    }
-
-    try {
-        console.log(`Recommending products with ${OPENAI_PRIMARY_MODEL} based on diagnosis...`);
-
-        // Build compact catalogs for the prompt
-        const tagCatalog = (availableTags || [])
-            .map(t => `[TAG:${t.id}] ${t.name}`)
-            .join('\n');
-
-        const categoryCatalog = (availableCategories || [])
-            .map(c => `[CAT:${c.id}] ${c.name}`)
-            .join('\n');
-
-        const response = await createChatCompletion({
-            model: OPENAI_PRIMARY_MODEL,
-            response_format: { type: "json_object" },
-            messages: [
-                {
-                    role: 'system',
-                    content: `You are an agricultural product recommendation expert for a Malaysian e-commerce store. Given a plant disease diagnosis, you must select the most relevant product tags AND categories from the store's catalog.
-
-You MUST split your recommendations into THREE groups:
-1. **Treatment**: Products to treat the diagnosed disease/issue (fungicides, disease control, pest control, soil treatment, recovery products)
-2. **Fertilizer**: Primary nutrients and base fertilizers (NPK, compost, organic-fertilizer, urea, potash, phosphate)
-3. **Supplement**: Secondary nutrients, bio-stimulants, and enhancers (trace-elements, seaweed extract, humic acid, amino acids, root boosters)
-
-Rules:
-- Select 1-3 tag IDs AND 1-2 category IDs for EACH group (if applicable)
-- For healthy plants, return maintenance fertilizer or supplement IDs when the catalog supports them.
-- IMPORTANT: You MUST heavily prioritize selecting WooCommerce Tags/Categories that contain or exactly match the "EXPLICIT PRODUCT SEARCH HINTS" provided below.
-- For healthy plants: treatment group can be empty, but focus on fertilizer and supplement.
-- For unhealthy plants: treatment group should address the specific disease.
-- For likely/suspected diagnoses, prefer cautious or IPM-aligned treatment supplies and state in the reasoning that field confirmation and physical product labels are required before use.
-- Do not recommend broad chemical disease-control products from weak evidence alone. If evidence is weak or retake is required, treatment can be empty and fertilizer/supplement can be general support only.
-- Fertilizer and supplement recommendations must be tied to confirmed/possible nutrition issues or healthy maintenance. Never use them as a cure for pest, fungal, bacterial, or other disease findings.
-- Fallback/exploratory products must not be described as diagnosis-specific.
-- Return ONLY IDs that exist in the provided catalogs
-- Output valid JSON only
-- Keep the reasoning short, factual, and non-promotional
-- Return the "reasoning" field in ${safeLanguage === 'ms' ? 'Bahasa Malaysia' : safeLanguage === 'zh' ? 'Simplified Chinese' : 'English'}`
-                },
-                {
-                    role: 'user',
-                    content: `PLANT DIAGNOSIS:
-- Plant Type: ${diagnosisInfo.plantType || 'Unknown'}
-- Disease: ${diagnosisInfo.disease || 'None'}
-- Diagnosis Status: ${diagnosisInfo.status || 'unknown'}
-- Overall Confidence: ${Number.isFinite(Number(diagnosisInfo.confidence)) ? `${diagnosisInfo.confidence}%` : 'unknown'}
-- Diagnosis Confidence: ${Number.isFinite(Number(diagnosisInfo.diagnosisConfidence)) ? `${diagnosisInfo.diagnosisConfidence}%` : 'unknown'}
-- Needs More Evidence: ${diagnosisInfo.needsMoreEvidence ? 'yes' : 'no'}
-- Requires Retake: ${diagnosisInfo.requiresRetake ? 'yes' : 'no'}
-- Health Status: ${diagnosisInfo.healthStatus || 'unknown'}
-- Pathogen Type: ${diagnosisInfo.pathogenType || 'None'}
-- Disease Category: ${diagnosisInfo.diseaseCategory || 'unknown'}
-- Symptoms: ${Array.isArray(diagnosisInfo.symptoms) ? diagnosisInfo.symptoms.join(', ') : (diagnosisInfo.symptoms || 'None')}
-- Immediate Actions: ${Array.isArray(diagnosisInfo.immediateActions) ? diagnosisInfo.immediateActions.join(', ') : (diagnosisInfo.immediateActions || 'None')}
-- Treatments Suggested: ${Array.isArray(diagnosisInfo.treatments) ? diagnosisInfo.treatments.join(', ') : (diagnosisInfo.treatments || 'None')}
-- Prevention Suggested: ${Array.isArray(diagnosisInfo.prevention) ? diagnosisInfo.prevention.join(', ') : (diagnosisInfo.prevention || 'None')}
-- Nutrition Status: ${diagnosisInfo.nutritionalStatus || 'none'}
-- Evidence Category: ${diagnosticEvidence.likelyCauseCategory || 'unknown'}
-- Evidence For: ${Array.isArray(diagnosticEvidence.evidenceFor) ? diagnosticEvidence.evidenceFor.join(', ') : 'None'}
-- Evidence Against: ${Array.isArray(diagnosticEvidence.evidenceAgainst) ? diagnosticEvidence.evidenceAgainst.join(', ') : 'None'}
-- Recommendation Caution Mode: ${suspectedOrLikely ? 'likely/suspected - confirm before use' : 'confirmed/maintenance'}
-
-EXPLICIT PRODUCT SEARCH HINTS (Use these strict keywords to immediately find matching tags below):
-${Array.isArray(diagnosisInfo.productSearchTags) ? diagnosisInfo.productSearchTags.join(', ') : (diagnosisInfo.productSearchTags || 'None')}
-
-AVAILABLE PRODUCT TAGS:
-${tagCatalog}
-
-AVAILABLE PRODUCT CATEGORIES:
-${categoryCatalog}
-
-Return JSON with three separate recommendation groups:
-{
-  "treatment": {
-    "tagIds": [123],
-    "categoryIds": [10]
-  },
-  "fertilizer": {
-    "tagIds": [456],
-    "categoryIds": [30]
-  },
-  "supplement": {
-    "tagIds": [789],
-    "categoryIds": [40]
-  },
-  "reasoning": "Brief explanation"
-}`
-                }
-            ],
-            maxTokens: 600,
-            temperature: 0.3,
-            signal: options.signal,
-        });
-
-        const content = response.choices[0].message.content;
-        const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-
-        if (!jsonMatch) {
-            console.error(`${OPENAI_PRIMARY_MODEL} product recommendation: Failed to parse response`);
-            return { treatmentTagIds: [], treatmentCategoryIds: [], fertilizerTagIds: [], fertilizerCategoryIds: [], supplementTagIds: [], supplementCategoryIds: [] };
-        }
-
-        const result = JSON.parse(jsonMatch[0]);
-
-        const validatedOutput = validateProductRecommendationSelection({
-            treatmentTagIds: result.treatment?.tagIds || [],
-            treatmentCategoryIds: result.treatment?.categoryIds || [],
-            fertilizerTagIds: result.fertilizer?.tagIds || [],
-            fertilizerCategoryIds: result.fertilizer?.categoryIds || [],
-            supplementTagIds: result.supplement?.tagIds || [],
-            supplementCategoryIds: result.supplement?.categoryIds || [],
-            reasoning: result.reasoning || ''
-        }, availableTags, availableCategories);
-        const output = applyCuratedProductRulesToRecommendation(
-            validatedOutput,
-            availableTags,
-            availableCategories,
-            diagnosisInfo,
-            diseaseProductRules,
-        );
-
-        console.log(`${OPENAI_PRIMARY_MODEL} recommended Treatment: ${output.treatmentTagIds.length} | Fertilizer: ${output.fertilizerTagIds.length} | Supplement: ${output.supplementTagIds.length}`);
-        console.log(`   Reason: ${output.reasoning}`);
-
-        // Cache this recommendation
-        recommendationCache.set(cacheKey, output);
-
-        return output;
-
-    } catch (error) {
-        console.error(`${OPENAI_PRIMARY_MODEL} product recommendation failed:`, error.message);
-        return {
-            treatmentTagIds: [],
-            treatmentCategoryIds: [],
-            fertilizerTagIds: [],
-            fertilizerCategoryIds: [],
-            supplementTagIds: [],
-            supplementCategoryIds: [],
-            reasoning: '',
-        };
-    }
-}
 
 /**
  * ----------------------------------------------------------------------------------
