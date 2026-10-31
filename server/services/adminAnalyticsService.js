@@ -1,5 +1,5 @@
 import { getNeonPool, queryNeon } from '../utils/neonDatabase.js';
-import { getServiceClient } from '../utils/supabaseAuth.js';
+import { getAuthenticatedClient, getServiceClient } from '../utils/supabaseAuth.js';
 
 const ADMIN_SUMMARY_DEFAULT_DAYS = 30;
 const ADMIN_SUMMARY_MAX_LIMIT = 50;
@@ -19,8 +19,8 @@ const normalizeList = (value, limit = 5) => (Array.isArray(value) ? value : [])
     .filter(Boolean)
     .slice(0, limit);
 
-const getAdminClient = () => {
-    return getServiceClient();
+const getAdminClient = (token) => {
+    return getServiceClient() || getAuthenticatedClient(token);
 };
 
 const getBearerToken = (req) => {
@@ -129,7 +129,8 @@ const runSelect = async (table, select, sinceIso, limit) => {
 };
 
 export const verifyAdminRequest = async (req) => {
-    const client = getAdminClient();
+    const token = getBearerToken(req);
+    const client = getAdminClient(token);
     const adminEmails = getAdminEmails();
     if (!client || adminEmails.size === 0) {
         const error = new Error('Admin analytics is not configured.');
@@ -137,7 +138,6 @@ export const verifyAdminRequest = async (req) => {
         throw error;
     }
 
-    const token = getBearerToken(req);
     if (!token) {
         const error = new Error('Admin sign-in is required.');
         error.status = 401;
