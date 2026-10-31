@@ -752,6 +752,13 @@ app.post('/api/analyze', async (req, res, next) => {
             decisionShadow = { status: 'unavailable', reason: 'checker_failed' };
         }
 
+        if (decisionShadow.status !== 'skipped') {
+            console.log(JSON.stringify({ event: 'decision_shadow', requestId: req.requestId,
+                status: decisionShadow.status, reason: decisionShadow.reason || null,
+                wouldAddReview: decisionShadow.wouldAddReview ?? null,
+                durationMs: decisionShadow.durationMs ?? null, costUsd: decisionShadow.costUsd ?? null }));
+        }
+
         if (requestController.signal.aborted) throw new Error('Analysis request cancelled');
 
         // 6. Cache Result (24 Hours)
