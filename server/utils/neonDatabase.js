@@ -1,6 +1,10 @@
 import pg from 'pg';
 
 const { Pool } = pg;
+// Return SQL "date" values as plain YYYY-MM-DD text. The default parser turns
+// them into a timestamp at the server's midnight, which shifts the day in
+// other time zones.
+pg.types?.setTypeParser?.(1082, (value) => value);
 let pool;
 let configuredUrl;
 

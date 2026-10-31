@@ -1,8 +1,9 @@
 import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
+import { parsePHIDays } from './phi.js';
 import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
-import { fetchNeonRows, neonDataRequest, neonDataRowRequest } from './neonApi.js';
+import { fetchNeonRows, neonApiRequest, neonDataRequest, neonDataRowRequest } from './neonApi.js';
 import { queueSyncOperation } from './syncQueue.js';
 
 const STORAGE_KEY = 'sea_plant_scan_history';
@@ -319,7 +320,7 @@ const optionalText = (value, max = 200) => {
 
 // Structured myGAP record fields. Quantity is recorded exactly as the farmer
 // entered it; the app never calculates or suggests chemical dosages.
-export const LOGBOOK_DETAIL_FIELDS = ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator'];
+export const LOGBOOK_DETAIL_FIELDS = ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'updated_at'];
 
 export const toLogbookRow = (log = {}, userId) => ({
     id: String(log.id ?? crypto.randomUUID()),
@@ -332,6 +333,12 @@ export const toLogbookRow = (log = {}, userId) => ({
     product_used: optionalText(log.product_used ?? log.productUsed),
     quantity: optionalText(log.quantity, 100),
     operator: optionalText(log.operator, 120),
+    active_ingredient: optionalText(log.active_ingredient, 200),
+    registration_no: optionalText(log.registration_no, 60),
+    area_treated: optionalText(log.area_treated, 60),
+    target_pest: optionalText(log.target_pest, 200),
+    phi_days: parsePHIDays(log.phi_days),
+    linked_scan_id: optionalText(log.linked_scan_id, 200),
     created_at: log.timestamp || log.created_at || new Date().toISOString(),
 });
 
@@ -341,6 +348,7 @@ export const fromLogbookRow = (row = {}) => ({
     type: row.type,
     notes: row.notes,
     ...Object.fromEntries(LOGBOOK_DETAIL_FIELDS.map((field) => [field, row[field] ?? null])),
+    activity_date: row.activity_date ? String(row.activity_date).slice(0, 10) : null,
     ...(row.syncStatus ? { syncStatus: row.syncStatus } : {}),
 });
 
@@ -712,6 +720,57 @@ export const saveLogEntry = async (logEntry, userId = null) => {
     if (!await persistIndexedGuestRecord('logbook', newLog)) return null;
     logs.unshift(newLog);
     return safeWrite(LOGBOOK_KEY, logs).ok ? newLog : null;
+};
+
+// Corrections keep the earlier values and the farmer's reason. Signed-in
+// records are corrected on the server (which logs each revision); guest
+// records keep their correction history on the entry itself.
+const LOGBOOK_CORRECTABLE_FIELDS = ['type', 'notes', ...LOGBOOK_DETAIL_FIELDS.filter((field) => field !== 'updated_at')];
+
+const pickCorrectableChanges = (changes = {}) => Object.fromEntries(
+    LOGBOOK_CORRECTABLE_FIELDS.filter((field) => changes[field] !== undefined).map((field) => [field, changes[field]]),
+);
+
+export const updateLogEntry = async (id, changes, reason, userId = null) => {
+    const picked = pickCorrectableChanges(changes);
+    if (isCloudUser(userId)) {
+        const result = await neonApiRequest(`/api/mygap/logs/${encodeURIComponent(id)}/correct`, {
+            method: 'POST',
+            body: JSON.stringify({ changes: picked, reason }),
+        });
+        return fromLogbookRow(result.row || result.data || {});
+    }
+    const logs = safeRead(LOGBOOK_KEY, []);
+    const index = logs.findIndex((log) => String(log.id) === String(id));
+    if (index < 0) throw new Error('Record not found.');
+    const current = logs[index];
+    const previous = Object.fromEntries(Object.keys(picked).filter((field) => (current[field] ?? null) !== (picked[field] ?? null)).map((field) => [field, current[field] ?? null]));
+    if (!Object.keys(previous).length) return current;
+    const updatedAt = new Date().toISOString();
+    const updated = {
+        ...current,
+        ...picked,
+        updated_at: updatedAt,
+        corrections: [...(current.corrections || []), { at: updatedAt, reason, previous }],
+    };
+    logs[index] = updated;
+    if (!safeWrite(LOGBOOK_KEY, logs).ok) throw new Error('Could not save the correction on this device.');
+    return updated;
+};
+
+export const deleteLogEntry = async (id, reason, userId = null) => {
+    if (isCloudUser(userId)) {
+        await neonApiRequest(`/api/mygap/logs/${encodeURIComponent(id)}/delete`, {
+            method: 'POST',
+            body: JSON.stringify({ reason }),
+        });
+        return true;
+    }
+    const logs = safeRead(LOGBOOK_KEY, []);
+    const remaining = logs.filter((log) => String(log.id) !== String(id));
+    if (remaining.length === logs.length) throw new Error('Record not found.');
+    if (!safeWrite(LOGBOOK_KEY, remaining).ok) throw new Error('Could not delete the record on this device.');
+    return true;
 };
 
 export const getLogbook = (userId = null, options = {}) => {

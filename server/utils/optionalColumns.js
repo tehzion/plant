@@ -1,14 +1,16 @@
-// Columns added by neon/migrations/0002. If the server is deployed before that
+// Columns added by neon/migrations/0002 and 0003. If the server is deployed before that
 // migration runs, Postgres reports an undefined column (42703). Rather than
 // failing the save, the structured values are folded into the free-text notes
 // so nothing the farmer entered is lost.
 export const OPTIONAL_COLUMNS = Object.freeze({
-    mygap_logs: ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator'],
+    mygap_logs: ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'updated_at'],
 });
 
 const LABELS = {
     activity_date: 'Date', plot_id: 'Plot', crop: 'Crop',
     product_used: 'Product', quantity: 'Quantity recorded', operator: 'Operator',
+    active_ingredient: 'Active ingredient', registration_no: 'LRMP no.', area_treated: 'Area treated',
+    target_pest: 'Target pest/disease', phi_days: 'PHI days', linked_scan_id: 'Scan', updated_at: 'Corrected',
 };
 
 export const isUndefinedColumnError = (error) => error?.code === '42703';

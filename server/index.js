@@ -19,6 +19,7 @@ import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
 import { trackAiUsage } from './utils/aiUsage.js';
+import { correctMygapLog, deleteMygapLog, listMygapLogRevisions } from './services/mygapRecordService.js';
 import { buildRecommendationSnapshot, saveRecommendationSnapshot } from './services/recommendationSnapshotService.js';
 import { captureError, flushErrorTracking, initErrorTracking } from './utils/errorTracking.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
@@ -247,6 +248,34 @@ app.post('/api/data/:table/:id', async (req, res, next) => {
 
 app.use('/api/', limiter);
 app.use('/api/', validateApiRequest);
+
+// myGAP logbook corrections keep the previous values and a reason, so the
+// record stays traceable for audits.
+const mapMissingColumn = (error) => (error?.code === '42703'
+    ? Object.assign(new Error('Record corrections are being set up. Please try again later.'), { status: 503 })
+    : error);
+
+app.post('/api/mygap/logs/:id/correct', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        const row = await correctMygapLog(user.id, req.params.id, req.body?.changes, req.body?.reason);
+        res.json({ row, data: row });
+    } catch (error) { next(mapMissingColumn(error)); }
+});
+
+app.post('/api/mygap/logs/:id/delete', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        res.json(await deleteMygapLog(user.id, req.params.id, req.body?.reason));
+    } catch (error) { next(mapMissingColumn(error)); }
+});
+
+app.get('/api/mygap/logs/:id/revisions', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        res.json({ revisions: await listMygapLogRevisions(user.id, req.params.id) });
+    } catch (error) { next(error); }
+});
 
 app.get('/api/reports/summary', async (req, res, next) => {
     try {

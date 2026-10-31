@@ -1,16 +1,6 @@
-export const MAX_PHI_DAYS = 3650;
+// The waiting-period rules live in shared/mygapCompliance.js so the PHI
+// calculator, the logbook and the report always agree.
+export { MAX_PHI_DAYS, parsePhiDays as parsePHIDays, addDays } from '../../shared/mygapCompliance.js';
+import { addDays } from '../../shared/mygapCompliance.js';
 
-export const parsePHIDays = (value) => {
-    const normalized = String(value ?? '').trim();
-    if (!normalized || !/^\d+$/.test(normalized)) return null;
-
-    const days = Number(normalized);
-    return Number.isInteger(days) && days >= 0 && days <= MAX_PHI_DAYS ? days : null;
-};
-
-export const calculateSafeHarvestDate = (days, from = new Date()) => {
-    const safeDate = new Date(from);
-    safeDate.setHours(0, 0, 0, 0);
-    safeDate.setDate(safeDate.getDate() + days);
-    return safeDate;
-};
+export const calculateSafeHarvestDate = (days, from = new Date()) => addDays(from, days);

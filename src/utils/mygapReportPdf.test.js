@@ -36,6 +36,20 @@ describe('myGAP report PDF', () => {
         expect(pdfText(doc)).toContain('Pengakuan');
     });
 
+    it('shows not-applicable items, waiting-period conflicts and scan monitoring', async () => {
+        const records = [
+            { id: 's', type: 'pesticide', activity_date: '2026-10-01', plot_id: 'Blok A', crop: 'Durian', product_used: 'Mancozeb', registration_no: 'LRMP R1/99', phi_days: 14, notes: 'spray' },
+            { id: 'h', type: 'harvest', activity_date: '2026-10-05', plot_id: 'Blok A', crop: 'Durian', notes: 'early' },
+        ];
+        const scans = [{ id: 'scan-1', timestamp: '2026-09-30T08:00:00Z', disease: 'Leaf spot', category: 'Durian', healthStatus: 'unhealthy' }];
+        const text = pdfText(await buildMyGapReportPdf({ logs: records, derivedChecklist: { check4: 'na' }, scans, language: 'en', translations }));
+        expect(text).toContain('Not applicable');
+        expect(text).toContain('R1/99');
+        expect(text).toContain('Harvested before');
+        expect(text).toContain('Pest monitoring');
+        expect(text).toContain('Leaf spot');
+    });
+
     it('names the file with the export date', () => {
         expect(mygapReportFileName(new Date('2026-10-31T10:00:00Z'))).toBe('myGAP-records-2026-10-31.pdf');
     });
