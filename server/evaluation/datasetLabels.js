@@ -32,8 +32,11 @@ export function referenceTerms(label) {
         .map(part => part.replace(CROP_WORDS, '').replace(/[()]/g, '').replace(/\s+/g, ' ').trim())
         .filter(Boolean);
     const terms = new Set(parts);
-    for (const part of parts) for (const alias of ALIASES[part] || []) terms.add(alias);
-    return { healthy: false, terms: [...terms] };
+    // Look aliases up on the label both before and after crop words are stripped.
+    const unstripped = [raw.replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim(), ...[...raw.matchAll(/\((.*?)\)/g)].map(m => m[1].trim())];
+    for (const part of [...parts, ...unstripped]) for (const alias of ALIASES[part] || []) terms.add(alias);
+    // Predictions are compared with "leaf" removed, so remove it from the terms too.
+    return { healthy: false, terms: [...terms].map(t => t.replace(/\bleaf\b/g, '').replace(/\s+/g, ' ').trim()).filter(Boolean) };
 }
 
 export function compareCondition(label, prediction, needsReview) {

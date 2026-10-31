@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "web", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5173", "--strictPort"], "port": 5173 },
-    { "name": "evaluation-api", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:evaluation-server"], "port": 13006, "env": { "EVALUATION_PORT": "13006", "FRONTEND_URLS": "http://localhost:5174" } },
+    { "name": "evaluation-api", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:evaluation-server"], "port": 13006, "env": { "EVALUATION_PORT": "13006", "FRONTEND_URLS": "http://localhost:5174", "AI_IDENTITY_DAILY_LIMIT": "300", "AI_GUEST_DAILY_LIMIT": "300" } },
     { "name": "web-evaluation", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5174", "--strictPort"], "port": 5174, "env": { "VITE_DEV_API_PROXY_TARGET": "http://127.0.0.1:13006" } }
   ]
 }

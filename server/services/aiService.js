@@ -2266,6 +2266,7 @@ Rules:
 - Never increase disease confidence only because PlantNet species confidence is high.
 - Do not state any species is confirmed unless the species context says it is confirmed.
 - If species context is weak or conflicts with the user-selected category, use it only as a hypothesis and rely on visible symptoms.
+- On tomato and potato, Early Blight, Late Blight and (on tomato) Leaf Mold look alike. Whenever you name one of them, list the others in differentialDiagnoses and state what separates them (Early Blight: concentric target rings, older leaves first; Late Blight: large water-soaked or greasy lesions with pale margins that spread fast, white growth underneath in humid conditions; Leaf Mold: yellow patches above with olive-green velvety growth underneath). Without that comparison the result is sent to expert review.
 - If the user-selected category names a specific crop (not a broad group such as Vegetables or Fruits), the farmer has stated what they grow: assume that crop unless the image clearly shows a different plant, set plantType to it, and compare against that crop's common diseases.
 - Compare visually similar conditions. In differentialDiagnoses list 0-3 OTHER conditions that remain genuinely plausible from the visible evidence (for example fungal vs bacterial leaf spot, nutrient deficiency, environmental stress). Never pad the list to reach three, never repeat the primary diagnosis, and return an empty list when nothing else is plausible.
 - For every alternative give: supportingEvidence (visible features consistent with it), weakeningEvidence (visible features that argue against it) and distinguishingFeatures (what a farmer could check to tell it apart from the primary diagnosis).
@@ -2653,6 +2654,15 @@ export const mergeDiagnosisResult = ({
         }
         filtered.immediateActions = [filtered.captureAssessment?.requiresRetake ? copy.nextRetake : copy.nextScout];
         filtered.prevention = [];
+    }
+    const missingLookAlikes = assessScanDecision(filtered).missingLookAlikes;
+    if (missingLookAlikes.length && !filtered.abstainReason) {
+        const names = [...new Set(missingLookAlikes)].join(', ');
+        filtered.abstainReason = translateText(language, {
+            en: `This looks similar to ${names}, which needs different control. An expert should confirm before any treatment.`,
+            ms: `Ini kelihatan serupa dengan ${names}, yang memerlukan kawalan berbeza. Pakar perlu mengesahkan sebelum sebarang rawatan.`,
+            zh: `该症状与${names}相似，而后者需要不同的防治方法。任何处理前应由专家确认。`,
+        });
     }
 
     const finalResult = ensureCarePlan(normalizeAnalysisResult(filtered, language, malaysiaCropInfo), language);

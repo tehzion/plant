@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getScanSectionPolicy } from './scanResultPolicy.js';
+import { assessScanDecision, getScanSectionPolicy } from './scanResultPolicy.js';
 
 const confidentFungalScan = {
   disease: 'Fungal leaf spot',
@@ -103,4 +103,31 @@ describe('getScanSectionPolicy', () => {
     expect(policy.showNutritionProducts).toBe(false);
     expect(policy.showDiseaseProducts).toBe(false);
   });
+});
+
+describe('look-alike safety rule', () => {
+    const confident = {
+        schemaVersion: 2, status: 'high_confidence', healthStatus: 'unhealthy', diseaseCategory: 'fungal',
+        diagnosisConfidence: 90, captureAssessment: { imageQualityConfidence: 90 },
+        disease: 'Early Blight', primaryScientificName: 'Alternaria solani',
+    };
+    it('withholds treatment for tomato Early Blight when Late Blight and Leaf Mold were never weighed', () => {
+        const decision = assessScanDecision({ ...confident, plantType: 'Tomato (Solanum lycopersicum)', differentialDiagnoses: [{ name: 'Septoria Leaf Spot' }] });
+        expect(decision.treatmentEligible).toBe(false);
+        expect(decision.missingLookAlikes).toEqual(['Late Blight', 'Leaf Mold']);
+    });
+    it('allows treatment once the look-alikes were compared, including by scientific name', () => {
+        const decision = assessScanDecision({ ...confident, plantType: 'Tomato', differentialDiagnoses: [{ name: 'Late Blight' }, { name: 'Other', scientificName: 'Passalora fulva' }] });
+        expect(decision.missingLookAlikes).toEqual([]);
+        expect(decision.treatmentEligible).toBe(true);
+    });
+    it('only requires Late Blight on potato and matches Malay and Chinese names', () => {
+        expect(assessScanDecision({ ...confident, plantType: 'Kentang', disease: 'Hawar Awal', primaryScientificName: '' }).missingLookAlikes).toEqual(['Late Blight']);
+        expect(assessScanDecision({ ...confident, plantType: '番茄', disease: '晚疫病', primaryScientificName: '', differentialDiagnoses: [{ name: '早疫病' }] }).treatmentEligible).toBe(true);
+    });
+    it('leaves other crops and diseases unchanged', () => {
+        const decision = assessScanDecision({ ...confident, plantType: 'Corn (Zea mays)', disease: 'Northern Corn Leaf Blight', primaryScientificName: 'Exserohilum turcicum' });
+        expect(decision.missingLookAlikes).toEqual([]);
+        expect(decision.treatmentEligible).toBe(true);
+    });
 });

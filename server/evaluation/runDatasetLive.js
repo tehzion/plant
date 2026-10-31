@@ -12,7 +12,9 @@ if ((!dbFile && !process.env.DATABASE_URL) || !host || !key || !runId || process
 // EVALUATION_SAMPLE=N assesses N not-yet-assessed reference images (balanced by source, varied by label)
 // instead of re-running the ten original POC cases. EVALUATION_DRY_RUN=true prints the selection only.
 const sample=Number(process.env.EVALUATION_SAMPLE || 0), dryRun=process.env.EVALUATION_DRY_RUN === 'true';
-if(!Number.isInteger(sample) || sample<0 || sample>20) throw Error('EVALUATION_SAMPLE must be 0-20');
+if(!Number.isInteger(sample) || sample<0 || sample>100) throw Error('EVALUATION_SAMPLE must be 0-100');
+const usageCap=Number(process.env.EVALUATION_USAGE_CAP_USD || 0.90);
+if(!Number.isFinite(usageCap) || usageCap<=0 || usageCap>5) throw Error('EVALUATION_USAGE_CAP_USD must be between 0 and 5');
 // EVALUATION_SEND_CROP=true sends the reference crop name as a farmer-stated crop (never the disease label).
 const sendCrop=process.env.EVALUATION_SEND_CROP === 'true';
 const apiUrl=process.env.EVALUATION_API_URL || 'http://127.0.0.1:13002';
@@ -38,12 +40,14 @@ try {
   const rerunOf=process.env.EVALUATION_RERUN_OF || null;
   const candidates=await client.query(`select i.*, null as baseline_id, row_number() over (partition by i.source, i.original_label order by md5(i.checksum)) rn
    from public.agricultural_reference_images i where i.storage_key is not null
-   and (case when $1::text is null then not exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum)
-        else exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum and a.run_id=$1) end)
+   and (case when $1::text is null then not exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum and a.completed)
+        else exists (select 1 from public.agricultural_dataset_assessments a where a.image_checksum=i.checksum and a.run_id=$1 and a.completed) end)
    order by rn, md5(i.checksum)`,[rerunOf]);
   // EVALUATION_EXCLUDE: comma-separated checksum prefixes withheld after visual review (watermarks, printed labels).
   const excluded=(process.env.EVALUATION_EXCLUDE || '').split(',').map(x=>x.trim()).filter(Boolean);
-  candidates.rows=candidates.rows.filter(r=>!excluded.some(prefix=>r.checksum.startsWith(prefix)));
+  // EVALUATION_LABEL_FILTER (case-insensitive regex on the reference label) and EVALUATION_SOURCE narrow targeted checks.
+  const labelFilter=process.env.EVALUATION_LABEL_FILTER ? new RegExp(process.env.EVALUATION_LABEL_FILTER,'i') : null, onlySource=process.env.EVALUATION_SOURCE || null;
+  candidates.rows=candidates.rows.filter(r=>!excluded.some(prefix=>r.checksum.startsWith(prefix)) && (!labelFilter || labelFilter.test(r.original_label)) && (!onlySource || r.source===onlySource));
   const picked=[], per=Math.ceil(sample/2);
   for(const source of ['PlantVillage','PlantDoc']) picked.push(...candidates.rows.filter(r=>r.source===source).slice(0,per));
   for(const r of candidates.rows) if(picked.length<sample && !picked.includes(r)) picked.push(r);
@@ -59,9 +63,9 @@ try {
   const existing=await client.query('select id from public.agricultural_dataset_assessments where id=$1',[id]);
   if(existing.rows.length){console.log(JSON.stringify({id,status:'already_recorded'}));continue;}
   const spent=await usage();
-  // Reserve $0.90 for any single request under the $1.80 prior pilot estimate.
-  // This is a conservative stop check, not a provider-enforced hard cap.
-  if(spent>0.90){console.log(JSON.stringify({stopped:'usage_reserve',usage:spent}));break;}
+  // Stop once cumulative key usage passes the approved cap (default $0.90; EVALUATION_USAGE_CAP_USD
+  // raises it only with explicit approval). A conservative stop check, not a provider-enforced cap.
+  if(spent>usageCap){console.log(JSON.stringify({stopped:'usage_cap',usage:spent,cap:usageCap}));break;}
   let image;
   if (item.storage_key) {
    if(item.storage_key!==imageObjectKey(item.source,item.filename))throw Error('Invalid evaluation image reference');
@@ -92,7 +96,7 @@ try {
   const duration=Date.now()-start;
   await client.query(`insert into public.agricultural_dataset_assessments(id,image_checksum,run_id,predicted_crop,predicted_condition,health_status,agreement,completed,duration_ms,evaluated_at,response) values($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),$10) on conflict do nothing`,[id,item.checksum,runId,payload.plantType||null,payload.disease||null,payload.healthStatus||null,agreement,completed,duration,payload]);
   console.log(JSON.stringify({case:item.baseline_id || `${item.source}/${item.original_label}`,predicted:payload.disease,health:payload.healthStatus,completed,agreement,durationMs:duration,error:completed?undefined:payload.error,usage:await usage()}));
-  if(!completed && /429|402|quota|credit|unavailable/i.test(payload.error))break;
+  if(!completed && /429|402|quota|credit|unavailable|usage limit/i.test(payload.error))break;
  }
  const result=await client.query('select count(*)::int attempts,count(*) filter(where completed)::int completed from public.agricultural_dataset_assessments where run_id=$1',[runId]);
  console.log(JSON.stringify({result:result.rows[0],usageAfter:await usage()}));

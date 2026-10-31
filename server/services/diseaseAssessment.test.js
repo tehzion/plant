@@ -119,7 +119,14 @@ describe('low-confidence handling', () => {
 
 describe('treatment safety', () => {
     it('replaces model-generated dosages and spray intervals with label guidance', () => {
-        const result = merge({ diagnosisConfidence: 92, confidenceLevel: 'high', resultState: 'confident_treatment' });
+        // Treatment needs the Early Blight look-alikes to have been compared (see the look-alike safety rule).
+        const result = merge({ diagnosisConfidence: 92, confidenceLevel: 'high', resultState: 'confident_treatment',
+            differentialDiagnoses: [
+                { name: 'Late Blight', category: 'fungal_disease', confidenceLevel: 'low', likelihood: 15,
+                    weakeningEvidence: ['No water-soaked lesions'], distinguishingFeatures: ['Late blight spreads fast with pale greasy margins'] },
+                { name: 'Leaf Mold', category: 'fungal_disease', confidenceLevel: 'low', likelihood: 10,
+                    weakeningEvidence: ['No velvety growth underneath'], distinguishingFeatures: ['Leaf mold shows olive growth on the underside'] },
+            ] });
         expect(result.treatmentEligible).toBe(true);
         expect(result.treatments).toEqual(['Spray mancozeb at the rate on the registered product label at the interval on the label']);
         expect(redactDosageInstructions(['Semburan 20 ml per 10 liter setiap 14 hari'], 'ms')[0])

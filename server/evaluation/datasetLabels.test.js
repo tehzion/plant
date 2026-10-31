@@ -16,6 +16,8 @@ describe('dataset label comparison', () => {
         expect(compareCondition('Common_rust_', null, false)).toBe('unassessed');
         expect(compareCondition('Tomato Septoria leaf spot', { disease: 'Septoria Leaf Spot' }, false)).toBe('match');
         expect(compareCondition('Corn Gray leaf spot', { disease: 'Gray Leaf Spot' }, false)).toBe('match');
+        expect(compareCondition('Cercospora_leaf_spot Gray_leaf_spot', { disease: 'Cercospora Leaf Spot' }, false)).toBe('match');
+        expect(compareCondition('Tomato leaf bacterial spot', { disease: 'Early Blight' }, false)).toBe('different_or_unclear');
     });
     it('maps crops to farmer categories', () => {
         expect(farmerCategory('Corn (maize)')).toBe('Corn');

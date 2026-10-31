@@ -25,6 +25,37 @@ export const isNoIssueDiagnosis = (value) => /^(healthy(?: plant)?|normal|none|n
 const nutritionPattern = /nutrient|nutrition|nutritional|nutrisi|deficien|kekurangan|nutrien|chlorosis|nitrogen|potassium|magnesium|calcium|kalium|营养|缺素|缺钾/i;
 const actionableDiseasePattern = /fungal|fungus|bacter|viral|virus|pest|insect|mealybug|aphid|mite|thrip|whitefly|infestation|oomycete|nematode|blight|spot|rot|wilt|rust|mildew|kulat|病/i;
 
+// Look-alike diseases that must be weighed before a treatment recommendation. Dataset evaluation
+// found confident "Early Blight" calls on late-blight and leaf-mould leaves where the model never
+// considered either. Names cover en/ms/zh plus language-neutral scientific names.
+const EARLY_BLIGHT = { name: 'Early Blight', pattern: /early blight|hawar awal|早疫病|alternaria solani/i };
+const LATE_BLIGHT = { name: 'Late Blight', pattern: /late blight|hawar lewat|晚疫病|phytophthora infestans/i };
+const LEAF_MOLD = { name: 'Leaf Mold', pattern: /leaf mou?ld|kulapuk daun|叶霉病|passalora fulva|fulvia fulva|cladosporium fulvum/i };
+const TOMATO = /tomato|tomat\b|番茄|lycopersic/i;
+const POTATO = /potato|kentang|马铃薯|土豆|tuberosum/i;
+const LOOK_ALIKE_RULES = [
+    { crop: (t) => TOMATO.test(t) || POTATO.test(t), diagnosis: EARLY_BLIGHT, mustConsider: [LATE_BLIGHT] },
+    { crop: (t) => TOMATO.test(t), diagnosis: EARLY_BLIGHT, mustConsider: [LEAF_MOLD] },
+    { crop: (t) => TOMATO.test(t) || POTATO.test(t), diagnosis: LATE_BLIGHT, mustConsider: [EARLY_BLIGHT] },
+    { crop: (t) => TOMATO.test(t), diagnosis: LEAF_MOLD, mustConsider: [EARLY_BLIGHT, LATE_BLIGHT] },
+];
+
+/** Returns the names of look-alike conditions the assessment never weighed (empty when none are required). */
+export const getMissingLookAlikes = (scan = {}) => {
+    const crop = [scan.plantType, scan.crop, scan.category, scan.identification?.scientificName].filter(Boolean).join(' ');
+    const primary = [scan.disease, scan.primaryScientificName].filter(Boolean).join(' ');
+    const evidence = scan.diagnosticEvidence || {};
+    const considered = [
+        ...(Array.isArray(scan.differentialDiagnoses) ? scan.differentialDiagnoses.flatMap((d) => [d?.name, d?.scientificName]) : []),
+        evidence.rejectedDiagnosis,
+        ...(Array.isArray(evidence.evidenceAgainst) ? evidence.evidenceAgainst : []),
+    ].filter(Boolean).join(' ');
+    return LOOK_ALIKE_RULES
+        .filter((rule) => rule.crop(crop) && rule.diagnosis.pattern.test(primary))
+        .flatMap((rule) => rule.mustConsider.filter((lookAlike) => !lookAlike.pattern.test(considered)))
+        .map((lookAlike) => lookAlike.name);
+};
+
 const normalizeNutritionStatus = (scan = {}) => {
     const source = scan.nutritionalIssues && typeof scan.nutritionalIssues === 'object'
         ? scan.nutritionalIssues
@@ -122,7 +153,8 @@ export const assessScanDecision = (scan = {}) => {
     const pest = /pest|insect|mealybug|aphid|mite|thrip|whitefly|infestation|kutu|serangga|粉蚧|虫/.test(text);
     const nonChemicalCause = ['environmental', 'nutrient', 'viral', 'healthy', 'unknown'].includes(normalized(scan.diseaseCategory));
     const actionable = !nonChemicalCause && (pest || /fungal|fungus|bacter|oomycete|nematode|blight|spot|rot|rust|mildew|kulat|病/.test(text));
-    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
+    const missingLookAlikes = getMissingLookAlikes(scan);
+    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || missingLookAlikes.length || scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
         || reviewStatuses.has(status) || reviewStates.has(explicit)
         || (confidence !== null && confidence < 70)
         || (confidencePercent(scan.confidence) !== null && confidencePercent(scan.confidence) < 70)
@@ -140,7 +172,7 @@ export const assessScanDecision = (scan = {}) => {
     const healthy = resultState === SCAN_RESULT_STATES.HEALTHY;
     const treatmentEligible = resultState === SCAN_RESULT_STATES.CONFIDENT_TREATMENT;
     return {
-        resultState, healthy, treatmentEligible, confidence,
+        resultState, healthy, treatmentEligible, confidence, missingLookAlikes,
         needsReview: !healthy && !treatmentEligible,
         requiresRetake: resultState === SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
         tone: healthy ? 'healthy' : treatmentEligible ? 'issue' : 'review',
