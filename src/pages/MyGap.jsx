@@ -12,15 +12,9 @@ import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
 import { useNotifications } from '../context/NotificationProvider.jsx';
-import { jsPDF } from 'jspdf';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
-import { createPdfTextRenderer } from '../utils/pdfTextRenderer';
-import { createPdfPageFlow, getPdfTranslation } from '../utils/pdfReportLayout';
 import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
 import './MyGap.css';
-
-// jsPDF font sizes are in points; layout is in millimetres.
-const PT_TO_MM = 25.4 / 72;
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
@@ -138,240 +132,22 @@ const MyGapPage = () => {
         ? Math.round((completedChecklistCount / checklistItems.length) * 100)
         : 0;
 
+    const [exportingReport, setExportingReport] = useState(false);
     const generateReport = async () => {
-        const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
-        const doc = new jsPDF();
-        const renderer = createPdfTextRenderer(doc);
-        const reportLang = language || 'en';
-        const rt = (key) => getPdfTranslation(translations, reportLang, key);
-
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const primaryColor = [0, 177, 79];
-        const secondaryColor = [232, 245, 233];
-        const darkColor = [28, 36, 52];
-        const lightText = [100, 116, 139];
-
-        const pendingLabel = rt('common.pending');
-        const pageLabel = rt('common.page');
-        const ofLabel = rt('common.of');
-        const flow = createPdfPageFlow({
-            doc,
-            renderer,
-            pageWidth,
-            pageHeight,
-            initialY: 60,
-            darkColor,
-        });
-        const { checkPageBreak, writeParagraph } = flow;
-        const writeSectionTitle = async (title, options = {}) => {
-            await flow.writeSectionTitle(title, {
-                fontSize: 14,
-                textColor: darkColor,
-                marginBottom: 6,
-                ...options,
-            });
-        };
-
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, pageWidth, 45, 'F');
-        doc.setFillColor(255, 255, 255);
-        doc.circle(25, 22, 12, 'F');
-        doc.setFillColor(...primaryColor);
-        doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
-        doc.fill();
-
-        await renderer.drawText('KANB Agropreneur Nasional', 42, 14, {
-            maxWidth: 90,
-            fontSize: 18,
-            fontStyle: 'bold',
-            color: [255, 255, 255],
-        });
-        await renderer.drawText(rt('mygap.reportTitle').toUpperCase(), 42, 24, {
-            maxWidth: 90,
-            fontSize: 12,
-            color: [255, 255, 255],
-        });
-
-        const dateStr = new Date().toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : 'en-MY');
-        await renderer.drawText(`${rt('pdf.reportDate') || 'Date'}: ${dateStr}`, pageWidth - 74, 18, {
-            maxWidth: 60,
-            fontSize: 10,
-            color: [255, 255, 255],
-            align: 'right',
-        });
-
-        const totalChecks = checklistItems.length;
-        const completedChecks = Object.values(derivedChecklist).filter(Boolean).length;
-        const complianceRate = Math.round((completedChecks / totalChecks) * 100);
-        const totalLogs = reportLogs.length;
-
-        doc.setDrawColor(226, 232, 240);
-        doc.setFillColor(248, 250, 252);
-        doc.roundedRect(14, 50, 182, 25, 3, 3, 'FD');
-
-        await renderer.drawText(rt('mygap.complianceProgress') || 'Compliance Progress', 22, 56, {
-            maxWidth: 42,
-            fontSize: 10,
-            color: darkColor,
-        });
-        await renderer.drawText(`${complianceRate}%`, 22, 63, {
-            maxWidth: 42,
-            fontSize: 14,
-            fontStyle: 'bold',
-            color: primaryColor,
-        });
-
-        await renderer.drawText(rt('mygap.checklistTitle'), 82, 56, {
-            maxWidth: 42,
-            fontSize: 10,
-            color: darkColor,
-        });
-        await renderer.drawText(`${completedChecks}/${totalChecks}`, 82, 63, {
-            maxWidth: 42,
-            fontSize: 14,
-            fontStyle: 'bold',
-            color: darkColor,
-        });
-
-        await renderer.drawText(rt('mygap.logbookTitle'), 142, 56, {
-            maxWidth: 42,
-            fontSize: 10,
-            color: darkColor,
-        });
-        await renderer.drawText(`${totalLogs}`, 142, 63, {
-            maxWidth: 42,
-            fontSize: 14,
-            fontStyle: 'bold',
-            color: darkColor,
-        });
-
-        flow.yPos = 85;
-
-        await writeSectionTitle(rt('mygap.checklistTitle'));
-
-        const checklistData = [
-            { id: 'check1', label: rt('mygap.check1') },
-            { id: 'check2', label: rt('mygap.check2') },
-            { id: 'check3', label: rt('mygap.check3') },
-            { id: 'check4', label: rt('mygap.check4') },
-            { id: 'check5', label: rt('mygap.check5') },
-            { id: 'check6', label: rt('mygap.check6') },
-            { id: 'check7', label: rt('mygap.check7') },
-            { id: 'check8', label: rt('mygap.check8') },
-        ].map((item) => ({
-            label: item.label,
-            complete: Boolean(derivedChecklist[item.id]),
-        }));
-
-        for (const item of checklistData) {
-            const statusText = item.complete ? (rt('common.completed') || 'Completed') : pendingLabel;
-            const rowHeight = Math.max(
-                renderer.measureTextHeight(item.label, 112, { fontSize: 10 }),
-                renderer.measureTextHeight(statusText, 30, { fontSize: 9, fontStyle: 'bold' }),
-                10 * PT_TO_MM,
-            ) + 8;
-
-            checkPageBreak(rowHeight + 4);
-            doc.setFillColor(...(item.complete ? [240, 253, 244] : [248, 250, 252]));
-            doc.setDrawColor(226, 232, 240);
-            doc.roundedRect(14, flow.yPos, pageWidth - 28, rowHeight, 3, 3, 'FD');
-
-            await renderer.drawText(item.label, 18, flow.yPos + 4, {
-                maxWidth: 112,
-                fontSize: 10,
-                color: darkColor,
-            });
-
-            const badgeWidth = 34;
-            const badgeX = pageWidth - 14 - badgeWidth - 4;
-            doc.setFillColor(...(item.complete ? primaryColor : [239, 68, 68]));
-            doc.roundedRect(badgeX, flow.yPos + 4, badgeWidth, rowHeight - 8, 3, 3, 'F');
-            await renderer.drawText(statusText, badgeX, flow.yPos + (rowHeight - 8 - (9 * PT_TO_MM * 1.35)) / 2 + 4, {
-                maxWidth: badgeWidth,
-                fontSize: 9,
-                fontStyle: 'bold',
-                color: [255, 255, 255],
-                align: 'center',
-            });
-
-            flow.yPos += rowHeight + 4;
+        if (exportingReport) return;
+        setExportingReport(true);
+        try {
+            // The PDF covers the complete logbook, not just the rows loaded on screen.
+            const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
+            const { buildMyGapReportPdf, mygapReportFileName } = await import('../utils/mygapReportPdf');
+            const doc = await buildMyGapReportPdf({ logs: reportLogs || logs, derivedChecklist, language: language || 'en', translations });
+            doc.save(mygapReportFileName());
+        } catch (error) {
+            console.error('myGAP report export failed:', error);
+            notify({ type: 'error', title: t('common.error'), message: t('common.error') });
+        } finally {
+            setExportingReport(false);
         }
-
-        flow.yPos += 8;
-        await writeSectionTitle(rt('mygap.logbookSummary'));
-
-        if (reportLogs.length === 0) {
-            await writeParagraph(rt('mygap.noLogs'), {
-                x: 14,
-                width: pageWidth - 28,
-                fontSize: 10,
-                color: lightText,
-                gapAfter: 6,
-            });
-        } else {
-            for (const log of reportLogs) {
-                const dateLabel = new Date(log.activity_date || log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
-                const typeLabel = rt(`mygap.${log.type}Log`).split(' ')[0];
-                const reportLabel = (key, fallback) => { const value = rt(key); return value && value !== key ? value : fallback; };
-                const details = [
-                    log.plot_id && `${reportLabel('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
-                    log.crop && `${reportLabel('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
-                    log.product_used && `${reportLabel('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
-                    log.quantity && `${reportLabel('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
-                    log.operator && `${reportLabel('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
-                ].filter(Boolean).join(' | ');
-                const body = [details, log.notes].filter(Boolean).join('\n') || '-';
-                const notesHeight = renderer.measureTextHeight(body, pageWidth - 36, { fontSize: 9 });
-                const cardHeight = notesHeight + 18;
-
-                checkPageBreak(cardHeight + 4);
-                doc.setFillColor(248, 250, 252);
-                doc.setDrawColor(226, 232, 240);
-                doc.roundedRect(14, flow.yPos, pageWidth - 28, cardHeight, 3, 3, 'FD');
-
-                await renderer.drawText(typeLabel, 18, flow.yPos + 4, {
-                    maxWidth: 70,
-                    fontSize: 9,
-                    fontStyle: 'bold',
-                    color: primaryColor,
-                });
-                await renderer.drawText(dateLabel, pageWidth - 66, flow.yPos + 4, {
-                    maxWidth: 48,
-                    fontSize: 8,
-                    color: lightText,
-                    align: 'right',
-                });
-                await renderer.drawText(body, 18, flow.yPos + 11, {
-                    maxWidth: pageWidth - 36,
-                    fontSize: 9,
-                    color: darkColor,
-                });
-
-                flow.yPos += cardHeight + 4;
-            }
-        }
-
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setDrawColor(226, 232, 240);
-            doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
-
-            await renderer.drawText(`KANB Agropreneur Nasional - ${rt('mygap.reportTitle')}`, 14, pageHeight - 12, {
-                maxWidth: 110,
-                fontSize: 8,
-                color: lightText,
-            });
-            await renderer.drawText(`${pageLabel} ${i} ${ofLabel} ${pageCount}`, pageWidth - 44, pageHeight - 12, {
-                maxWidth: 30,
-                fontSize: 8,
-                color: lightText,
-                align: 'right',
-            });
-        }
-
-        doc.save('myGAP_Compliance_Report.pdf');
     };
 
     if (dataLoading) return <div role="status">{t('common.loading')}</div>;
@@ -470,7 +246,7 @@ const MyGapPage = () => {
                             {t('mygap.officialLink')}
                             <ExternalLink size={16} />
                         </a>
-                        <button onClick={generateReport} className="report-button">
+                        <button type="button" onClick={generateReport} className="report-button" disabled={exportingReport} aria-busy={exportingReport}>
                             {t('mygap.generateReport')}
                             <Download size={16} />
                         </button>
@@ -560,9 +336,15 @@ const MyGapPage = () => {
                         {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
 
                         {!isAddingLog && logs.length > 0 && (
-                            <button type="button" className="btn btn-secondary mygap-repeat-btn" onClick={repeatLastLog}>
-                                {label('assessment.ux.repeatLast', 'Repeat last entry')}
-                            </button>
+                            <div className="mygap-log-actions">
+                                <button type="button" className="btn btn-secondary mygap-repeat-btn" onClick={repeatLastLog}>
+                                    {label('assessment.ux.repeatLast', 'Repeat last entry')}
+                                </button>
+                                <button type="button" className="btn btn-secondary" onClick={generateReport} disabled={exportingReport} aria-busy={exportingReport}>
+                                    <Download size={16} aria-hidden="true" />
+                                    {t('mygap.generateReport')}
+                                </button>
+                            </div>
                         )}
 
                         {isAddingLog && (

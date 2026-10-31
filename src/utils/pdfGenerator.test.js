@@ -24,6 +24,7 @@ const createDocMock = () => ({
     path: vi.fn(),
     fill: vi.fn(),
     line: vi.fn(),
+    setLineWidth: vi.fn(),
     save: vi.fn(),
 });
 

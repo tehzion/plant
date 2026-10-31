@@ -67,4 +67,22 @@ describe('pdfTextRenderer', () => {
         expect(doc.addImage).toHaveBeenCalled();
         expect(doc.text).not.toHaveBeenCalled();
     });
+
+    it('wraps latin text using the font size it will be drawn at', () => {
+        const doc = { splitTextToSize: vi.fn(() => ['x']), setFont: vi.fn(), setFontSize: vi.fn() };
+        createPdfTextRenderer(doc).getWrappedLines('Some text', 50, { fontSize: 9, fontStyle: 'bold' });
+        expect(doc.setFontSize).toHaveBeenCalledWith(9);
+        expect(doc.setFont).toHaveBeenCalledWith('helvetica', 'bold');
+        expect(doc.setFontSize.mock.invocationCallOrder[0]).toBeLessThan(doc.splitTextToSize.mock.invocationCallOrder[0]);
+    });
+
+    it.each([
+        ['left', 20],
+        ['right', 80],
+        ['center', 50],
+    ])('treats x as the left edge of the box for %s-aligned latin text', async (align, expectedAnchor) => {
+        const doc = { splitTextToSize: () => ['Date'], setFont: vi.fn(), setFontSize: vi.fn(), setTextColor: vi.fn(), text: vi.fn(), addImage: vi.fn() };
+        await createPdfTextRenderer(doc).drawText('Date', 20, 10, { maxWidth: 60, align });
+        expect(doc.text).toHaveBeenCalledWith(['Date'], expectedAnchor, 10, { align, baseline: 'top' });
+    });
 });

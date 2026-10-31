@@ -592,3 +592,21 @@
 .voice-log__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .voice-log__actions .btn { min-height: 48px; display: inline-flex; align-items: center; gap: 6px; flex: 1 1 140px; justify-content: center; }
 .voice-log__message { margin: 0; font-size: .9rem; color: #14532d; }
+
+.mygap-log-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mygap-log-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1 1 200px;
+    width: auto;
+    min-height: 48px;
+    margin-bottom: 0;
+}
