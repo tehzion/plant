@@ -295,13 +295,6 @@ app.get('/api/followups/:scanId', async (req, res, next) => {
 });
 
 const aiRoutes = ['/api/analyze', '/api/ask', '/api/assistant', '/api/results/localize', '/api/products/search', '/api/farm'];
-app.use(aiRoutes, rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    max: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50,
-    standardHeaders: true, legacyHeaders: false,
-    skip: (req) => req.method !== 'POST',
-    message: { error: 'Daily AI usage limit reached. Please try again tomorrow.' },
-}));
 
 app.post('/api/session', (req, res, next) => {
     try {
@@ -358,14 +351,24 @@ app.use(aiRoutes, async (req, res, next) => {
         next();
     } catch (error) { next(error); }
 });
-app.use(aiRoutes, rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    max: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000,
-    keyGenerator: () => 'server',
-    standardHeaders: false, legacyHeaders: false,
-    skip: (req) => req.method !== 'POST',
-    message: { error: 'AI service daily capacity reached. Please try again tomorrow.' },
-}));
+// Daily per-IP and whole-server caps live in Neon so every serverless
+// instance shares one count (in-memory limiters reset per instance).
+app.use(aiRoutes, async (req, res, next) => {
+    if (req.method !== 'POST') return next();
+    try {
+        const ipQuota = await consumeAiQuota({ identity: `daily-ip:${req.ip || 'unknown'}`, limit: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50 });
+        if (!ipQuota.allowed) {
+            console.warn(JSON.stringify({ event: 'ai_ip_quota_exceeded', requestId: req.requestId, ip: req.ip }));
+            return res.status(429).json({ error: 'Daily AI usage limit reached. Please try again tomorrow.', requestId: req.requestId });
+        }
+        const serverQuota = await consumeAiQuota({ identity: 'server-total', limit: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000 });
+        if (!serverQuota.allowed) {
+            console.warn(JSON.stringify({ event: 'ai_server_quota_exceeded', requestId: req.requestId }));
+            return res.status(429).json({ error: 'AI service daily capacity reached. Please try again tomorrow.', requestId: req.requestId });
+        }
+        next();
+    } catch (error) { next(error); }
+});
 let activeAiRequests = 0;
 app.use(aiRoutes, (req, res, next) => {
     if (req.method !== 'POST') return next();

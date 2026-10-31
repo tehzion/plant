@@ -6,7 +6,7 @@
 
 | Gap | Why it matters | Recommended next action |
 |---|---|---|
-| Migration 0002 not applied | Expert review endpoints return errors without the table; myGAP structured fields fall back into notes. | Apply to a Neon branch, run the app against it, then apply to production during a planned release. |
+| ~~Migration 0002 not applied~~ Done | Verified 31 Oct 2026: `diagnosis_expert_reviews` and the new `mygap_logs` columns exist on the production Neon project. | — |
 | Ownership fix not verified on real Postgres | Tests used an in-memory emulation. | On a Neon branch with two test accounts, attempt single and bulk upserts on each other's IDs over HTTP; expect 409 and unchanged rows. |
 | Reviewer configuration | Workflow is closed until configured. | Set `EXPERT_REVIEWER_EMAILS`; confirm `ORDER_ACCESS_SECRET` (or `SCAN_CAPABILITY_SECRET`) is ≥ 32 chars in production. |
 | Release approval | No deployment was performed. | Review the diff, then commit and deploy with explicit approval. |
@@ -61,3 +61,21 @@
 | P1 | Experts reviewing non-consented scans see only the text assessment, without photos. | Accept this, or ask for a separate, explicit consent to expert review. Measure how many cases lack photos. |
 | P2 | Consent is saved per device, not per account. | Store the answer on the profile for signed-in users, and add a setting to change it later. |
 | P2 (partly fixed) | No way to withdraw consent for photos already stored. | Added `POST /api/scans/:scanId/withdraw-photos` (same proof of ownership as feedback): deletes the photos and marks the record not consented. The privacy policy tells farmers to contact support. **Still missing:** an in-app button on Results/History. |
+
+---
+
+## Addendum — repo audit (31 October 2026)
+
+| Priority | Gap | Status / next action |
+|---|---|---|
+| P0 | One production host for the API. `vercel.json`, two Vercel projects and `render.yaml` all exist, and a workflow keeps a Render instance warm. | **Open — owner decision.** Pick Render or Vercel for the API, delete the other config, and keep env vars in one place. |
+| ~~P0~~ Fixed | OpenRouter support. | `server/utils/aiProvider.js` (PR #4): set `AI_PROVIDER=openrouter` and `OPENROUTER_API_KEY`; model ids get the `openai/` prefix. |
+| ~~P0~~ Fixed | Daily per-IP and whole-server AI caps were in-memory, so each serverless instance counted separately. | Both now use the Neon `ai_usage_counters` table, like the per-identity quota. The 60/min burst limiter is still per instance; fine on Render, approximate on Vercel. |
+| ~~P0~~ Fixed | High-severity advisories (zod, undici) via `openai@4`. | Upgraded to `openai@7` with npm overrides; no high advisories remain. Moderate ones are in build-time tooling (`vite-plugin-pwa`, `javascript-obfuscator`). |
+| ~~P1~~ Fixed | AI abort signals were sent as a JSON body field (`"signal": {}`), so timed-out requests kept running and billing tokens. | Signal is now passed as a request option. |
+| ~~P1~~ Fixed | No end-to-end check that each disease maps to the right product class. | `server/services/productRecommendationMatrix.test.js` covers every curated rule plus healthy, retake and nutrient cases. |
+| ~~P1~~ Fixed | ~170 lines of unused AI product matcher (`recommendProductTags`). | Removed; product matching is rule-based only. |
+| P1 | No error tracking (Sentry or similar) and AI cost per scan is not recorded. | Add Sentry on server and client; log OpenRouter `usage` per call into the audit record. |
+| P1 | `aiService.js` is ~3,900 lines. | Split into diagnosis, ask, farm-insights and products modules. |
+| P1 | No linter in CI. | Add ESLint flat config and a `lint` step to `ci.yml`. |
+| P2 | `.env.production` is tracked although `.gitignore` excludes it (public keys only). | Untrack once the `VITE_*` values are set in the host's build environment. |
