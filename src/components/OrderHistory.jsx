@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import { getLocalOrders } from '../utils/localStorage.js';
 import { getOrderSession } from '../utils/orderSession.js';
 import { supabase } from '../lib/supabase.js';
+import { friendlyErrorMessage } from '../utils/friendlyError.js';
 
 const OrderHistory = ({ guestId, user = null }) => {
     const { t, label } = useLanguage();
@@ -36,7 +37,7 @@ const OrderHistory = ({ guestId, user = null }) => {
                   : `${apiUrl}/api/orders/user/${session.guestId}`;
 
                 const response = await fetch(fetchUrl, { headers: { Authorization: `Bearer ${session.accessToken}` } });
-                if (!response.ok) throw new Error('Failed to fetch orders');
+                if (!response.ok) throw Object.assign(new Error('Failed to fetch orders'), { status: response.status });
                 const data = await response.json();
                 if (!cancelled) {
                     setOrders(data);
@@ -44,7 +45,7 @@ const OrderHistory = ({ guestId, user = null }) => {
                 }
             } catch (err) {
                 console.error('❌ Order history fetch failed:', err);
-                if (!cancelled) setError(err.message);
+                if (!cancelled) setError(friendlyErrorMessage(err, t, 'errors.ordersLoad'));
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -62,19 +63,19 @@ const OrderHistory = ({ guestId, user = null }) => {
         try {
             const { data } = await supabase?.auth?.getSession?.() || { data: {} };
             const token = data?.session?.access_token;
-            if (!token) throw new Error('Please sign in again before requesting store verification.');
+            if (!token) throw Object.assign(new Error('No session'), { status: 401 });
             const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/orders/recovery-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ orderNumber: recoveryOrderNumber, explanation: recoveryExplanation }),
             });
             const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(payload.message || payload.error || 'Could not send the recovery request.');
-            setRecoveryMessage('Your request was sent to the store team for verification.');
+            if (!response.ok) throw Object.assign(new Error(payload.message || payload.error || 'Recovery request failed'), { status: response.status, serverMessage: response.status === 400 ? (payload.message || payload.error) : '' });
+            setRecoveryMessage(t('errors.recoverySent'));
             setRecoveryOrderNumber('');
             setRecoveryExplanation('');
         } catch (error) {
-            setRecoveryMessage(error.message || 'Could not send the recovery request.');
+            setRecoveryMessage(error.serverMessage || friendlyErrorMessage(error, t, 'errors.recoveryFailed'));
         } finally {
             setRecoverySubmitting(false);
         }
@@ -96,7 +97,7 @@ const OrderHistory = ({ guestId, user = null }) => {
         );
     }
 
-    if (error) return <div role="alert">{label('common.error', 'Error')}: {error}</div>;
+    if (error) return <div role="alert">{error}</div>;
 
     if (orders.length === 0) {
         return (

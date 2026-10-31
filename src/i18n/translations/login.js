@@ -32,7 +32,10 @@ const loginTranslations = {
             "resetLinkInvalid": "This reset link is invalid or has expired. Request a new link and try again.",
             "passwordTooShort": "Use at least 8 characters for your new password.",
             "passwordMismatch": "The passwords do not match.",
-            "passwordUpdateFailed": "The password could not be updated. Request a new reset link."
+            "passwordUpdateFailed": "The password could not be updated. Request a new reset link.",
+            "passwordSameAsOld": "Choose a password different from your current one.",
+            "errorTooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
+            "errorGeneric": "We could not sign you in. Please try again."
         }
     },
     "ms": {
@@ -68,7 +71,10 @@ const loginTranslations = {
             "resetLinkInvalid": "Pautan tetapan semula tidak sah atau telah tamat tempoh. Minta pautan baharu.",
             "passwordTooShort": "Gunakan sekurang-kurangnya 8 aksara untuk kata laluan baharu.",
             "passwordMismatch": "Kata laluan tidak sepadan.",
-            "passwordUpdateFailed": "Kata laluan tidak dapat dikemas kini. Minta pautan tetapan semula baharu."
+            "passwordUpdateFailed": "Kata laluan tidak dapat dikemas kini. Minta pautan tetapan semula baharu.",
+            "passwordSameAsOld": "Pilih kata laluan yang berbeza daripada kata laluan semasa.",
+            "errorTooManyAttempts": "Terlalu banyak percubaan. Sila tunggu beberapa minit dan cuba lagi.",
+            "errorGeneric": "Kami tidak dapat log masuk anda. Sila cuba lagi."
         }
     },
     "zh": {
@@ -104,7 +110,10 @@ const loginTranslations = {
             "resetLinkInvalid": "此重置链接无效或已过期。请重新申请链接。",
             "passwordTooShort": "新密码至少需要 8 个字符。",
             "passwordMismatch": "两次输入的密码不一致。",
-            "passwordUpdateFailed": "无法更新密码。请重新申请密码重置链接。"
+            "passwordUpdateFailed": "无法更新密码。请重新申请密码重置链接。",
+            "passwordSameAsOld": "请选择与当前密码不同的新密码。",
+            "errorTooManyAttempts": "尝试次数过多，请等待几分钟后再试。",
+            "errorGeneric": "无法登录，请重试。"
         }
     }
 };

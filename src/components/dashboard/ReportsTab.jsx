@@ -20,6 +20,7 @@ import {
     QUALITY_GRADES_CFG,
     EXPENSE_CATEGORIES_CFG,
 } from '../../data/config';
+import { friendlyErrorMessage } from '../../utils/friendlyError.js';
 
 
 
@@ -73,7 +74,7 @@ const ReportsTab = ({
         const reportEndText = [reportEnd.getFullYear(), String(reportEnd.getMonth() + 1).padStart(2, '0'), String(reportEnd.getDate()).padStart(2, '0')].join('-');
         fetchReportSummary({ from: '2000-01-01', to: reportEndText, plotId: selectedPlotId })
             .then((summary) => { if (!cancelled) setServerSummary(summary); })
-            .catch((error) => { if (!cancelled) setServerReportError(error.message || 'Could not load the complete report.'); });
+            .catch((error) => { if (!cancelled) setServerReportError(friendlyErrorMessage(error, t, 'errors.reportLoad')); });
         return () => { cancelled = true; };
     }, [selectedPlotId, userId]);
 

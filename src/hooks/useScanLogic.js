@@ -2,6 +2,7 @@ import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease, analyzeLocalImageQuality } from '../utils/diseaseDetection';
 import { isNetworkUnavailableError, isTimeoutError } from '../utils/networkRequest.js';
+import { friendlyErrorKey } from '../utils/friendlyError.js';
 import {
     consumeStorageCleanupNotice,
     saveScan,
@@ -216,7 +217,11 @@ export const useScanLogic = () => {
                             ? (t('home.errorAnalysisNetwork') || 'We could not reach the analysis service. Please check your connection and try again.')
                             : err.status >= 500
                                 ? (t('home.errorAnalysisUnavailable') || 'The analysis service is temporarily unavailable. Please try again shortly.')
-                                : (qualityErrors[errorCode] || err.message || t('home.errorAnalysis'));
+                                : friendlyErrorKey(err)
+                                    ? t(friendlyErrorKey(err))
+                                    // 4xx bodies carry the server's localized AI_* text; anything else
+                                    // (a JavaScript or library error) is not meant for farmers.
+                                    : (qualityErrors[errorCode] || (err.status >= 400 ? err.message : '') || t('home.errorAnalysis'));
                 dispatch({
                     type: 'SET_ERROR',
                     payload: {
