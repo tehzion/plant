@@ -1,8 +1,10 @@
+import { useReviewerText } from '../utils/reviewerCopy.js';
 import { useEffect, useState } from 'react';
 import { getNeonAccessToken, neonApiRequest } from '../utils/neonApi.js';
 
 const base='/api/admin/evaluation/dataset';
 export default function AgriculturalDataset() {
+    const tr = useReviewerText();
     const [data,setData]=useState(null), [error,setError]=useState(''), [source,setSource]=useState(''), [offset,setOffset]=useState(0);
     const [selected,setSelected]=useState(null), [image,setImage]=useState('');
     useEffect(()=>{
@@ -26,12 +28,12 @@ export default function AgriculturalDataset() {
     },[selected]);
     const summary=data?.summary, metrics=data?.metrics;
     return <section className="admin-panel admin-panel--wide" aria-labelledby="agricultural-dataset-title">
-        <div className="admin-panel-header"><div><h2 id="agricultural-dataset-title">Agricultural Dataset</h2><p>Reference labels and AI assessments are stored separately.</p></div></div>
+        <div className="admin-panel-header"><div><h2 id="agricultural-dataset-title">{tr("Agricultural Dataset")}</h2><p>{tr("Reference labels and AI assessments are stored separately.")}</p></div></div>
         {error && <p className="admin-error" role="alert">{error}</p>}
-        {summary && <><div className="evaluation-metrics"><div><span>Imported images</span><strong>{summary.total}</strong></div><div><span>Completed assessments</span><strong>{metrics.completed}</strong></div><div><span>Agreement</span><strong>{metrics.comparable ? `${Math.round(100*metrics.matches/metrics.comparable)}% (${metrics.matches}/${metrics.comparable})` : 'Not available'}</strong></div></div>
-        <p><strong>Sources:</strong> {summary.sources.join(', ') || 'None'}</p><p><strong>Crops:</strong> {summary.crops.join(', ') || 'None'}</p><p><strong>Dataset labels:</strong> {summary.conditions.join(', ') || 'None'}</p><p>Original POC assessments are marked baseline and may predate the health-status fix. Agreement uses the latest result per image and excludes review and unassessed cases.</p></>}
-        <label className="evaluation-label">Source <select value={source} onChange={e=>{setSource(e.target.value);setOffset(0);}}><option value="">All datasets</option><option>PlantVillage</option><option>PlantDoc</option></select></label>
-        {data && <><ul>{data.images.map(row=><li key={row.checksum}><button type="button" onClick={()=>setSelected(row)}>{row.crop} · {row.original_label} · {row.source}</button></li>)}</ul><button type="button" disabled={!offset} onClick={()=>setOffset(Math.max(0,offset-20))}>Previous</button> <span>Page {offset/20+1}</span> <button type="button" disabled={data.images.length<20} onClick={()=>setOffset(offset+20)}>Next</button></>}
-        {selected && <div><h3>Selected image</h3>{image && <img src={image} className="evaluation-image" alt="Selected agricultural dataset example" />}<p>Reference: {selected.crop} / {selected.original_label}</p><p>AI: {selected.completed ? `${selected.predicted_crop || 'Unknown'} / ${selected.predicted_condition || 'Unknown'} · ${selected.agreement} (${selected.run_id})` : 'Not assessed'}</p></div>}
+        {summary && <><div className="evaluation-metrics"><div><span>{tr("Imported images")}</span><strong>{summary.total}</strong></div><div><span>{tr("Completed assessments")}</span><strong>{metrics.completed}</strong></div><div><span>{tr("Agreement")}</span><strong>{metrics.comparable ? `${Math.round(100*metrics.matches/metrics.comparable)}% (${metrics.matches}/${metrics.comparable})` : 'Not available'}</strong></div></div>
+        <p><strong>{tr("Sources:")}</strong> {summary.sources.join(', ') || 'None'}</p><p><strong>{tr("Crops:")}</strong> {summary.crops.join(', ') || 'None'}</p><p><strong>{tr("Dataset labels:")}</strong> {summary.conditions.join(', ') || 'None'}</p><p>{tr("Original POC assessments are marked baseline and may predate the health-status fix. Agreement uses the latest result per image and excludes review and unassessed cases.")}</p></>}
+        <label className="evaluation-label">{tr("Source")}{' '}<select value={source} onChange={e=>{setSource(e.target.value);setOffset(0);}}><option value="">{tr("All datasets")}</option><option>PlantVillage</option><option>PlantDoc</option></select></label>
+        {data && <><ul>{data.images.map(row=><li key={row.checksum}><button type="button" onClick={()=>setSelected(row)}>{row.crop} · {row.original_label} · {row.source}</button></li>)}</ul><button type="button" disabled={!offset} onClick={()=>setOffset(Math.max(0,offset-20))}>{tr("Previous")}</button> <span>{tr("Page")}{' '}{offset/20+1}</span> <button type="button" disabled={data.images.length<20} onClick={()=>setOffset(offset+20)}>{tr("Next")}</button></>}
+        {selected && <div><h3>{tr("Selected image")}</h3>{image && <img src={image} className="evaluation-image" alt={tr("Selected agricultural dataset example")} />}<p>{tr("Reference:")}{' '}{selected.crop} / {selected.original_label}</p><p>{tr("AI:")}{' '}{selected.completed ? `${selected.predicted_crop || 'Unknown'} / ${selected.predicted_condition || 'Unknown'} · ${selected.agreement} (${selected.run_id})` : 'Not assessed'}</p></div>}
     </section>;
 }

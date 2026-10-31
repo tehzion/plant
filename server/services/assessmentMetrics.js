@@ -15,7 +15,7 @@ const percentile = (sorted, p) => {
 export const summarizeAssessmentMetrics = (rows = []) => {
     const fresh = rows.filter((row) => !row.cached);
     const durations = fresh
-        .map((row) => Number(row.duration_ms))
+        .map((row) => (row.duration_ms == null || row.duration_ms === '' ? NaN : Number(row.duration_ms)))
         .filter((value) => Number.isFinite(value) && value >= 0)
         .sort((a, b) => a - b);
     const costs = fresh

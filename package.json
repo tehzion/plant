@@ -20,7 +20,8 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "dev:evaluation-server": "node server/evaluation/startEvaluationServer.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "audit:reviews": "node server/scripts/reportReviewAgreement.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",

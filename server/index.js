@@ -1,3 +1,5 @@
+import { enforceRegisteredTreatments } from './services/registrationEligibility.js';
+import { resolveTelemetryIdentity } from './services/telemetryIdentity.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
@@ -142,7 +144,7 @@ app.use('/api/', rateLimit({
     standardHeaders: true, legacyHeaders: false,
     skip: (req) => req.path === '/health',
     handler: (req, res) => {
-        console.warn(JSON.stringify({ event: 'rate_limit', requestId: req.requestId, path: req.path, ip: req.ip }));
+        console.warn(JSON.stringify({ event: 'rate_limit', requestId: req.requestId, path: req.path }));
         res.status(429).json({ error: 'Too many requests. Please try again later.', requestId: req.requestId });
     },
 }));
@@ -156,7 +158,7 @@ const limiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
-        console.warn(JSON.stringify({ event: 'rate_limit', requestId: req.requestId, path: req.path, ip: req.ip }));
+        console.warn(JSON.stringify({ event: 'rate_limit', requestId: req.requestId, path: req.path }));
         res.status(429).json({ error: 'Too many requests from this IP, please try again later.', requestId: req.requestId });
     },
 });
@@ -186,11 +188,6 @@ app.get('/api/neon/health', async (req, res) => {
     res.status(database.connected ? 200 : 503).json(database);
 });
 
-const optionalAuthenticatedUser = async (req) => {
-    if (!getBearerToken(req)) return null;
-    return verifyAuthenticatedUser(req);
-};
-
 // Neon is the application database. These routes deliberately keep the
 // database credential on the server and enforce ownership after Supabase Auth
 // verifies the bearer token. Supabase remains responsible only for Auth and
@@ -208,11 +205,8 @@ app.post('/api/data/:table', async (req, res, next) => {
     try {
         const { table } = req.params;
         if (getTelemetryDatasetNames().includes(table)) {
-            const user = await optionalAuthenticatedUser(req);
-            const row = await insertTelemetryRow(table, req.body?.payload || req.body, {
-                userId: user?.id || null,
-                guestId: req.body?.guest_id || req.body?.payload?.guest_id || null,
-            });
+            const attribution = await resolveTelemetryIdentity(req);
+            const row = await insertTelemetryRow(table, req.body?.payload || req.body, attribution);
             return res.status(201).json({ row, data: row });
         }
         if (!getDatasetNames().includes(table)) return res.status(404).json({ error: 'Data collection not found.' });
@@ -378,7 +372,7 @@ app.use(aiRoutes, async (req, res, next) => {
     try {
         const quota = await consumeAiQuota({ identity: req.aiIdentity, limit: Number(process.env.AI_IDENTITY_DAILY_LIMIT) || 50 });
         if (!quota.allowed) {
-            console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId, identity: req.aiIdentity }));
+            console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId }));
             return res.status(429).json({ error: 'Daily AI usage limit reached. Please try again tomorrow.', requestId: req.requestId });
         }
         next();
@@ -391,7 +385,7 @@ app.use(aiRoutes, async (req, res, next) => {
     try {
         const ipQuota = await consumeAiQuota({ identity: `daily-ip:${req.ip || 'unknown'}`, limit: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50 });
         if (!ipQuota.allowed) {
-            console.warn(JSON.stringify({ event: 'ai_ip_quota_exceeded', requestId: req.requestId, ip: req.ip }));
+            console.warn(JSON.stringify({ event: 'ai_ip_quota_exceeded', requestId: req.requestId }));
             return res.status(429).json({ error: 'Daily AI usage limit reached. Please try again tomorrow.', requestId: req.requestId });
         }
         const serverQuota = await consumeAiQuota({ identity: 'server-total', limit: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000 });
@@ -454,11 +448,11 @@ app.post('/api/ask', async (req, res, next) => {
         // 2. Check Cache
         const cachedAnswer = aiCache.get(cacheKey);
         if (cachedAnswer) {
-            console.log(`🧠 Cache HIT for question: "${question.substring(0, 30)}..."`);
+            console.log(JSON.stringify({ event: 'question_cache_hit', requestId: req.requestId }));
             return res.json({ ...cachedAnswer, cached: true });
         }
 
-        console.log(`🧠 Cache MISS for question: "${question.substring(0, 30)}..." - Calling OpenAI...`);
+        console.log(JSON.stringify({ event: 'question_cache_miss', requestId: req.requestId }));
 
         // 3. Call Service
         const answer = await withAbortableTimeout(
@@ -624,7 +618,7 @@ app.post('/api/analyze', async (req, res, next) => {
             return res.status(400).json({ error: 'Image (treeImage) is required' });
         }
 
-        console.log(`📸 New Analysis Request - Category: ${category}, Location: ${location || 'Not provided'}`);
+        console.log(JSON.stringify({ event: 'analysis_started', requestId: req.requestId }));
 
         // 1. Generate Image Hash for Caching
         const cacheKey = buildAnalysisCacheKey(req.body);
@@ -879,10 +873,10 @@ app.post('/api/products/search', async (req, res, next) => {
         // product also passes basic purpose, crop, restriction and label
         // checks. Unverified matches are returned separately as catalogue
         // discovery so the UI can present them without implying suitability.
-        const treatmentSplit = partitionByEligibility(
+        const treatmentSplit = enforceRegisteredTreatments(partitionByEligibility(
             sectionPolicy.showDiseaseProducts ? enrichRecommendedProducts(rawTreatment, diagnosis, 'treatment', diseaseProductRules) : [],
             diagnosis, 'treatment', targetLanguage,
-        );
+        ), diagnosis);
         const nutritionList = (products, role) => {
             const split = partitionByEligibility(products, diagnosis, role, targetLanguage);
             return [...split.eligible, ...split.discovery.map(({ discoveryOnly: _discoveryOnly, ...product }) => product)];
@@ -1266,7 +1260,7 @@ registerEvaluationRoutes(app);
 // Global Error Handler
 app.use((err, req, res, next) => {
     const isProduction = process.env.NODE_ENV === 'production';
-    console.error(JSON.stringify({ event: 'api_error', requestId: req.requestId, method: req.method, path: req.path, status: err.status || 500, message: err.message }));
+    console.error(JSON.stringify({ event: 'api_error', requestId: req.requestId, method: req.method, path: req.path, status: err.status || 500, code: err.code || 'API_ERROR' }));
     if (!err.status || err.status >= 500) captureError(err, { requestId: req.requestId, path: req.path, method: req.method });
 
     res.status(err.status || 500).json({
