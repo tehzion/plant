@@ -9,6 +9,7 @@ import FormData from 'form-data';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import { withAbortableTimeout } from '../utils/requestTimeout.js';
+import { recordAiUsage } from '../utils/aiUsage.js';
 import { MALAYSIA_CROP_KNOWLEDGE, MALAYSIA_SUPPLIERS } from '../data/crops.js';
 import {
     DEFAULT_DISEASE_PRODUCT_RULES,
@@ -67,11 +68,20 @@ export const createChatCompletion = ({ model, messages, maxTokens, temperature, 
         request.temperature = temperature;
     }
 
+    // Ask OpenRouter to include the charged cost in the usage block.
+    if (resolveAiProvider().provider === 'openrouter') {
+        request.usage = { include: true };
+    }
+
     // The abort signal is a request option, not a body field.
     const client = getOpenAIClient();
-    return signal
+    const pending = signal
         ? client.chat.completions.create(request, { signal })
         : client.chat.completions.create(request);
+    return Promise.resolve(pending).then((response) => {
+        recordAiUsage(response?.usage);
+        return response;
+    });
 };
 
 const normalizePlantNetOrgan = (value) => {

@@ -93,10 +93,17 @@ export const listReviewQueue = async ({ status = 'needs_review', days = 30, limi
     return { cases: filtered.slice(0, rowLimit), windowDays };
 };
 
+const SHOWN_ROLES = ['treatment', 'fertilizer', 'supplement', 'discovery'];
+
+const shownProductRows = (snapshot) => (snapshot && typeof snapshot === 'object'
+    ? SHOWN_ROLES.flatMap((role) => (Array.isArray(snapshot[role]) ? snapshot[role] : [])
+        .map((product) => ({ productId: product.id ?? null, productName: product.name || '', role, shown: true })))
+    : []);
+
 export const getReviewCase = async (scanId) => {
     if (!SCAN_ID_PATTERN.test(String(scanId || ''))) throw fail('Invalid scan ID.');
     const { rows } = await queryNeon(
-        'select id, created_at, category, images, raw_result from public.diagnosis_training_logs where id = $1',
+        "select id, created_at, category, images, raw_result, metadata->'shownRecommendations' as shown_recommendations from public.diagnosis_training_logs where id = $1",
         [scanId],
     );
     const log = rows?.[0];
@@ -126,9 +133,17 @@ export const getReviewCase = async (scanId) => {
             const { attribution = null, wasCorrect = null, correctCrop = null, correctDisease = null, issueType = null, note = null } = row.feedback || {};
             return { createdAt: row.created_at, source: 'farmer', verified: Boolean(attribution), wasCorrect, correctCrop, correctDisease, issueType, note };
         }),
-        products: [...new Map((productEvents.rows || []).map((row) => [String(row.product_id || row.product_name), {
-            productId: row.product_id, productName: row.product_name, role: row.recommendation_role,
-        }])).values()],
+        // The product list the farmer was shown, when it was recorded.
+        shownRecommendations: log.shown_recommendations || null,
+        // Everything shown to the farmer first, then anything else they clicked.
+        products: [
+            ...shownProductRows(log.shown_recommendations),
+            ...(productEvents.rows || []).map((row) => ({ productId: row.product_id, productName: row.product_name, role: row.recommendation_role })),
+        ].reduce((unique, product) => {
+            const key = String(product.productId ?? product.productName);
+            if (!unique.seen.has(key)) { unique.seen.add(key); unique.list.push(product); }
+            return unique;
+        }, { seen: new Set(), list: [] }).list,
     };
 };
 

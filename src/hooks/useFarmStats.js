@@ -363,9 +363,6 @@ export const useFarmStats = ({ userId, getLocation, notify, t = (key) => key, ma
         setAcknowledgedIds: persistAcknowledgedIds,
         assessingRisk,
         predictiveRisk,
-        hasLoggedToday,
-        streak,
-        complianceNudges,
         allEvents: [...notes, ...logbook, ...scanHistory]
     };
 };

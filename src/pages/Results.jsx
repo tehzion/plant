@@ -1,6 +1,6 @@
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
-﻿import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -144,6 +144,8 @@ const Results = () => {
     scanResult: result,
     language,
     enabled: Boolean(scan && !scanLoading),
+    scanId: scan?.id || '',
+    feedbackToken: scan?.feedbackToken || '',
   });
   const normalizedNutrition = result.nutritionalIssues;
   const scanCopy = getScanQualityCopy(language);

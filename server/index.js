@@ -18,6 +18,9 @@ import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerReque
 import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
+import { trackAiUsage } from './utils/aiUsage.js';
+import { buildRecommendationSnapshot, saveRecommendationSnapshot } from './services/recommendationSnapshotService.js';
+import { captureError, flushErrorTracking, initErrorTracking } from './utils/errorTracking.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
 import { syncOperation } from './services/syncService.js';
 import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
@@ -40,6 +43,7 @@ import { fileURLToPath } from 'url';
 // .env.local; hosted environments continue to provide env vars directly.
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+initErrorTracking();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -655,8 +659,9 @@ app.post('/api/analyze', async (req, res, next) => {
         // response failures are classified instead of being reported as
         // timeouts, so farmers see an accurate next step.
         let analysisResult;
+        let analysisUsage = null;
         try {
-            analysisResult = await withAbortableTimeout(
+            const tracked = await trackAiUsage(() => withAbortableTimeout(
                 (signal) => analyzeWithGPT4Mini(
                     plantNetResult,
                     mainImage,
@@ -669,7 +674,9 @@ app.post('/api/analyze', async (req, res, next) => {
                 ),
                 Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
                 { signal: requestController.signal, timeoutMessage: 'AI pipeline stage timed out' },
-            );
+            ));
+            analysisResult = tracked.result;
+            analysisUsage = tracked.usage;
         } catch (analysisError) {
             if (requestController.signal.aborted) throw analysisError;
             const failure = classifyAnalysisFailure(analysisError, language);
@@ -711,8 +718,10 @@ app.post('/api/analyze', async (req, res, next) => {
                 model: finalResult.analysisMetadata?.model || null,
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
                 durationMs: Date.now() - analysisStartedAt,
+                aiUsage: analysisUsage,
             }
         }).catch(err => console.error('Data logging failed:', err));
+        console.log(JSON.stringify({ event: 'analysis_usage', requestId: req.requestId, model: finalResult.analysisMetadata?.model || null, ...analysisUsage }));
 
         res.json({ ...finalResult, id: scanId, feedbackToken });
 
@@ -892,7 +901,7 @@ app.post('/api/products/search', async (req, res, next) => {
             };
         }
 
-        res.json({
+        const responseBody = {
             diseaseControl: finalTreatment,
             fertilizers: finalFertilizers,
             supplements: finalSupplements,
@@ -910,7 +919,19 @@ app.post('/api/products/search', async (req, res, next) => {
             curatedRules: recommendation.curatedRules || [],
             keywords: recommendation.keywords || {},
             storeUrl: getStoreUrl()
-        });
+        };
+
+        // Record what this farmer was shown, when they prove they own the scan.
+        const snapshotOwner = req.body.scanId ? verifyScanCapability(String(req.body.scanId), req.body.feedbackToken) : null;
+        if (snapshotOwner) {
+            saveRecommendationSnapshot({
+                scanId: String(req.body.scanId),
+                ownerHash: snapshotOwner,
+                snapshot: buildRecommendationSnapshot(responseBody, targetLanguage),
+            }).catch((error) => console.warn(JSON.stringify({ event: 'recommendation_snapshot_failed', requestId: req.requestId, message: error.message })));
+        }
+
+        res.json(responseBody);
     } catch (error) {
         if (requestController.signal.aborted) {
             const timeoutError = new Error('Product recommendations timed out or were cancelled.');
@@ -1217,6 +1238,7 @@ registerEvaluationRoutes(app);
 app.use((err, req, res, next) => {
     const isProduction = process.env.NODE_ENV === 'production';
     console.error(JSON.stringify({ event: 'api_error', requestId: req.requestId, method: req.method, path: req.path, status: err.status || 500, message: err.message }));
+    if (!err.status || err.status >= 500) captureError(err, { requestId: req.requestId, path: req.path, method: req.method });
 
     res.status(err.status || 500).json({
         error: isProduction && (!err.status || err.status >= 500) ? 'Internal Server Error' : (err.name || 'Request Error'),
@@ -1265,8 +1287,9 @@ const handleFatalProcessError = (event, error) => {
         message: error?.message || String(error),
         stack: error?.stack,
     }));
+    captureError(error instanceof Error ? error : new Error(String(error)), { event });
     if (process.env.NODE_ENV === 'production') {
-        setImmediate(() => process.exit(1));
+        flushErrorTracking().finally(() => process.exit(1));
     }
 };
 

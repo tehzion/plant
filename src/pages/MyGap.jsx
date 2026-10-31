@@ -19,6 +19,9 @@ import { createPdfPageFlow, getPdfTranslation } from '../utils/pdfReportLayout';
 import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
 import './MyGap.css';
 
+// jsPDF font sizes are in points; layout is in millimetres.
+const PT_TO_MM = 25.4 / 72;
+
 const MyGapPage = () => {
     const { t, language } = useLanguage();
     const { user } = useAuth();

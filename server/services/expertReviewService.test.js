@@ -85,6 +85,25 @@ describe('expert review records', () => {
         expect(JSON.stringify(view.farmerFeedback)).not.toContain('submitterHash');
         expect(view.aiAssessment.alternatives).toEqual([{ name: 'Septoria Leaf Spot', confidence_level: 'low' }]);
     });
+
+    it('lists every product the farmer was shown before ones they only clicked', async () => {
+        const shown = { treatment: [{ id: 11, name: 'Copper fungicide', eligibility: 'eligible' }], fertilizer: [{ id: 22, name: 'NPK 15-15-15' }], supplement: [], discovery: [] };
+        mocks.queryNeon
+            .mockResolvedValueOnce({ rows: [{ id: 'scan-1', created_at: 'now', category: 'Tomato', images: {}, raw_result: aiResult, shown_recommendations: shown }] })
+            .mockResolvedValueOnce({ rows: [] })
+            .mockResolvedValueOnce({ rows: [] })
+            .mockResolvedValueOnce({ rows: [
+                { product_id: 11, product_name: 'Copper fungicide', recommendation_role: 'treatment' },
+                { product_id: 33, product_name: 'Seaweed extract', recommendation_role: 'supplement' },
+            ] });
+        const view = await getReviewCase('scan-1');
+        expect(view.shownRecommendations).toEqual(shown);
+        expect(view.products).toEqual([
+            { productId: 11, productName: 'Copper fungicide', role: 'treatment', shown: true },
+            { productId: 22, productName: 'NPK 15-15-15', role: 'fertilizer', shown: true },
+            { productId: 33, productName: 'Seaweed extract', role: 'supplement' },
+        ]);
+    });
 });
 
 describe('farmer-facing review summary', () => {

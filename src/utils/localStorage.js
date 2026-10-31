@@ -236,8 +236,6 @@ export const normalizeStoredPlot = (plot = {}) => {
     return {
         id: plot.id ?? crypto.randomUUID(),
         name: plot.name ?? '',
-        cropType,
-        crop_type: cropType,
         area: plot.area ?? 0,
         unit: plot.unit ?? 'acres',
         soil_ph: plot.soil_ph ?? null,
