@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getOrderSession } from './orderSession.js';
 
 const apiBase = () => String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
@@ -8,8 +9,9 @@ export const getNeonAccessToken = async () => {
 };
 
 export const neonApiRequest = async (path, options = {}) => {
-    const { authRequired = true, ...requestOptions } = options;
-    const token = await getNeonAccessToken();
+    const { authRequired = true, guestSession = false, ...requestOptions } = options;
+    let token = await getNeonAccessToken();
+    if (!token && guestSession) token = (await getOrderSession()).accessToken;
     if (!token && authRequired) throw new Error('Your session has expired. Sign in again and retry.');
     const headers = new Headers(requestOptions.headers || {});
     if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -28,6 +30,7 @@ export const neonDataRequest = (table, payload = {}, options = {}) => neonApiReq
     method: options.method || 'POST',
     body: JSON.stringify(payload),
     authRequired: options.authRequired !== false,
+    guestSession: ['product_events', 'consultation_leads'].includes(table),
 });
 
 export const neonDataRowRequest = (table, id, payload = {}) => neonApiRequest(`/api/data/${table}/${encodeURIComponent(id)}`, {
