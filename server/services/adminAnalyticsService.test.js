@@ -107,6 +107,15 @@ describe('adminAnalyticsService', () => {
         })).rejects.toMatchObject({ status: 403 });
     });
 
+    it('verifies an admin token with a publishable key when the service key is absent', async () => {
+        delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+        process.env.SUPABASE_PUBLISHABLE_KEY = 'publishable-key';
+        const user = await verifyAdminRequest({ get: () => 'Bearer token-789' });
+        expect(user.email).toBe('admin@example.com');
+        expect(createClientMock).toHaveBeenCalledWith('https://project.supabase.co', 'publishable-key', expect.any(Object));
+        expect(getUserMock).toHaveBeenCalledWith('token-789');
+    });
+
     it('builds review summary counts, common diseases, and top products', async () => {
         dataByTable.scan_history = [
             {

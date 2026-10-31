@@ -72,6 +72,7 @@ vi.mock('lucide-react', () => {
         'Map',
         'MapPin',
         'MessageCircle',
+        'MessageSquareText',
         'MessageSquareWarning',
         'Microscope',
         'MoveRight',

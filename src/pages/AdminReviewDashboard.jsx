@@ -13,6 +13,8 @@ import { useAuth } from '../context/AuthContext';
 import { fetchAdminReviewSummary } from '../utils/adminAnalytics.js';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ExpertReviewPanel from '../components/ExpertReviewPanel';
+import EvaluationPanel from '../components/EvaluationPanel';
+import AgriculturalDataset from '../components/AgriculturalDataset';
 import './AdminReviewDashboard.css';
 
 const formatDate = (value) => {
@@ -155,6 +157,8 @@ const AdminReviewDashboard = () => {
                     </section>
 
                     <ExpertReviewPanel />
+                    <AgriculturalDataset />
+                    <EvaluationPanel />
 
                     <section className="admin-grid">
                         <div className="admin-panel admin-panel--wide">

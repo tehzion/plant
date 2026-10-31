@@ -18,9 +18,11 @@
     "check:translations": "node ./scripts/check-translations.mjs",
     "check:translations:strict": "node ./scripts/check-translations.mjs --strict",
     "preview": "vite preview",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "dev:evaluation-server": "node server/evaluation/startEvaluationServer.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
     "@neon/config": "^1.9.3",
     "@neon/env": "^1.6.4",
     "@supabase/supabase-js": "^2.100.0",

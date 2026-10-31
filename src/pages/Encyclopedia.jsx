@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { diseaseDatabase, getDiseasesByCategory, getCategories } from '../data/diseaseDatabase';
 import DiseaseCard from '../components/DiseaseCard';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -8,7 +9,13 @@ import { getUiCopy } from '../utils/uiCopy.js';
 
 const Encyclopedia = () => {
   const { t, label, language } = useLanguage();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  // ?q= lets the assistant link straight to one entry.
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
+  const linkedQuery = searchParams.get('q');
+  useEffect(() => {
+    if (linkedQuery) setSearchQuery(linkedQuery);
+  }, [linkedQuery]);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const safeLabel = (key, fallback) => {

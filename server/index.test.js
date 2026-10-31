@@ -158,6 +158,15 @@ describe('assessment and feedback attribution', () => {
 });
 
 describe('AI provider failure handling', () => {
+    it('uses a successful PlantNet match without invoking the identification fallback', async () => {
+        mocks.identify.mockResolvedValueOnce({ scientificName: 'Durio zibethinus', confidence: 95, source: 'PlantNet' });
+        const res = await invoke('/api/analyze', { body: { treeImage: 'plantnet-success-unique', category: 'Durian', language: 'en' } });
+        expect(mocks.identifyGpt).not.toHaveBeenCalled();
+        expect(mocks.analyze).toHaveBeenCalledOnce();
+        expect(mocks.logTraining).toHaveBeenCalledOnce();
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ identificationSource: 'PlantNet' }));
+    });
+
     it('reports a provider outage as an unavailable service, not a timeout, and logs nothing', async () => {
         mocks.analyze.mockRejectedValueOnce(Object.assign(new Error('upstream 500'), { status: 500 }));
         const res = await invoke('/api/analyze', { body: { treeImage: 'provider-down', category: 'Durian', language: 'ms' } });
@@ -179,8 +188,30 @@ describe('AI provider failure handling', () => {
         mocks.identifyGpt.mockResolvedValueOnce({ isPlant: true, scientificName: 'Durio zibethinus', confidence: 50 });
         const res = await invoke('/api/analyze', { body: { treeImage: 'plantnet-down', category: 'Durian', language: 'en' } });
         expect(mocks.identifyGpt).toHaveBeenCalledOnce();
+        expect(mocks.analyze).toHaveBeenCalledOnce();
+        expect(mocks.logTraining).toHaveBeenCalledOnce();
         expect(mocks.analyze.mock.calls[0][0]).toMatchObject({ source: 'GPT-Vision' });
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ identificationSource: 'GPT-Vision' }));
+    });
+
+    it('aborts a timed-out PlantNet request and performs one fallback assessment', async () => {
+        vi.useFakeTimers();
+        try {
+            let plantNetSignal;
+            mocks.identify.mockImplementationOnce((_image, { signal }) => {
+                plantNetSignal = signal;
+                return new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true }));
+            });
+            mocks.identifyGpt.mockResolvedValueOnce({ isPlant: true, scientificName: 'Durio zibethinus', confidence: 50 });
+            const pending = invoke('/api/analyze', { body: { treeImage: 'plantnet-timeout-unique', category: 'Durian', language: 'en' } });
+            await vi.advanceTimersByTimeAsync(12001);
+            const res = await pending;
+            expect(plantNetSignal.aborted).toBe(true);
+            expect(mocks.identifyGpt).toHaveBeenCalledOnce();
+            expect(mocks.analyze).toHaveBeenCalledOnce();
+            expect(mocks.logTraining).toHaveBeenCalledOnce();
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ identificationSource: 'GPT-Vision' }));
+        } finally { vi.useRealTimers(); }
     });
 });
 

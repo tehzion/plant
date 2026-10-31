@@ -14,7 +14,9 @@ export const pruneDiagnosisAudit = async (days = Number(process.env.DIAGNOSIS_RE
         );
         if (!rows?.length) break;
         const paths = rows.flatMap((row) => Object.values(row.images || {})).filter(Boolean);
-        if (paths.some((value) => typeof value !== 'string' || !/^training\/[a-zA-Z0-9_-]+_(tree|leaf)\.(jpg|png|webp)$/.test(value))) {
+        // Accepts both the original flat layout and the per-owner folder
+        // (training/<owner>/<scan>_tree.jpg) used since the ownership fix.
+        if (paths.some((value) => typeof value !== 'string' || !/^training\/(?:[a-zA-Z0-9_-]+\/)?[a-zA-Z0-9_-]+_(tree|leaf)\.(jpg|png|webp)$/.test(value))) {
             throw new Error('Unexpected audit image path; cleanup stopped');
         }
         if (paths.length) {

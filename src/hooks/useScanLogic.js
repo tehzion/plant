@@ -6,7 +6,7 @@ import {
     consumeStorageCleanupNotice,
     saveScan,
 } from '../utils/localStorage';
-import { getStandardizedStatus } from '../utils/statusUtils';
+import { getStandardizedStatus, getScanResultState, SCAN_RESULT_STATES } from '../utils/statusUtils';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast.js';
 
@@ -157,7 +157,9 @@ export const useScanLogic = () => {
                 );
 
                 dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
-                const standardizedHealthStatus = getStandardizedStatus(result);
+                const resultState = getScanResultState(result);
+                const standardizedHealthStatus = resultState === SCAN_RESULT_STATES.HEALTHY ? 'healthy'
+                    : resultState === SCAN_RESULT_STATES.CONFIDENT_TREATMENT ? getStandardizedStatus(result) : 'unknown';
 
                 const savedScan = await saveScan({
                     image: treeImageThumbnail,
