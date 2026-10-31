@@ -28,15 +28,14 @@
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
-  border-radius: 18px;
+  border-radius: 10px;
   transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .action-btn:hover:not(:disabled) {
-  background: rgba(0, 177, 79, 0.08);
+  background: rgba(46, 107, 63, 0.08);
   color: var(--color-primary-dark);
-  transform: translateY(-1px);
 }
 
 .action-btn:active:not(:disabled) {
@@ -51,14 +50,13 @@
 .action-btn.primary {
   background: var(--gradient-primary);
   color: #fff;
-  box-shadow: 0 10px 20px rgba(0, 177, 79, 0.22);
+  box-shadow: none;
   flex: 1.15;
 }
 
 .action-btn.primary:hover:not(:disabled) {
   background: var(--gradient-primary-hover);
   color: #fff;
-  box-shadow: 0 12px 22px rgba(0, 140, 62, 0.24);
 }
 
 .action-btn .icon {
@@ -94,14 +92,14 @@
 @media (max-width: 480px) {
   .quick-actions {
     margin: 0 0 var(--space-lg);
-    border-radius: 22px;
+    border-radius: 12px;
   }
 }
 
 @media (min-width: 768px) {
   .quick-actions {
     padding: var(--space-md);
-    border-radius: 28px;
+    border-radius: 12px;
     max-width: 860px;
     margin: 0 auto var(--space-xl);
   }

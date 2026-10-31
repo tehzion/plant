@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import {
     ShieldCheck, Sprout, HeartHandshake, Globe, AlertTriangle, ExternalLink, RefreshCw,
-    ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download
+    ClipboardCheck, BookOpen, Plus, Calendar, FileText, CheckCircle2, Circle, Calculator, Timer, Download, MinusCircle
 } from 'lucide-react';
-import { getLogbook, saveLogEntry, saveChecklistState } from '../utils/localStorage';
-import VoiceLogInput from '../components/VoiceLogInput';
+import { deleteLogEntry, getLogbook, saveLogEntry, saveChecklistState, updateLogEntry } from '../utils/localStorage';
+import MyGapLogForm from '../components/mygap/MyGapLogForm';
+import MyGapLogCard from '../components/mygap/MyGapLogCard';
+import PestCheckList from '../components/mygap/PestCheckList';
+import { createLabel, fill } from '../components/mygap/mygapText.js';
+import { findPhiConflicts, NOT_APPLICABLE } from '../../shared/mygapCompliance.js';
 import { addHarvestReminder, getLogDefaults, localDateKey, rememberLogDefaults } from '../utils/farmerPrefs.js';
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
 import { useNotifications } from '../context/NotificationProvider.jsx';
-import { jsPDF } from 'jspdf';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
-import { createPdfTextRenderer } from '../utils/pdfTextRenderer';
-import { createPdfPageFlow, getPdfTranslation } from '../utils/pdfReportLayout';
 import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
 import './MyGap.css';
+
+const MYGAP_TABS = [
+    { id: 'logbook', icon: FileText, labelKey: 'mygap.tabLogbook' },
+    { id: 'checklist', icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
+    { id: 'calendar', icon: Calendar, labelKey: 'mygap.tabCalendar' },
+    { id: 'phi', icon: Calculator, labelKey: 'mygap.tabPhi' },
+    { id: 'guide', icon: BookOpen, labelKey: 'nav.about' },
+];
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
@@ -31,20 +41,32 @@ const MyGapPage = () => {
         checklistState: checklist, setChecklistState: setChecklist,
         derivedChecklist,
         autoCheckedItems,
-        checklistPct,
+        checklistEvidence,
+        checklistSummary,
         allEvents,
         hasMoreData,
+        scanHistory,
+        plots,
     } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
-    const [activeTab, setActiveTab] = useState('guide'); // 'guide' | 'checklist' | 'logbook' | 'phi'
+    const [searchParams] = useSearchParams();
+    // Records are the daily task, so the log opens first; ?tab= deep-links a tab.
+    const [activeTab, setActiveTab] = useState(() => (
+        MYGAP_TABS.some((tab) => tab.id === searchParams.get('tab')) ? searchParams.get('tab') : 'logbook'
+    ));
     const [isAddingLog, setIsAddingLog] = useState(false);
+    const [editingLog, setEditingLog] = useState(null);
     // Plot, crop and operator rarely change between entries, so they are
     // remembered on this device and pre-filled.
     const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults() });
     const [newLog, setNewLog] = useState(emptyLog);
-    const label = (key, fallback) => {
-        const value = t(key);
-        return value && value !== key ? value : fallback;
+    const [formKey, setFormKey] = useState(0);
+    const label = createLabel(t);
+    const openAddForm = (values) => {
+        setEditingLog(null);
+        setNewLog(values);
+        setFormKey((key) => key + 1);
+        setIsAddingLog(true);
     };
 
     // PHI Calculator State
@@ -53,18 +75,19 @@ const MyGapPage = () => {
     const [phiResult, setPhiResult] = useState(null);
     const [phiError, setPhiError] = useState('');
 
-    const handleCheckToggle = async (id) => {
-        const newState = { ...checklist, [id]: !checklist[id] };
+    const saveChecklistValue = async (id, value) => {
+        const newState = { ...checklist, [id]: value };
         const saved = await saveChecklistState(newState, user?.id ?? null);
         if (saved) setChecklist(newState);
         else notify({ type: 'error', title: t('common.error'), message: t('common.error') });
     };
+    const handleCheckToggle = (id) => saveChecklistValue(id, checklist[id] === true ? false : true);
+    const toggleNotApplicable = (id) => saveChecklistValue(id, checklist[id] === NOT_APPLICABLE ? false : NOT_APPLICABLE);
 
-    const handleAddLog = async (e) => {
-        e.preventDefault();
-        const entry = await saveLogEntry(newLog, user?.id ?? null);
+    const handleAddLog = async (values) => {
+        const entry = await saveLogEntry(values, user?.id ?? null);
         if (entry) {
-            rememberLogDefaults(newLog);
+            rememberLogDefaults(values);
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
             setNewLog(emptyLog());
@@ -76,17 +99,51 @@ const MyGapPage = () => {
         }
     };
 
+    const handleSaveCorrection = async (values, reason) => {
+        try {
+            const updated = await updateLogEntry(editingLog.id, values, reason, user?.id ?? null);
+            setLogs(logs.map((log) => (log.id === editingLog.id ? { ...log, ...updated } : log)));
+            setEditingLog(null);
+        } catch (error) {
+            console.error('myGAP record correction failed:', error);
+            notify({ type: 'error', title: t('common.error'), message: error?.status === 400 ? error.message : label('mygap.correctionFailed', 'The change could not be saved. Check your connection and try again.') });
+        }
+    };
+
+    const handleDeleteLog = async (log, reason) => {
+        try {
+            await deleteLogEntry(log.id, reason, user?.id ?? null);
+            setLogs(logs.filter((item) => item.id !== log.id));
+        } catch (error) {
+            console.error('myGAP record deletion failed:', error);
+            notify({ type: 'error', title: t('common.error'), message: error?.status === 400 ? error.message : label('mygap.correctionFailed', 'The change could not be saved. Check your connection and try again.') });
+        }
+    };
+
     const repeatLastLog = () => {
         const last = logs[0];
         if (!last) return;
-        setNewLog({
+        openAddForm({
             ...emptyLog(),
             type: last.type || 'pesticide',
             notes: last.notes || '',
-            ...Object.fromEntries(['plot_id', 'crop', 'product_used', 'quantity', 'operator'].map((field) => [field, last[field] || ''])),
+            ...Object.fromEntries(['plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days'].map((field) => [field, last[field] ?? ''])),
         });
-        setIsAddingLog(true);
     };
+
+    const recordTreatmentFromScan = (scan) => openAddForm({
+        ...emptyLog(),
+        type: 'pesticide',
+        target_pest: scan.disease || '',
+        linked_scan_id: scan.id,
+        crop: scan.category || scan.plantType || getLogDefaults().crop || '',
+        plot_id: scan.plotId || scan.plot_id || getLogDefaults().plot_id || '',
+    });
+
+    const recentScans = useMemo(() => (scanHistory || [])
+        .filter((scan) => Date.now() - new Date(scan.timestamp || scan.created_at).getTime() <= 60 * 86400000)
+        .slice(0, 5), [scanHistory]);
+    const phiConflicts = useMemo(() => new Map(findPhiConflicts(logs).map((conflict) => [conflict.harvestId, conflict])), [logs]);
 
     const saveHarvestReminder = () => {
         if (!phiResult) return;
@@ -130,251 +187,36 @@ const MyGapPage = () => {
         { id: 'check8', label: t('mygap.check8') },
     ];
 
-    const completedChecklistCount = checklistItems.filter((item) => Boolean(derivedChecklist[item.id])).length;
-    const checklistProgressPct = checklistItems.length > 0
-        ? Math.round((completedChecklistCount / checklistItems.length) * 100)
-        : 0;
-
-    const generateReport = async () => {
-        const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
-        const doc = new jsPDF();
-        const renderer = createPdfTextRenderer(doc);
-        const reportLang = language || 'en';
-        const rt = (key) => getPdfTranslation(translations, reportLang, key);
-
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const primaryColor = [0, 177, 79];
-        const secondaryColor = [232, 245, 233];
-        const darkColor = [28, 36, 52];
-        const lightText = [100, 116, 139];
-
-        const pendingLabel = rt('common.pending');
-        const pageLabel = rt('common.page');
-        const ofLabel = rt('common.of');
-        const flow = createPdfPageFlow({
-            doc,
-            renderer,
-            pageWidth,
-            pageHeight,
-            initialY: 60,
-            darkColor,
-        });
-        const { checkPageBreak, writeParagraph } = flow;
-        const writeSectionTitle = async (title, options = {}) => {
-            await flow.writeSectionTitle(title, {
-                fontSize: 14,
-                textColor: darkColor,
-                marginBottom: 6,
-                ...options,
-            });
-        };
-
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, pageWidth, 45, 'F');
-        doc.setFillColor(255, 255, 255);
-        doc.circle(25, 22, 12, 'F');
-        doc.setFillColor(...primaryColor);
-        doc.path('M 25 15 C 25 15 30 20 30 25 C 30 30 25 32 25 32 C 25 32 20 30 20 25 C 20 20 25 15 25 15');
-        doc.fill();
-
-        await renderer.drawText('KANB Agropreneur Nasional', 42, 14, {
-            maxWidth: 90,
-            fontSize: 18,
-            fontStyle: 'bold',
-            color: [255, 255, 255],
-        });
-        await renderer.drawText(rt('mygap.reportTitle').toUpperCase(), 42, 24, {
-            maxWidth: 90,
-            fontSize: 12,
-            color: [255, 255, 255],
-        });
-
-        const dateStr = new Date().toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : 'en-MY');
-        await renderer.drawText(`${rt('pdf.reportDate') || 'Date'}: ${dateStr}`, pageWidth - 74, 18, {
-            maxWidth: 60,
-            fontSize: 10,
-            color: [255, 255, 255],
-            align: 'right',
-        });
-
-        const totalChecks = checklistItems.length;
-        const completedChecks = Object.values(derivedChecklist).filter(Boolean).length;
-        const complianceRate = Math.round((completedChecks / totalChecks) * 100);
-        const totalLogs = reportLogs.length;
-
-        doc.setDrawColor(226, 232, 240);
-        doc.setFillColor(248, 250, 252);
-        doc.roundedRect(14, 50, 182, 25, 3, 3, 'FD');
-
-        await renderer.drawText(rt('mygap.complianceProgress') || 'Compliance Progress', 22, 56, {
-            maxWidth: 42,
-            fontSize: 10,
-            color: darkColor,
-        });
-        await renderer.drawText(`${complianceRate}%`, 22, 63, {
-            maxWidth: 42,
-            fontSize: 14,
-            fontStyle: 'bold',
-            color: primaryColor,
-        });
-
-        await renderer.drawText(rt('mygap.checklistTitle'), 82, 56, {
-            maxWidth: 42,
-            fontSize: 10,
-            color: darkColor,
-        });
-        await renderer.drawText(`${completedChecks}/${totalChecks}`, 82, 63, {
-            maxWidth: 42,
-            fontSize: 14,
-            fontStyle: 'bold',
-            color: darkColor,
-        });
-
-        await renderer.drawText(rt('mygap.logbookTitle'), 142, 56, {
-            maxWidth: 42,
-            fontSize: 10,
-            color: darkColor,
-        });
-        await renderer.drawText(`${totalLogs}`, 142, 63, {
-            maxWidth: 42,
-            fontSize: 14,
-            fontStyle: 'bold',
-            color: darkColor,
-        });
-
-        flow.yPos = 85;
-
-        await writeSectionTitle(rt('mygap.checklistTitle'));
-
-        const checklistData = [
-            { id: 'check1', label: rt('mygap.check1') },
-            { id: 'check2', label: rt('mygap.check2') },
-            { id: 'check3', label: rt('mygap.check3') },
-            { id: 'check4', label: rt('mygap.check4') },
-            { id: 'check5', label: rt('mygap.check5') },
-            { id: 'check6', label: rt('mygap.check6') },
-            { id: 'check7', label: rt('mygap.check7') },
-            { id: 'check8', label: rt('mygap.check8') },
-        ].map((item) => ({
-            label: item.label,
-            complete: Boolean(derivedChecklist[item.id]),
-        }));
-
-        for (const item of checklistData) {
-            const statusText = item.complete ? (rt('common.completed') || 'Completed') : pendingLabel;
-            const rowHeight = Math.max(
-                renderer.measureTextHeight(item.label, 112, { fontSize: 10 }),
-                renderer.measureTextHeight(statusText, 30, { fontSize: 9, fontStyle: 'bold' }),
-                10 * PT_TO_MM,
-            ) + 8;
-
-            checkPageBreak(rowHeight + 4);
-            doc.setFillColor(...(item.complete ? [240, 253, 244] : [248, 250, 252]));
-            doc.setDrawColor(226, 232, 240);
-            doc.roundedRect(14, flow.yPos, pageWidth - 28, rowHeight, 3, 3, 'FD');
-
-            await renderer.drawText(item.label, 18, flow.yPos + 4, {
-                maxWidth: 112,
-                fontSize: 10,
-                color: darkColor,
-            });
-
-            const badgeWidth = 34;
-            const badgeX = pageWidth - 14 - badgeWidth - 4;
-            doc.setFillColor(...(item.complete ? primaryColor : [239, 68, 68]));
-            doc.roundedRect(badgeX, flow.yPos + 4, badgeWidth, rowHeight - 8, 3, 3, 'F');
-            await renderer.drawText(statusText, badgeX, flow.yPos + (rowHeight - 8 - (9 * PT_TO_MM * 1.35)) / 2 + 4, {
-                maxWidth: badgeWidth,
-                fontSize: 9,
-                fontStyle: 'bold',
-                color: [255, 255, 255],
-                align: 'center',
-            });
-
-            flow.yPos += rowHeight + 4;
-        }
-
-        flow.yPos += 8;
-        await writeSectionTitle(rt('mygap.logbookSummary'));
-
-        if (reportLogs.length === 0) {
-            await writeParagraph(rt('mygap.noLogs'), {
-                x: 14,
-                width: pageWidth - 28,
-                fontSize: 10,
-                color: lightText,
-                gapAfter: 6,
-            });
-        } else {
-            for (const log of reportLogs) {
-                const dateLabel = new Date(log.activity_date || log.timestamp).toLocaleDateString(reportLang === 'ms' ? 'ms-MY' : reportLang === 'zh' ? 'zh-MY' : 'en-MY');
-                const typeLabel = rt(`mygap.${log.type}Log`).split(' ')[0];
-                const reportLabel = (key, fallback) => { const value = rt(key); return value && value !== key ? value : fallback; };
-                const details = [
-                    log.plot_id && `${reportLabel('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
-                    log.crop && `${reportLabel('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
-                    log.product_used && `${reportLabel('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
-                    log.quantity && `${reportLabel('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
-                    log.operator && `${reportLabel('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
-                ].filter(Boolean).join(' | ');
-                const body = [details, log.notes].filter(Boolean).join('\n') || '-';
-                const notesHeight = renderer.measureTextHeight(body, pageWidth - 36, { fontSize: 9 });
-                const cardHeight = notesHeight + 18;
-
-                checkPageBreak(cardHeight + 4);
-                doc.setFillColor(248, 250, 252);
-                doc.setDrawColor(226, 232, 240);
-                doc.roundedRect(14, flow.yPos, pageWidth - 28, cardHeight, 3, 3, 'FD');
-
-                await renderer.drawText(typeLabel, 18, flow.yPos + 4, {
-                    maxWidth: 70,
-                    fontSize: 9,
-                    fontStyle: 'bold',
-                    color: primaryColor,
-                });
-                await renderer.drawText(dateLabel, pageWidth - 66, flow.yPos + 4, {
-                    maxWidth: 48,
-                    fontSize: 8,
-                    color: lightText,
-                    align: 'right',
-                });
-                await renderer.drawText(body, 18, flow.yPos + 11, {
-                    maxWidth: pageWidth - 36,
-                    fontSize: 9,
-                    color: darkColor,
-                });
-
-                flow.yPos += cardHeight + 4;
-            }
-        }
-
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setDrawColor(226, 232, 240);
-            doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
-
-            await renderer.drawText(`KANB Agropreneur Nasional - ${rt('mygap.reportTitle')}`, 14, pageHeight - 12, {
-                maxWidth: 110,
-                fontSize: 8,
-                color: lightText,
-            });
-            await renderer.drawText(`${pageLabel} ${i} ${ofLabel} ${pageCount}`, pageWidth - 44, pageHeight - 12, {
-                maxWidth: 30,
-                fontSize: 8,
-                color: lightText,
-                align: 'right',
-            });
-        }
-
-        doc.save('myGAP_Compliance_Report.pdf');
+    const completedChecklistCount = checklistSummary.completed;
+    const checklistProgressPct = checklistSummary.percent;
+    const evidenceText = (id) => {
+        const item = checklistEvidence[id];
+        if (!item) return label('mygap.manualOnly', 'Records cannot show this. Tick it once you have checked it on the farm.');
+        return fill(label(`mygap.evidence_${item.reason}`, ''), { count: item.count ?? 0 });
     };
 
-    if (dataLoading) return <div role="status">{t('common.loading')}</div>;
-    if (dataError) return <div role="alert">
+    const [exportingReport, setExportingReport] = useState(false);
+    const generateReport = async () => {
+        if (exportingReport) return;
+        setExportingReport(true);
+        try {
+            // The PDF covers the complete logbook, not just the rows loaded on screen.
+            const reportLogs = await Promise.resolve(getLogbook(user?.id ?? null)).catch(() => logs);
+            const { buildMyGapReportPdf, mygapReportFileName } = await import('../utils/mygapReportPdf');
+            const doc = await buildMyGapReportPdf({ logs: reportLogs || logs, derivedChecklist, scans: scanHistory, language: language || 'en', translations });
+            doc.save(mygapReportFileName());
+        } catch (error) {
+            console.error('myGAP report export failed:', error);
+            notify({ type: 'error', title: t('common.error'), message: t('common.error') });
+        } finally {
+            setExportingReport(false);
+        }
+    };
+
+    if (dataLoading) return <div className="mygap-page-container mygap-state" role="status"><span className="loading-spinner-circle" aria-hidden="true" />{t('common.loading')}</div>;
+    if (dataError) return <div className="mygap-page-container mygap-state" role="alert">
         <p>{t('profile.dataLoadFailed')}</p>
-        <button type="button" onClick={reloadData}>{t('common.retry')}</button>
+        <button type="button" className="btn btn-primary" onClick={reloadData}>{t('common.retry')}</button>
     </div>;
     return (
         <div className="mygap-page-container">
@@ -383,57 +225,21 @@ const MyGapPage = () => {
                 <p className="page-subtitle">{t('mygap.subtitle')}</p>
             </div>
 
-            <div className="tabs-container" role="tablist">
-                <button
-                    role="tab" aria-selected={activeTab === 'guide'} aria-controls="mygap-panel" id="mygap-tab-guide"
-                    tabIndex={activeTab === 'guide' ? 0 : -1}
-                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
-                    className={`tab-btn ${activeTab === 'guide' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('guide')}
-                >
-                    <BookOpen size={18} />
-                    <span>{t('nav.about')}</span>
-                </button>
-                <button
-                    role="tab" aria-selected={activeTab === 'checklist'} aria-controls="mygap-panel" id="mygap-tab-checklist"
-                    tabIndex={activeTab === 'checklist' ? 0 : -1}
-                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
-                    className={`tab-btn ${activeTab === 'checklist' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('checklist')}
-                >
-                    <ClipboardCheck size={18} />
-                    <span>{t('mygap.tabChecklist')}</span>
-                </button>
-                <button
-                    role="tab" aria-selected={activeTab === 'logbook'} aria-controls="mygap-panel" id="mygap-tab-logbook"
-                    tabIndex={activeTab === 'logbook' ? 0 : -1}
-                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
-                    className={`tab-btn ${activeTab === 'logbook' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('logbook')}
-                >
-                    <FileText size={18} />
-                    <span>{t('mygap.tabLogbook')}</span>
-                </button>
-                <button
-                    role="tab" aria-selected={activeTab === 'calendar'} aria-controls="mygap-panel" id="mygap-tab-calendar"
-                    tabIndex={activeTab === 'calendar' ? 0 : -1}
-                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
-                    className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('calendar')}
-                >
-                    <Calendar size={18} />
-                    <span>{t('mygap.tabCalendar')}</span>
-                </button>
-                <button
-                    role="tab" aria-selected={activeTab === 'phi'} aria-controls="mygap-panel" id="mygap-tab-phi"
-                    tabIndex={activeTab === 'phi' ? 0 : -1}
-                    onKeyDown={event => { const keys = ['guide', 'checklist', 'logbook', 'calendar', 'phi']; let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
-                    className={`tab-btn ${activeTab === 'phi' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('phi')}
-                >
-                    <Calculator size={18} />
-                    <span>{t('mygap.tabPhi')}</span>
-                </button>
+            <div className="tabs-container" role="tablist" aria-label={t('mygap.title')}>
+                {MYGAP_TABS.map(({ id, icon: Icon, labelKey }) => (
+                    <button
+                        key={id}
+                        type="button"
+                        role="tab" aria-selected={activeTab === id} aria-controls="mygap-panel" id={`mygap-tab-${id}`}
+                        tabIndex={activeTab === id ? 0 : -1}
+                        onKeyDown={event => { const keys = MYGAP_TABS.map(tab => tab.id); let i = keys.indexOf(activeTab); if (event.key === 'ArrowRight') i = (i + 1) % keys.length; else if (event.key === 'ArrowLeft') i = (i + keys.length - 1) % keys.length; else if (event.key === 'Home') i = 0; else if (event.key === 'End') i = keys.length - 1; else return; event.preventDefault(); setActiveTab(keys[i]); document.getElementById('mygap-tab-' + keys[i])?.focus(); } }
+                        className={`tab-btn ${activeTab === id ? 'active' : ''}`}
+                        onClick={() => setActiveTab(id)}
+                    >
+                        <Icon size={18} aria-hidden="true" />
+                        <span>{t(labelKey)}</span>
+                    </button>
+                ))}
             </div>
 
             <div id="mygap-panel" role="tabpanel" aria-labelledby={`mygap-tab-${activeTab}`} tabIndex={0}>
@@ -467,7 +273,7 @@ const MyGapPage = () => {
                             {t('mygap.officialLink')}
                             <ExternalLink size={16} />
                         </a>
-                        <button onClick={generateReport} className="report-button">
+                        <button type="button" onClick={generateReport} className="report-button" disabled={exportingReport} aria-busy={exportingReport}>
                             {t('mygap.generateReport')}
                             <Download size={16} />
                         </button>
@@ -485,7 +291,7 @@ const MyGapPage = () => {
                             <div className="progress-header">
                                 <span className="progress-label">{t('mygap.complianceProgress') || 'Compliance Progress'}</span>
                                 <span className="progress-stats">
-                                    {completedChecklistCount}/{checklistItems.length} {t('mygap.completed') || 'Completed'} - {checklistProgressPct}%
+                                    {completedChecklistCount}/{checklistSummary.applicable} {t('mygap.completed') || 'Completed'} - {checklistProgressPct}%
                                 </span>
                             </div>
                             <div className="progress-track">
@@ -498,28 +304,35 @@ const MyGapPage = () => {
 
                         <div className="checklist-items">
                             {checklistItems.map((item) => {
-                                const isCompleted = derivedChecklist[item.id];
-                                const isAuto = autoCheckedItems[item.id];
-                                
+                                const state = derivedChecklist[item.id];
+                                const notApplicable = state === NOT_APPLICABLE;
+                                const isCompleted = state === true;
+                                const isAuto = autoCheckedItems[item.id] && !notApplicable;
+                                const hintId = `mygap-${item.id}-evidence`;
+
                                 return (
-                                    <label
-                                        key={item.id}
-                                        className={`checklist-item ${isCompleted ? 'completed' : ''} ${isAuto ? 'is-auto-derived' : ''}`}
-                                    >
-                                        <input type="checkbox" checked={Boolean(isCompleted)} disabled={Boolean(isAuto)} onChange={() => handleCheckToggle(item.id)} />
-                                        <div className="check-icon" aria-hidden="true">
-                                            {isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                                        </div>
-                                        <div className="checklist-item-content">
-                                            <span>{item.label}</span>
-                                            {isAuto && (
-                                                <span className="synced-badge">
-                                                    <RefreshCw size={10} />
-                                                    {t('mygap.syncedFromRecords') || 'Completed from farm records'}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </label>
+                                    <div key={item.id} className={`checklist-row ${notApplicable ? 'is-na' : ''}`}>
+                                        <label className={`checklist-item ${isCompleted ? 'completed' : ''} ${isAuto ? 'is-auto-derived' : ''}`}>
+                                            <input type="checkbox" checked={isCompleted} disabled={Boolean(isAuto) || notApplicable} aria-describedby={hintId} onChange={() => handleCheckToggle(item.id)} />
+                                            <div className="check-icon" aria-hidden="true">
+                                                {notApplicable ? <MinusCircle size={24} /> : isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                                            </div>
+                                            <div className="checklist-item-content">
+                                                <span>{item.label}</span>
+                                                {isAuto && (
+                                                    <span className="synced-badge">
+                                                        <RefreshCw size={10} />
+                                                        {t('mygap.syncedFromRecords') || 'Completed from farm records'}
+                                                    </span>
+                                                )}
+                                                {notApplicable && <span className="na-badge">{label('mygap.naLabel', 'Not applicable')}</span>}
+                                                <small id={hintId} className="checklist-evidence">{evidenceText(item.id)}</small>
+                                            </div>
+                                        </label>
+                                        <button type="button" className="checklist-na-btn" aria-pressed={notApplicable} onClick={() => toggleNotApplicable(item.id)}>
+                                            {notApplicable ? label('mygap.undoNa', 'Applies to my farm') : label('mygap.markNa', 'Not applicable to my farm')}
+                                        </button>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -545,96 +358,37 @@ const MyGapPage = () => {
                             <h2 className="section-title">{t('mygap.logbookTitle')}</h2>
                             <button
                                 type="button"
-                                className="add-log-btn"
-                                onClick={() => setIsAddingLog(!isAddingLog)}
-                                aria-label={t('mygap.addLog') || 'Add activity log'}
+                                className="btn btn-primary mygap-add-record"
+                                onClick={() => (isAddingLog ? setIsAddingLog(false) : openAddForm(emptyLog()))}
                                 aria-expanded={isAddingLog}
                             >
-                                <Plus size={20} />
+                                <Plus size={18} aria-hidden="true" />
+                                {t('mygap.addLog') || 'Add activity log'}
                             </button>
                         </div>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>
                         {hasMoreData && <p className="data-scope-note" role="status">{t('mygap.recentDataNotice') || 'Showing the 200 most recent records for faster loading. The PDF report includes the complete logbook.'}</p>}
 
                         {!isAddingLog && logs.length > 0 && (
-                            <button type="button" className="btn btn-secondary mygap-repeat-btn" onClick={repeatLastLog}>
-                                {label('assessment.ux.repeatLast', 'Repeat last entry')}
-                            </button>
+                            <div className="mygap-log-actions">
+                                <button type="button" className="btn btn-secondary mygap-repeat-btn" onClick={repeatLastLog}>
+                                    {label('assessment.ux.repeatLast', 'Repeat last entry')}
+                                </button>
+                                <button type="button" className="btn btn-secondary" onClick={generateReport} disabled={exportingReport} aria-busy={exportingReport}>
+                                    <Download size={16} aria-hidden="true" />
+                                    {t('mygap.generateReport')}
+                                </button>
+                            </div>
                         )}
 
                         {isAddingLog && (
-                            <form className="add-log-form slide-down" onSubmit={handleAddLog}>
-                                <VoiceLogInput onFill={(fields) => setNewLog((current) => ({ ...current, ...fields }))} />
-                                <div className="form-group">
-                                    <label htmlFor="mygap-log-type">{t('mygap.logType')}</label>
-                                    <select
-                                        id="mygap-log-type"
-                                        value={newLog.type}
-                                        onChange={(e) => setNewLog({ ...newLog, type: e.target.value })}
-                                    >
-                                        <option value="pesticide">{t('mygap.pesticideLog')}</option>
-                                        <option value="fertilizer">{t('mygap.fertilizerLog')}</option>
-                                        <option value="harvest">{t('mygap.harvestLog')}</option>
-                                        <option value="irrigation">{t('mygap.irrigationLog')}</option>
-                                    </select>
-                                </div>
-                                <div className="mygap-log-details">
-                                    <div className="form-group">
-                                        <label htmlFor="mygap-log-date">{label('assessment.mygap.activityDate', 'Activity date')}</label>
-                                        <input id="mygap-log-date" type="date" value={newLog.activity_date} max={new Date().toISOString().slice(0, 10)}
-                                            onChange={(e) => setNewLog({ ...newLog, activity_date: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label htmlFor="mygap-log-plot">{label('assessment.mygap.plot', 'Farm or plot')}</label>
-                                        <input id="mygap-log-plot" type="text" maxLength={120} value={newLog.plot_id}
-                                            onChange={(e) => setNewLog({ ...newLog, plot_id: e.target.value })} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label htmlFor="mygap-log-crop">{label('assessment.mygap.crop', 'Crop')}</label>
-                                        <input id="mygap-log-crop" type="text" maxLength={120} value={newLog.crop}
-                                            onChange={(e) => setNewLog({ ...newLog, crop: e.target.value })} />
-                                    </div>
-                                    {['pesticide', 'fertilizer'].includes(newLog.type) && (
-                                        <>
-                                            <div className="form-group">
-                                                <label htmlFor="mygap-log-product">{label('assessment.mygap.productUsed', 'Product used')}</label>
-                                                <input id="mygap-log-product" type="text" maxLength={200} value={newLog.product_used}
-                                                    onChange={(e) => setNewLog({ ...newLog, product_used: e.target.value })} />
-                                            </div>
-                                            <div className="form-group">
-                                                <label htmlFor="mygap-log-quantity">{label('assessment.mygap.quantity', 'Quantity you used')}</label>
-                                                <input id="mygap-log-quantity" type="text" maxLength={100} value={newLog.quantity}
-                                                    aria-describedby="mygap-log-quantity-hint"
-                                                    onChange={(e) => setNewLog({ ...newLog, quantity: e.target.value })} />
-                                                <small id="mygap-log-quantity-hint" className="field-hint">{label('assessment.mygap.quantityHint', 'Record what you actually applied. Always follow the product label.')}</small>
-                                            </div>
-                                        </>
-                                    )}
-                                    <div className="form-group">
-                                        <label htmlFor="mygap-log-operator">{label('assessment.mygap.operator', 'Done by')}</label>
-                                        <input id="mygap-log-operator" type="text" maxLength={120} value={newLog.operator}
-                                            onChange={(e) => setNewLog({ ...newLog, operator: e.target.value })} />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label htmlFor="mygap-log-notes">{t('mygap.logNotes')}</label>
-                                    <textarea
-                                        id="mygap-log-notes"
-                                        required
-                                        value={newLog.notes}
-                                        onChange={(e) => setNewLog({ ...newLog, notes: e.target.value })}
-                                        placeholder={t('mygap.logNotesPlaceholder')}
-                                    />
-                                </div>
-                                <div className="form-actions">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setIsAddingLog(false)}>
-                                        {t('common.cancel')}
-                                    </button>
-                                    <button type="submit" className="btn btn-primary">
-                                        {t('common.save')}
-                                    </button>
-                                </div>
-                            </form>
+                            <MyGapLogForm key={`add-${formKey}`} t={t} language={language} mode="add" initialValues={newLog}
+                                logs={logs} plots={plots} recentScans={recentScans}
+                                onSubmit={handleAddLog} onCancel={() => setIsAddingLog(false)} />
+                        )}
+
+                        {!isAddingLog && (
+                            <PestCheckList t={t} scans={recentScans} onRecordTreatment={recordTreatmentFromScan} />
                         )}
 
                         <div className="logs-list">
@@ -643,39 +397,21 @@ const MyGapPage = () => {
                                     <Calendar size={48} />
                                     <p>{t('mygap.emptyLogs')}</p>
                                     {!isAddingLog && (
-                                        <button type="button" className="btn btn-primary" onClick={() => setIsAddingLog(true)}>
+                                        <button type="button" className="btn btn-primary" onClick={() => openAddForm(emptyLog())}>
                                             {label('assessment.ux.addFirstLog', 'Add your first record')}
                                         </button>
                                     )}
                                 </div>
                             ) : (
-                                logs.map((log) => (
-                                    <div key={log.id} className="log-card">
-                                        <div className="log-header">
-                                            <span className={`log-badge ${log.type}`}>
-                                                {t(`mygap.${log.type}Log`).split(' ')[0]}
-                                            </span>
-                                            <span className="log-date">
-                                                {new Date(log.activity_date || log.timestamp).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                        {log.syncStatus === 'pending' && (
-                                            <span className="log-sync-badge">{label('assessment.sync.savedOnDeviceShort', 'Saved on device')}</span>
-                                        )}
-                                        {[log.plot_id, log.crop, log.product_used, log.quantity, log.operator].some(Boolean) && (
-                                            <p className="log-details">
-                                                {[
-                                                    log.plot_id && `${label('assessment.mygap.plot', 'Farm or plot')}: ${log.plot_id}`,
-                                                    log.crop && `${label('assessment.mygap.crop', 'Crop')}: ${log.crop}`,
-                                                    log.product_used && `${label('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
-                                                    log.quantity && `${label('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
-                                                    log.operator && `${label('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
-                                                ].filter(Boolean).join(' · ')}
-                                            </p>
-                                        )}
-                                        <p className="log-notes">{log.notes}</p>
-                                    </div>
-                                ))
+                                logs.map((log) => (editingLog?.id === log.id ? (
+                                    <MyGapLogForm key={`edit-${log.id}`} t={t} language={language} mode="edit"
+                                        initialValues={{ ...emptyLog(), ...Object.fromEntries(Object.entries(log).map(([field, value]) => [field, value ?? ''])) }}
+                                        logs={logs} plots={plots} recentScans={recentScans}
+                                        onSubmit={handleSaveCorrection} onCancel={() => setEditingLog(null)} />
+                                ) : (
+                                    <MyGapLogCard key={log.id} t={t} language={language} log={log} conflict={phiConflicts.get(log.id)}
+                                        onEdit={(item) => { setIsAddingLog(false); setEditingLog(item); }} onDelete={handleDeleteLog} />
+                                )))
                             )}
                         </div>
                     </div>

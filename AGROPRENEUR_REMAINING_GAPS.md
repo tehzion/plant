@@ -6,8 +6,8 @@
 
 | Gap | Why it matters | Recommended next action |
 |---|---|---|
-| Migration 0002 not applied | Expert review endpoints return errors without the table; myGAP structured fields fall back into notes. | Apply to a Neon branch, run the app against it, then apply to production during a planned release. |
-| Ownership fix not verified on real Postgres | Tests used an in-memory emulation. | On a Neon branch with two test accounts, attempt single and bulk upserts on each other's IDs over HTTP; expect 409 and unchanged rows. |
+| ~~Migration 0002 not applied~~ Done | Verified 31 Oct 2026: `diagnosis_expert_reviews` and the new `mygap_logs` columns exist on the production Neon project. | — |
+| ~~Ownership fix not verified on real Postgres~~ Done | Verified 31 Oct 2026 on Neon branch `ownership-check-2026-10-31` using the exact SQL `neonDataService` generates: another user's upsert returned no row (→ 409), plain insert hit `plots_pkey` (→ 409), the bulk pre-check found the foreign ID (whole batch rejected), update and delete affected 0 rows, the owner's row stayed unchanged, and the owner could still update it. | — |
 | Reviewer configuration | Workflow is closed until configured. | Set `EXPERT_REVIEWER_EMAILS`; confirm `ORDER_ACCESS_SECRET` (or `SCAN_CAPABILITY_SECRET`) is ≥ 32 chars in production. |
 | Release approval | No deployment was performed. | Review the diff, then commit and deploy with explicit approval. |
 
@@ -19,7 +19,7 @@
 | Alternative-condition quality is unmeasured. | Have reviewers mark whether the correct diagnosis appeared among the alternatives; track that rate. |
 | Product eligibility is text-based, not a registration lookup. | Add a curated per-product table (registration number, registered crops, target pests/diseases, label URL) maintained by the partner; prefer it over listing text. |
 | Real catalogue listings may lack crop/label details, sending most items to "discovery". | Audit the live WooCommerce listings and improve descriptions/tags; measure the eligible/discovery split. |
-| Recommended products are not stored per scan, so reviewers see only products the farmer clicked plus ones they add manually. | Store the recommendation set server-side, bound to the scan capability, so experts review exactly what was shown. |
+| ~~Recommended products are not stored per scan~~ Fixed: the product list shown is saved on the scan's audit record (owner-verified) and seeds the expert review form. | Store the recommendation set server-side, bound to the scan capability, so experts review exactly what was shown. |
 | Expert corrections are not shown to the farmer. | Add an optional "Reviewed by an expert" note on the farmer's result when a review exists (needs a privacy/consent decision). |
 | No reviewer assignment. | If volume grows, add an `assigned_reviewer` column; current design is a shared queue. |
 | Legacy guest scans have no feedback token. | Accept as a one-time limitation, or offer feedback through a support channel for older scans. |
@@ -44,7 +44,7 @@
 | Admin and expert screens are English only. | Translate if non-English reviewers are expected. |
 | myGAP coverage vs official requirements not verified; no certification or government integration. | Map fields to the official myGAP checklist with DOA/an auditor; keep "preparation aid" wording. |
 | PDPA assessment for images, location and feedback not done. | Qualified legal review; document retention for audit images and reviews. |
-| Performance, cost per assessment and latency not measured. | Server analysis time is now recorded per scan, and `npm run audit:metrics -- 30` reports median and 95th-percentile time plus the consent opt-in rate for a period (read-only). Run it after deployment for real figures; AI cost per scan is still not reported. |
+| Performance, cost per assessment and latency not measured. | `npm run audit:metrics -- 30` now reports time, AI tokens and OpenRouter cost per scan plus the consent opt-in rate (read-only). Run it after a few days of real traffic. |
 | Farmer usability not observed. | Short field sessions with farmers in ms/en/zh, focusing on the comparison cards and offline banner. |
 | Workbox runtime caching of API GETs not configured. | Not needed now — reads fall back to the IndexedDB cache. |
 
@@ -61,3 +61,38 @@
 | P1 | Experts reviewing non-consented scans see only the text assessment, without photos. | Accept this, or ask for a separate, explicit consent to expert review. Measure how many cases lack photos. |
 | P2 | Consent is saved per device, not per account. | Store the answer on the profile for signed-in users, and add a setting to change it later. |
 | P2 (partly fixed) | No way to withdraw consent for photos already stored. | Added `POST /api/scans/:scanId/withdraw-photos` (same proof of ownership as feedback): deletes the photos and marks the record not consented. The privacy policy tells farmers to contact support. **Still missing:** an in-app button on Results/History. |
+
+---
+
+## Addendum — repo audit (31 October 2026)
+
+| Priority | Gap | Status / next action |
+|---|---|---|
+| P0 | One production host for the API. `vercel.json`, two Vercel projects and `render.yaml` all exist, and a workflow keeps a Render instance warm. | **Open — owner decision.** Pick Render or Vercel for the API, delete the other config, and keep env vars in one place. |
+| ~~P0~~ Fixed | OpenRouter support. | `server/utils/aiProvider.js` (PR #4): set `AI_PROVIDER=openrouter` and `OPENROUTER_API_KEY`; model ids get the `openai/` prefix. |
+| ~~P0~~ Fixed | Daily per-IP and whole-server AI caps were in-memory, so each serverless instance counted separately. | Both now use the Neon `ai_usage_counters` table, like the per-identity quota. The 60/min burst limiter is still per instance; fine on Render, approximate on Vercel. |
+| ~~P0~~ Fixed | High-severity advisories (zod, undici) via `openai@4`. | Upgraded to `openai@7` with npm overrides; no high advisories remain. Moderate ones are in build-time tooling (`vite-plugin-pwa`, `javascript-obfuscator`). |
+| ~~P1~~ Fixed | AI abort signals were sent as a JSON body field (`"signal": {}`), so timed-out requests kept running and billing tokens. | Signal is now passed as a request option. |
+| ~~P1~~ Fixed | No end-to-end check that each disease maps to the right product class. | `server/services/productRecommendationMatrix.test.js` covers every curated rule plus healthy, retake and nutrient cases. |
+| ~~P1~~ Fixed | ~170 lines of unused AI product matcher (`recommendProductTags`). | Removed; product matching is rule-based only. |
+| ~~P1~~ Fixed | No error tracking and no AI cost per scan. | Opt-in Sentry (server + browser, scrubbed) via `SENTRY_DSN` / `VITE_SENTRY_DSN`; token usage and OpenRouter cost are stored per scan and reported by `npm run audit:metrics`. |
+| P1 | `aiService.js` is ~3,900 lines. | Split into diagnosis, ask, farm-insights and products modules. |
+| P1 (partly fixed) | No linter in CI. | `npm run lint` added (it found a myGAP PDF crash and duplicate keys, now fixed). The `ci.yml` step must be added by a maintainer: the Claude GitHub App lacks `workflows` permission. 88 warnings (mostly unused variables) remain. |
+| P2 | `.env.production` is tracked although `.gitignore` excludes it (public keys only). | Untrack once the `VITE_*` values are set in the host's build environment. |
+
+---
+
+## Addendum — myGAP Phase 1 (31 October 2026)
+
+Based on the DOA myGAP food-crop scheme (MS 1784, myGAP 4 record forms, 6-1 checklist). Official DOA PDFs could not be fetched from the build environment; field lists come from indexed excerpts and should be checked against the current forms.
+
+| Priority | Item | Status |
+|---|---|---|
+| ~~P0~~ Fixed | Checklist auto-ticks overstated compliance (one irrigation log ticked "clean water", one pesticide log ticked "pesticide records"). | Only items the records fully show are auto-completed (complete pesticide records; date + plot + crop on every record). Water, storage, PPE, disposal and training are manual. Items can be marked not applicable and are excluded from the percentage. Rules in `shared/mygapCompliance.js`. |
+| ~~P1~~ Fixed | Pesticide record lacked myGAP 4-5 fields. | Active ingredient, LRMP no., area treated, target pest/disease and pre-harvest interval (PHI) days; safe harvest date shown; missing fields listed per record. Migration `0003` (additive). |
+| ~~P1~~ Fixed | No pre-harvest interval check. | Harvest form warns when a waiting period is still running on that plot; early harvests are flagged in the logbook and the PDF. |
+| ~~P1~~ Fixed | Scans not used as pest monitoring (myGAP 4-4). | Recent scans listed in the logbook with "Record treatment"; scans appear as a monitoring table in the PDF. |
+| ~~P1~~ Fixed | Plots typed freely. | Plot field suggests saved plots and fills the crop. |
+| ~~P1~~ Fixed | Records could not be corrected. | Edit and delete with a required reason; signed-in corrections keep previous values in `activity_revisions`; guest records keep their history on the entry. Records still waiting to sync cannot be edited until they sync. |
+| P1 | Phase 2: purchase and stock records, harvest/sales with lot codes, workers and training, post-harvest treatment, farm profile and renewal reminder. | Open. |
+| P2 | Phase 3: map to the 17 official elements with evidence, annual internal audit, audit pack in official layouts, registered-pesticide lookup. | Open — needs DOA forms and data. |

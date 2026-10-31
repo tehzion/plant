@@ -13,7 +13,7 @@ describe('product plan drafts', () => {
                 resultState: 'confident_treatment',
             },
             recommendationIntent: 'treatment_ready',
-            consultation: { phone: '+60136667810' },
+            consultation: { phone: '+60146193328' },
             products: {
                 diseaseControl: [
                     {
@@ -76,7 +76,7 @@ describe('product plan drafts', () => {
                 resultState: 'expert_review_needed',
             },
             recommendationIntent: 'consultation_needed',
-            consultation: { phone: '+60136667810' },
+            consultation: { phone: '+60146193328' },
             products: {},
         });
 
@@ -87,6 +87,6 @@ describe('product plan drafts', () => {
             expense_category: 'Labor',
         });
         expect(draft.note).toContain('Recommended products: none selected yet');
-        expect(draft.note).toContain('+60136667810');
+        expect(draft.note).toContain('+60146193328');
     });
 });

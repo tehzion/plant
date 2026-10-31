@@ -26,6 +26,10 @@ services:
         value: openrouter
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: VITE_SENTRY_DSN
+        sync: false
       - key: EVALUATION_STORAGE_BUCKET
         value: agricultural-evaluation
       - key: EVALUATION_STORAGE_BRANCH

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-  ScanLine, AlertCircle, Leaf, ChevronDown, X
+  ScanLine, AlertCircle, Leaf, ChevronDown, X, Check
 } from 'lucide-react';
 import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
 import { DEMO_SCANS } from '../utils/demoData';
@@ -26,13 +26,12 @@ import HeroSection from '../components/home/HeroSection';
 import EventProductHero from '../components/home/EventProductHero';
 import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
+import RecentActivity from '../components/home/RecentActivity';
 import DueReminders from '../components/home/DueReminders';
 import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
-import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
-import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { isFollowUpDue } from '../utils/uiCopy.js';
 
@@ -105,7 +104,7 @@ const Home = () => {
   });
   const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
   const [analysisPreviewUrl, setAnalysisPreviewUrl] = useState('');
-  const [photoQualityIssue, setPhotoQualityIssue] = useState(null);
+  const [, setPhotoQualityIssue] = useState(null);
 
   const steps = [
     { label: t('home.step1') },
@@ -483,22 +482,26 @@ const Home = () => {
                 weatherError={weatherError}
               />
 
-              {/* Follow-up checks and harvest dates that are due, shown before the promo banner. */}
-              <DueReminders scans={dueScans} onOpenScan={(id) => navigate(`/results/${id}`)} />
-
               <EventProductHero
                 onScan={handleStartScan}
                 showDemoScenarios={user?.id === 'demo-user-123'}
                 onDemoScenario={(scenarioId) => navigate(`/results/${scenarioId}`)}
               />
 
+              {/* Follow-up checks and harvest dates that are due. */}
+              <DueReminders scans={dueScans} onOpenScan={(id) => navigate(`/results/${id}`)} />
+
               <div className="home-dashboard-stack">
-                <ActionGrid onScan={handleStartScan} />
                 <RecentScans
                   scans={recentScans}
                   onSeeAll={() => navigate('/history')}
                   onScanClick={(id) => navigate(`/results/${id}`)}
+                  onScan={handleStartScan}
                 />
+
+                <RecentActivity />
+
+                <ActionGrid onScan={handleStartScan} />
 
                 {/* Farming Notices — logged-in users only */}
                 {user && forecast.length > 0 && (
@@ -542,28 +545,38 @@ const Home = () => {
                   className="analysis-preview-image"
                 />
               )}
-              <div className="loading-spinner-circle"></div>
-
-              <h2 className="loading-title" role="status" aria-live="polite" aria-atomic="true">
-                {[
+              {(() => {
+                const analysisSteps = [
                   t('home.loadingReviewingImage'),
                   t('home.loadingVisibleSymptoms'),
                   t('home.loadingCarePlan'),
-                ][Math.min(Math.max(analyzingStep, 0), 2)]}
-              </h2>
-              <p className="loading-description">{t('home.analyzingDesc')}</p>
+                ];
+                const activeStep = Math.min(Math.max(analyzingStep, 0), 2);
+                return (
+                  <>
+                    <h2 className="loading-title" role="status" aria-live="polite" aria-atomic="true">
+                      {analysisSteps[activeStep]}
+                    </h2>
+                    <p className="loading-description">{t('home.analyzingDesc')}</p>
+                    <ol className="analysis-steps">
+                      {analysisSteps.map((stepLabel, index) => (
+                        <li
+                          key={stepLabel}
+                          className={`analysis-steps__item ${index < activeStep ? 'is-done' : ''} ${index === activeStep ? 'is-current' : ''}`}
+                          aria-current={index === activeStep ? 'step' : undefined}
+                        >
+                          <span className="analysis-steps__marker" aria-hidden="true">
+                            {index < activeStep ? <Check size={14} /> : index === activeStep ? <span className="loading-spinner-circle analysis-steps__spinner" /> : index + 1}
+                          </span>
+                          <span>{stepLabel}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                );
+              })()}
 
-              <div className="quote-box">
-                <span className="quote-icon-left">"</span>
-                <p className="quote-text">{currentPeribahasa}</p>
-                <span className="quote-icon-right">"</span>
-              </div>
-
-              <div className="dots-indicator">
-                <div className={`dot ${analyzingStep >= 0 ? 'active' : ''}`}></div>
-                <div className={`dot ${analyzingStep >= 1 ? 'active' : ''}`}></div>
-                <div className={`dot ${analyzingStep >= 2 ? 'active' : ''}`}></div>
-              </div>
+              {currentPeribahasa && <p className="analysis-proverb">{currentPeribahasa}</p>}
 
               {analysisStatusHint && (
                 <div className="analysis-hint-banner">
@@ -654,15 +667,6 @@ const Home = () => {
                   <details className="ui-disclosure">
                     <summary>{getEnhancementCopy(language).optionalContext}</summary>
                     <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
-                  </details>
-                  <details className="ui-disclosure" open={photoQualityIssue ? true : undefined}>
-                    <summary>{getScanQualityCopy(language).photoGuidance.title}</summary>
-                  <ScanPhotoGuidance
-                    plantPart={captureContext.plantPart}
-                    captureRole={photoQualityIssue?.role || 'whole'}
-                    qualityIssue={photoQualityIssue?.code || ''}
-                    onDismissIssue={() => setPhotoQualityIssue(null)}
-                  />
                   </details>
                   {/* Leaf Image Upload (Optional) */}
                   <details className="leaf-upload-card ui-disclosure mb-lg fade-in-delayed" open={selectedLeafImage ? true : undefined}>

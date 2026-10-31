@@ -11,13 +11,17 @@ import { buildAnalysisCacheKey } from './utils/analysisCache.js';
 import { isAiProviderConfigured, resolveAiProvider } from './utils/aiProvider.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
-import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
+import { logAssistantFeedback, logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS, normalizeFarmerCrop } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
 import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
+import { trackAiUsage } from './utils/aiUsage.js';
+import { correctMygapLog, deleteMygapLog, listMygapLogRevisions } from './services/mygapRecordService.js';
+import { buildRecommendationSnapshot, saveRecommendationSnapshot } from './services/recommendationSnapshotService.js';
+import { captureError, flushErrorTracking, initErrorTracking } from './utils/errorTracking.js';
 import { getReportSummary, getScanHistoryPage } from './services/reportService.js';
 import { syncOperation } from './services/syncService.js';
 import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
@@ -40,6 +44,7 @@ import { fileURLToPath } from 'url';
 // .env.local; hosted environments continue to provide env vars directly.
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+initErrorTracking();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -244,6 +249,34 @@ app.post('/api/data/:table/:id', async (req, res, next) => {
 app.use('/api/', limiter);
 app.use('/api/', validateApiRequest);
 
+// myGAP logbook corrections keep the previous values and a reason, so the
+// record stays traceable for audits.
+const mapMissingColumn = (error) => (error?.code === '42703'
+    ? Object.assign(new Error('Record corrections are being set up. Please try again later.'), { status: 503 })
+    : error);
+
+app.post('/api/mygap/logs/:id/correct', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        const row = await correctMygapLog(user.id, req.params.id, req.body?.changes, req.body?.reason);
+        res.json({ row, data: row });
+    } catch (error) { next(mapMissingColumn(error)); }
+});
+
+app.post('/api/mygap/logs/:id/delete', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        res.json(await deleteMygapLog(user.id, req.params.id, req.body?.reason));
+    } catch (error) { next(mapMissingColumn(error)); }
+});
+
+app.get('/api/mygap/logs/:id/revisions', async (req, res, next) => {
+    try {
+        const user = await verifyAuthenticatedUser(req);
+        res.json({ revisions: await listMygapLogRevisions(user.id, req.params.id) });
+    } catch (error) { next(error); }
+});
+
 app.get('/api/reports/summary', async (req, res, next) => {
     try {
         const user = await verifyAuthenticatedUser(req);
@@ -295,13 +328,6 @@ app.get('/api/followups/:scanId', async (req, res, next) => {
 });
 
 const aiRoutes = ['/api/analyze', '/api/ask', '/api/assistant', '/api/results/localize', '/api/products/search', '/api/farm'];
-app.use(aiRoutes, rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    max: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50,
-    standardHeaders: true, legacyHeaders: false,
-    skip: (req) => req.method !== 'POST',
-    message: { error: 'Daily AI usage limit reached. Please try again tomorrow.' },
-}));
 
 app.post('/api/session', (req, res, next) => {
     try {
@@ -358,14 +384,24 @@ app.use(aiRoutes, async (req, res, next) => {
         next();
     } catch (error) { next(error); }
 });
-app.use(aiRoutes, rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    max: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000,
-    keyGenerator: () => 'server',
-    standardHeaders: false, legacyHeaders: false,
-    skip: (req) => req.method !== 'POST',
-    message: { error: 'AI service daily capacity reached. Please try again tomorrow.' },
-}));
+// Daily per-IP and whole-server caps live in Neon so every serverless
+// instance shares one count (in-memory limiters reset per instance).
+app.use(aiRoutes, async (req, res, next) => {
+    if (req.method !== 'POST') return next();
+    try {
+        const ipQuota = await consumeAiQuota({ identity: `daily-ip:${req.ip || 'unknown'}`, limit: Number(process.env.AI_GUEST_DAILY_LIMIT) || 50 });
+        if (!ipQuota.allowed) {
+            console.warn(JSON.stringify({ event: 'ai_ip_quota_exceeded', requestId: req.requestId, ip: req.ip }));
+            return res.status(429).json({ error: 'Daily AI usage limit reached. Please try again tomorrow.', requestId: req.requestId });
+        }
+        const serverQuota = await consumeAiQuota({ identity: 'server-total', limit: Number(process.env.AI_SERVER_DAILY_LIMIT) || 1000 });
+        if (!serverQuota.allowed) {
+            console.warn(JSON.stringify({ event: 'ai_server_quota_exceeded', requestId: req.requestId }));
+            return res.status(429).json({ error: 'AI service daily capacity reached. Please try again tomorrow.', requestId: req.requestId });
+        }
+        next();
+    } catch (error) { next(error); }
+});
 let activeAiRequests = 0;
 app.use(aiRoutes, (req, res, next) => {
     if (req.method !== 'POST') return next();
@@ -462,8 +498,8 @@ app.post('/api/assistant/chat', async (req, res, next) => {
         if (!isAiProviderConfigured()) {
             return res.status(503).json({ error: 'ASSISTANT_UNAVAILABLE', message: 'AI provider API key is missing on the server.' });
         }
-        const { messages, language = 'en' } = req.body;
-        res.json(await chatWithAssistant({ messages, language, signal: requestController.signal }));
+        const { messages, language = 'en', scanContext } = req.body;
+        res.json(await chatWithAssistant({ messages, language, scanContext, signal: requestController.signal }));
     } catch (error) {
         if (requestController.signal.aborted) {
             const timeoutError = new Error('Assistant request timed out or was cancelled. Please try again.');
@@ -474,6 +510,21 @@ app.post('/api/assistant/chat', async (req, res, next) => {
         clearTimeout(requestDeadline);
         req.removeListener?.('aborted', abortOnDisconnect);
         res.removeListener?.('close', abortOnDisconnect);
+    }
+});
+
+// Thumbs up/down on assistant answers. Not an AI route, so it does not use
+// the farmer's AI quota; the general API rate limit still applies.
+app.post('/api/assistant-feedback', async (req, res, next) => {
+    try {
+        const { rating, question = '', answer, language = 'en', page, scanStatus } = req.body;
+        if (await logAssistantFeedback({ rating, question, answer, language, page, scanStatus })) {
+            res.json({ message: 'Feedback received' });
+        } else {
+            res.status(500).json({ error: 'Failed to log feedback' });
+        }
+    } catch (error) {
+        next(error);
     }
 });
 
@@ -655,8 +706,9 @@ app.post('/api/analyze', async (req, res, next) => {
         // response failures are classified instead of being reported as
         // timeouts, so farmers see an accurate next step.
         let analysisResult;
+        let analysisUsage = null;
         try {
-            analysisResult = await withAbortableTimeout(
+            const tracked = await trackAiUsage(() => withAbortableTimeout(
                 (signal) => analyzeWithGPT4Mini(
                     plantNetResult,
                     mainImage,
@@ -669,7 +721,9 @@ app.post('/api/analyze', async (req, res, next) => {
                 ),
                 Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
                 { signal: requestController.signal, timeoutMessage: 'AI pipeline stage timed out' },
-            );
+            ));
+            analysisResult = tracked.result;
+            analysisUsage = tracked.usage;
         } catch (analysisError) {
             if (requestController.signal.aborted) throw analysisError;
             const failure = classifyAnalysisFailure(analysisError, language);
@@ -712,8 +766,10 @@ app.post('/api/analyze', async (req, res, next) => {
                 model: finalResult.analysisMetadata?.model || null,
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
                 durationMs: Date.now() - analysisStartedAt,
+                aiUsage: analysisUsage,
             }
         }).catch(err => console.error('Data logging failed:', err));
+        console.log(JSON.stringify({ event: 'analysis_usage', requestId: req.requestId, model: finalResult.analysisMetadata?.model || null, ...analysisUsage }));
 
         res.json({ ...finalResult, id: scanId, feedbackToken });
 
@@ -893,7 +949,7 @@ app.post('/api/products/search', async (req, res, next) => {
             };
         }
 
-        res.json({
+        const responseBody = {
             diseaseControl: finalTreatment,
             fertilizers: finalFertilizers,
             supplements: finalSupplements,
@@ -911,7 +967,19 @@ app.post('/api/products/search', async (req, res, next) => {
             curatedRules: recommendation.curatedRules || [],
             keywords: recommendation.keywords || {},
             storeUrl: getStoreUrl()
-        });
+        };
+
+        // Record what this farmer was shown, when they prove they own the scan.
+        const snapshotOwner = req.body.scanId ? verifyScanCapability(String(req.body.scanId), req.body.feedbackToken) : null;
+        if (snapshotOwner) {
+            saveRecommendationSnapshot({
+                scanId: String(req.body.scanId),
+                ownerHash: snapshotOwner,
+                snapshot: buildRecommendationSnapshot(responseBody, targetLanguage),
+            }).catch((error) => console.warn(JSON.stringify({ event: 'recommendation_snapshot_failed', requestId: req.requestId, message: error.message })));
+        }
+
+        res.json(responseBody);
     } catch (error) {
         if (requestController.signal.aborted) {
             const timeoutError = new Error('Product recommendations timed out or were cancelled.');
@@ -1218,6 +1286,7 @@ registerEvaluationRoutes(app);
 app.use((err, req, res, next) => {
     const isProduction = process.env.NODE_ENV === 'production';
     console.error(JSON.stringify({ event: 'api_error', requestId: req.requestId, method: req.method, path: req.path, status: err.status || 500, message: err.message }));
+    if (!err.status || err.status >= 500) captureError(err, { requestId: req.requestId, path: req.path, method: req.method });
 
     res.status(err.status || 500).json({
         error: isProduction && (!err.status || err.status >= 500) ? 'Internal Server Error' : (err.name || 'Request Error'),
@@ -1266,8 +1335,9 @@ const handleFatalProcessError = (event, error) => {
         message: error?.message || String(error),
         stack: error?.stack,
     }));
+    captureError(error instanceof Error ? error : new Error(String(error)), { event });
     if (process.env.NODE_ENV === 'production') {
-        setImmediate(() => process.exit(1));
+        flushErrorTracking().finally(() => process.exit(1));
     }
 };
 

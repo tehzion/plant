@@ -15,6 +15,18 @@ describe('assessment metrics', () => {
         expect(summary.durationMs).toEqual({ p50: 10000, p95: 19000 });
     });
 
+    it('reports AI cost and tokens for fresh assessments that recorded usage', () => {
+        const summary = summarizeAssessmentMetrics([
+            { cost_usd: '0.002', total_tokens: '3000', cached: false },
+            { cost_usd: '0.004', total_tokens: '5000', cached: false },
+            { cost_usd: null, total_tokens: null, cached: false },
+            { cost_usd: '0.5', total_tokens: '1', cached: true },
+        ]);
+        expect(summary.costedAssessments).toBe(2);
+        expect(summary.aiCostUsd).toEqual({ total: 0.006, p50: 0.002, p95: 0.004 });
+        expect(summary.aiTotalTokens).toEqual({ p50: 3000, p95: 5000 });
+    });
+
     it('computes the opt-in rate only over scans that recorded an answer', () => {
         const summary = summarizeAssessmentMetrics([
             { consent: 'true' }, { consent: 'false' }, { consent: 'false' }, { consent: null }, { duration_ms: 'x', consent: 'true' },

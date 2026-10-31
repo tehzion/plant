@@ -11,7 +11,7 @@
     font-size: .9rem;
 }
 .sync-status--offline { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
-.sync-status--pending { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
+.sync-status--pending { background: #f0f3f4; border-color: #c9d4da; color: #2f4858; }
 .sync-status--problem { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 .sync-status__text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .sync-status__text span { line-height: 1.4; }

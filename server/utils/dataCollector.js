@@ -16,7 +16,7 @@ const IMAGES_DIR = path.join(DATASET_DIR, 'images');
 // Log File Rotates Daily (Calculated inside function)
 
 let auditClient;
-const useCloudAudit = () => process.env.DIAGNOSIS_DATA_BACKEND === 'supabase'
+const shouldUseCloudAudit = () => process.env.DIAGNOSIS_DATA_BACKEND === 'supabase'
     || (process.env.NODE_ENV === 'production' && process.env.DIAGNOSIS_DATA_BACKEND !== 'local');
 
 export const getAuditClient = () => {
@@ -80,7 +80,7 @@ export const logTrainingData = async (data) => {
         const scanId = id || crypto.randomUUID();
         if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) throw new Error('Invalid scan ID');
 
-        if (useCloudAudit()) {
+        if (shouldUseCloudAudit()) {
             const existing = await queryNeon(
                 "select metadata->>'ownerHash' as owner_hash from public.diagnosis_training_logs where id = $1",
                 [scanId],
@@ -194,7 +194,7 @@ export const logFeedback = async (feedbackData, attribution = null) => {
         // Attribution is written by the server after verifying the caller, so
         // farmer feedback is always distinguishable from expert reviews.
         const record = attribution ? { ...feedbackData, attribution } : feedbackData;
-        if (useCloudAudit()) {
+        if (shouldUseCloudAudit()) {
             await queryNeon(
                 'insert into public.diagnosis_feedback(scan_id, feedback, created_at) values ($1, $2, $3)',
                 [feedbackData.scanId, record, now.toISOString()],
@@ -231,7 +231,7 @@ export const logFeedback = async (feedbackData, attribution = null) => {
 export const withdrawTrainingImages = async (scanId) => {
     if (!/^[a-zA-Z0-9_-]{1,100}$/.test(String(scanId || ''))) throw new Error('Invalid scan ID');
     const withdrawn = { ...normalizeDataConsent(null), withdrawnAt: new Date().toISOString() };
-    if (useCloudAudit()) {
+    if (shouldUseCloudAudit()) {
         const { rows } = await queryNeon('select images from public.diagnosis_training_logs where id = $1', [scanId]);
         if (!rows?.length) return null;
         const paths = Object.values(rows[0].images || {}).filter(Boolean);
@@ -252,4 +252,37 @@ export const withdrawTrainingImages = async (scanId) => {
     const matches = files.filter((name) => name.endsWith(`_${scanId}_tree.jpg`) || name.endsWith(`_${scanId}_leaf.jpg`));
     await Promise.all(matches.map((name) => fs.promises.unlink(path.join(IMAGES_DIR, name))));
     return { removed: matches.length };
+};
+
+/**
+ * Log a farmer's thumbs up or down on a floating-assistant answer, so wrong or
+ * unhelpful answers can be found and the assistant's instructions improved.
+ * @param {{rating: 'up'|'down', question: string, answer: string, language: string, page?: string, scanStatus?: string|null}} feedback
+ */
+export const logAssistantFeedback = async (feedback) => {
+    const record = {
+        rating: feedback.rating,
+        language: feedback.language || 'en',
+        question: feedback.question,
+        answer: feedback.answer,
+        page: feedback.page || null,
+        scanStatus: feedback.scanStatus || null,
+    };
+    try {
+        const now = new Date();
+        if (shouldUseCloudAudit()) {
+            await queryNeon(
+                'insert into public.assistant_feedback(rating, language, question, answer, page, scan_status, created_at) values ($1, $2, $3, $4, $5, $6, $7)',
+                [record.rating, record.language, record.question, record.answer, record.page, record.scanStatus, now.toISOString()],
+            );
+            return true;
+        }
+        await ensureLocalDataset();
+        const file = path.join(DATASET_DIR, `assistant_feedback_${now.toISOString().split('T')[0]}.jsonl`);
+        await fs.promises.appendFile(file, JSON.stringify({ ...record, timestamp: now.toISOString() }) + '\n');
+        return true;
+    } catch (error) {
+        console.error('❌ Assistant feedback logging failed:', error?.message || error);
+        return false;
+    }
 };

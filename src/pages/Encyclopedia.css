@@ -1,7 +1,7 @@
 .encyclopedia-page {
   background:
-    radial-gradient(circle at top, rgba(0, 177, 79, 0.06), transparent 38%),
-    #f8fafc;
+    radial-gradient(circle at top, rgba(46, 107, 63, 0.06), transparent 38%),
+    #faf8f4;
   min-height: 100vh;
 }
 
@@ -23,7 +23,7 @@
 .encyclopedia-page-title {
   font-family: var(--font-heading);
   font-size: 1.55rem;
-  font-weight: 850;
+  font-weight: 700;
   color: var(--color-primary-dark);
   margin-bottom: 8px;
   letter-spacing: -0.02em;
@@ -43,8 +43,8 @@
   margin-bottom: 4px;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(226, 232, 240, 0.92);
-  border-radius: 28px;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  box-shadow: none;
   backdrop-filter: blur(14px);
   position: relative;
   z-index: 10;
@@ -60,7 +60,7 @@
   left: 20px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9CA3AF;
+  color: #8a8d86;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -69,11 +69,11 @@
 .search-input {
   width: 100%;
   padding: 16px 20px 16px 52px;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border: 1px solid #e4e0d8;
+  border-radius: 10px;
   font-size: 1rem;
-  background: #f8fafc;
-  color: #1e293b;
+  background: #faf8f4;
+  color: #262a26;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   font-weight: 500;
@@ -82,7 +82,7 @@
 .search-input:focus {
   background: white;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.08);
+  box-shadow: 0 0 0 4px rgba(46, 107, 63, 0.08);
   transform: translateY(-1px);
 }
 
@@ -122,29 +122,28 @@
 
 .filter-btn {
   padding: 10px 18px;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
+  background: #faf8f4;
+  border: 1.5px solid #e4e0d8;
+  border-radius: 10px;
   font-family: var(--font-heading);
   font-size: 0.85rem;
   font-weight: 700;
-  color: #64748b;
+  color: #5c615a;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .filter-btn:hover {
-  background: #E5E7EB;
-  color: #1F2937;
-  transform: translateY(-1px);
+  background: #e4e0d8;
+  color: #262a26;
 }
 
 .filter-btn.active {
   background: var(--color-brand-mist);
   color: var(--color-primary);
   border-color: var(--color-primary);
-  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.12);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -155,9 +154,9 @@
 }
 
 .encyclopedia-results-pill {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: #f2efe9;
+  color: #4c514b;
+  border: 1px solid #e4e0d8;
 }
 
 .results-info p {
@@ -173,7 +172,7 @@
 
 .no-results {
   padding: 64px 24px;
-  color: #6B7280;
+  color: #5c615a;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -181,12 +180,12 @@
 
 .no-results-icon {
   margin-bottom: 16px;
-  color: #15803d;
+  color: #2e6b3f;
 }
 
 .no-results h3 {
   margin: 0 0 8px 0;
-  color: #374151;
+  color: #3a3f3a;
   font-size: 1.25rem;
 }
 
@@ -226,7 +225,7 @@
   .controls-card {
     padding: 20px;
     margin-bottom: 24px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .search-input {

@@ -1,8 +1,7 @@
 .login-page {
     min-height: calc(100vh - 70px);
     background:
-        radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 28%),
-        linear-gradient(180deg, #f0fdf4 0%, #ffffff 38%);
+        #f1f4ee;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -16,10 +15,10 @@
 
 .login-card {
     background: white;
-    border-radius: 24px;
+    border-radius: 12px;
     padding: 40px;
-    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
-    border: 1px solid rgba(0, 177, 79, 0.1);
+    box-shadow: none;
+    border: 1px solid rgba(46, 107, 63, 0.1);
 }
 
 .login-header {
@@ -32,10 +31,10 @@
     margin-bottom: 12px;
     padding: 6px 12px;
     border-radius: 999px;
-    background: #ecfdf3;
-    color: #15803d;
+    background: #eef3ec;
+    color: #2e6b3f;
     font-size: 0.7rem;
-    font-weight: 850;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
@@ -43,7 +42,7 @@
 .login-title {
     font-family: var(--font-heading);
     font-size: var(--font-size-3xl);
-    font-weight: 850;
+    font-weight: 700;
     color: var(--color-primary-dark);
     margin-bottom: 8px;
     letter-spacing: -0.02em;
@@ -74,16 +73,16 @@
 }
 
 .auth-alert--success {
-    background: #f0fdf4;
-    color: #166534;
-    border: 1px solid #d1fae5;
+    background: #f1f4ee;
+    color: #22522f;
+    border: 1px solid #e3ece1;
 }
 
 .auth-alert--info {
     align-items: flex-start;
-    background: #eff6ff;
-    color: #1e40af;
-    border: 1px solid #bfdbfe;
+    background: #f0f3f4;
+    color: #34505e;
+    border: 1px solid #c9d4da;
     line-height: 1.45;
 }
 
@@ -105,7 +104,7 @@
     display: block;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #374151;
+    color: #3a3f3a;
     margin-bottom: 8px;
     font-family: var(--font-heading);
 }
@@ -119,27 +118,27 @@
     left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: #9ca3af;
+    color: #8a8d86;
     pointer-events: none;
 }
 
 .form-input {
     width: 100%;
     padding: 14px 16px 14px 48px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #e4e0d8;
     border-radius: 12px;
     font-size: 1rem;
     transition: all 0.2s ease;
     outline: none;
-    background: #f9fafb;
-    color: #1f2937;
+    background: #faf8f4;
+    color: #262a26;
     box-sizing: border-box;
 }
 
 .form-input:focus {
     background: white;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(0, 177, 79, 0.12);
+    box-shadow: 0 0 0 4px rgba(46, 107, 63, 0.12);
 }
 
 .form-input:disabled {
@@ -153,7 +152,7 @@
     background: var(--gradient-primary);
     color: white;
     border: none;
-    border-radius: 16px;
+    border-radius: 10px;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -162,14 +161,12 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: 0 10px 24px rgba(0, 177, 79, 0.2);
+    box-shadow: none;
     font-family: var(--font-heading);
 }
 
 .login-btn:hover:not(:disabled) {
     background: var(--gradient-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(0, 177, 79, 0.26);
 }
 
 .login-btn:active {
@@ -211,14 +208,14 @@
     left: 0;
     width: 100%;
     height: 1px;
-    background: #e5e7eb;
+    background: #e4e0d8;
     z-index: 1;
 }
 
 .login-divider span {
     background: white;
     padding: 0 16px;
-    color: #9ca3af;
+    color: #8a8d86;
     font-size: 0.85rem;
     font-weight: 600;
     position: relative;
@@ -237,19 +234,19 @@
     gap: 12px;
     padding: 14px;
     background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
+    border: 1px solid #e4e0d8;
+    border-radius: 10px;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #374151;
+    color: #3a3f3a;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: var(--font-family);
 }
 
 .social-btn:hover:not(:disabled) {
-    background: #f9fafb;
-    border-color: #86efac;
+    background: #faf8f4;
+    border-color: #b9cdb9;
 }
 
 .social-btn:disabled {
@@ -265,13 +262,13 @@
 .login-footer {
     text-align: center;
     font-size: 0.95rem;
-    color: #6b7280;
+    color: #5c615a;
 }
 
 .toggle-btn {
     background: none;
     border: none;
-    color: #15803d;
+    color: #2e6b3f;
     font-weight: 700;
     margin-left: 8px;
     cursor: pointer;
@@ -292,7 +289,7 @@
 @media (max-width: 480px) {
     .login-card {
         padding: 24px 20px;
-        border-radius: 20px;
+        border-radius: 12px;
     }
 
     .login-title {

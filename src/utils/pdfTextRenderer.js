@@ -60,6 +60,10 @@ export const createPdfTextRenderer = (doc) => {
         const fontStyle = options.fontStyle ?? 'normal';
 
         if (!containsComplexPdfText(content)) {
+            // splitTextToSize measures with the document's current font, so
+            // set the font this text will be drawn in before wrapping it.
+            doc.setFont('helvetica', fontStyle);
+            doc.setFontSize(fontSize);
             return doc.splitTextToSize(content, maxWidth);
         }
 
@@ -89,7 +93,11 @@ export const createPdfTextRenderer = (doc) => {
             doc.setFont('helvetica', fontStyle);
             doc.setFontSize(fontSize);
             doc.setTextColor(...color);
-            doc.text(lines, x, y, { align, baseline: 'top' });
+            // x is the left edge of a maxWidth-wide box for every alignment
+            // (as in the canvas path below); jsPDF anchors right/center text
+            // at x itself, so move the anchor to the box's right edge or middle.
+            const anchorX = align === 'right' ? x + maxWidth : align === 'center' ? x + (maxWidth / 2) : x;
+            doc.text(lines, anchorX, y, { align, baseline: 'top' });
             return measureTextHeight(content, maxWidth, options);
         }
 

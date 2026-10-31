@@ -160,8 +160,8 @@ describe('ProductRecommendations', () => {
                 fallbackMeta: null,
                 recommendationIntent: 'treatment_ready',
                 consultation: {
-                    phone: '+60136667810',
-                    url: 'https://wa.me/60136667810?text=scan',
+                    phone: '+60146193328',
+                    url: 'https://wa.me/60146193328?text=scan',
                     message: 'Scan ID: scan-123',
                     label: 'Contact us for consultation',
                     priority: 'secondary',
@@ -331,11 +331,12 @@ describe('ProductRecommendations', () => {
         expect(screen.getByText('Use only crop-registered fungicides.')).toBeInTheDocument();
         expect(screen.getByText('Strong match')).toBeInTheDocument();
         expect(screen.getByText('Need help choosing?')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60146193328'));
         expect(screen.getByText('Recommended Plant-Care Products')).toBeInTheDocument();
         expect(screen.getByText('In stock')).toBeInTheDocument();
         expect(screen.getAllByText(/Category: Disease Control/i).length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Tag: fungicide/i).length).toBeGreaterThan(0);
+        // Store tags are internal search keywords, not information for farmers.
+        expect(screen.queryByText(/Tag: fungicide/i)).not.toBeInTheDocument();
     });
 
     it('opens WooCommerce checkout for recommended products', async () => {
@@ -476,7 +477,7 @@ describe('ProductRecommendations', () => {
         });
         await waitFor(() => {
             expect(window.open).toHaveBeenCalledWith(
-                expect.stringContaining('wa.me/60136667810'),
+                expect.stringContaining('wa.me/60146193328'),
                 '_blank',
                 'noopener,noreferrer',
             );
@@ -499,8 +500,8 @@ describe('ProductRecommendations', () => {
                 },
                 recommendationIntent: 'consultation_needed',
                 consultation: {
-                    phone: '+60136667810',
-                    url: 'https://wa.me/60136667810?text=scan',
+                    phone: '+60146193328',
+                    url: 'https://wa.me/60146193328?text=scan',
                     message: 'Scan ID: scan-999',
                     label: 'Contact us for consultation',
                     priority: 'primary',
@@ -531,7 +532,7 @@ describe('ProductRecommendations', () => {
         expect(screen.getAllByText('No safe disease-specific product match was found.').length).toBeGreaterThan(0);
         expect(screen.getByText('No products found')).toBeInTheDocument();
         expect(screen.queryByText('Recommended Fertilizers')).not.toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60146193328'));
     });
 
     it('offers consultation when the live catalog fails', async () => {
@@ -554,7 +555,7 @@ describe('ProductRecommendations', () => {
 
         expect(await screen.findByText('Could not load products')).toBeInTheDocument();
         expect(screen.getByText('Catalog failed. Contact agronomy support.')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60136667810'));
+        expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60146193328'));
     });
 
     it('keeps nutrition products out of disease mode', async () => {
@@ -668,7 +669,7 @@ describe('ProductRecommendations', () => {
                         otherPopular: [],
                         recommendationIntent: 'support_only',
                         consultation: {
-                            url: 'https://wa.me/60136667810',
+                            url: 'https://wa.me/60146193328',
                             priority: 'primary',
                             label: 'Contact us for consultation',
                         },

@@ -19,12 +19,17 @@
     "check:translations:strict": "node ./scripts/check-translations.mjs --strict",
     "preview": "vite preview",
     "start": "node server/index.js",
-    "dev:evaluation-server": "node server/evaluation/startEvaluationServer.js"
+    "dev:evaluation-server": "node server/evaluation/startEvaluationServer.js",
+    "lint": "eslint .",
+    "benchmark:regression": "vitest run server/evaluation shared/scanResultPolicy.test.js server/services/diseaseAssessment.test.js server/services/productEligibility.test.js",
+    "benchmark:development": "node server/evaluation/runDevelopmentExperiment.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",
     "@neon/config": "^1.9.3",
     "@neon/env": "^1.6.4",
+    "@sentry/node": "^10.78.0",
+    "@sentry/react": "^10.78.0",
     "@supabase/supabase-js": "^2.100.0",
     "@vitejs/plugin-react": "^4.3.3",
     "compression": "^1.8.2",
@@ -42,7 +47,7 @@
     "lucide-react": "^0.562.0",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
-    "openai": "^4.67.3",
+    "openai": "^7.46.0",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
@@ -55,14 +60,22 @@
     "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
     "jsdom": "^29.0.1",
     "vitest": "^4.1.2"
   },
   "overrides": {
-    "proxy-addr": "2.0.8"
+    "undici": "^7.30.1",
+    "openai": {
+      "zod": "^4.6.7"
+    }
   }
 }

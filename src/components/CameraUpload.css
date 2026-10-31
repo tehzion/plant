@@ -9,14 +9,14 @@
 .camera-upload-guidance {
   padding: 14px 16px;
   border: 1px solid #dbece0;
-  border-radius: 14px;
+  border-radius: 10px;
   color: #365245;
-  background: #f7fff9;
+  background: #faf8f4;
 }
 
 .camera-upload-guidance strong {
   display: block;
-  color: #166534;
+  color: #22522f;
   font-size: 0.84rem;
 }
 
@@ -38,4 +38,4 @@
 }
 
 .camera-upload-step { margin: 0 0 10px; font-weight: 700; font-size: 1rem; color: var(--color-text-primary); }
-.camera-upload-quality-ok { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 6px 12px; border-radius: 999px; background: var(--color-brand-soft); color: #14532d; font-weight: 700; font-size: .9rem; }
+.camera-upload-quality-ok { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 6px 12px; border-radius: 999px; background: var(--color-brand-soft); color: #183d23; font-weight: 700; font-size: .9rem; }

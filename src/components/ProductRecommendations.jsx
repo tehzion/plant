@@ -555,7 +555,6 @@ const ProductRecommendations = ({
   const renderProductCard = (product, index) => {
     const isSelected = selectedProductIds.has(product.id);
     const categoryNames = Array.isArray(product.categories) ? product.categories.filter(Boolean).map((value) => String(value)) : [];
-    const tagNames = Array.isArray(product.tags) ? product.tags.filter(Boolean).map((value) => String(value)) : [];
     const isFertilizer = product.name?.toLowerCase().includes('baja') || product.name?.toLowerCase().includes('fertilizer') || categoryNames.some(c => c.toLowerCase().includes('fertilizer'));
     const hasImage = Boolean(product.image);
     const packageSize = product.count || product.packageSize || '';
@@ -646,16 +645,11 @@ const ProductRecommendations = ({
             </p>
           </div>
 
-          {(categoryNames.length > 0 || tagNames.length > 0 || availabilityLabel) && (
+          {(categoryNames.length > 0 || availabilityLabel) && (
             <div className="product-meta-row">
               {categoryNames.slice(0, 1).map((category) => (
                 <span className="product-meta-chip product-meta-chip--category" key={`category-${category}`} title={`${getLabel(t, 'results.category', 'Category')}: ${category}`}>
                   {getLabel(t, 'results.category', 'Category')}: {category}
-                </span>
-              ))}
-              {tagNames.slice(0, 1).map((tag) => (
-                <span className="product-meta-chip product-meta-chip--tag" key={`tag-${tag}`} title={`Tag: ${tag}`}>
-                  Tag: {tag}
                 </span>
               ))}
               {availabilityLabel && (

@@ -87,7 +87,7 @@ const sections = [
         contact: {
             title: 'Data Protection Officer, KANB',
             email: 'agropreneurnasional@gmail.com',
-            whatsapp: '+60136667810',
+            whatsapp: '+60146193328',
         },
     },
 ];

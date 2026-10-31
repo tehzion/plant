@@ -167,7 +167,7 @@ export const assessScanDecision = (scan = {}) => {
     const nonChemicalCause = ['environmental', 'nutrient', 'viral', 'healthy', 'unknown'].includes(normalized(scan.diseaseCategory));
     const actionable = !nonChemicalCause && (pest || /fungal|fungus|bacter|oomycete|nematode|blight|spot|rot|rust|mildew|kulat|病/.test(text));
     const missingLookAlikes = getMissingLookAlikes(scan);
-    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || missingLookAlikes.length || isUnsureHealthy(scan) || scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
+    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || missingLookAlikes.length || isUnsureHealthy(scan) || scan.needsMoreEvidence || scan.needsReview || scan.expertReviewRequired || scan.abstainReason || scan.validationIssues?.length
         || reviewStatuses.has(status) || reviewStates.has(explicit)
         || (confidence !== null && confidence < 70)
         || (confidencePercent(scan.confidence) !== null && confidencePercent(scan.confidence) < 70)

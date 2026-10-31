@@ -84,6 +84,8 @@ vi.mock('lucide-react', () => {
         'RefreshCcw',
         'RefreshCw',
         'RotateCcw',
+        'ThumbsDown',
+        'ThumbsUp',
         'Save',
         'Scale',
         'ScanEye',

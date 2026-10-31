@@ -893,7 +893,7 @@ describe('aiService helpers', () => {
 
         expect(aiService.getProductRecommendationIntent(diagnosis, { treatmentCount: 0, fertilizerCount: 2 })).toBe('consultation_needed');
         expect(consultation.priority).toBe('primary');
-        expect(consultation.phone).toBe('+60136667810');
+        expect(consultation.phone).toBe('+60146193328');
         expect(decodeURIComponent(consultation.url)).toContain('scan-456');
         expect(decodeURIComponent(consultation.url)).toContain('Bud Rot');
         expect(decodeURIComponent(consultation.url)).toContain('Kota Tinggi');

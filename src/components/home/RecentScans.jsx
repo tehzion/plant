@@ -2,7 +2,7 @@ import StatusBadge from '../StatusBadge.jsx';
 import { assessScanDecision } from '../../../shared/scanResultPolicy.js';
 import { getDiagnosisStatusLabel } from '../../utils/diagnosisStatusLabels.js';
 import React from 'react';
-import { MapPin, Leaf } from 'lucide-react';
+import { MapPin, Leaf, Camera } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { getStandardizedStatus } from '../../utils/statusUtils';
 
@@ -44,7 +44,7 @@ const formatScanDate = (timestamp, locale) => {
     });
 };
 
-const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
+const RecentScans = ({ scans, onSeeAll, onScanClick, onScan }) => {
     const { t, label: labelFn } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
     const scanList = Array.isArray(scans) ? scans : null;
@@ -55,13 +55,15 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
         <div className="home-recent-scans slide-up">
             <div className="section-header-row home-section-header-row">
                 <h3 className="section-title home-section-title">
-                    {t('profile.recentActivity') || 'Recent Scans'}
+                    {label('home.recentChecks', 'Recent plant checks')}
                 </h3>
-                <button onClick={onSeeAll} className="home-section-link">
-                    {t('home.seeAll')}
-                </button>
+                {hasScans && (
+                    <button type="button" onClick={onSeeAll} className="home-section-link">
+                        {t('home.seeAll')}
+                    </button>
+                )}
             </div>
-            <div className="superapp-shelf-container">
+            <div className={`superapp-shelf-container ${hasScans || isLoading ? 'home-recent-grid' : ''}`}>
                 {isLoading ? (
                     Array.from({ length: 3 }, (_, index) => (
                         <div key={index} className="superapp-activity-card home-recent-skeleton-card" aria-hidden="true">
@@ -103,6 +105,7 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                                             className="superapp-activity-img"
                                             loading="lazy"
                                             decoding="async"
+                                            onError={(event) => { event.currentTarget.hidden = true; }}
                                         />
                                     ) : (
                                         <div className="home-scan-card-fallback" aria-hidden="true">
@@ -139,8 +142,18 @@ const RecentScans = ({ scans, onSeeAll, onScanClick }) => {
                         );
                     })
                 ) : (
-                    <div className="app-empty-state home-recent-empty">
-                        <span>{t('home.noRecentScans')}</span>
+                    <div className="ui-empty-state home-recent-empty">
+                        <Leaf size={22} aria-hidden="true" />
+                        <div>
+                            <p className="ui-empty-state__title">{label('home.noRecentChecks', 'No plant checks yet.')}</p>
+                            <p className="ui-empty-state__text">{label('home.noRecentChecksHint', '')}</p>
+                        </div>
+                        {onScan && (
+                            <button type="button" className="btn btn-secondary" onClick={onScan}>
+                                <Camera size={18} aria-hidden="true" />
+                                {label('home.checkAction', 'Upload a photo')}
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

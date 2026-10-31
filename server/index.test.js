@@ -2,15 +2,15 @@
 import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
-    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), withdrawImages: vi.fn(),
-    buildKeywordProductRecommendation: vi.fn(), recommendProductTags: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
+    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), logAssistantFeedback: vi.fn(), withdrawImages: vi.fn(),
+    buildKeywordProductRecommendation: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
     getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
-    isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(),
+    isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(), saveSnapshot: vi.fn(async () => true),
 }));
 vi.mock('./services/aiService.js', () => ({
     identifyPlantWithPlantNet: mocks.identify, identifyPlantWithGPTVision: mocks.identifyGpt, analyzeWithGPT4Mini: mocks.analyze,
-    askAI: vi.fn(), buildKeywordProductRecommendation: mocks.buildKeywordProductRecommendation, recommendProductTags: mocks.recommendProductTags, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
+    askAI: vi.fn(), buildKeywordProductRecommendation: mocks.buildKeywordProductRecommendation, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
     parseNaturalLanguageLog: vi.fn(), generatePredictiveRisk: vi.fn(), localizeStoredAnalysisResult: vi.fn(),
     canRecommendTreatmentProducts: mocks.canRecommendTreatmentProducts, enrichRecommendedProducts: mocks.enrichRecommendedProducts, getProductRecommendationIntent: mocks.getProductRecommendationIntent,
     normalizeFarmerCrop: (value) => (typeof value === 'string' ? value.trim() : ''),
@@ -26,8 +26,9 @@ vi.mock('./services/wooCommerceService.js', () => ({
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
     getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
 }));
-vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, withdrawTrainingImages: mocks.withdrawImages }));
+vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, logAssistantFeedback: mocks.logAssistantFeedback, withdrawTrainingImages: mocks.withdrawImages }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
+vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) => ({ ...(await importOriginal()), saveRecommendationSnapshot: mocks.saveSnapshot }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
 let app;
 let processListeners;
@@ -82,6 +83,19 @@ describe('order route ownership', () => {
         mocks.createOrder.mockResolvedValue(order(1, 'owner'));
         await invoke('/api/orders', { body: { items: [{ productId: 1, quantity: 1 }], guestId: 'other' }, orderSession: { guestId: 'owner' } });
         expect(mocks.createOrder).toHaveBeenCalledWith(expect.objectContaining({ guestId: 'owner' }));
+    });
+});
+describe('assistant answer feedback', () => {
+    it('records a vote without spending the AI quota and reports a storage failure', async () => {
+        expect(app._router.stack.find((layer) => layer.route?.path === '/api/assistant-feedback')).toBeDefined();
+        mocks.logAssistantFeedback.mockResolvedValue(true);
+        const body = { rating: 'down', question: 'Why yellow?', answer: 'Check nitrogen.', language: 'ms', page: 'home', scanStatus: null };
+        const ok = await invoke('/api/assistant-feedback', { body });
+        expect(mocks.logAssistantFeedback).toHaveBeenCalledWith(body);
+        expect(ok.json).toHaveBeenCalledWith({ message: 'Feedback received' });
+        mocks.logAssistantFeedback.mockResolvedValue(false);
+        const failed = await invoke('/api/assistant-feedback', { body });
+        expect(failed.status).toHaveBeenCalledWith(500);
     });
 });
 describe('diagnosis cache and feedback identity', () => {
@@ -319,7 +333,6 @@ describe('product search section grouping', () => {
         const response = await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
         const body = response.json.mock.calls[0][0];
 
-        expect(mocks.recommendProductTags).not.toHaveBeenCalled();
         expect(body.diseaseControl).toHaveLength(expected.diseaseControl);
         expect(body.fertilizers).toHaveLength(expected.fertilizers);
         expect(body.supplements).toHaveLength(expected.supplements);
@@ -343,5 +356,22 @@ describe('product search section grouping', () => {
         expect(body.catalogueDiscovery[0]).toMatchObject({ discoveryOnly: true, eligibility: { status: 'needs_verification' } });
         expect(body.eligibilitySummary).toEqual({ eligibleTreatments: 1, discoveryOnly: 1, excludedAsUnsuitable: 1 });
         expect(JSON.stringify(body)).not.toContain('Glyphosate');
+    });
+
+    it('records the shown products on the scan only for a valid scan capability', async () => {
+        const { createScanCapability } = await import('./utils/scanCapability.js');
+        const diagnosis = { disease: 'Healthy Plant', resultState: 'healthy', healthStatus: 'healthy' };
+        const feedbackToken = createScanCapability('scan-shown-1', 'guest:abc');
+
+        await invoke('/api/products/search', { body: { diagnosis, language: 'en', scanId: 'scan-shown-1', feedbackToken } });
+        expect(mocks.saveSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+            scanId: 'scan-shown-1',
+            snapshot: expect.objectContaining({ fertilizer: [expect.objectContaining({ id: 102 })] }),
+        }));
+
+        mocks.saveSnapshot.mockClear();
+        await invoke('/api/products/search', { body: { diagnosis, language: 'en', scanId: 'scan-other', feedbackToken } });
+        await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
+        expect(mocks.saveSnapshot).not.toHaveBeenCalled();
     });
 });

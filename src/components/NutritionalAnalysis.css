@@ -12,8 +12,8 @@
 .na-title {
   margin: 0;
   font-size: 1.24rem;
-  font-weight: 800;
-  color: #0f172a;
+  font-weight: 700;
+  color: #1f2320;
 }
 
 .na-healthy-card,
@@ -32,12 +32,12 @@
 .na-healthy-icon {
   width: 52px;
   height: 52px;
-  border-radius: 18px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #dcfce7;
-  color: #16a34a;
+  background: #e3ece1;
+  color: #2e6b3f;
   flex-shrink: 0;
 }
 
@@ -51,14 +51,14 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: #166534;
+  color: #22522f;
 }
 
 .na-healthy-subtitle {
   margin: 0;
   font-size: 0.92rem;
   line-height: 1.55;
-  color: #64748b;
+  color: #5c615a;
 }
 
 .na-alert {
@@ -84,14 +84,14 @@
 }
 
 .na-alert.possible-alert {
-  background: #eff6ff;
-  border-color: #93c5fd;
+  background: #f0f3f4;
+  border-color: #a9bac4;
 }
 
 .na-alert-icon-wrapper {
   width: 46px;
   height: 46px;
-  border-radius: 16px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,11 +108,11 @@
 }
 
 .severity-severe .na-alert-icon-wrapper {
-  color: #dc2626;
+  color: #b42318;
 }
 
 .possible-alert .na-alert-icon-wrapper {
-  color: #2563eb;
+  color: #3f5c6c;
 }
 
 .na-alert-content {
@@ -130,8 +130,8 @@
 
 .na-alert-title {
   font-size: 1rem;
-  font-weight: 800;
-  color: #0f172a;
+  font-weight: 700;
+  color: #1f2320;
 }
 
 .severity-badge {
@@ -159,21 +159,21 @@
 }
 
 .severity-badge.possible {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #e3e9ec;
+  color: #3f5c6c;
 }
 
 .na-alert-description {
   margin: 0;
   font-size: 0.92rem;
   line-height: 1.65;
-  color: #475569;
+  color: #4c514b;
 }
 
 .na-symptoms-list {
   margin: 10px 0 0;
   padding-left: 20px;
-  color: #475569;
+  color: #4c514b;
   font-size: 0.88rem;
   line-height: 1.6;
 }
@@ -186,14 +186,14 @@
 }
 
 .na-subsection-icon {
-  color: #11853a;
+  color: #22522f;
 }
 
 .na-subsection-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #1f2320;
 }
 
 .na-nutrients-grid {
@@ -207,15 +207,15 @@
   align-items: center;
   gap: 8px;
   padding: 9px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #faf8f4;
+  border: 1px solid #e4e0d8;
   border-radius: 999px;
   font-size: 0.875rem;
 }
 
 .na-nutrient-name {
   font-weight: 700;
-  color: #1f2937;
+  color: #262a26;
 }
 
 .chip-severity {
@@ -242,20 +242,20 @@
 }
 
 .na-possible-nutrients-section {
-  border-color: #bfdbfe;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  border-color: #c9d4da;
+  background: #faf8f4;
 }
 
 .na-possible-chip {
-  background: #eff6ff;
-  border-color: #bfdbfe;
+  background: #f0f3f4;
+  border-color: #c9d4da;
 }
 
 .na-possible-nutrients-note {
   margin: 14px 0 0;
   font-size: 0.88rem;
   line-height: 1.55;
-  color: #475569;
+  color: #4c514b;
 }
 
 .na-recommendations-section {
@@ -265,7 +265,7 @@
 
 .na-recommendations-note {
   margin: -4px 0 14px;
-  color: #475569;
+  color: #4c514b;
   font-size: 0.88rem;
   line-height: 1.55;
 }
@@ -287,9 +287,9 @@
 
 .na-recommendation-card {
   padding: 14px 16px;
-  border: 1px solid #dbeafe;
-  border-radius: 14px;
-  background: #f8fbff;
+  border: 1px solid #e3e9ec;
+  border-radius: 10px;
+  background: #faf8f4;
 }
 
 .na-recommendation-heading {
@@ -297,11 +297,11 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  color: #0f172a;
+  color: #1f2320;
 }
 
 .na-recommendation-heading span {
-  color: #64748b;
+  color: #5c615a;
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -318,7 +318,7 @@
 }
 
 .na-recommendation-details dt {
-  color: #64748b;
+  color: #5c615a;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -327,7 +327,7 @@
 
 .na-recommendation-details dd {
   margin: 3px 0 0;
-  color: #1e293b;
+  color: #262a26;
   font-size: 0.84rem;
   line-height: 1.4;
 }

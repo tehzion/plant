@@ -1,6 +1,6 @@
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { getUiCopy } from '../utils/uiCopy.js';
-﻿import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -11,7 +11,7 @@ import DiseaseResult from '../components/DiseaseResult';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 
-import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList } from 'lucide-react';
+import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList, MessageSquareText } from 'lucide-react';
 import { showToast } from '../utils/toast';
 
 import { getScanResultState, getStandardizedStatus } from '../utils/statusUtils';
@@ -29,6 +29,7 @@ import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { confidencePercent } from '../../shared/scanResultPolicy.js';
 import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
 import { useProductRecommendations } from '../hooks/useProductRecommendations.js';
+import { buildAssistantScanContext, openAssistant, setAssistantScanContext } from '../utils/assistantContext.js';
 
 const TreatmentRecommendations = lazyWithRetry(
   () => import('../components/TreatmentRecommendations'),
@@ -144,7 +145,15 @@ const Results = () => {
     scanResult: result,
     language,
     enabled: Boolean(scan && !scanLoading),
+    scanId: scan?.id || '',
+    feedbackToken: scan?.feedbackToken || '',
   });
+  // Lets the floating assistant answer follow-ups about this scan.
+  const assistantScan = useMemo(() => (scan ? buildAssistantScanContext(result) : null), [scan, result]);
+  useEffect(() => {
+    setAssistantScanContext(assistantScan);
+    return () => setAssistantScanContext(null);
+  }, [assistantScan]);
   const normalizedNutrition = result.nutritionalIssues;
   const scanCopy = getScanQualityCopy(language);
   const scoreText = value => {
@@ -543,7 +552,8 @@ ${t('pdf.generatedBy')}
   return (
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
-        {(originalScan?.analysisLanguage || originalScan?.language) !== language && <section className="analysis-language ui-card" aria-busy={translating}>
+        <ScanDecisionSummary result={result} expertReview={expertReview} />
+        {(originalScan?.analysisLanguage || originalScan?.language) !== language && <section className="analysis-language ui-card ui-card--compact" aria-busy={translating}>
           <p>{enhancementCopy.source}: {enhancementCopy.languages[originalScan?.analysisLanguage || originalScan?.language] || originalScan?.analysisLanguage || originalScan?.language || enhancementCopy.unknown}</p>
           {scan.analysisLanguage === language && <p role="status">{enhancementCopy.translated}</p>}
           <div className="ui-action-row">
@@ -552,11 +562,13 @@ ${t('pdf.generatedBy')}
           </div>
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
-        <ScanDecisionSummary result={result} expertReview={expertReview} />
         <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
         <div className="results-next-action">
           <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
             {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
+          </button>
+          <button className="btn btn-secondary" onClick={openAssistant}>
+            <MessageSquareText size={18} aria-hidden="true" /> {label('assistant.askAboutResult', 'Ask about this result')}
           </button>
         </div>
         <div className="results-content-grid">
