@@ -1,3 +1,4 @@
+import { STORE_URL } from '../utils/store.js';
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -57,7 +58,7 @@ const BottomNav = () => {
                 </Link>
 
                 <a
-                    href="https://www.mojosense.app/kanb/products/"
+                    href={STORE_URL}
                     className="nav-item"
                     target="_blank"
                     rel="noreferrer"

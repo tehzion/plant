@@ -1,4 +1,5 @@
 import express from 'express';
+import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
@@ -7,6 +8,7 @@ import compression from 'compression';
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
 import { buildAnalysisCacheKey } from './utils/analysisCache.js';
+import { isAiProviderConfigured, resolveAiProvider } from './utils/aiProvider.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
 import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
@@ -166,7 +168,8 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString(),
         ...(!isProduction && {
             config: {
-                openai: !!process.env.OPENAI_API_KEY,
+                aiProvider: resolveAiProvider().provider,
+                aiConfigured: isAiProviderConfigured(),
                 plantnet: !!process.env.PLANTNET_API_KEY
             }
         })
@@ -396,8 +399,8 @@ app.post('/api/ask', async (req, res, next) => {
             return res.status(400).json({ error: 'Question is required' });
         }
 
-        if (!process.env.OPENAI_API_KEY) {
-            return res.status(503).json({ error: 'Service Unavailable', message: 'OpenAI API Key is missing on the server.' });
+        if (!isAiProviderConfigured()) {
+            return res.status(503).json({ error: 'Service Unavailable', message: 'AI provider API key is missing on the server.' });
         }
 
         // 1. Normalize Cache Key
@@ -456,8 +459,8 @@ app.post('/api/assistant/chat', async (req, res, next) => {
     req.once?.('aborted', abortOnDisconnect);
     res.once?.('close', abortOnDisconnect);
     try {
-        if (!process.env.OPENAI_API_KEY) {
-            return res.status(503).json({ error: 'ASSISTANT_UNAVAILABLE', message: 'OpenAI API Key is missing on the server.' });
+        if (!isAiProviderConfigured()) {
+            return res.status(503).json({ error: 'ASSISTANT_UNAVAILABLE', message: 'AI provider API key is missing on the server.' });
         }
         const { messages, language = 'en' } = req.body;
         res.json(await chatWithAssistant({ messages, language, signal: requestController.signal }));
@@ -566,11 +569,11 @@ app.post('/api/analyze', async (req, res, next) => {
     res.once?.('close', abortOnDisconnect);
     try {
         // Validation: Critical Keys
-        if (!process.env.OPENAI_API_KEY) {
-            console.error('❌ Request Failed: OPENAI_API_KEY is missing.');
+        if (!isAiProviderConfigured()) {
+            console.error('❌ Request Failed: AI provider API key is missing.');
             return res.status(503).json({
                 error: 'Configuration Error',
-                message: 'Server is missing API Keys. Please check Render Environment Variables.'
+                message: 'AI provider is not configured on the server.'
             });
         }
 
@@ -1205,6 +1208,7 @@ app.post('/api/expert/cases/:scanId/reviews', async (req, res, next) => {
 });
 
 registerFarmerReviewRoutes(app);
+registerEvaluationRoutes(app);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

@@ -22,6 +22,26 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: AI_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: EVALUATION_STORAGE_BUCKET
+        value: agricultural-evaluation
+      - key: EVALUATION_STORAGE_BRANCH
+        sync: false
+      - key: EVALUATION_DATABASE_URL
+        sync: false
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: VITE_STORE_URL
+        value: https://www.kanb.coop.my/products/
       - key: PLANTNET_API_KEY
         sync: false
       - key: FRONTEND_URL
@@ -45,7 +65,7 @@ services:
       - key: ADMIN_EMAILS
         sync: false
       - key: WOOCOMMERCE_URL
-        sync: false
+        value: https://www.kanb.coop.my
       - key: WOOCOMMERCE_CONSUMER_KEY
         sync: false
       - key: WOOCOMMERCE_CONSUMER_SECRET

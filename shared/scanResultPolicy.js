@@ -112,6 +112,9 @@ export const assessScanDecision = (scan = {}) => {
     const disease = String(scan.disease || '').trim().toLowerCase();
     const noIssue = isNoIssueDiagnosis(disease);
     const unknownDisease = !disease || /^(unknown|n\/a|unknown disease|tidak diketahui)$/.test(disease);
+    const healthStatus = normalized(scan.healthStatus);
+    const conflictingHealth = (['healthy', 'sihat', 'normal', '健康'].includes(healthStatus) && !noIssue && !unknownDisease)
+        || (healthStatus === 'unhealthy' && noIssue);
     const healthySignal = (noIssue || unknownDisease)
         && (noIssue || ['healthy', 'sihat', 'normal', '健康'].includes(normalized(scan.healthStatus || status)) || explicit === 'healthy');
     const text = [scan.disease, scan.diseaseCategory, scan.pathogenType, scan.diagnosticEvidence?.likelyCauseCategory].join(' ').toLowerCase();
@@ -119,7 +122,7 @@ export const assessScanDecision = (scan = {}) => {
     const pest = /pest|insect|mealybug|aphid|mite|thrip|whitefly|infestation|kutu|serangga|粉蚧|虫/.test(text);
     const nonChemicalCause = ['environmental', 'nutrient', 'viral', 'healthy', 'unknown'].includes(normalized(scan.diseaseCategory));
     const actionable = !nonChemicalCause && (pest || /fungal|fungus|bacter|oomycete|nematode|blight|spot|rot|rust|mildew|kulat|病/.test(text));
-    const weak = Boolean(scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
+    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
         || reviewStatuses.has(status) || reviewStates.has(explicit)
         || (confidence !== null && confidence < 70)
         || (confidencePercent(scan.confidence) !== null && confidencePercent(scan.confidence) < 70)

@@ -1,4 +1,5 @@
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
+import { resolveAiProvider, isAiProviderConfigured } from '../utils/aiProvider.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { assessScanDecision, getScanSectionPolicy, isNoIssueDiagnosis, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
 import { buildStructuredAssessment, normalizeAlternativeConditions, redactDosageInstructions, resolveConfidenceLevel } from '../../shared/diseaseAssessment.js';
@@ -21,29 +22,31 @@ dotenv.config();
 let openaiClient = null;
 
 const getOpenAIClient = () => {
-    if (!process.env.OPENAI_API_KEY) {
-        const error = new Error('OpenAI API Key is missing on the server.');
+    const config = resolveAiProvider();
+    if (!config.apiKey) {
+        const error = new Error('AI provider API key is missing on the server.');
         error.status = 503;
         throw error;
     }
 
     if (!openaiClient) {
         openaiClient = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
+            apiKey: config.apiKey,
+            ...(config.baseURL ? { baseURL: config.baseURL } : {}),
         });
     }
 
     return openaiClient;
 };
 
-export const OPENAI_PRIMARY_MODEL = process.env.OPENAI_MODEL || 'gpt-5.4-mini';
-const OPENAI_FALLBACK_MODEL = process.env.OPENAI_FALLBACK_MODEL || 'gpt-5-mini';
+export const OPENAI_PRIMARY_MODEL = resolveAiProvider().primaryModel;
+const OPENAI_FALLBACK_MODEL = resolveAiProvider().fallbackModel;
 
 // Cache product recommendations for 1 hour
 const recommendationCache = new NodeCache({ stdTTL: 3600 });
 
-const usesModernCompletionLimit = (model = '') => /^(gpt-5|o\d|o[1-9]|gpt-oss)/i.test(String(model));
-const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(String(model));
+const usesModernCompletionLimit = (model = '') => /^(gpt-5|o\d|o[1-9]|gpt-oss)/i.test(String(model).split('/').pop());
+const supportsTemperature = (model = '') => !/^(gpt-5|o\d|o[1-9])/i.test(String(model).split('/').pop());
 
 /**
  * GPT-5 / O-series compatible chat completion wrapper.
@@ -2521,6 +2524,12 @@ export const mergeDiagnosisResult = ({
     const frontendTreeQuality = imageQuality?.tree || {};
     const frontendLeafQuality = imageQuality?.leaf || {};
     const validationIssues = validateDiagnosisStage(stageOne);
+    const reportedHealth = String(diagnosisAssessment.healthStatus || '').trim().toLowerCase();
+    const reportedDiagnosis = String(diagnosisAssessment.primaryDiagnosis || '').trim();
+    const conflictingHealth = (reportedHealth === 'healthy' && reportedDiagnosis && !isNoIssueDiagnosis(reportedDiagnosis)
+        && !/^(unknown|n\/a|unknown disease|tidak diketahui)$/i.test(reportedDiagnosis))
+        || (reportedHealth === 'unhealthy' && isNoIssueDiagnosis(reportedDiagnosis));
+    if (conflictingHealth) validationIssues.push('conflicting_health_status');
     const scores = [captureAssessment.imageQualityConfidence, frontendTreeQuality.qualityConfidence,
         frontendLeafQuality.qualityConfidence].filter(value => value != null && value !== '' && Number.isFinite(Number(value))).map(Number);
 
@@ -2545,7 +2554,7 @@ export const mergeDiagnosisResult = ({
         retakeReason,
         plantType: diagnosisAssessment.plantType || getPlantTypeLabel(plantNetResult, category, language, speciesAssessment),
         disease: diagnosisAssessment.primaryDiagnosis || translateText(language, { en: 'Assessment incomplete', ms: 'Penilaian belum lengkap', zh: '评估不完整' }),
-        healthStatus: String(diagnosisAssessment.healthStatus || '').toLowerCase() === 'healthy' ? 'healthy' : 'unhealthy',
+        healthStatus: conflictingHealth || !['healthy', 'unhealthy'].includes(reportedHealth) ? 'unknown' : reportedHealth,
         severity: String(diagnosisAssessment.severity || 'mild').toLowerCase(),
         confidence: diagnosisConfidence,
         diagnosisConfidence,
@@ -2789,7 +2798,7 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             imageQuality,
         });
 
-        finalResult.analysisMetadata = { policyVersion: 4, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
+        finalResult.analysisMetadata = { policyVersion: 4, provider: resolveAiProvider().provider, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
         console.log('Analysis complete');
         return finalResult;
 
@@ -2937,7 +2946,7 @@ export async function localizeStoredAnalysisResult(result = {}, language = 'en')
         return { ...result, analysisLanguage: targetLanguage };
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!isAiProviderConfigured()) {
         return { ...result };
     }
 
@@ -2988,10 +2997,13 @@ function ensureCarePlan(result, language) {
     const healthyKeywords = ['healthy', 'sihat', 'tiada masalah', '健康', '无问题', '未检测到问题', 'normal', 'tiada penyakit', 'pokok elok'];
 
     // Explicitly map status for consistency
-    const isActuallyHealthy = healthyKeywords.some(keyword => rawStatus.includes(keyword)) ||
-        (result.disease && healthyKeywords.some(keyword => result.disease.toLowerCase().includes(keyword)));
+    // Match whole statuses: `unhealthy` contains `healthy`, so substring
+    // matching incorrectly marked diseased assessments as healthy.
+    const normalizedStatus = rawStatus.trim();
+    const isActuallyHealthy = healthyKeywords.includes(normalizedStatus)
+        || (normalizedStatus !== 'unhealthy' && isNoIssueDiagnosis(result.disease));
 
-    result.healthStatus = isActuallyHealthy ? 'healthy' : 'unhealthy';
+    result.healthStatus = normalizedStatus === 'unknown' ? 'unknown' : isActuallyHealthy ? 'healthy' : 'unhealthy';
 
     // 2. Ensure care plan exists for healthy plants or as general fallback
     if (!result.healthyCarePlan ||
@@ -3208,21 +3220,11 @@ const getDiagnosisConfidenceValue = (diagnosisInfo = {}) => {
 };
 
 export const isHealthyProductDiagnosis = (diagnosisInfo = {}) => {
-    const resultState = normalizeScanStateText(diagnosisInfo.resultState);
-    const healthStatus = normalizeRecommendationText(diagnosisInfo.healthStatus);
-    const disease = normalizeRecommendationText(diagnosisInfo.disease);
-    const status = normalizeRecommendationText(diagnosisInfo.status);
-
-    return resultState === SCAN_RESULT_STATES.HEALTHY
-        || healthStatus === 'healthy'
-        || status === 'healthy'
-        || disease === 'healthy'
-        || disease === 'normal'
-        || disease === 'none'
-        || disease === 'no disease detected';
+    return assessScanDecision(diagnosisInfo).healthy;
 };
 
 export const isWeakProductDiagnosis = (diagnosisInfo = {}) => {
+    if (assessScanDecision(diagnosisInfo).needsReview) return true;
     const resultState = normalizeScanStateText(diagnosisInfo.resultState);
     const status = normalizeRecommendationText(diagnosisInfo.status);
     const confidence = getDiagnosisConfidenceValue(diagnosisInfo);

@@ -1,10 +1,11 @@
+import { STORE_URL } from '../../utils/store.js';
 import { useEffect, useState } from 'react';
 import { ExternalLink, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { useAuth } from '../../context/AuthContext';
 import OrderHistory from '../OrderHistory';
 
-const SHOP_CATALOG_URL = 'https://www.mojosense.app/kanb/products/';
+const SHOP_CATALOG_URL = STORE_URL;
 
 const ProductsTab = ({ label: labelProp }) => {
     const { t, label: i18nLabel } = useLanguage();

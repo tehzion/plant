@@ -2,7 +2,7 @@ import { fetchJsonWithTimeout } from './networkRequest.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
-export const STORE_URL = 'https://www.mojosense.app/kanb/products/';
+export { STORE_URL } from './store.js';
 
 /**
  * Ask the floating help assistant.
