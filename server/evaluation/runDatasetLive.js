@@ -47,7 +47,9 @@ try {
   const excluded=(process.env.EVALUATION_EXCLUDE || '').split(',').map(x=>x.trim()).filter(Boolean);
   // EVALUATION_LABEL_FILTER (case-insensitive regex on the reference label) and EVALUATION_SOURCE narrow targeted checks.
   const labelFilter=process.env.EVALUATION_LABEL_FILTER ? new RegExp(process.env.EVALUATION_LABEL_FILTER,'i') : null, onlySource=process.env.EVALUATION_SOURCE || null;
-  candidates.rows=candidates.rows.filter(r=>!excluded.some(prefix=>r.checksum.startsWith(prefix)) && (!labelFilter || labelFilter.test(r.original_label)) && (!onlySource || r.source===onlySource));
+  // EVALUATION_ONLY: comma-separated checksum prefixes to re-check specific images.
+  const only=(process.env.EVALUATION_ONLY || '').split(',').map(x=>x.trim()).filter(Boolean);
+  candidates.rows=candidates.rows.filter(r=>!excluded.some(prefix=>r.checksum.startsWith(prefix)) && (!only.length || only.some(prefix=>r.checksum.startsWith(prefix))) && (!labelFilter || labelFilter.test(r.original_label)) && (!onlySource || r.source===onlySource));
   const picked=[], per=Math.ceil(sample/2);
   for(const source of ['PlantVillage','PlantDoc']) picked.push(...candidates.rows.filter(r=>r.source===source).slice(0,per));
   for(const r of candidates.rows) if(picked.length<sample && !picked.includes(r)) picked.push(r);

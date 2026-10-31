@@ -56,6 +56,19 @@ export const getMissingLookAlikes = (scan = {}) => {
         .map((lookAlike) => lookAlike.name);
 };
 
+/**
+ * A "no issues" verdict below high confidence. Dataset evaluation found mites, powdery mildew,
+ * citrus greening, scab and target spot called "No Issues" at medium confidence, so such a
+ * verdict is not shown as healthy, nor one where the model reported any subtle sign as present
+ * or unclear. Older scans without these fields are unaffected.
+ */
+export const isUnsureHealthy = (scan = {}) => {
+    if (!isNoIssueDiagnosis(String(scan.disease || '').trim().toLowerCase())) return false;
+    const level = normalized(scan.confidenceLevel);
+    const signs = scan.subtleSigns && typeof scan.subtleSigns === 'object' ? Object.values(scan.subtleSigns) : [];
+    return (Boolean(level) && level !== 'high') || signs.some((state) => ['present', 'unclear'].includes(normalized(state)));
+};
+
 const normalizeNutritionStatus = (scan = {}) => {
     const source = scan.nutritionalIssues && typeof scan.nutritionalIssues === 'object'
         ? scan.nutritionalIssues
@@ -154,7 +167,7 @@ export const assessScanDecision = (scan = {}) => {
     const nonChemicalCause = ['environmental', 'nutrient', 'viral', 'healthy', 'unknown'].includes(normalized(scan.diseaseCategory));
     const actionable = !nonChemicalCause && (pest || /fungal|fungus|bacter|oomycete|nematode|blight|spot|rot|rust|mildew|kulat|病/.test(text));
     const missingLookAlikes = getMissingLookAlikes(scan);
-    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || missingLookAlikes.length || scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
+    const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || missingLookAlikes.length || isUnsureHealthy(scan) || scan.needsMoreEvidence || scan.abstainReason || scan.validationIssues?.length
         || reviewStatuses.has(status) || reviewStates.has(explicit)
         || (confidence !== null && confidence < 70)
         || (confidencePercent(scan.confidence) !== null && confidencePercent(scan.confidence) < 70)

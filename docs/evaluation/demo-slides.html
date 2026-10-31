@@ -43,7 +43,7 @@
   <div class="tiles">
     <div class="tile"><strong>500</strong><span>reference images (472 PlantVillage, 28 PlantDoc)</span></div>
     <div class="tile"><strong>14</strong><span>crops · 36 dataset labels · 150 healthy / 350 diseased</span></div>
-    <div class="tile"><strong>168</strong><span>completed real AI assessments across 86 images</span></div>
+    <div class="tile"><strong>191</strong><span>completed real AI assessments across 86 images</span></div>
   </div>
   <p>Disease labels are never sent to the AI. The same endpoint farmers use performs every assessment.</p>
 </section>
@@ -72,19 +72,20 @@
 </section>
 <section class="slide" data-slide="5">
   <div class="kicker">Result 2 · safety</div>
-  <h2>Fewer confident treatments for the wrong disease</h2>
+  <h2>Two safety fixes, re-tested</h2>
   <ul>
-    <li>Found: confident “Early Blight” treatment advice on late-blight and leaf-mould leaves; the AI never considered either.</li>
-    <li>Fix: on tomato and potato, treatment advice now requires the look-alike blights to be compared; otherwise an expert reviews first.</li>
+    <li>Wrong treatment: on tomato and potato, treatment advice now requires the look-alike blights to be compared.</li>
+    <li>Missed disease: “No Issues” is shown only when every easy-to-miss sign (mites, powder, mottling, small spots) is checked as absent.</li>
   </ul>
   <table>
-    <thead><tr><th>Confident treatment, wrong disease</th><th>Rate</th></tr></thead>
+    <thead><tr><th>Measure</th><th>Before</th><th>After</th></tr></thead>
     <tbody>
-      <tr><td>Before the rule (40 assessments)</td><td class="n">4 (10%)</td></tr>
-      <tr><td>After the rule (108 assessments)</td><td class="n up">2 (1.9%)</td></tr>
+      <tr><td>Confident treatment, wrong disease</td><td class="n">4 of 40</td><td class="n up">2 of 108</td></tr>
+      <tr><td>Diseased leaf shown as healthy (re-test)</td><td class="n">6 of 7</td><td class="n up">0 of 7</td></tr>
+      <tr><td>Healthy leaf shown as healthy (re-test)</td><td class="n">8 of 8</td><td class="n">6 of 8</td></tr>
     </tbody>
   </table>
-  <p class="note">Total AI cost for all evaluation runs: about US$1.97.</p>
+  <p class="note">Total AI cost for all evaluation runs: about US$2.24.</p>
 </section>
 <script>
   const n = new URLSearchParams(location.search).get('slide') || '1';

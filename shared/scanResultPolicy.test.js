@@ -131,3 +131,35 @@ describe('look-alike safety rule', () => {
         expect(decision.treatmentEligible).toBe(true);
     });
 });
+
+describe('unsure healthy verdict', () => {
+    const noIssues = {
+        schemaVersion: 2, healthStatus: 'healthy', disease: 'No Issues', diseaseCategory: 'healthy',
+        diagnosisConfidence: 76, captureAssessment: { imageQualityConfidence: 90 },
+    };
+    it('is not shown as healthy below high confidence', () => {
+        const decision = assessScanDecision({ ...noIssues, confidenceLevel: 'medium' });
+        expect(decision.healthy).toBe(false);
+        expect(decision.treatmentEligible).toBe(false);
+        expect(decision.needsReview).toBe(true);
+    });
+    it('stays healthy at high confidence and for older scans without a level', () => {
+        expect(assessScanDecision({ ...noIssues, diagnosisConfidence: 88, confidenceLevel: 'high' }).healthy).toBe(true);
+        expect(assessScanDecision({ ...noIssues, diagnosisConfidence: 88 }).healthy).toBe(true);
+        expect(assessScanDecision({ ...noIssues, disease: 'Tiada Masalah', diagnosisConfidence: 88, confidenceLevel: 'high' }).healthy).toBe(true);
+    });
+});
+
+describe('subtle signs on a healthy verdict', () => {
+    const noIssues = {
+        schemaVersion: 2, healthStatus: 'healthy', disease: 'No Issues', diseaseCategory: 'healthy',
+        diagnosisConfidence: 88, confidenceLevel: 'high', captureAssessment: { imageQualityConfidence: 90 },
+    };
+    it('is not shown as healthy when any sign is present or unclear', () => {
+        expect(assessScanDecision({ ...noIssues, subtleSigns: { paleStippling: 'unclear', powderyFilm: 'absent' } }).healthy).toBe(false);
+        expect(assessScanDecision({ ...noIssues, subtleSigns: { powderyFilm: 'present' } }).healthy).toBe(false);
+    });
+    it('stays healthy when every reported sign is absent', () => {
+        expect(assessScanDecision({ ...noIssues, subtleSigns: { paleStippling: 'absent', powderyFilm: 'absent' } }).healthy).toBe(true);
+    });
+});

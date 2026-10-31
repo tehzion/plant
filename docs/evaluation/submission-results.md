@@ -20,6 +20,7 @@ To check the AI objectively, we:
 The evaluation showed two weaknesses, and we fixed both:
 - **Wrong crop.** Without a stated crop, the AI misidentified it in 25 of 70 images (for example, tomato read as bean or cabbage), because farmers could only choose a broad group such as "Vegetables". We added an optional "Which crop?" choice in all three languages, which the AI treats as the farmer's stated crop.
 - **Confident treatment for the wrong disease.** The AI gave confident "Early Blight" treatment advice on late-blight and leaf-mould leaves without ever considering those look-alikes. A new safety rule means that on tomato and potato, treatment advice is only given once the look-alike blights have been compared; otherwise the farmer is told an expert should confirm first.
+- **Disease missed ("No Issues").** The AI called 14 diseased-leaf results healthy (mites, powdery mildew, citrus greening, scab, target spot). It now reports each easy-to-miss sign (stippling, powdery film, mottling, small spots, velvety spots, curling) as present, absent or unclear. A "No Issues" result is shown only when every sign is absent and confidence is high; otherwise the farmer is told what to check and asked for a close-up.
 
 ## (iv) What measurable outcomes or improvements resulted?
 
@@ -37,16 +38,21 @@ The 70 images are 52 PlantVillage and 18 PlantDoc images covering 13 crops; 11 a
 | Before the look-alike rule (40 assessments) | 4 (10%) |
 | With the rule (108 assessments) | 2 (1.9%) |
 
+| Re-test of the same 15 leaves, crop stated | Before | After the subtle-sign check |
+|---|---:|---:|
+| Diseased leaves shown as healthy (of 7) | 6 | 0 |
+| Healthy leaves shown as healthy (of 8) | 8 | 6 |
+
 Other results:
 - **Dataset:** 500 reference images stored and retrievable (472 PlantVillage, 28 PlantDoc; 150 healthy, 350 diseased).
-- **Assessments:** 168 completed real AI assessments of 86 distinct images, stored separately from the reference labels. The 12 original pilot records are unchanged.
+- **Assessments:** 191 completed real AI assessments of 86 distinct images, stored separately from the reference labels. The 12 original pilot records are unchanged.
 - **Health-status defect fixed:** in the original pilot, all 8 diseased cases named a disease but were marked "healthy". That contradiction no longer occurs.
-- **Cost:** about US$0.012 per assessment; about US$1.97 for all evaluation runs.
+- **Cost:** about US$0.012 per assessment; about US$2.24 for all evaluation runs.
 
 **Limits to state honestly:**
 - 70 images is still a modest sample, and dataset labels are not field-validated Malaysian diagnoses.
 - In the "with crop" runs the crop was stated, as a farmer would state it, so the crop figure reflects the new input rather than better image recognition.
-- The AI still called 7 of 59 diseased leaves "no issues" (for example, citrus greening, spider mites and powdery mildew), and 1 of 11 healthy leaves was flagged as unhealthy. This is the next safety item to address.
+- The missed-disease fix was re-tested on 15 leaves only. The AI still rarely names these subtle diseases correctly; it now says it is unsure instead of "no issues". The cost is that about 1 in 4 healthy leaves gets a "check closer" message instead of "healthy".
 - One of the two remaining wrong confident treatments is a PlantDoc image labelled "late blight" whose visible symptoms look like early blight; its label needs expert checking.
 
 ## (v) Why is this AI / automation implementation unique or innovative?
@@ -60,12 +66,12 @@ Other results:
 
 - Assess all 500 imported images, and add more PlantDoc and Malaysian field photos (durian, oil palm, paddy, chilli) to the same Neon schema.
 - Add a plant-identification service (PlantNet) to confirm crops automatically when the farmer is unsure.
-- Use the stored results to reduce missed diseases (“no issues” on a diseased leaf) and extend the look-alike rule to other crops, with agronomist reviews recorded in the existing review tables.
+- Use the stored results to improve detection of subtle diseases (mites, mildew, citrus greening) and extend the look-alike rule to other crops, with agronomist reviews recorded in the existing review tables.
 - Repeat the before/after evaluation on every model or prompt change as a quality gate before release.
 
 ## Supporting evidence
 
 - `docs/evaluation/demo-walkthrough.mp4`: 56-second captioned walkthrough built from real screenshots of this run (captions also in `demo-walkthrough.srt`).
 - `docs/evaluation/demo-slides.html`: open with `?slide=1` to `?slide=5` for the evidence slides.
-- Neon evaluation branch `codex-agro-poc-20261031`: tables `agricultural_reference_images` (500 rows) and `agricultural_dataset_assessments` (168 completed rows; the 70-image comparison uses runs `batch-20261031-n20`, `batch-20261031-n20-crop`, `paired2-20261031-nocrop` and `paired2-20261031-crop`).
-- Automated test suite: 445 tests passing (99 files).
+- Neon evaluation branch `codex-agro-poc-20261031`: tables `agricultural_reference_images` (500 rows) and `agricultural_dataset_assessments` (191 completed rows; the 70-image comparison uses runs `batch-20261031-n20`, `batch-20261031-n20-crop`, `paired2-20261031-nocrop` and `paired2-20261031-crop`; the missed-disease re-test is run `subtle-20261031-crop`).
+- Automated test suite: 452 tests passing (99 files).
