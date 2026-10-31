@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Pencil, Timer, Trash2 } from 'lucide-react';
+import { AlertTriangle, Pencil, Printer, Tag, Timer, Trash2 } from 'lucide-react';
 import { missingPesticideFields, safeHarvestDateFor } from '../../../shared/mygapCompliance.js';
 import { createLabel, fieldLabel, fill, formatDay } from './mygapText.js';
 
-const MyGapLogCard = ({ t, language, log, conflict = null, onEdit, onDelete }) => {
+const MyGapLogCard = ({ t, language, log, conflict = null, onEdit, onDelete, onPrintLabel }) => {
     const label = createLabel(t);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [reason, setReason] = useState('');
@@ -17,7 +17,13 @@ const MyGapLogCard = ({ t, language, log, conflict = null, onEdit, onDelete }) =
         log.product_used && `${label('assessment.mygap.productUsed', 'Product used')}: ${log.product_used}`,
         log.active_ingredient && `${label('mygap.activeIngredient', 'Active ingredient')}: ${log.active_ingredient}`,
         log.registration_no && `${label('mygap.lrmpNo', 'LRMP registration no.')}: ${log.registration_no}`,
+        log.topic && `${label('mygap.topic', 'Training topic')}: ${log.topic}`,
         log.quantity && `${label('assessment.mygap.quantity', 'Quantity you used')}: ${log.quantity}`,
+        log.amount != null && log.amount !== '' && `${label(log.type === 'harvest' ? 'mygap.amountHarvested' : log.type === 'purchase' ? 'mygap.amountBought' : 'mygap.amountUsed', 'Amount')}: ${log.amount} ${log.unit || ''}`.trim(),
+        log.supplier && `${label('mygap.supplier', 'Supplier')}: ${log.supplier}`,
+        log.buyer && `${label('mygap.buyer', 'Buyer')}: ${log.buyer}`,
+        log.price && `${label('mygap.price', 'Price (RM)')}: ${log.price}`,
+        log.attendees && `${label('mygap.attendees', 'Who attended')}: ${log.attendees}`,
         log.area_treated && `${label('mygap.areaTreated', 'Area treated')}: ${log.area_treated}`,
         log.target_pest && `${label('mygap.targetPest', 'Pest or disease treated')}: ${log.target_pest}`,
         log.operator && `${label('assessment.mygap.operator', 'Done by')}: ${log.operator}`,
@@ -33,12 +39,13 @@ const MyGapLogCard = ({ t, language, log, conflict = null, onEdit, onDelete }) =
     return (
         <div className="log-card">
             <div className="log-header">
-                <span className={`log-badge ${log.type}`}>{t(`mygap.${log.type}Log`).split(' ')[0]}</span>
+                <span className={`log-badge ${log.type}`}>{label(`mygap.${log.type}Log`, log.type).split(' ')[0]}</span>
                 <span className="log-date">{new Date(log.activity_date || log.timestamp).toLocaleDateString()}</span>
             </div>
             <div className="log-status-row">
                 {pendingSync && <span className="log-sync-badge">{label('assessment.sync.savedOnDeviceShort', 'Saved on device')}</span>}
                 {log.updated_at && <span className="log-edited-badge">{label('mygap.edited', 'Edited')}</span>}
+                {log.lot_code && <span className="log-lot-badge"><Tag size={12} aria-hidden="true" />{log.lot_code}</span>}
                 {safeFrom && (
                     <span className="log-safe-badge"><Timer size={12} aria-hidden="true" />{fill(label('mygap.safeFrom', 'Safe to harvest from {date}'), { date: formatDay(safeFrom, language) })}</span>
                 )}
@@ -67,6 +74,9 @@ const MyGapLogCard = ({ t, language, log, conflict = null, onEdit, onDelete }) =
                         <small className="field-hint">{label('mygap.pendingSyncEdit', 'Can be edited after it syncs.')}</small>
                     ) : (
                         <>
+                            {log.type === 'harvest' && log.lot_code && onPrintLabel && (
+                                <button type="button" className="log-action-btn" onClick={() => onPrintLabel(log)}><Printer size={14} aria-hidden="true" />{label('mygap.printLabel', 'Print lot label')}</button>
+                            )}
                             <button type="button" className="log-action-btn" onClick={() => onEdit(log)}><Pencil size={14} aria-hidden="true" />{label('mygap.edit', 'Edit')}</button>
                             <button type="button" className="log-action-btn log-action-btn--danger" onClick={() => setConfirmingDelete(true)}><Trash2 size={14} aria-hidden="true" />{label('mygap.delete', 'Delete')}</button>
                         </>
