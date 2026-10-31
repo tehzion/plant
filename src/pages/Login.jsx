@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { peekFollowUpDraft } from '../utils/scanFollowUpDraft.js';
+import { friendlyErrorMessage } from '../utils/friendlyError.js';
 import './Login.css';
 
 const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboardPanel'), 'dashboard-panel');
@@ -81,8 +82,10 @@ const Login = () => {
                 setError(t('login.errorEmailExists') || 'That email is already registered. Try signing in instead.');
             } else if (msg.includes('Email not confirmed')) {
                 setError(t('login.errorEmailNotConfirmed') || 'Please confirm your email first, then sign in.');
+            } else if (/rate limit|too many/i.test(msg) || err.status === 429) {
+                setError(t('login.errorTooManyAttempts'));
             } else {
-                setError(msg);
+                setError(friendlyErrorMessage(err, t, 'login.errorGeneric'));
             }
         } finally {
             setLoading(false);
