@@ -1,3 +1,5 @@
+import { registerPrivacyRoutes } from './routes/privacyRoutes.js';
+import { resolveAccountScanConsent } from './services/accountConsentService.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
@@ -535,13 +537,14 @@ app.post('/api/scans/:scanId/withdraw-photos', async (req, res, next) => {
     try {
         const scanId = String(req.params.scanId || '');
         if (!/^[a-zA-Z0-9_-]{1,100}$/.test(scanId)) return res.status(400).json({ error: 'Invalid scan ID' });
-        if (!await resolveFeedbackAttribution(req, scanId)) {
+        const attribution = await resolveFeedbackAttribution(req, scanId);
+        if (!attribution) {
             return res.status(403).json({
                 error: 'WITHDRAWAL_NOT_AUTHORISED',
                 message: 'Photos can only be withdrawn from the device or account that ran this scan.',
             });
         }
-        const result = await withdrawTrainingImages(scanId);
+        const result = await withdrawTrainingImages(scanId, attribution.submitterHash);
         res.json({ withdrawn: true, removedPhotos: result?.removed || 0 });
     } catch (error) {
         next(error);
@@ -615,7 +618,10 @@ app.post('/api/analyze', async (req, res, next) => {
 
         // Fix: Extract treeImage/leafImage to match Frontend Payload (src/utils/diseaseDetection.js)
         // Fallback to 'image' for backward compatibility
-        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null, dataConsent = null } = req.body;
+        const { treeImage, leafImage, image, category, language = 'en', location, imageQuality = null, dataConsent: submittedConsent = null } = req.body;
+        const dataConsent = req.aiIdentity?.startsWith('user:')
+            ? await resolveAccountScanConsent(req.aiIdentity.slice(5), submittedConsent)
+            : submittedConsent;
         const analysisStartedAt = Date.now();
 
         const mainImage = treeImage || image;
@@ -1260,6 +1266,7 @@ app.post('/api/expert/cases/:scanId/reviews', async (req, res, next) => {
     } catch (error) { next(error); }
 });
 
+registerPrivacyRoutes(app);
 registerFarmerReviewRoutes(app);
 registerEvaluationRoutes(app);
 

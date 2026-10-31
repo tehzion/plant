@@ -153,7 +153,7 @@ describe('assessment and feedback attribution', () => {
         expect((await withdraw({ feedbackToken: otherToken })).status).toHaveBeenCalledWith(403);
         expect(mocks.withdrawImages).not.toHaveBeenCalled();
         const allowed = await withdraw({ feedbackToken });
-        expect(mocks.withdrawImages).toHaveBeenCalledWith(scanId);
+        expect(mocks.withdrawImages).toHaveBeenCalledWith(scanId, expect.any(String));
         expect(allowed.json).toHaveBeenCalledWith({ withdrawn: true, removedPhotos: 2 });
     });
 });

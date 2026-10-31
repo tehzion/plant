@@ -1,21 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { getDataConsent, setDataConsent } from '../utils/dataConsent';
+import { CONSENT_CHANGED, getDataConsent, saveDataConsent } from '../utils/dataConsent';
 import './DataConsentToggle.css';
 
 // Opt-in, unchecked by default. Scanning works the same either way.
 const DataConsentToggle = ({ disabled = false }) => {
     const { t } = useLanguage();
     const [checked, setChecked] = useState(() => getDataConsent().aiImprovement);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(false);
+    useEffect(() => {
+        const update = () => setChecked(getDataConsent().aiImprovement);
+        window.addEventListener(CONSENT_CHANGED, update);
+        return () => window.removeEventListener(CONSENT_CHANGED, update);
+    }, []);
+    const change = async (event) => {
+        const next = event.target.checked;
+        setSaving(true); setError(false);
+        try { setChecked((await saveDataConsent(next)).aiImprovement); }
+        catch { setChecked(getDataConsent().aiImprovement); setError(true); }
+        finally { setSaving(false); }
+    };
 
     return (
-        <label className="data-consent-toggle">
+        <div><label className="data-consent-toggle">
             <input
                 type="checkbox"
                 checked={checked}
-                disabled={disabled}
-                onChange={(event) => setChecked(setDataConsent(event.target.checked).aiImprovement)}
+                disabled={disabled || saving}
+                onChange={change}
             />
             <span>
                 <strong>{t('home.dataConsentLabel')}</strong>
@@ -24,7 +38,7 @@ const DataConsentToggle = ({ disabled = false }) => {
                     <Link to="/privacy">{t('home.dataConsentPrivacyLink')}</Link>
                 </small>
             </span>
-        </label>
+        </label>{error && <p role="alert">{t('photoPrivacy.saveFailed')}</p>}</div>
     );
 };
 
