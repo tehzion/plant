@@ -360,6 +360,12 @@ const Home = () => {
     getLocation().then(loc => loc && fetchWeather(loc.lat, loc.lng));
   };
 
+  // Retry where we last looked; before a location is known that is the
+  // Kuala Lumpur default the dashboard opens with.
+  const handleWeatherRetry = () => {
+    fetchWeather(location?.lat ?? 3.1412, location?.lng ?? 101.6865);
+  };
+
   const handleFeatureStub = (featureName) => {
     setModalConfig({
       isOpen: true,
@@ -486,6 +492,7 @@ const Home = () => {
                 weatherTemp={weatherTemp}
                 weatherIcon={weatherIcon}
                 weatherError={weatherError}
+                onWeatherRetry={handleWeatherRetry}
               />
 
               <EventProductHero

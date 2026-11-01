@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import LanguageSelector from './LanguageSelector';
 import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react';
-import { checkServerHealth } from '../utils/diseaseDetection';
+import { checkHealthOnce, hasRecentHealth } from '../utils/serverHealth.js';
 import './AppHeader.css';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { NAV_ITEMS, getBackTarget, isNavItemActive } from './navItems.js';
@@ -13,9 +13,10 @@ const AppHeader = ({ isHome }) => {
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
     const location = useLocation();
     const navigate = useNavigate();
-    const [systemStatus, setSystemStatus] = useState(() => (
-        typeof navigator !== 'undefined' && navigator.onLine ? 'checking' : 'offline'
-    ));
+    const [systemStatus, setSystemStatus] = useState(() => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return 'offline';
+        return hasRecentHealth() ? 'online' : 'checking';
+    });
 
     const refreshSystemStatus = useCallback(async () => {
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -23,10 +24,15 @@ const AppHeader = ({ isHome }) => {
             return;
         }
 
+        if (hasRecentHealth()) {
+            setSystemStatus('online');
+            return;
+        }
+
         setSystemStatus((current) => (current === 'online' ? current : 'checking'));
 
         try {
-            await checkServerHealth();
+            await checkHealthOnce();
             setSystemStatus('online');
         } catch {
             setSystemStatus(navigator.onLine ? 'unavailable' : 'offline');
@@ -68,6 +74,12 @@ const AppHeader = ({ isHome }) => {
         : systemStatus === 'unavailable' ? getUiCopy(language).service : systemStatus === 'offline'
             ? label('nav.statusOffline', 'Offline')
             : label('nav.statusChecking', 'Checking connection');
+    // Phones have room for a word or two next to the dot, not a sentence.
+    const statusShortLabel = systemStatus === 'unavailable'
+        ? label('nav.statusUnavailableShort', 'Down')
+        : systemStatus === 'offline'
+            ? label('nav.statusOfflineShort', 'Offline')
+            : label('nav.statusCheckingShort', 'Checking…');
 
     const backTarget = getBackTarget(location.pathname);
     const handleBack = (event) => {
@@ -97,6 +109,9 @@ const AppHeader = ({ isHome }) => {
                         >
                             <span className="app-header__status-dot" aria-hidden="true" />
                             <span className="app-header__status-text">{statusLabel}</span>
+                            {systemStatus !== 'online' && (
+                                <span className="app-header__status-text-short">{statusShortLabel}</span>
+                            )}
                         </span>
                         <button
                             onClick={() => window.location.reload()}

@@ -352,9 +352,30 @@
   font-size: 1.25rem;
 }
 
+.home-weather-pill--retry {
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-primary-dark);
+}
+
+.home-weather-pill--retry:hover {
+  border-color: var(--color-primary);
+}
+
+.home-weather-pill--retry:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.home-weather-retry-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Only shown over a saved forecast, so it is a note, not an alarm. */
 .weather-error-note {
   font-size: 0.75rem;
-  color: #b42318;
+  color: var(--color-text-secondary);
   margin-top: 4px;
   padding: 0 4px;
 }
