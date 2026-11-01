@@ -1578,3 +1578,5 @@
 .capture-photo-grid .leaf-upload-card { padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 .capture-photo-grid .camera-upload-step, .capture-photo-grid .leaf-upload-card > summary { min-height: 88px; }
 .scan-page .data-consent-toggle small { font-size: .875rem; }
+
+.analysis-progress-note { max-width: 48ch; margin: 12px auto; font-size: 1rem; line-height: 1.6; color: var(--color-text-secondary); }

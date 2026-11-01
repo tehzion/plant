@@ -136,6 +136,31 @@ const UserDashboardPanel = () => {
     });
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const profileDialogRef = useRef(null);
+    useEffect(() => {
+        if (!showProfileModal) return;
+        const previousFocus = document.activeElement;
+        const dialog = profileDialogRef.current;
+        const focusable = () => [...(dialog?.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]') || [])].filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true');
+        focusable()[0]?.focus();
+        const handleKey = event => {
+            if (event.key === 'Escape') { event.preventDefault(); setShowProfileModal(false); }
+            if (event.key !== 'Tab') return;
+            const items = focusable();
+            const first = items[0]; const last = items.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        };
+        const retainFocus = event => { if (!dialog?.contains(event.target)) focusable()[0]?.focus(); };
+        document.addEventListener('keydown', handleKey);
+        document.addEventListener('focusin', retainFocus);
+        return () => {
+            document.removeEventListener('keydown', handleKey);
+            document.removeEventListener('focusin', retainFocus);
+            if (previousFocus?.isConnected) previousFocus.focus();
+        };
+    }, [showProfileModal]);
+
     const isVerified = !!(profileInfo.name && profileInfo.contact);
 
     const [tempProfile, setTempProfile] = useState(profileInfo);
@@ -398,18 +423,19 @@ const UserDashboardPanel = () => {
                             <span className="udp-avatar-status udp-avatar-status--compact" />
                         </div>
                         <div className="udp-profile-identity">
-                            <h2 className="udp-display-name udp-display-name--compact">{displayName}</h2>
+                            <h1 className="udp-display-name udp-display-name--compact">{displayName}</h1>
                             <p className="udp-email udp-email--compact"><span className="udp-email-dot" />{email}</p>
                         </div>
                     </div>
                     <div className="udp-profile-actions">
                         <button 
                             className="udp-signout-mini udp-signout-mini--muted"
+                            aria-label={t('profile.editProfile')}
                             onClick={() => setShowProfileModal(true)}
                         >
                             <User size={14} />
                         </button>
-                        <button className="udp-signout-mini" onClick={handleSignOut} disabled={signingOut}>
+                        <button className="udp-signout-mini" aria-label={t('common.signOut')} onClick={handleSignOut} disabled={signingOut}>
                             <LogOut size={14} />
                         </button>
                     </div>
@@ -578,15 +604,15 @@ const UserDashboardPanel = () => {
             {/* ── Farmer Profile / Verification Modal ─────────────────────── */}
             {showProfileModal && (
                 <div className="udp-modal-overlay" onClick={() => setShowProfileModal(false)}>
-                    <div className="udp-profile-modal" onClick={e => e.stopPropagation()}>
+                    <div className="udp-profile-modal" ref={profileDialogRef} role="dialog" aria-modal="true" aria-labelledby="farm-profile-dialog-title" onClick={e => e.stopPropagation()}>
                         <div className="udp-profile-modal-header">
-                            <button className="udp-profile-modal-close" onClick={() => setShowProfileModal(false)}>
+                            <button className="udp-profile-modal-close" aria-label={t('common.close')} onClick={() => setShowProfileModal(false)}>
                                 <X size={20} />
                             </button>
                             <div className="udp-profile-modal-avatar">
                                 {isVerified ? initials : <User size={40} />}
                             </div>
-                            <h3 style={{ marginBottom: '4px' }}>{isVerified ? profileInfo.name : label('profile.completeToVerify', 'Complete Profile')}</h3>
+                            <h3 id="farm-profile-dialog-title" style={{ marginBottom: '4px' }}>{isVerified ? profileInfo.name : label('profile.completeToVerify', 'Complete Profile')}</h3>
                             <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>{email}</p>
                         </div>
                         
@@ -594,10 +620,11 @@ const UserDashboardPanel = () => {
                             {isEditingProfile ? (
                                 <form onSubmit={handleProfileSave}>
                                     <div className="udp-form-group">
-                                        <label className="udp-form-label">{label('profile.plotName', 'Full Name')}</label>
+                                        <label className="udp-form-label" htmlFor="farm-profile-name">{label('profile.plotName', 'Full Name')}</label>
                                         <input 
                                             type="text" 
                                             className="udp-form-input" 
+                                            id="farm-profile-name"
                                             value={tempProfile.name}
                                             onChange={e => setTempProfile({...tempProfile, name: e.target.value})}
                                             placeholder={label('profile.agropreneurPlaceholder', 'e.g. Ahmad Farmer')}
@@ -605,10 +632,11 @@ const UserDashboardPanel = () => {
                                         />
                                     </div>
                                     <div className="udp-form-group">
-                                        <label className="udp-form-label">{label('profile.contactInfo', 'Contact Number')}</label>
+                                        <label className="udp-form-label" htmlFor="farm-profile-contact">{label('profile.contactInfo', 'Contact Number')}</label>
                                         <input 
                                             type="text" 
                                             className="udp-form-input" 
+                                            id="farm-profile-contact"
                                             value={tempProfile.contact}
                                             onChange={e => setTempProfile({...tempProfile, contact: e.target.value})}
                                             placeholder={label('profile.contactPlaceholder', 'e.g. +60 12-345 6789')}
@@ -616,10 +644,11 @@ const UserDashboardPanel = () => {
                                         />
                                     </div>
                                     <div className="udp-form-group">
-                                        <label className="udp-form-label">{label('profile.specializedCrops', 'Specialized Crops')}</label>
+                                        <label className="udp-form-label" htmlFor="farm-profile-crops">{label('profile.specializedCrops', 'Specialized Crops')}</label>
                                         <input 
                                             type="text" 
                                             className="udp-form-input" 
+                                            id="farm-profile-crops"
                                             value={tempProfile.crops}
                                             onChange={e => setTempProfile({...tempProfile, crops: e.target.value})}
                                             placeholder={label('profile.cropsPlaceholder', 'e.g. Durian, Rubber')}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import StatusBadge from './StatusBadge.jsx';
 import { assessScanDecision } from '../../shared/scanResultPolicy.js';
 import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
@@ -17,6 +18,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
       return value && value !== key ? value : fallback;
     };
 
+  const [failedPreview, setFailedPreview] = useState(null);
   const standardizedStatus = getStandardizedStatus(scan);
   const decision = assessScanDecision(scan);
   const healthy = standardizedStatus === 'healthy';
@@ -65,10 +67,12 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
     <article className="scan-history-card">
       <div className="card-content">
         <div className="scan-thumbnail-shell">
-          {previewSrc ? (
+          {previewSrc && failedPreview !== previewSrc ? (
             <img
               src={previewSrc}
-              alt={scan.disease}
+              alt=""
+              loading="lazy"
+              onError={() => setFailedPreview(previewSrc)}
               className="scan-thumbnail"
             />
           ) : (
@@ -78,7 +82,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
           )}
         </div>
         <div className="scan-info">
-          <h4 className="scan-disease"><Link className="scan-card-link" to={`/results/${scan.id}`}>{scan.disease}</Link></h4>
+          <h3 className="scan-disease"><Link className="scan-card-link" to={`/results/${scan.id}`}>{scan.disease}</Link></h3>
           <div className="scan-meta-group">
             <p className="scan-meta-text">
               {(() => {
@@ -96,9 +100,9 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
                 {decision.needsReview ? getDiagnosisStatusLabel(t, decision.resultState) : t(`results.${standardizedStatus}`)}
               </StatusBadge>
 
-              {scan.severity && (
+              {scan.severity && !['unknown', 'none', 'n/a'].includes(scan.severity.toLowerCase()) && (
                 <span className={`badge-severity ${getSeverityBadgeClass(scan.severity)}`}>
-                  {t(`results.${(scan.severity || 'unknown').toLowerCase().replace(/\s+/g, '')}`) || scan.severity}
+                  {safeLabel(`results.${scan.severity.toLowerCase().replace(/\s+/g, '')}`, scan.severity)}
                 </span>
               )}
             </div>
@@ -109,6 +113,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
               {locationLabel}
             </p>
           )}
+          <Link className="scan-repeat-link" to="/?scan=true">{t('common.checkAgain')}</Link>
         </div>
         <button
           className="delete-btn"

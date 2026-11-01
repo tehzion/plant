@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-  ScanLine, AlertCircle, ChevronDown, X, Check, WifiOff
+  ScanLine, AlertCircle, ChevronDown, X, WifiOff
 } from 'lucide-react';
 import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
 import { DEMO_SCANS } from '../utils/demoData';
+import AnalysisProgress from '../components/AnalysisProgress.jsx';
 import PlantCheckGuide from '../components/PlantCheckGuide.jsx';
 import { validCaptureDetails } from '../utils/captureDetails.js';
 import CaptureDraftControl from '../components/CaptureDraftControl.jsx';
@@ -261,10 +262,10 @@ const Home = () => {
   const analysisStatusHint = useMemo(() => {
     if (!(loading && currentStep === 3)) return '';
     if (analysisElapsedMs > 120000) {
-      return t('home.analysisDeepReviewHint') || 'Still reviewing the image carefully. This can take a little longer for better diagnosis quality.';
+      return t('common.slowScanHint');
     }
     if (analysisElapsedMs > 60000) {
-      return t('home.analysisSlowHint') || 'This is taking longer than usual, but the analysis is still running. Please keep this screen open.';
+      return t('common.slowScanHint');
     }
     if (analysisElapsedMs > 20000) {
       return t('home.analysisNetworkHint') || 'Uploading large photos may take longer on mobile data. Please keep this screen open.';
@@ -601,41 +602,12 @@ const Home = () => {
                   className="analysis-preview-image"
                 />
               )}
-              {(() => {
-                const analysisSteps = [
-                  t('home.loadingReviewingImage'),
-                  t('home.loadingVisibleSymptoms'),
-                  t('home.loadingCarePlan'),
-                ];
-                const activeStep = Math.min(Math.max(analyzingStep, 0), 2);
-                return (
-                  <>
-                    <h2 className="loading-title" role="status" aria-live="polite" aria-atomic="true">
-                      {analysisSteps[activeStep]}
-                    </h2>
-                    <p className="loading-description">{t('home.analyzingDesc')}</p>
-                    <ol className="analysis-steps">
-                      {analysisSteps.map((stepLabel, index) => (
-                        <li
-                          key={stepLabel}
-                          className={`analysis-steps__item ${index < activeStep ? 'is-done' : ''} ${index === activeStep ? 'is-current' : ''}`}
-                          aria-current={index === activeStep ? 'step' : undefined}
-                        >
-                          <span className="analysis-steps__marker" aria-hidden="true">
-                            {index < activeStep ? <Check size={14} /> : index === activeStep ? <span className="loading-spinner-circle analysis-steps__spinner" /> : index + 1}
-                          </span>
-                          <span>{stepLabel}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </>
-                );
-              })()}
+              <AnalysisProgress step={analyzingStep} />
 
               {currentPeribahasa && <p className="analysis-proverb">{currentPeribahasa}</p>}
 
               {analysisStatusHint && (
-                <div className="analysis-hint-banner">
+                <div className="analysis-hint-banner" role="status">
                   <AlertCircle size={16} />
                   <span>{analysisStatusHint}</span>
                 </div>

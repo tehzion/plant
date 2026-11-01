@@ -322,3 +322,10 @@
         height: 36px;
     }
 }
+
+.history-filter-scope { grid-column: 1 / -1; font-size: 1rem; color: var(--color-text-secondary); line-height: 1.6; }
+.history-page .empty-state p { font-size: 1rem; }
+.history-page .app-empty-state h2 { font-size: 1.25rem; margin-bottom: 12px; }
+.history-page .app-empty-state .btn { margin-top: 16px; }
+.history-view-tabs button { min-height: 44px; }
+.history-view-tabs button[aria-pressed="true"] { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; }

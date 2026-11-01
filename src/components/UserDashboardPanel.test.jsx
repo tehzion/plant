@@ -26,6 +26,8 @@ const translationMap = {
     'nav.shop': 'Shop',
     'home.onlineStatus': 'Online',
     'common.signOut': 'Sign out',
+    'common.close': 'Close',
+    'profile.editProfile': 'Edit Profile',
     'profile.verifiedFarmer': 'Verified Farmer',
     'profile.totalScans': 'Scans',
     'profile.healthy': 'Healthy',
@@ -36,8 +38,10 @@ const translationMap = {
 
 vi.mock('lucide-react', async () => {
     const React = await import('react');
+    const icons = await vi.importActual('lucide-react');
     const Icon = ({ children, ...props }) => React.createElement('svg', props, children);
     return {
+        ...icons,
         LogOut: Icon,
         MapPinned: Icon,
         NotebookPen: Icon,
@@ -59,6 +63,7 @@ vi.mock('lucide-react', async () => {
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
+    Link: ({to, children, ...props}) => <a href={to} {...props}>{children}</a>,
     useSearchParams: () => [
         new URLSearchParams(routerMocks.searchParamsString),
         routerMocks.setSearchParams,
@@ -259,4 +264,20 @@ describe('UserDashboardPanel', () => {
         expect(routerMocks.setSearchParams).toHaveBeenCalledWith(expect.any(URLSearchParams), { replace: true });
         expect(routerMocks.setSearchParams.mock.calls[0][0].toString()).toBe('');
     });
+    it('names profile controls, contains dialog focus and restores it on Escape', async () => {
+        render(<UserDashboardPanel />);
+        const trigger = await screen.findByRole('button', {name:'Edit Profile'});
+        trigger.focus();
+        fireEvent.click(trigger);
+        const dialog = screen.getByRole('dialog');
+        const close = within(dialog).getByRole('button', {name:'Close'});
+        expect(close).toHaveFocus();
+        fireEvent.keyDown(close, {key:'Tab',shiftKey:true});
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        expect(close).not.toHaveFocus();
+        fireEvent.keyDown(document.activeElement, {key:'Escape'});
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(trigger).toHaveFocus();
+    });
+
 });

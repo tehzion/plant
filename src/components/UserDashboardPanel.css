@@ -3592,3 +3592,10 @@
         transition: none;
     }
 }
+
+.udp-signout-mini, .udp-profile-modal-close { min-width: 44px; min-height: 44px; }
+.udp-container :is(button, a, summary, input, select, textarea):focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }
+.ov-tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ov-tool-card { min-width: 0; }
+.ov-tool-copy { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .ov-tools-grid { grid-template-columns: minmax(0, 1fr); } }

@@ -149,7 +149,7 @@ const NotesTab = ({
                 {notes.length === 0 && !addingNote && (
                     <div className="udp-empty">
                         <FileText size={32} />
-                        <p>{label('profile.noNotes', 'No log entries yet.')}</p>
+                        <p>{label('profile.noNotes', 'No log entries yet.')}</p><p>{t('common.emptyNoteHint')}</p><button className="btn btn-primary" onClick={() => setAddingNote(true)}>{t('common.addNoteAction')}</button>
                     </div>
                 )}
 

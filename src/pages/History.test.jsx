@@ -12,6 +12,7 @@ const notifySuccessMock = vi.fn();
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
+    Link: ({to, children, ...props}) => <a href={to} {...props}>{children}</a>,
 }));
 
 vi.mock('../utils/localStorage', () => ({
@@ -137,7 +138,9 @@ describe('History', () => {
         fireEvent.change(screen.getByRole('searchbox', { name: 'Search scans' }), { target: { value: 'missing crop' } });
         expect(screen.queryByText('Trigger delete scan-1')).not.toBeInTheDocument();
         expect(screen.getByText('No scans match these filters.')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+        const resetButtons = screen.getAllByRole('button', { name: 'Reset filters' });
+        expect(resetButtons).toHaveLength(2);
+        fireEvent.click(resetButtons.at(-1));
         expect(screen.getByText('Trigger delete scan-1')).toBeInTheDocument();
     });
 });
