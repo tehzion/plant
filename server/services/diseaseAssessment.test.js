@@ -127,6 +127,8 @@ describe('treatment safety', () => {
                     weakeningEvidence: ['No water-soaked lesions'], distinguishingFeatures: ['Late blight spreads fast with pale greasy margins'] },
                 { name: 'Leaf Mold', category: 'fungal_disease', confidenceLevel: 'low', likelihood: 10,
                     weakeningEvidence: ['No velvety growth underneath'], distinguishingFeatures: ['Leaf mold shows olive growth on the underside'] },
+                { name: 'Bacterial Spot', category: 'bacterial_disease', confidenceLevel: 'low', likelihood: 8,
+                    weakeningEvidence: ['No greasy halo'], distinguishingFeatures: ['Bacterial spot lesions are small and greasy'] },
             ] });
         expect(result.treatmentEligible).toBe(true);
         expect(result.treatments).toEqual(['Spray mancozeb at the rate on the registered product label at the interval on the label']);

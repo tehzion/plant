@@ -1,4 +1,4 @@
-import { checkDecisionShadow } from './services/decisionShadowService.js';
+import { applyDecisionCheck, checkDecisionShadow, resolveDecisionCheckMode } from './services/decisionShadowService.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
@@ -718,7 +718,7 @@ app.post('/api/analyze', async (req, res, next) => {
                     language,
                     location,
                     imageQuality,
-                    { signal },
+                    { signal, farmerStatedCrop: Boolean(farmerCrop) },
                 ),
                 Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
                 { signal: requestController.signal, timeoutMessage: 'AI pipeline stage timed out' },
@@ -740,23 +740,24 @@ app.post('/api/analyze', async (req, res, next) => {
             analysisLanguage: language,
         };
 
-        // Optional research checker: server-only audit data, never result or cache content.
-        let decisionShadow;
-        try {
-            const shadow = await trackAiUsage(() => checkDecisionShadow({
-                prediction: finalResult, treeImage: mainImage, leafImage, crop: cropHint,
-                dataConsent, signal: requestController.signal,
-            }));
-            decisionShadow = { ...shadow.result, aiUsage: shadow.usage };
-        } catch {
-            decisionShadow = { status: 'unavailable', reason: 'checker_failed' };
-        }
-
-        if (decisionShadow.status !== 'skipped') {
-            console.log(JSON.stringify({ event: 'decision_shadow', requestId: req.requestId,
-                status: decisionShadow.status, reason: decisionShadow.reason || null,
-                wouldAddReview: decisionShadow.wouldAddReview ?? null,
-                durationMs: decisionShadow.durationMs ?? null, costUsd: decisionShadow.costUsd ?? null }));
+        // Optional second check of the diagnosis (see resolveDecisionCheckMode). In enforce mode it
+        // runs before the farmer sees the result and can only send it to review; in shadow mode it
+        // runs after the response is sent, so research never slows the farmer down.
+        const checkMode = resolveDecisionCheckMode();
+        const runDecisionCheck = (signal) => trackAiUsage(() => checkDecisionShadow({
+            prediction: finalResult, treeImage: mainImage, leafImage, crop: cropHint, dataConsent, signal,
+        })).then(shadow => ({ ...shadow.result, aiUsage: shadow.usage }))
+            .catch(() => ({ status: 'unavailable', reason: 'checker_failed' }));
+        const logDecisionCheck = (check) => {
+            if (check.status === 'skipped') return;
+            console.log(JSON.stringify({ event: 'decision_shadow', requestId: req.requestId, mode: check.mode || checkMode,
+                status: check.status, reason: check.reason || null, wouldAddReview: check.wouldAddReview ?? null,
+                applied: check.applied ?? false, durationMs: check.durationMs ?? null, costUsd: check.costUsd ?? null }));
+        };
+        let decisionShadow = { status: 'skipped', reason: checkMode === 'shadow' ? 'after_response' : 'disabled' };
+        if (checkMode === 'enforce') {
+            decisionShadow = await runDecisionCheck(requestController.signal);
+            if (decisionShadow.applied) applyDecisionCheck(finalResult, decisionShadow, language);
         }
 
         if (requestController.signal.aborted) throw new Error('Analysis request cancelled');
@@ -765,8 +766,7 @@ app.post('/api/analyze', async (req, res, next) => {
         cacheResult(cacheKey, finalResult, 86400);
 
         // 7. Log Data for Training (Fire & Forget)
-        // Fix: Pass single object as expected by dataCollector.js
-        logTrainingData({
+        const writeAudit = (check) => logTrainingData({
             id: scanId,
             ownerHash,
             treeImage: mainImage,
@@ -789,12 +789,20 @@ app.post('/api/analyze', async (req, res, next) => {
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
                 durationMs: Date.now() - analysisStartedAt,
                 aiUsage: analysisUsage,
-                decisionShadow,
+                decisionShadow: check,
             }
         }).catch(err => console.error('Data logging failed:', err));
         console.log(JSON.stringify({ event: 'analysis_usage', requestId: req.requestId, model: finalResult.analysisMetadata?.model || null, ...analysisUsage }));
 
         res.json({ ...finalResult, id: scanId, feedbackToken });
+
+        if (checkMode === 'shadow') {
+            // The response's close event aborts the request signal, so the check gets its own timeout.
+            void runDecisionCheck(undefined).then((check) => { logDecisionCheck(check); return writeAudit(check); });
+        } else {
+            logDecisionCheck(decisionShadow);
+            writeAudit(decisionShadow);
+        }
 
     } catch (error) {
         if (requestController.signal.aborted) {
