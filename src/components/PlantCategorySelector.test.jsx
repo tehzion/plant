@@ -7,7 +7,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
     t: (key) => ({
       'home.selectCategory': 'Select Plant Category',
       'home.selectCategorySubtitle': 'Choose crop type',
-      'home.categoryDurian': 'Durian',
+      'home.categoryRice': 'Rice',
     }[key] || key),
   }),
 }));
@@ -17,14 +17,21 @@ describe('PlantCategorySelector', () => {
     const onSelect = vi.fn();
     render(<PlantCategorySelector selected="" onSelect={onSelect} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /durian/i }));
+    fireEvent.click(screen.getByRole('button', { name: /rice/i }));
 
-    expect(onSelect).toHaveBeenCalledWith('Durian');
+    expect(onSelect).toHaveBeenCalledWith('Rice');
   });
 
   it('marks the selected crop button as pressed', () => {
-    render(<PlantCategorySelector selected="Durian" onSelect={vi.fn()} />);
+    render(<PlantCategorySelector selected="Rice" onSelect={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: /durian/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /rice/i })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('offers only rice, vegetables and fruits for now', () => {
+    render(<PlantCategorySelector selected="" onSelect={vi.fn()} />);
+
+    expect(screen.getAllByRole('button').map((button) => button.textContent))
+      .toEqual(['Rice', 'home.categoryVegetables', 'home.categoryFruits']);
   });
 });
