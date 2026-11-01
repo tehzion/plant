@@ -9,7 +9,7 @@
   border-radius: 10px;
   padding: 13px 16px;
   border: 1.5px solid var(--notification-border, #4a6878);
-  background-color: var(--notification-bg, #f0f3f4);
+  background-color: var(--notification-bg, var(--color-info-bg));
   box-shadow:
     0 10px 25px -5px rgba(0, 0, 0, 0.10),
     0 4px 10px -3px rgba(0, 0, 0, 0.06);
@@ -31,7 +31,7 @@
 .notification-message {
   flex: 1;
   font-size: 0.88rem;
-  color: #1f2320;
+  color: var(--color-text-primary);
   font-weight: 600;
   line-height: 1.45;
   margin: 0;
@@ -49,7 +49,7 @@
   align-items: center;
   gap: 4px;
   font-weight: 700;
-  color: #1f2320;
+  color: var(--color-text-primary);
   transition: all 0.15s;
   white-space: nowrap;
 }
@@ -58,7 +58,7 @@
   flex-shrink: 0;
   background: none;
   border: none;
-  color: #5c615a;
+  color: var(--color-text-secondary);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -70,7 +70,7 @@
 
 .notification-close:hover {
   background: rgba(0, 0, 0, 0.06);
-  color: #262a26;
+  color: var(--color-text-primary);
 }
 
 @keyframes notificationToastSlideDown {

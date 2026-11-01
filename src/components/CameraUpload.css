@@ -11,12 +11,12 @@
   border: 1px solid #dbece0;
   border-radius: 10px;
   color: #365245;
-  background: #faf8f4;
+  background: var(--color-bg-subtle);
 }
 
 .camera-upload-guidance strong {
   display: block;
-  color: #22522f;
+  color: var(--color-primary-dark);
   font-size: 0.84rem;
 }
 
@@ -38,4 +38,4 @@
 }
 
 .camera-upload-step { margin: 0 0 10px; font-weight: 700; font-size: 1rem; color: var(--color-text-primary); }
-.camera-upload-quality-ok { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 6px 12px; border-radius: 999px; background: var(--color-brand-soft); color: #183d23; font-weight: 700; font-size: .9rem; }
+.camera-upload-quality-ok { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 6px 12px; border-radius: 999px; background: var(--color-brand-soft); color: var(--color-primary-deep); font-weight: 700; font-size: .9rem; }

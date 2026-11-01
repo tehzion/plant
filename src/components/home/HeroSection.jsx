@@ -76,9 +76,9 @@ const HeroSection = ({
         <div className="dashboard-header home-hero-shell">
             <div className="hero-content home-hero-content">
                 <div className="greeting-container">
-                    <h2 className="greeting home-hero-greeting">
+                    <h1 className="greeting home-hero-greeting">
                         {greeting}, {t('common.farmer')}!
-                    </h2>
+                    </h1>
                 </div>
 
                 <div className="superapp-shelf-container home-hero-shelf">

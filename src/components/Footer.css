@@ -28,7 +28,7 @@
 }
 
 .app-footer__links a:hover {
-    color: #2e6b3f;
+    color: var(--color-primary);
 }
 
 .app-footer__links .separator {
@@ -44,7 +44,7 @@
 }
 
 .version-tag {
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     opacity: 0.62;
 }
 
@@ -58,7 +58,7 @@
     border-radius: var(--radius-sm);
     background: var(--color-bg-subtle);
     color: var(--color-text-secondary);
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 600;
     border: 1px solid var(--color-border);
 }

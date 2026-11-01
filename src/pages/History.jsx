@@ -190,7 +190,7 @@ const History = () => {
                             <HistoryIcon size={22} className="header-icon" />
                         </span>
                         <div className="history-title-copy">
-                            <h2 className="history-page-title">{t('history.scanHistory')}</h2>
+                            <h1 className="history-page-title">{t('history.scanHistory')}</h1>
                             <p className="history-page-subtitle">
                                 {hasScans
                                     ? (t('history.reviewScansHint') === 'history.reviewScansHint'

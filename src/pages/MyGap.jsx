@@ -52,11 +52,16 @@ const MyGapPage = () => {
         plots,
     } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
-    const [searchParams] = useSearchParams();
-    // Records are the daily task, so the log opens first; ?tab= deep-links a tab.
-    const [activeTab, setActiveTab] = useState(() => (
-        MYGAP_TABS.some((tab) => tab.id === searchParams.get('tab')) ? searchParams.get('tab') : 'logbook'
-    ));
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Records are the daily task, so the log opens first. The tab lives in ?tab=
+    // so links into myGAP switch tabs even when the page is already open.
+    const requestedTab = searchParams.get('tab');
+    const activeTab = MYGAP_TABS.some((tab) => tab.id === requestedTab) ? requestedTab : 'logbook';
+    const setActiveTab = (id) => setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.set('tab', id);
+        return next;
+    }, { replace: true });
     const tabsRef = useScrollEdges();
     // Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
     const handleTabKey = (event) => {

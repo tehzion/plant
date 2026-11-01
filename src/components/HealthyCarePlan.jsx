@@ -149,7 +149,6 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
           padding: 10px 12px;
           margin-bottom: 8px;
           background: #F9FAFB;
-          border-left: 3px solid var(--color-primary);
           border-radius: 6px;
           color: #4B5563;
           line-height: 1.6;

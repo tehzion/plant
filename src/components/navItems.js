@@ -33,3 +33,33 @@ export const getBackTarget = (pathname) => {
     }
     return null;
 };
+
+// The browser tab title names the page, so screen readers and the tab list can
+// tell pages apart (WCAG 2.4.2). Returns null for Home, which keeps the app name.
+const PAGE_TITLES = [
+    ['/results/', 'nav.pageResult', 'Check result'],
+    ['/history', 'nav.history', 'History'],
+    ['/encyclopedia', 'nav.encyclopedia', 'Encyclopedia'],
+    ['/profile', 'nav.farm', 'My farm'],
+    ['/login', 'nav.pageSignIn', 'Sign in'],
+    ['/reset-password', 'nav.pageResetPassword', 'Reset password'],
+    ['/mygap', 'nav.mygap', 'myGAP'],
+    ['/nutrition', 'nav.pageNutrition', 'Nutrition'],
+    ['/admin', 'nav.pageAdmin', 'Expert review'],
+    ['/onboarding', 'nav.pageOnboarding', 'Get started'],
+    ['/guide', 'nav.pageGuide', 'User guide'],
+    ['/terms', 'nav.terms', 'Terms of Use'],
+    ['/privacy', 'nav.privacy', 'Privacy Policy'],
+];
+
+export const getPageTitle = (location) => {
+    if (location.pathname === '/') {
+        return location.search.includes('scan=true')
+            ? { key: 'nav.checkPlant', fallback: 'Check plant health' }
+            : null;
+    }
+    const match = PAGE_TITLES.find(([path]) => location.pathname.startsWith(path));
+    return match
+        ? { key: match[1], fallback: match[2] }
+        : { key: 'common.notFoundTitle', fallback: 'Page not found' };
+};

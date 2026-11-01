@@ -68,14 +68,14 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
 /* Semantic primitives shared by dashboard, history, and saved results. */
 :root {
  --ui-card-bg: #fff;
- --ui-card-border: #e4e0d8;
+ --ui-card-border: var(--color-border);
  --ui-card-radius: 16px;
- --ui-status-healthy-bg: #eef3ec;
- --ui-status-healthy-ink: #22522f;
- --ui-status-unhealthy-bg: #fef2f2;
- --ui-status-unhealthy-ink: #991b1b;
- --ui-status-review-bg: #fffbeb;
- --ui-status-review-ink: #92400e;
+ --ui-status-healthy-bg: var(--color-primary-light);
+ --ui-status-healthy-ink: var(--color-primary-dark);
+ --ui-status-unhealthy-bg: var(--color-danger-bg);
+ --ui-status-unhealthy-ink: var(--color-danger-ink);
+ --ui-status-review-bg: var(--color-warning-bg);
+ --ui-status-review-ink: var(--color-warning-ink);
 }
 .ui-card { padding: 20px; border: 1px solid var(--ui-card-border); border-radius: var(--ui-card-radius); background: var(--ui-card-bg); min-width: 0; }
 .ui-muted { color: var(--color-text-secondary); line-height: 1.6; }

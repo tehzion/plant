@@ -158,27 +158,8 @@ export default defineConfig(async ({ mode }) => {
               ) {
                 return 'vendor-charts';
               }
-              if (
-                id.includes('jspdf') ||
-                id.includes('/fflate/') ||
-                id.includes('\\fflate\\')
-              ) {
-                return 'vendor-pdf';
-              }
-              if (
-                id.includes('html2canvas') ||
-                id.includes('canvg') ||
-                id.includes('rgbcolor') ||
-                id.includes('stackblur-canvas') ||
-                id.includes('svg-pathdata') ||
-                id.includes('/raf/') ||
-                id.includes('\\raf\\') ||
-                id.includes('performance-now') ||
-                id.includes('/core-js/') ||
-                id.includes('\\core-js\\')
-              ) {
-                return 'vendor-canvas';
-              }
+              // jsPDF and html2canvas stay out of manualChunks: grouping them pulled shared
+              // helpers into their chunk, so every first visit preloaded ~380 KB of PDF code.
               if (id.includes('qrcode')) return 'vendor-qrcode';
               if (id.includes('@supabase') || id.includes('openai')) return 'vendor-services';
             }

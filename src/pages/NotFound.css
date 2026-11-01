@@ -1,7 +1,7 @@
 .not-found-page {
     min-height: calc(100vh - 70px);
     background:
-        #f1f4ee;
+        var(--color-primary-light);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,7 +39,7 @@
 
 .error-title {
     font-size: 1.75rem;
-    color: #262a26;
+    color: var(--color-text-primary);
     font-weight: 700;
     margin: 0 0 12px;
     text-wrap: balance;
@@ -47,7 +47,7 @@
 }
 
 .error-message {
-    color: #5c615a;
+    color: var(--color-text-secondary);
     line-height: 1.6;
     margin-bottom: 32px;
     font-size: 1.05rem;

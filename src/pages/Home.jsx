@@ -664,7 +664,7 @@ const Home = () => {
                       <ScanLine size={24} />
                     </div>
                     <div className="leaf-card-text">
-                      <h2 className="mb-xs">{t('home.step1Title')}</h2>
+                      <h1 className="scan-step-title mb-xs">{t('home.step1Title')}</h1>
                       <p>{t('home.step1Desc')}</p>
                     </div>
                   </div>
@@ -715,7 +715,7 @@ const Home = () => {
               {currentStep === 2 && (
                 <div className="step-wrapper">
                   <div className="step-header mb-lg mt-xl">
-                    <h2>{t('home.step2Title')}</h2>
+                    <h1 className="scan-step-title">{t('home.step2Title')}</h1>
                     <p>{t('home.step2Desc')}</p>
                   </div>
                   <PlantCategorySelector
