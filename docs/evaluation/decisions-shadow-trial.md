@@ -1,6 +1,6 @@
 # GPT-5.4-mini with a Decisions shadow checker
 
-The `/api/analyze` route now supports an optional OpenRouter Decisions checker. The diagnosis, advice, product eligibility, API result and cached result remain the original GPT output and existing policy. Checker output is stored only in `metadata.decisionShadow` in the existing private diagnosis audit log. There is no production deployment or automatic enforcement in this change.
+The `/api/analyze` route now supports an optional OpenRouter Decisions checker. The diagnosis, advice, product eligibility, API result and cached result remain the original GPT output and existing policy. Checker output is stored only in `metadata.decisionShadow` in the existing private diagnosis audit log. The checker never enforces its hypothetical veto; live activation is controlled by server configuration.
 
 ## Controlled trial configuration
 
@@ -56,4 +56,4 @@ Route tests verify audit-only storage, unchanged responses, cache-hit behavior a
 
 The integrated service completed all three live canary checks through OpenRouter for **US$0.0005562**, with mean checker latency **974 ms**. All three input diagnoses remained byte-for-byte unchanged, and no reserved image was used. Both prior treatment-eligible label disagreements were flagged, as was the healthy-labelled control (low-confidence triage). This confirms the integration works and also illustrates why the initial trial remains shadow-only; three deliberately selected cases do not establish an error rate or clinical accuracy.
 
-The full root suite passed **587 tests across 114 files**. The new audit-metrics checks also passed separately (2 tests). The checker is disabled by default, and no production deployment or production database write was performed. Canary metadata and the source snapshot remain in the private ignored directory `server/dataset/decision-shadow-canary-20261031/`.
+The full root suite passed **587 tests across 114 files**. The new audit-metrics checks also passed separately (2 tests). The checker is disabled by default. During this pre-release verification, no production deployment or production database write was performed. Canary metadata and the source snapshot remain in the private ignored directory `server/dataset/decision-shadow-canary-20261031/`.
