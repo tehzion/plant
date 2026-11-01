@@ -3599,3 +3599,24 @@
 .ov-tool-card { min-width: 0; }
 .ov-tool-copy { overflow-wrap: anywhere; }
 @media (max-width: 480px) { .ov-tools-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Plot scope: match field height instead of clipping text inside a 26px box. */
+.udp-input.rep-plot-select {
+    width: clamp(140px, 18vw, 240px);
+    max-width: 100%;
+    height: auto;
+    min-height: 44px;
+    padding: 10px 36px 10px 12px;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+}
+@media (max-width: 480px) {
+    .rep-chart-card .udp-section-header { flex-wrap: wrap; gap: 12px; }
+    .rep-chart-card .udp-sh-action { max-width: 100%; }
+}
