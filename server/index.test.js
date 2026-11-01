@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
+import { consumeFreeScanQuota } from './services/scanQuotaService.js';
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
     analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), logAssistantFeedback: vi.fn(), withdrawImages: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) =>
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
 const shadowMock = vi.hoisted(() => vi.fn());
 vi.mock('./services/decisionShadowService.js', () => ({ checkDecisionShadow: shadowMock }));
+vi.mock('./services/scanQuotaService.js', async (importOriginal) => ({ ...(await importOriginal()), consumeFreeScanQuota: vi.fn(async () => ({allowed:true,limit:10})) }));
 let app;
 let processListeners;
 beforeAll(async () => {
@@ -400,5 +402,16 @@ describe('Decisions shadow route integration', () => {
         const res=await invoke('/api/analyze',{body:{treeImage:'shadow-failure-unique',category:'Fruits',scanId:'shadow-failure-1'}});
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Leaf spot'}));
         expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:{status:'unavailable',reason:'checker_failed'}})}));
+    });
+});
+
+
+describe('daily free scan allowance', () => {
+    it('returns the scan-limit response before calling the AI provider', async () => {
+        consumeFreeScanQuota.mockResolvedValueOnce({allowed:false,limit:10});
+        const res = await invoke('/api/analyze', {body:{treeImage:'test-photo',language:'en'}, aiIdentity:'user:free-limit'});
+        expect(res.status).toHaveBeenCalledWith(429);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({code:'FREE_SCAN_DAILY_LIMIT',limit:10,resetTimeZone:'Asia/Kuala_Lumpur'}));
+        expect(mocks.analyze).not.toHaveBeenCalled();
     });
 });

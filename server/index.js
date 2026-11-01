@@ -19,6 +19,7 @@ import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerReque
 import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
+import { consumeFreeScanQuota, scanQuotaMessage } from './services/scanQuotaService.js';
 import { trackAiUsage } from './utils/aiUsage.js';
 import { correctMygapLog, deleteMygapLog, listMygapLogRevisions } from './services/mygapRecordService.js';
 import { buildRecommendationSnapshot, saveRecommendationSnapshot } from './services/recommendationSnapshotService.js';
@@ -377,6 +378,8 @@ app.use('/api/analyze', async (req, res, next) => {
 app.use(aiRoutes, async (req, res, next) => {
     if (req.method !== 'POST') return next();
     try {
+        // Plant scans have their own allowance; other AI features cannot spend it.
+        if (req.baseUrl === '/api/analyze') return next();
         const quota = await consumeAiQuota({ identity: req.aiIdentity, limit: Number(process.env.AI_IDENTITY_DAILY_LIMIT) || 50 });
         if (!quota.allowed) {
             console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId, identity: req.aiIdentity }));
@@ -641,6 +644,16 @@ app.post('/api/analyze', async (req, res, next) => {
 
         if (!mainImage) {
             return res.status(400).json({ error: 'Image (treeImage) is required' });
+        }
+
+        const scanQuota = await consumeFreeScanQuota(req.aiIdentity || `ip:${req.ip || 'unknown'}`);
+        if (!scanQuota.allowed) {
+            return res.status(429).json({
+                error: scanQuotaMessage(language, scanQuota.limit),
+                code: 'FREE_SCAN_DAILY_LIMIT',
+                limit: scanQuota.limit,
+                resetTimeZone: 'Asia/Kuala_Lumpur',
+            });
         }
 
         console.log(`📸 New Analysis Request - Category: ${category}${farmerCrop ? ` (${farmerCrop})` : ''}, Location: ${location || 'Not provided'}`);
