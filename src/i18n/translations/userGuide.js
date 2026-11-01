@@ -79,10 +79,10 @@ const userGuideTranslations = {
     },
     "ms": {
         "userGuide": {
-            "title": "Memahami Keputusan Imbasan",
+            "title": "Memahami Keputusan Semakan",
             "intro": "Panduan ini membantu anda memahami maksud setiap penunjuk dan tindakan yang perlu diambil.",
             "healthTitle": "Status Kesihatan Tumbuhan",
-            "healthSubtitle": "Yang anda lihat selepas mengimbas",
+            "healthSubtitle": "Yang anda lihat selepas menyemak",
             "healthy": {
                 "title": "Sihat",
                 "meaning": "Tumbuhan anda tidak menunjukkan tanda penyakit atau kekurangan",
@@ -148,10 +148,10 @@ const userGuideTranslations = {
             },
             "tipTitle": "Petua Profesional",
             "tips": [
-                "Imbas kerap untuk kesan masalah awal",
+                "Semak kerap untuk kesan masalah awal",
                 "Sentiasa semak skor keyakinan - lebih tinggi lebih boleh dipercayai",
-                "Simpan sejarah imbasan untuk jejak kesihatan tumbuhan",
-                "Bandingkan imbasan untuk lihat sama ada rawatan berkesan"
+                "Simpan sejarah semakan untuk jejak kesihatan tumbuhan",
+                "Bandingkan semakan untuk lihat sama ada rawatan berkesan"
             ]
         }
     },

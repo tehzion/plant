@@ -97,7 +97,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
       </div>
 
       {selectedScaleData && selectedScaleData.hasQuantity && (
-        <div className="quantity-input-container fade-in mt-md">
+        <div className="quantity-input-container quantity-input-reveal mt-md">
           <label className="quantity-label">{selectedScaleData.quantityLabel}</label>
           <div className="input-with-unit">
             <input

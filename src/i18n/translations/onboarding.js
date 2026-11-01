@@ -14,7 +14,7 @@ const onboardingTranslations = {
             "step1Title": "Ambil Foto",
             "step1Desc": "Ambil gambar daun tumbuhan yang terjejas dengan jelas. Pencahayaan penting!",
             "step2Title": "Menganalisis...",
-            "step2Desc": "Sistem pintar kami mengimbas imej untuk mengenal pasti kemungkinan penyakit dengan segera.",
+            "step2Desc": "Sistem pintar kami menyemak imej untuk mengenal pasti kemungkinan penyakit dengan segera.",
             "step3Title": "Dapatkan Rawatan",
             "step3Desc": "Terima nasihat pakar, cadangan produk, dan tips penjagaan."
         }

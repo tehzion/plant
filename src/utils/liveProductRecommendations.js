@@ -279,7 +279,7 @@ export const createProductConsultationFromDiagnosis = (diagnosis = {}, recommend
             ? '\u8054\u7cfb\u6211\u4eec\u54a8\u8be2'
             : 'Contact us for consultation';
     const reason = normalizeLanguage(language) === 'ms'
-        ? 'Hantar butiran imbasan kepada pasukan agronomi kami untuk semakan lanjut.'
+        ? 'Hantar butiran semakan kepada pasukan agronomi kami untuk dinilai lanjut.'
         : normalizeLanguage(language) === 'zh'
             ? '\u5c06\u626b\u63cf\u8be6\u60c5\u53d1\u9001\u7ed9\u6211\u4eec\u7684\u519c\u827a\u56e2\u961f\u8fdb\u4e00\u6b65\u6838\u5bf9\u3002'
             : 'Send the scan details to our agronomy team for review.';

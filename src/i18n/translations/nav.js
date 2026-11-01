@@ -35,7 +35,7 @@ const navTranslations = {
             history: 'Sejarah',
             encyclopedia: 'Ensiklopedia',
             profile: 'Profil',
-            scan: 'Imbas',
+            scan: 'Semak',
             about: 'Tentang',
             terms: 'Terma Penggunaan',
             privacy: 'Dasar Privasi',
