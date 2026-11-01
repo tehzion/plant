@@ -7,6 +7,7 @@ import translations from '../i18n/translations';
 import QuickActions from '../components/QuickActions';
 import DiseaseResultSections from '../components/disease-result/DiseaseResultSections';
 import { buildProductDiagnosisPayload, createProductConsultationFromDiagnosis } from '../utils/liveProductRecommendations.js';
+import PlantCheckGuide from '../components/PlantCheckGuide.jsx';
 import ScanServiceNotice from '../components/ScanServiceNotice.jsx';
 import { getScanTranslation, cacheScanTranslation, localizedText, applyScanTranslation } from '../utils/scanLanguageCache.js';
 import { getFieldAnswers, saveFieldAnswerWithStatus, localDateKey } from '../utils/farmerPrefs.js';
@@ -524,6 +525,7 @@ ${t('pdf.generatedBy')}
           <h2 id="watch-title">{t('results.watchTitle')}</h2>
           <p>{t(healthy ? 'results.watchHealthy' : 'results.watchDisease')}</p>
         </section>}
+        <PlantCheckGuide />
         <ScanServiceNotice />
         {!result.requiresRetake && <button type="button" className="btn btn-secondary" onClick={handleLogFollowUp}><ClipboardList size={18} aria-hidden="true" />{t('results.logCare')}</button>}
         {!result.requiresRetake && <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} healthy={healthy} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />}

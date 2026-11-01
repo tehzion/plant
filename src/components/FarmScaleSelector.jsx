@@ -107,7 +107,8 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
               onChange={(e) => onQuantityChange(e.target.value)}
               placeholder="0"
               className="quantity-input"
-              min="1"
+              min={selected === 'acre' ? '0.01' : '1'}
+              step={selected === 'acre' ? 'any' : '1'}
               disabled={disabled}
             />
             <span className="unit-label">{selectedScaleData.quantityUnit}</span>

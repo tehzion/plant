@@ -1,6 +1,28 @@
 const resultsTranslations = {
     "en": {
         "results": {
+            "acreUnit": "acre",
+            "acreUnits": "acres",
+            "treeUnit": "tree",
+            "treeUnits": "trees",
+
+            "optionalCloseup": "Close-up (optional)",
+
+            "guideTitle": "Plant-check help — works offline",
+            "guideOffline": "This guide is stored in the app. No connection is needed to read it.",
+            "guidePhotosTitle": "Take useful photos",
+            "guidePhotosBody": "Use daylight, hold the phone steady and tap to focus. Show the whole plant in the first photo. In the second, fill the frame with the affected part. For a requested retake, replace both views.",
+            "guideUncertainTitle": "If the result is unclear",
+            "guideUncertainBody": "An unclear photo is not a diagnosis. Retake it first. For a result needing review, check nearby plants and ask an agricultural expert before buying or spraying chemicals. Include when the signs started and recent treatments.",
+            "guideOfflineTitle": "If the connection or storage fails",
+            "guideOfflineBody": "Save a photo draft before leaving capture. Wait for its saved time, then you can close the screen. Resume restores the photos without sending them. If saving fails, keep the screen open and retry; the app has not promised a saved copy. Saved results, cached translations and checked steps stay available on this phone.",
+            "guideSafetyTitle": "Treatment and expert help",
+            "guideSafetyBody": "A checklist records work; ticking it does not apply a treatment. Follow the product label for the crop, dose, protective equipment and waiting period before harvest. Do not guess an unreadable dose. Ask KANB on WhatsApp if unsure; opening the draft does not send it.",
+            "detailsInvalid": "Enter an area greater than zero, or a whole number of trees.",
+            "lastDetails": "Use these crop details",
+            "changeDetails": "Change crop or scale",
+            "repeatAnalyse": "Analyse with these details",
+
             "draftSavedAt": "Photo draft saved at {time} on this phone. You can close this screen and resume later; analysis has not started.",
 
             "photoDraft": "Saved photo draft",
@@ -391,6 +413,28 @@ const resultsTranslations = {
     },
     "ms": {
         "results": {
+            "acreUnit": "ekar",
+            "acreUnits": "ekar",
+            "treeUnit": "pokok",
+            "treeUnits": "pokok",
+
+            "optionalCloseup": "Foto dekat (pilihan)",
+
+            "guideTitle": "Bantuan semakan — boleh dibaca tanpa internet",
+            "guideOffline": "Panduan ini disimpan dalam aplikasi. Anda tidak perlukan internet untuk membacanya.",
+            "guidePhotosTitle": "Ambil foto yang berguna",
+            "guidePhotosBody": "Gunakan cahaya siang, pegang telefon dengan stabil dan sentuh untuk fokus. Foto pertama menunjukkan seluruh pokok. Untuk foto kedua, dekatkan bahagian bergejala sehingga jelas. Jika diminta ambil semula, gantikan kedua-dua foto.",
+            "guideUncertainTitle": "Jika keputusan belum jelas",
+            "guideUncertainBody": "Foto kabur belum cukup untuk mengenal pasti penyakit. Ambil semula dahulu. Jika keputusan perlu disemak, periksa pokok berdekatan dan tanya pakar pertanian sebelum membeli atau menyembur racun. Beritahu bila gejala bermula dan rawatan terkini.",
+            "guideOfflineTitle": "Jika sambungan atau simpanan gagal",
+            "guideOfflineBody": "Simpan draf foto sebelum meninggalkan skrin foto. Tunggu masa simpanan dipaparkan, kemudian anda boleh tutup skrin. Sambung memulihkan foto tanpa menghantarnya. Jika gagal disimpan, biarkan skrin terbuka dan cuba lagi; belum ada salinan tersimpan yang disahkan. Keputusan, terjemahan tersimpan dan tanda kerja masih boleh digunakan dalam telefon ini.",
+            "guideSafetyTitle": "Rawatan dan bantuan pakar",
+            "guideSafetyBody": "Senarai semak mencatat kerja; menandanya tidak menjalankan rawatan. Ikut label produk untuk tanaman, sukatan, alat pelindung dan tempoh menunggu sebelum menuai. Jangan agak sukatan yang tidak dapat dibaca. Tanya KANB melalui WhatsApp jika ragu; membuka draf tidak menghantar mesej.",
+            "detailsInvalid": "Luas mesti lebih daripada sifar. Bilangan pokok mesti 1, 2, 3 dan seterusnya.",
+            "lastDetails": "Guna butiran tanaman ini",
+            "changeDetails": "Ubah tanaman atau skala",
+            "repeatAnalyse": "Analisis dengan butiran ini",
+
             "draftSavedAt": "Draf foto disimpan pada {time} dalam telefon ini. Anda boleh tutup skrin dan sambung kemudian; analisis belum bermula.",
 
             "photoDraft": "Draf foto tersimpan",
@@ -781,6 +825,28 @@ const resultsTranslations = {
     },
     "zh": {
         "results": {
+            "acreUnit": "英亩",
+            "acreUnits": "英亩",
+            "treeUnit": "棵",
+            "treeUnits": "棵",
+
+            "optionalCloseup": "近照（可选）",
+
+            "guideTitle": "植物检查帮助——可离线阅读",
+            "guideOffline": "此指南保存在应用中，阅读时无需网络连接。",
+            "guidePhotosTitle": "拍摄有用的照片",
+            "guidePhotosBody": "请在日光下稳住手机并点击对焦。第一张照片展示整株植物，第二张近照清晰展示出现症状的部位。若要求重新拍摄，请更换两个视角的照片。",
+            "guideUncertainTitle": "结果不明确时",
+            "guideUncertainBody": "模糊照片不能作为诊断，请先重新拍摄。需要复核时，请检查附近植株，并在购买或喷洒农药前咨询农业专家。请提供症状开始时间和近期处理情况。",
+            "guideOfflineTitle": "连接或存储失败时",
+            "guideOfflineBody": "离开拍照页面前请保存照片草稿，等待显示保存时间后再关闭。继续草稿会恢复照片，不会发送照片。若保存失败，请保持页面打开并重试；此时尚未确认存在已保存副本。已保存的结果、翻译和勾选记录仍可在此手机上使用。",
+            "guideSafetyTitle": "治疗与专家帮助",
+            "guideSafetyBody": "检查清单只记录工作，勾选不会执行治疗。请遵照产品标签规定的作物、用量、防护装备和采收前安全间隔。不要猜测无法阅读的用量。不确定时可通过 WhatsApp 咨询 KANB，打开草稿不会发送消息。",
+            "detailsInvalid": "请输入大于零的面积，或整数的树木数量。",
+            "lastDetails": "使用这些作物信息",
+            "changeDetails": "更改作物或规模",
+            "repeatAnalyse": "使用这些信息分析",
+
             "draftSavedAt": "照片草稿已于{time}保存在此手机上。您可以关闭页面并稍后继续，分析尚未开始。",
 
             "photoDraft": "已保存的照片草稿",

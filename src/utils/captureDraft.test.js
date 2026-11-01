@@ -14,6 +14,11 @@ describe('local capture drafts',()=>{
   expect(await loadCaptureDraft('user:b')).toBeNull();
   await discardCaptureDraft('user:a');expect(await loadCaptureDraft('user:a')).toBeNull();
  });
+ it('preserves incomplete quantity for correction instead of silently replacing it with one',async()=>{
+  await saveCaptureDraft('user:a',{selectedImage:new File(['x'],'x.jpg',{type:'image/jpeg',lastModified:0}),scaleQuantity:0});
+  const restored=await loadCaptureDraft('user:a');
+  expect(restored.scaleQuantity).toBe(0);expect(restored.selectedImage.lastModified).toBe(0);
+ });
  it('never stores analysis state or arbitrary scan metadata and does not claim a failed write succeeded',async()=>{
   await saveCaptureDraft('guest:a',{selectedImage:new File(['x'],'photo.jpg',{type:'image/jpeg'}),loading:true,currentStep:3,feedbackToken:'secret',location:{lat:1}});
   const value=putRecord.mock.calls[0][0].value;

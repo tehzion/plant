@@ -1563,3 +1563,18 @@
 .capture-draft-control .btn { min-height: 44px; white-space: normal; }
 /* Field instructions keep the same reading size as Results. */
 .scan-page :is(p, li, label), .capture-draft-control p { font-size: 1rem; }
+.capture-photo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.capture-photo-grid > * { min-width: 0; margin: 0; }
+.capture-photo-grid .camera-upload-step, .capture-photo-grid .leaf-upload-card > summary { min-height: 64px; margin: 0; padding-block: 8px; font-size: 1rem; font-weight: 600; }
+.capture-photo-grid .upload-buttons { display: grid; gap: 8px; }
+.capture-photo-grid .btn-large { min-height: 52px; width: 100%; padding: 10px 6px; display: flex; flex-direction: row; gap: 6px; white-space: normal; font-size: 1rem; }
+.capture-photo-grid .btn-icon-large { width: 18px; height: 18px; flex-shrink: 0; }
+.capture-photo-grid .preview-image { width: 100%; height: 140px; object-fit: cover; }
+.capture-photo-grid .preview-container .btn { width: 100%; white-space: normal; padding-inline: 6px; }
+.repeat-scan-details { margin-block: 16px; }
+.repeat-scan-details h2 { font-size: 1.125rem; margin-bottom: 8px; }
+.repeat-scan-details p { margin-block: 8px; }
+@media (max-width: 339px) { .capture-photo-grid { grid-template-columns: 1fr; } }
+.capture-photo-grid .leaf-upload-card { padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.capture-photo-grid .camera-upload-step, .capture-photo-grid .leaf-upload-card > summary { min-height: 88px; }
+.scan-page .data-consent-toggle small { font-size: .875rem; }

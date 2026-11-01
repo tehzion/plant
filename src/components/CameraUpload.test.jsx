@@ -54,6 +54,14 @@ describe('CameraUpload', () => {
         expect(screen.queryByText(/Step 2 of 2/)).not.toBeInTheDocument();
     });
 
+    it('removes the selected file from capture state when its preview is deleted', async () => {
+        const onImageCapture = vi.fn();
+        render(<CameraUpload currentImage="data:image/jpeg;base64,eA==" onImageCapture={onImageCapture} />);
+        const remove = await screen.findByRole('button', { name: 'Clear Image' });
+        fireEvent.click(remove);
+        expect(onImageCapture).toHaveBeenCalledWith(null);
+    });
+
     it('shows a toast error for non-image files', () => {
         const { container } = render(<CameraUpload onImageCapture={vi.fn()} />);
         const input = container.querySelector('input[type="file"][accept="image/*"]');

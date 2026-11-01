@@ -7,7 +7,7 @@ import { getImageQualityGuidance } from '../utils/diseaseDetection';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import './CameraUpload.css';
 
-const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, required = false, captureRole = 'whole' }) => {
+const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, showGuidance = true, required = false, captureRole = 'whole' }) => {
     const { t, language } = useLanguage();
     const qualityCopy = getScanQualityCopy(language);
     const { notifyError, notifyInfo } = useNotifications();
@@ -252,6 +252,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
     const clearPreview = () => {
         setPreview(null);
+        onImageCapture?.(null);
         setQualityPassed(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (cameraInputRef.current) cameraInputRef.current.value = '';
@@ -319,7 +320,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         <Image size={32} className="btn-icon-large" />
                         <span>{t('common.uploadGallery')}</span>
                     </button>
-                    <details id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance" hidden={captureRole !== 'whole'}>
+                    <details id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance" hidden={!showGuidance || captureRole !== 'whole'}>
                         <summary>{qualityCopy.photoGuidance.tipsTitle}</summary>
                         <ul>
                             {qualityCopy.photoGuidance.tips.slice(0, 3).map((tip) => <li key={tip}>{tip}</li>)}

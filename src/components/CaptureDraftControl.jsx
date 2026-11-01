@@ -4,15 +4,16 @@ import { saveCaptureDraft, loadCaptureDraft, discardCaptureDraft, captureDraftSi
 
 export default function CaptureDraftControl({ owner, state, onResume }) {
     const { t, language } = useLanguage();
-    const [draft, setDraft] = useState(null);
+    const [draftRecord, setDraftRecord] = useState(null);
+    const draft = draftRecord?.owner === owner ? draftRecord.value : null;
     const [busy, setBusy] = useState(false);
     const [failed, setFailed] = useState(false);
     const request = useRef(0);
     const saveButton = useRef(null);
     useEffect(() => {
         const id = ++request.current;
-        setDraft(null); setFailed(false); setBusy(false);
-        loadCaptureDraft(owner).then(value => { if (id === request.current) setDraft(value); }).catch(() => {});
+        setDraftRecord(null); setFailed(false); setBusy(false);
+        loadCaptureDraft(owner).then(value => { if (id === request.current) setDraftRecord({ owner, value }); }).catch(() => {});
         return () => { request.current++; };
     }, [owner]);
     const hasPhotos = Boolean(state.selectedImage || state.selectedLeafImage);
@@ -21,7 +22,7 @@ export default function CaptureDraftControl({ owner, state, onResume }) {
     const save = async () => {
         const id = ++request.current;
         setBusy(true); setFailed(false);
-        try { const value = await saveCaptureDraft(owner, state); if (id === request.current) setDraft(value); }
+        try { const value = await saveCaptureDraft(owner, state); if (id === request.current) setDraftRecord({ owner, value }); }
         catch { if (id === request.current) setFailed(true); }
         finally { if (id === request.current) { setBusy(false); requestAnimationFrame(() => saveButton.current?.focus({ preventScroll: true })); } }
     };
@@ -29,7 +30,7 @@ export default function CaptureDraftControl({ owner, state, onResume }) {
         if (!window.confirm(t('results.discardDraftConfirm'))) return;
         const id = ++request.current;
         setBusy(true); setFailed(false);
-        try { await discardCaptureDraft(owner); if (id === request.current) setDraft(null); }
+        try { await discardCaptureDraft(owner); if (id === request.current) setDraftRecord(null); }
         catch { if (id === request.current) setFailed(true); }
         finally { if (id === request.current) setBusy(false); }
     };

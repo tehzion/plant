@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useScanLogic } from './useScanLogic.js';
 
@@ -7,6 +7,7 @@ const diseaseDetectionMocks = vi.hoisted(() => ({
     analyzePlantDisease: vi.fn(),
     analyzeLocalImageQuality: vi.fn(),
 }));
+const auth = vi.hoisted(() => ({ user: { id: 'user-1' }, guestId: null }));
 const storageMocks = vi.hoisted(() => ({
     consumeStorageCleanupNotice: vi.fn(),
     saveScan: vi.fn(),
@@ -19,11 +20,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
     }),
 }));
 
-vi.mock('../context/AuthContext', () => ({
-    useAuth: () => ({
-        user: { id: 'user-1' },
-    }),
-}));
+vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }));
 
 vi.mock('../utils/diseaseDetection', () => diseaseDetectionMocks);
 
@@ -36,6 +33,7 @@ vi.mock('../utils/toast.js', () => ({
 describe('useScanLogic', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        auth.user = { id: 'user-1' }; auth.guestId = null;
         localStorage.clear();
         diseaseDetectionMocks.analyzeLocalImageQuality.mockResolvedValue({
             requiresRetake: false,
@@ -72,6 +70,31 @@ describe('useScanLogic', () => {
         act(() => result.current.actions.restoreDraft({ selectedImage: photo, selectedLeafImage: photo, selectedCategory: 'Rice', selectedCrop: '', selectedScale: 'acre', scaleQuantity: 2, currentStep: 3, loading: true, error: 'old failure' }));
         expect(result.current.state).toMatchObject({ selectedImage: photo, selectedCategory: 'Rice', currentStep: 2, loading: false, error: '' });
         expect(diseaseDetectionMocks.analyzePlantDisease).not.toHaveBeenCalled();
+    });
+
+    it('clears in-memory photos on account switch and keeps farm defaults scoped to the owner', () => {
+        const { result, rerender } = renderHook(() => useScanLogic());
+        const file = new File(['photo'], 'private.jpg', { type: 'image/jpeg' });
+        act(() => { result.current.actions.handleImageCapture(file); result.current.actions.setCategory('Rice'); result.current.actions.setQuantity(3); });
+        auth.user = { id: 'user-2' }; rerender();
+        expect(result.current.state.selectedImage).toBeNull();
+        expect(result.current.state.selectedCategory).toBe('');
+        act(() => result.current.actions.setCategory('Durian'));
+        auth.user = { id: 'user-1' }; rerender();
+        expect(result.current.state).toMatchObject({ selectedImage: null, selectedCategory: 'Rice', scaleQuantity: 3 });
+    });
+
+    it('does not save or display a previous account result when ownership changes during analysis', async () => {
+        let finish; diseaseDetectionMocks.analyzePlantDisease.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+        const { result, rerender } = renderHook(() => useScanLogic());
+        let pending;
+        act(() => { pending = result.current.actions.performAnalyze(null, '', { selectedImage: new File(['x'], 'x.jpg', { type: 'image/jpeg' }), selectedCategory: 'Rice' }).catch(error => error); });
+        await waitFor(() => expect(diseaseDetectionMocks.analyzePlantDisease).toHaveBeenCalled());
+        auth.user = { id: 'user-2' }; rerender();
+        let error; await act(async () => { finish({ disease: 'Leaf spot' }); error = await pending; });
+        expect(error.code).toBe('ANALYSIS_CANCELLED');
+        expect(storageMocks.saveScan).not.toHaveBeenCalled();
+        expect(result.current.state).toMatchObject({ loading: false, error: '', selectedImage: null });
     });
 
     it('uses the immediate selected crop override when analysis starts', async () => {
