@@ -7,12 +7,14 @@ import { Search } from 'lucide-react';
 import './Encyclopedia.css';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { setAssistantPageTopic } from '../utils/assistantContext.js';
+import { useScrollEdges } from '../hooks/useScrollEdges.js';
 
 const Encyclopedia = () => {
   const { t, label, language } = useLanguage();
   const [searchParams] = useSearchParams();
   // ?q= lets the assistant link straight to one entry.
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
+  const categoryShelfRef = useScrollEdges();
   const linkedQuery = searchParams.get('q');
   useEffect(() => {
     if (linkedQuery) setSearchQuery(linkedQuery);
@@ -99,7 +101,7 @@ const Encyclopedia = () => {
           </div>
 
           <div className="category-wrapper">
-            <div className="superapp-shelf-container encyclopedia-category-shelf">
+            <div ref={categoryShelfRef} className="superapp-shelf-container encyclopedia-category-shelf scroll-fade">
               {categories.map(category => {
                 const isActive = selectedCategory === category;
                 const labelText = getCategoryLabel(category);

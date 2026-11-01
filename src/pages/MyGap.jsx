@@ -17,6 +17,7 @@ import { addHarvestReminder, getLogDefaults, localDateKey, rememberLogDefaults }
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
+import { useScrollEdges } from '../hooks/useScrollEdges.js';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
 import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
@@ -56,6 +57,7 @@ const MyGapPage = () => {
     const [activeTab, setActiveTab] = useState(() => (
         MYGAP_TABS.some((tab) => tab.id === searchParams.get('tab')) ? searchParams.get('tab') : 'logbook'
     ));
+    const tabsRef = useScrollEdges();
     // Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
     const handleTabKey = (event) => {
         const ids = MYGAP_TABS.map((tab) => tab.id);
@@ -290,7 +292,7 @@ const MyGapPage = () => {
                 </div>
             )}
 
-            <div className="tabs-container" role="tablist" aria-label={t('mygap.title')}>
+            <div ref={tabsRef} className="tabs-container scroll-fade" role="tablist" aria-label={t('mygap.title')}>
                 {MYGAP_TABS.map(({ id, Icon, labelKey }) => (
                     <button
                         key={id}

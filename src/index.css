@@ -809,8 +809,22 @@ p {
   }
 }
 
+/* The one page-entrance fade. Content is visible by default and only eases
+   in, so a page never stays hidden if the animation does not run. Other
+   files must not redefine .fade-in. */
 .fade-in {
-  animation: fadeIn 0.4s ease forwards;
+  animation: app-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes app-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in {
+    animation: none;
+  }
 }
 
 .slide-up {
@@ -835,6 +849,23 @@ p {
   );
   background-size: 200% 100%;
   animation: shine 2.5s infinite linear;
+}
+
+/* Horizontal scroll rows: fade whichever edge hides more items (set by
+   useScrollEdges), so a cut-off chip reads as "scroll for more". */
+.scroll-fade[data-fade-end] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.scroll-fade[data-fade-start] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px);
+  mask-image: linear-gradient(to right, transparent, #000 40px);
+}
+
+.scroll-fade[data-fade-start][data-fade-end] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
 }
 
 /* === Utility Classes === */
@@ -1664,14 +1695,6 @@ p {
 }
 
 /* User Guide Styles */
-.guide-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 32px;
-  padding-top: 24px;
-}
-
 .guide-header h1 {
   font-size: 1.75rem;
   font-weight: 700;

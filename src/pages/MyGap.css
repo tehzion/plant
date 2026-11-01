@@ -533,22 +533,8 @@
     margin-top: var(--space-xl);
 }
 
-.fade-in {
-    animation: mygap-fade-in 0.3s ease;
-}
-
 .slide-down {
     animation: mygap-slide-down 0.3s ease;
-}
-
-@keyframes mygap-fade-in {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
 }
 
 @keyframes mygap-slide-down {
@@ -569,7 +555,6 @@
     .progress-fill,
     .official-link-button,
     .report-button,
-    .fade-in,
     .slide-down,
     .synced-badge svg {
         animation: none;
