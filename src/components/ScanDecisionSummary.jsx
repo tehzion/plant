@@ -66,7 +66,11 @@ const ScanDecisionSummary = ({ result, expertReview = null }) => {
         )}
         <h3>{copy.observations}</h3>
         {observations.length ? <ul>{observations.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul> : <p>{copy.noEvidence}</p>}
-        {assessment?.needs_expert_review && !expertReview && <p className="scan-decision__review-note" role="note">{label('assessment.expertReviewNote', 'Ask an agricultural expert to check this result before buying or spraying any chemical.')}</p>}
+        {result.urgent && !expertReview && <p className="scan-decision__urgent" role="alert">{copy.urgent}</p>}
+        {(assessment?.needs_expert_review || result.needsReview) && !result.requiresRetake && !expertReview && <div className="scan-decision__review-note" role="note">
+            <p>{label('assessment.expertReviewNote', 'Ask an agricultural expert to check this result before buying or spraying any chemical.')}</p>
+            {!result.isDemo && <p className="scan-decision__review-status">{copy.reviewListed}</p>}
+        </div>}
         {limits.length > 0 && (
             <details className="scan-decision__why">
                 <summary>{label('assessment.ux.whyTitle', 'Why we think this')}</summary>

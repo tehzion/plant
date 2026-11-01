@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
+import { beforeAll, beforeEach, afterAll, afterEach, describe, it, expect, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
     analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), logAssistantFeedback: vi.fn(), withdrawImages: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: v
 vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) => ({ ...(await importOriginal()), saveRecommendationSnapshot: mocks.saveSnapshot }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
 const shadowMock = vi.hoisted(() => vi.fn());
-vi.mock('./services/decisionShadowService.js', () => ({ checkDecisionShadow: shadowMock }));
+vi.mock('./services/decisionShadowService.js', async (importOriginal) => ({ ...(await importOriginal()), checkDecisionShadow: shadowMock }));
 let app;
 let processListeners;
 beforeAll(async () => {
@@ -380,25 +380,44 @@ describe('product search section grouping', () => {
 });
 
 describe('Decisions shadow route integration', () => {
-    it('stores checker findings only in audit metadata and never changes or caches them in the result', async () => {
+    afterEach(() => vi.stubEnv('DECISIONS_CHECK_MODE', 'off'));
+    it('runs the shadow check after responding and keeps its findings in audit metadata only', async () => {
+        vi.stubEnv('DECISIONS_CHECK_MODE', 'shadow');
         const diagnostic = { disease:'Apple scab', plantType:'Apple', healthStatus:'unhealthy', status:'high_confidence', confidence:92, additionalNotes:'Original advice', analysisMetadata:{model:'openai/gpt-5.4-mini'} };
         mocks.analyze.mockResolvedValueOnce(diagnostic);
-        const finding = {status:'checked',wouldAddReview:true,shadowState:'expert_review_needed'};
+        const finding = {status:'checked',mode:'shadow',wouldAddReview:true,shadowState:'expert_review_needed'};
         shadowMock.mockResolvedValueOnce(finding);
         const body = {treeImage:'shadow-route-unique-photo',category:'Fruits',crop:'Apple',scanId:'shadow-trial-1',dataConsent:{aiImprovement:true}};
         const response = await invoke('/api/analyze',{body});
         expect(response.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Apple scab',status:'high_confidence',confidence:92}));
         expect(response.json.mock.calls[0][0]).not.toHaveProperty('decisionShadow');
-        expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:expect.objectContaining(finding)})}));
-        expect(shadowMock).toHaveBeenCalledWith(expect.objectContaining({dataConsent:{aiImprovement:true},crop:'Apple'}));
+        await vi.waitFor(() => expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:expect.objectContaining(finding)})})));
+        expect(shadowMock).toHaveBeenCalledWith(expect.objectContaining({dataConsent:{aiImprovement:true},crop:'Apple',signal:undefined}));
         const cached = await invoke('/api/analyze',{body:{...body,scanId:'shadow-trial-2'}});
         expect(cached.json.mock.calls[0][0]).not.toHaveProperty('decisionShadow');
         expect(shadowMock).toHaveBeenCalledTimes(1);
     });
     it('returns the primary assessment when the shadow checker throws',async()=>{
+        vi.stubEnv('DECISIONS_CHECK_MODE', 'shadow');
         shadowMock.mockRejectedValueOnce(Error('unavailable'));
         const res=await invoke('/api/analyze',{body:{treeImage:'shadow-failure-unique',category:'Fruits',scanId:'shadow-failure-1'}});
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Leaf spot'}));
-        expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:{status:'unavailable',reason:'checker_failed'}})}));
+        await vi.waitFor(() => expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:{status:'unavailable',reason:'checker_failed'}})})));
+    });
+    it('does not call the checker when it is off',async()=>{
+        shadowMock.mockClear();
+        await invoke('/api/analyze',{body:{treeImage:'shadow-off-unique',category:'Fruits',scanId:'shadow-off-1'}});
+        expect(shadowMock).not.toHaveBeenCalled();
+    });
+    it('applies an enforce-mode veto to the farmer result before responding',async()=>{
+        vi.stubEnv('DECISIONS_CHECK_MODE', 'enforce');
+        mocks.analyze.mockResolvedValueOnce({ disease:'Apple scab', plantType:'Apple', healthStatus:'unhealthy', status:'high_confidence', diseaseCategory:'fungal',
+            confidence:92, treatments:['Spray fungicide'], analysisMetadata:{model:'openai/gpt-5.4-mini'} });
+        shadowMock.mockResolvedValueOnce({status:'checked',mode:'enforce',applied:true,baselineState:'confident_treatment',
+            reasons:['alternative_better_supported'],supportedAlternatives:['Apple rust']});
+        const res=await invoke('/api/analyze',{body:{treeImage:'enforce-unique',category:'Fruits',crop:'Apple',scanId:'enforce-1',language:'en'}});
+        const sent=res.json.mock.calls[0][0];
+        expect(sent).toMatchObject({treatments:[],treatmentEligible:false,resultState:'expert_review_needed',secondCheck:{applied:true}});
+        expect(sent.abstainReason).toMatch(/Apple rust/);
     });
 });

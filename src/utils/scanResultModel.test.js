@@ -61,3 +61,21 @@ describe('shared scan result decisions', () => {
         expect(draft.note).not.toContain('Linked scan:'); expect(draft.note).toContain('test');
     });
 });
+
+describe('saved decision snapshot', () => {
+    it('keeps a result that was shown as needing review from upgrading to treatment under newer rules', () => {
+        const model = buildScanResultModel({ ...strong, decisionSnapshot: { needsReview: true, resultState: 'expert_review_needed' } });
+        expect(model.treatmentEligible).toBe(false);
+        expect(model.treatments).toEqual([]);
+    });
+    it('still lets newer rules make a saved treatment result more cautious', () => {
+        const model = buildScanResultModel({ ...strong, diagnosisConfidence: 40,
+            decisionSnapshot: { needsReview: false, resultState: 'confident_treatment' } });
+        expect(model.needsReview).toBe(true);
+    });
+    it('puts the urgent step first for a serious unconfirmed problem', () => {
+        const model = buildScanResultModel({ ...strong, diagnosisConfidence: 50, severity: 'severe' }, 'ms');
+        expect(model.urgent).toBe(true);
+        expect(model.immediateActions[0]).toMatch(/Pejabat Pertanian Daerah/);
+    });
+});

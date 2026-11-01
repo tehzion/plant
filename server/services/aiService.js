@@ -1,7 +1,7 @@
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { resolveAiProvider, isAiProviderConfigured } from '../utils/aiProvider.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
-import { assessScanDecision, getScanSectionPolicy, isNoIssueDiagnosis, isUnsureHealthy, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, getScanSectionPolicy, isCropUncertain, isNoIssueDiagnosis, isUnsureHealthy, lookAlikeLabel, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
 import { buildStructuredAssessment, normalizeAlternativeConditions, redactDosageInstructions, resolveConfidenceLevel } from '../../shared/diseaseAssessment.js';
 export { SCAN_RESULT_STATES };
 import OpenAI from 'openai';
@@ -2688,11 +2688,22 @@ export const mergeDiagnosisResult = ({
     }
     const missingLookAlikes = assessScanDecision(filtered).missingLookAlikes;
     if (missingLookAlikes.length && !filtered.abstainReason) {
-        const names = [...new Set(missingLookAlikes)].join(', ');
+        const names = (lang) => [...new Set(missingLookAlikes)].map((name) => lookAlikeLabel(name, lang)).join(', ');
         filtered.abstainReason = translateText(language, {
-            en: `This looks similar to ${names}, which needs different control. An expert should confirm before any treatment.`,
-            ms: `Ini kelihatan serupa dengan ${names}, yang memerlukan kawalan berbeza. Pakar perlu mengesahkan sebelum sebarang rawatan.`,
-            zh: `该症状与${names}相似，而后者需要不同的防治方法。任何处理前应由专家确认。`,
+            en: `This looks similar to ${names('en')}, which needs different control. An expert should confirm before any treatment.`,
+            ms: `Ini kelihatan serupa dengan ${names('ms')}, yang memerlukan kawalan berbeza. Pakar perlu mengesahkan sebelum sebarang rawatan.`,
+            zh: `该症状与${names('zh')}相似，而后者需要不同的防治方法。任何处理前应由专家确认。`,
+        });
+    }
+    // Say why only when the crop doubt is what held treatment back.
+    const blockedByCrop = isCropUncertain(filtered) && assessScanDecision({
+        ...filtered, speciesAssessment: { ...filtered.speciesAssessment, farmerStatedCrop: true },
+    }).treatmentEligible;
+    if (blockedByCrop && !filtered.abstainReason) {
+        filtered.abstainReason = translateText(language, {
+            en: 'The crop could not be confirmed from the photo. Choose your crop and check again before any treatment.',
+            ms: 'Jenis tanaman tidak dapat disahkan daripada foto. Pilih tanaman anda dan semak semula sebelum sebarang rawatan.',
+            zh: '无法从照片确认作物种类。请选择您的作物后重新检查，再决定是否处理。',
         });
     }
 
@@ -2758,6 +2769,8 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         const isChinese = language === 'zh';
 
         const speciesAssessment = assessSpeciesIdentification(plantNetResult, category);
+        // Lets the policy hold back treatment when nobody, farmer or species check, confirmed the crop.
+        if (typeof options.farmerStatedCrop === 'boolean') speciesAssessment.farmerStatedCrop = options.farmerStatedCrop;
         const speciesContext = buildSpeciesContext({
             plantNetResult,
             speciesAssessment,
@@ -2848,7 +2861,13 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             imageQuality,
         });
 
-        finalResult.analysisMetadata = { policyVersion: 4, provider: resolveAiProvider().provider, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
+        finalResult.analysisMetadata = { policyVersion: 5, provider: resolveAiProvider().provider, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
+        // What the farmer was shown, kept with the scan so a later rule change can make a saved
+        // result more cautious but never quietly upgrade it to treatment or healthy.
+        const shownDecision = assessScanDecision(finalResult);
+        finalResult.decisionSnapshot = { policyVersion: 5, resultState: shownDecision.resultState,
+            treatmentEligible: shownDecision.treatmentEligible, needsReview: shownDecision.needsReview,
+            decidedAt: finalResult.analysisMetadata.generatedAt };
         console.log('Analysis complete');
         return finalResult;
 

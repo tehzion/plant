@@ -111,13 +111,13 @@ describe('look-alike safety rule', () => {
         diagnosisConfidence: 90, captureAssessment: { imageQualityConfidence: 90 },
         disease: 'Early Blight', primaryScientificName: 'Alternaria solani',
     };
-    it('withholds treatment for tomato Early Blight when Late Blight and Leaf Mold were never weighed', () => {
+    it('withholds treatment for tomato Early Blight when Late Blight, Leaf Mold and bacterial spot were never weighed', () => {
         const decision = assessScanDecision({ ...confident, plantType: 'Tomato (Solanum lycopersicum)', differentialDiagnoses: [{ name: 'Septoria Leaf Spot' }] });
         expect(decision.treatmentEligible).toBe(false);
-        expect(decision.missingLookAlikes).toEqual(['Late Blight', 'Leaf Mold']);
+        expect(decision.missingLookAlikes).toEqual(['Late Blight', 'Leaf Mold', 'Bacterial Leaf Spot']);
     });
     it('allows treatment once the look-alikes were compared, including by scientific name', () => {
-        const decision = assessScanDecision({ ...confident, plantType: 'Tomato', differentialDiagnoses: [{ name: 'Late Blight' }, { name: 'Other', scientificName: 'Passalora fulva' }] });
+        const decision = assessScanDecision({ ...confident, plantType: 'Tomato', differentialDiagnoses: [{ name: 'Late Blight' }, { name: 'Other', scientificName: 'Passalora fulva' }, { name: 'Bacterial spot' }] });
         expect(decision.missingLookAlikes).toEqual([]);
         expect(decision.treatmentEligible).toBe(true);
     });
@@ -162,4 +162,42 @@ describe('subtle signs on a healthy verdict', () => {
     it('stays healthy when every reported sign is absent', () => {
         expect(assessScanDecision({ ...noIssues, subtleSigns: { paleStippling: 'absent', powderyFilm: 'absent' } }).healthy).toBe(true);
     });
+});
+
+describe('decision gaps found in the November 2026 review', () => {
+  const confident = { status: 'confirmed', diagnosisConfidence: 88, confidence: 82, healthStatus: 'unhealthy',
+    schemaVersion: 2, captureAssessment: { imageQualityConfidence: 85 }, diseaseCategory: 'fungal' };
+  const cases = [
+    // [name, scan, expected resultState]
+    ['rice blast without brown spot weighed', { ...confident, plantType: 'Padi', disease: 'Penyakit Karah Padi (blast)' }, 'expert_review_needed'],
+    ['rice blast with brown spot weighed', { ...confident, plantType: 'Rice', disease: 'Rice blast',
+      differentialDiagnoses: [{ name: 'Brown spot' }] }, 'confident_treatment'],
+    ['brown spot without blast weighed', { ...confident, plantType: 'Padi', disease: 'Bintik Perang' }, 'expert_review_needed'],
+    ['leaf blight without leaf streak weighed', { ...confident, plantType: 'Padi', disease: 'Hawar Daun Bakteria', diseaseCategory: 'bacterial' }, 'expert_review_needed'],
+    ['chilli cercospora without bacterial spot weighed', { ...confident, plantType: 'Cili', disease: 'Cercospora leaf spot' }, 'expert_review_needed'],
+    ['tomato early blight without bacterial spot weighed', { ...confident, plantType: 'Tomato', disease: 'Early Blight',
+      differentialDiagnoses: [{ name: 'Late Blight' }, { name: 'Leaf Mold' }] }, 'expert_review_needed'],
+    ['tomato early blight with all look-alikes weighed', { ...confident, plantType: 'Tomato', disease: 'Early Blight',
+      differentialDiagnoses: [{ name: 'Late Blight' }, { name: 'Leaf Mold' }, { name: 'Bacterial Spot' }] }, 'confident_treatment'],
+    ['virus named but category mislabelled', { ...confident, plantType: 'Tomato', disease: 'Tomato spotted wilt virus', diseaseCategory: 'disease' }, 'expert_review_needed'],
+    ['virus in Chinese with no category', { ...confident, plantType: '辣椒', disease: '辣椒病毒病', diseaseCategory: '' }, 'expert_review_needed'],
+    ['crop not stated and not confirmed', { ...confident, plantType: 'Tomato', disease: 'Septoria leaf spot',
+      speciesAssessment: { confirmed: false, farmerStatedCrop: false } }, 'expert_review_needed'],
+    ['crop stated by the farmer', { ...confident, plantType: 'Tomato', disease: 'Septoria leaf spot',
+      speciesAssessment: { confirmed: false, farmerStatedCrop: true } }, 'confident_treatment'],
+    ['crop confirmed by the species check', { ...confident, plantType: 'Tomato', disease: 'Septoria leaf spot',
+      speciesAssessment: { confirmed: true, farmerStatedCrop: false } }, 'confident_treatment'],
+    ['older scan without the crop flag', { ...confident, plantType: 'Tomato', disease: 'Septoria leaf spot',
+      speciesAssessment: { confirmed: false } }, 'confident_treatment'],
+  ];
+  it.each(cases)('%s', (_name, scan, expected) => {
+    expect(assessScanDecision(scan).resultState).toBe(expected);
+  });
+
+  it('marks a serious unconfirmed problem as urgent, but not a retake or a confident call', () => {
+    expect(assessScanDecision({ ...confident, disease: 'Unknown rot', diagnosisConfidence: 50, severity: 'severe' }).urgent).toBe(true);
+    expect(assessScanDecision({ ...confident, disease: 'Unknown rot', diagnosisConfidence: 50, severity: 'mild' }).urgent).toBe(false);
+    expect(assessScanDecision({ ...confident, disease: 'Unknown rot', requiresRetake: true, severity: 'severe' }).urgent).toBe(false);
+    expect(assessScanDecision({ ...confident, plantType: 'Tomato', disease: 'Septoria leaf spot', severity: 'severe' }).urgent).toBe(false);
+  });
 });
