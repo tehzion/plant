@@ -30,6 +30,8 @@ vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining,
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
 vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) => ({ ...(await importOriginal()), saveRecommendationSnapshot: mocks.saveSnapshot }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
+const shadowMock = vi.hoisted(() => vi.fn());
+vi.mock('./services/decisionShadowService.js', () => ({ checkDecisionShadow: shadowMock }));
 let app;
 let processListeners;
 beforeAll(async () => {
@@ -46,6 +48,7 @@ afterAll(() => {
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.logTraining.mockResolvedValue(true);
+    shadowMock.mockResolvedValue({ status: 'skipped', reason: 'disabled' });
     mocks.logFeedback.mockResolvedValue(true);
     mocks.identifyGpt.mockResolvedValue(null);
     mocks.identify.mockResolvedValue({ scientificName: 'Durio zibethinus' });
@@ -373,5 +376,29 @@ describe('product search section grouping', () => {
         await invoke('/api/products/search', { body: { diagnosis, language: 'en', scanId: 'scan-other', feedbackToken } });
         await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
         expect(mocks.saveSnapshot).not.toHaveBeenCalled();
+    });
+});
+
+describe('Decisions shadow route integration', () => {
+    it('stores checker findings only in audit metadata and never changes or caches them in the result', async () => {
+        const diagnostic = { disease:'Apple scab', plantType:'Apple', healthStatus:'unhealthy', status:'high_confidence', confidence:92, additionalNotes:'Original advice', analysisMetadata:{model:'openai/gpt-5.4-mini'} };
+        mocks.analyze.mockResolvedValueOnce(diagnostic);
+        const finding = {status:'checked',wouldAddReview:true,shadowState:'expert_review_needed'};
+        shadowMock.mockResolvedValueOnce(finding);
+        const body = {treeImage:'shadow-route-unique-photo',category:'Fruits',crop:'Apple',scanId:'shadow-trial-1',dataConsent:{aiImprovement:true}};
+        const response = await invoke('/api/analyze',{body});
+        expect(response.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Apple scab',status:'high_confidence',confidence:92}));
+        expect(response.json.mock.calls[0][0]).not.toHaveProperty('decisionShadow');
+        expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:expect.objectContaining(finding)})}));
+        expect(shadowMock).toHaveBeenCalledWith(expect.objectContaining({dataConsent:{aiImprovement:true},crop:'Apple'}));
+        const cached = await invoke('/api/analyze',{body:{...body,scanId:'shadow-trial-2'}});
+        expect(cached.json.mock.calls[0][0]).not.toHaveProperty('decisionShadow');
+        expect(shadowMock).toHaveBeenCalledTimes(1);
+    });
+    it('returns the primary assessment when the shadow checker throws',async()=>{
+        shadowMock.mockRejectedValueOnce(Error('unavailable'));
+        const res=await invoke('/api/analyze',{body:{treeImage:'shadow-failure-unique',category:'Fruits',scanId:'shadow-failure-1'}});
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Leaf spot'}));
+        expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:{status:'unavailable',reason:'checker_failed'}})}));
     });
 });
