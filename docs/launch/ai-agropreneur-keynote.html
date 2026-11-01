@@ -1,0 +1,430 @@
+<title>AI Agropreneur Keynote</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a keynote stage. One idea per full-width "slide", huge type, quiet chrome, one gold-to-leaf gradient used for reveals. */
+:root{
+  --stage:#07090a;
+  --stage-2:#0f1312;
+  --line:#1f2624;
+  --ink:#f3f5f2;
+  --muted:#97a19c;
+  --leaf:#7fd58a;
+  --paddy:#e8c766;
+  --warn:#f0a868;
+  --display:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body:"Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --reveal:linear-gradient(100deg,var(--paddy) 0%,#c9d36f 45%,var(--leaf) 100%);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-snap-type:y proximity}
+body{background:var(--stage);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--stage)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+
+.slide{scroll-snap-align:start;padding-block:clamp(72px,12vw,150px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-top:1px solid var(--line);position:relative}
+.slide:first-of-type{border-top:0}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.center{text-align:center;align-items:center}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.035em;line-height:1.02}
+h1{font-size:clamp(48px,9.5vw,128px);font-weight:800}
+h2{font-size:clamp(36px,6.4vw,84px);font-weight:800}
+h3{font-size:clamp(20px,2.1vw,26px);font-weight:700;letter-spacing:-.02em;line-height:1.2}
+p{margin:0}
+.lede{font-size:clamp(19px,2.2vw,26px);color:var(--muted);max-width:34ch;line-height:1.4;font-weight:500}
+.center .lede{margin-inline:auto}
+.grad{background:var(--reveal);-webkit-background-clip:text;background-clip:text;color:transparent}
+.dim{color:var(--muted)}
+
+/* nav */
+.chapters{position:fixed;right:max(14px,calc(env(safe-area-inset-right,0px) + 14px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:5}
+.chapters a{width:8px;height:8px;border-radius:50%;background:#3a4440;display:block;transition:background .3s,transform .3s}
+.chapters a.on{background:var(--ink);transform:scale(1.35)}
+.chapters a:focus-visible{outline:2px solid var(--paddy);outline-offset:3px}
+@media (max-width:700px){.chapters{display:none}}
+
+/* hero */
+.hero{min-height:min(92vh,900px);display:flex;align-items:center;padding-block:clamp(90px,14vw,170px)}
+.hero h1{animation:rise 1.2s cubic-bezier(.2,.7,.1,1) both}
+.hero .lede{animation:rise 1.2s .25s cubic-bezier(.2,.7,.1,1) both}
+@keyframes rise{from{transform:translateY(24px);filter:blur(6px)}to{transform:none;filter:none}}
+.mark{width:84px;height:84px;border-radius:24px;background:radial-gradient(120% 120% at 20% 10%,#2c3b2a,#101512);display:grid;place-items:center;border:1px solid #2a3430;box-shadow:0 20px 60px -20px rgba(127,213,138,.35)}
+.hint{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.08em}
+
+/* problem */
+.questions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:860px}
+.q{padding:12px 20px;border:1px solid var(--line);border-radius:999px;color:var(--ink);font-weight:500;background:var(--stage-2)}
+
+/* product reveal */
+.reveal{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(32px,6vw,80px);align-items:center}
+.reveal > *{min-width:0}
+@media (max-width:860px){.reveal{grid-template-columns:1fr}}
+.phone{width:min(330px,100%);aspect-ratio:9/19;max-width:100%;margin:0 auto;border-radius:48px;background:#121614;border:10px solid #1c2220;box-shadow:0 40px 120px -30px rgba(232,199,102,.25),inset 0 0 0 1px #2a322f;padding:18px 14px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.phone .notch{width:90px;height:22px;border-radius:12px;background:#000;margin:0 auto 4px}
+.ph-photo{border-radius:20px;aspect-ratio:4/3;background:radial-gradient(90% 80% at 50% 60%,#2f5a2c,#14240f);display:grid;place-items:center;position:relative;overflow:hidden}
+.ph-photo svg{width:62%}
+.ph-scanline{position:absolute;left:0;right:0;height:2px;background:var(--reveal);box-shadow:0 0 18px var(--paddy);animation:scan 3.2s ease-in-out infinite}
+@keyframes scan{0%,100%{top:12%}50%{top:86%}}
+.ph-card{background:#1a201e;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.ph-k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ph-v{font-weight:700;font-size:15px;line-height:1.25}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(232,199,102,.14);color:var(--paddy);width:max-content}
+.ph-todo{margin:0;padding-left:18px;font-size:12.5px;color:#cfd6d1;display:flex;flex-direction:column;gap:3px}
+
+/* feature grid */
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:28px;overflow:hidden}
+@media (max-width:900px){.features{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.features{grid-template-columns:1fr}}
+.feat{background:var(--stage);padding:30px 28px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.feat svg{width:30px;height:30px;stroke:var(--paddy);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.feat p{color:var(--muted);font-size:15.5px}
+
+/* confidence ladder */
+.ladder{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%}
+@media (max-width:760px){.ladder{grid-template-columns:repeat(2,1fr)}}
+.rung{border:1px solid var(--line);border-radius:22px;padding:22px;display:flex;flex-direction:column;gap:8px;background:var(--stage-2);text-align:left}
+.rung b{font-family:var(--display);font-size:20px;letter-spacing:-.02em}
+.rung span{color:var(--muted);font-size:14.5px}
+.rung .bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.rung .bar i{display:block;height:100%;background:var(--reveal)}
+
+/* chain (USP) */
+.chain{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 6px}
+.chain .node{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.6vw,32px);letter-spacing:-.02em;padding:14px 22px;border-radius:18px;background:var(--stage-2);border:1px solid var(--line)}
+.chain .arr{color:var(--muted);font-size:24px}
+.usps{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;width:100%;text-align:left}
+@media (max-width:720px){.usps{grid-template-columns:1fr}}
+.usp{padding:30px;border-radius:26px;background:var(--stage-2);border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.usp p{color:var(--muted)}
+.usp .num{font-family:var(--mono);font-size:12px;color:var(--paddy);letter-spacing:.12em}
+
+/* tech stack */
+.stack{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;width:100%}
+@media (max-width:900px){.stack{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.stack{grid-template-columns:1fr}}
+.layer{border-top:2px solid var(--paddy);padding-top:18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.layer .ph-k{color:var(--paddy)}
+.layer p{color:var(--muted);font-size:15px}
+.layer b{font-weight:700}
+
+/* one more thing */
+.omt{background:radial-gradient(70% 60% at 50% 0%,rgba(232,199,102,.10),transparent 70%),var(--stage)}
+.omt-title{font-size:clamp(28px,4.5vw,56px);font-weight:600;letter-spacing:-.03em;color:var(--muted)}
+.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:14px;align-items:stretch;width:100%}
+.flow > *{min-width:0}
+@media (max-width:820px){.flow{grid-template-columns:1fr}.flow .fa{transform:rotate(90deg);justify-self:center}}
+.fbox{border:1px solid var(--line);border-radius:22px;padding:24px;background:var(--stage-2);display:flex;flex-direction:column;gap:10px;text-align:left}
+.fbox.hl{border-color:rgba(232,199,102,.55);box-shadow:0 0 0 1px rgba(232,199,102,.18),0 30px 80px -40px rgba(232,199,102,.5)}
+.fa{align-self:center;color:var(--muted);font-size:26px}
+.qa{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.qa div{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:8px 12px;border-radius:12px;background:#151a18}
+.qa em{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--paddy);white-space:nowrap}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:100%;text-align:left}
+@media (max-width:760px){.rules{grid-template-columns:1fr}}
+.rule{padding:22px 24px;border-radius:20px;border:1px solid var(--line)}
+.rule h3{font-size:19px;margin-bottom:6px}
+.rule p{color:var(--muted);font-size:15px}
+.trial{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);border:1px solid rgba(240,168,104,.4);padding:6px 14px;border-radius:999px}
+
+/* competitors */
+.tbl-wrap{overflow-x:auto;width:100%;border:1px solid var(--line);border-radius:24px}
+table{border-collapse:collapse;width:100%;min-width:760px;text-align:left}
+th,td{padding:18px 20px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:var(--stage-2)}
+td:first-child{font-weight:700;white-space:nowrap}
+td .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;font-weight:400}
+td.us{color:var(--ink)}
+tr.ours td{background:linear-gradient(90deg,rgba(232,199,102,.08),rgba(127,213,138,.05))}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.cmp{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%}
+@media (max-width:760px){.cmp{grid-template-columns:1fr}}
+.cmp div{padding:20px 22px;border-radius:20px;background:var(--stage-2);border:1px solid var(--line);text-align:left}
+.cmp b{display:block;margin-bottom:4px}
+.cmp span{color:var(--muted);font-size:14.5px}
+
+/* privacy + close */
+.trust{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;width:100%;text-align:left}
+@media (max-width:760px){.trust{grid-template-columns:1fr}}
+.trust p{color:var(--muted)}
+.url{font-family:var(--mono);font-size:clamp(18px,2.6vw,28px);padding:16px 26px;border-radius:999px;border:1px solid var(--line);background:var(--stage-2);user-select:all}
+.langs{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.langs span{padding:8px 16px;border-radius:999px;border:1px solid var(--line);font-weight:600}
+footer{padding-block:40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+footer p{max-width:70ch;margin:0 auto}
+</style>
+
+<nav class="chapters" aria-label="Keynote chapters">
+  <a href="#open" aria-label="Opening"></a>
+  <a href="#why" aria-label="Why"></a>
+  <a href="#meet" aria-label="Meet the app"></a>
+  <a href="#features" aria-label="Features"></a>
+  <a href="#honest" aria-label="Honest AI"></a>
+  <a href="#usp" aria-label="What makes it different"></a>
+  <a href="#tech" aria-label="Technology"></a>
+  <a href="#decisions" aria-label="One more thing"></a>
+  <a href="#field" aria-label="Competitors"></a>
+  <a href="#trust" aria-label="Privacy"></a>
+  <a href="#available" aria-label="Availability"></a>
+</nav>
+
+<!-- 1. Opening -->
+<section class="slide hero" id="open">
+  <div class="wrap center">
+    <div class="mark" aria-hidden="true">
+      <svg width="44" height="44" viewBox="0 0 48 48"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8c766"/><stop offset="1" stop-color="#7fd58a"/></linearGradient></defs><path d="M10 38C10 20 22 9 40 8c0 18-11 30-29 30z" fill="url(#g)"/><path d="M12 36 30 18" stroke="#0f1512" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </div>
+    <p class="eyebrow">KANB · Launch Event · 2026</p>
+    <h1>AI <span class="grad">Agropreneur.</span></h1>
+    <p class="lede">A crop doctor, a farm notebook and a trusted store. In one app, made in Malaysia for the farmers of Southeast Asia.</p>
+    <p class="hint">Scroll, or use ↓ and ↑</p>
+  </div>
+</section>
+
+<!-- 2. Why -->
+<section class="slide" id="why">
+  <div class="wrap center">
+    <p class="eyebrow">It starts with a leaf</p>
+    <h2>A leaf changes colour.<br><span class="dim">And the questions begin.</span></h2>
+    <div class="questions">
+      <span class="q">Is it a disease, or just the weather?</span>
+      <span class="q">Penyakit atau kekurangan baja?</span>
+      <span class="q">Which product actually fits my crop?</span>
+      <span class="q">Can I still harvest this week?</span>
+      <span class="q">这个要喷药吗？</span>
+      <span class="q">Where do I write this down for myGAP?</span>
+    </div>
+    <p class="lede">Help is often far away, and a wrong guess costs a season. We built something that sits in your pocket and answers carefully.</p>
+  </div>
+</section>
+
+<!-- 3. Meet -->
+<section class="slide" id="meet">
+  <div class="wrap">
+    <div class="reveal">
+      <div style="display:flex;flex-direction:column;gap:26px">
+        <p class="eyebrow">Introducing</p>
+        <h2>Point. Snap.<br><span class="grad">Know what to do today.</span></h2>
+        <p class="lede">Take a photo of your rice, chilli, durian, palm or rubber. AI Agropreneur reads the symptoms, names the most likely problem, shows the look-alikes it ruled in or out, and gives you up to three clear actions for today.</p>
+      </div>
+      <div class="phone" role="img" aria-label="Example scan result on a phone">
+        <div class="notch"></div>
+        <div class="ph-photo">
+          <svg viewBox="0 0 120 90" aria-hidden="true"><path d="M14 74C18 34 48 12 104 12c-2 44-34 66-90 62z" fill="#5d9a4a"/><path d="M18 72 92 20" stroke="#2c4d24" stroke-width="2.5" stroke-linecap="round"/><circle cx="56" cy="46" r="7" fill="#b98a3c"/><circle cx="72" cy="36" r="4.5" fill="#a77a33"/><circle cx="44" cy="58" r="4" fill="#9d6f2f"/></svg>
+          <div class="ph-scanline"></div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-k">Example · Most likely</span>
+          <span class="ph-v">Leaf spot (fungal)</span>
+          <span class="pill">● Medium confidence</span>
+        </div>
+        <div class="ph-card">
+          <span class="ph-k">What to do today</span>
+          <ol class="ph-todo">
+            <li>Remove badly spotted leaves</li>
+            <li>Improve airflow between plants</li>
+            <li>Re-scan in 5 days to compare</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Features -->
+<section class="slide" id="features">
+  <div class="wrap">
+    <div class="center wrap" style="gap:18px">
+      <p class="eyebrow">Everything a farm needs</p>
+      <h2>One app.<br><span class="dim">The whole season.</span></h2>
+    </div>
+    <div class="features">
+      <div class="feat"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><h3>Smart plant scan</h3><p>Camera or gallery. Photo tips guide a clear shot. Diseases, pests, nutrient gaps and stress, with the alternatives explained.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><h3>Follow-up compare</h3><p>Scan the same plant again and see it side by side. Know whether things are getting better or worse.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/><path d="m15 9 1.5 1.5L20 7"/></svg><h3>Expert review</h3><p>Uncertain cases go to agricultural professionals. Their corrections sit beside the original AI result, so you see both.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1.5 12h-11z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><h3>The right products</h3><p>Matched from the KANB store and checked for purpose, crop fit and label information. Unverified items are kept separate.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><h3>myGAP made easy</h3><p>Farm profile, pesticide records, waiting-period checks before harvest, input stock, harvest lots with labels, training records.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><h3>Speak your farm log</h3><p>Say what you did today. Spraying, harvest, scouting and costs land in your daily log and reports.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><h3>Ask the assistant</h3><p>A floating chat for any farming question, on phone or desktop, in your language.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg><h3>Local weather</h3><p>Forecasts for where you farm, so you can plan spraying and harvest around the rain.</p></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg><h3>History and reports</h3><p>Every scan, note and harvest in one timeline. Export clean PDF reports when you need them.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Honest AI -->
+<section class="slide" id="honest">
+  <div class="wrap center">
+    <p class="eyebrow">Honest by design</p>
+    <h2>It knows when<br><span class="grad">it isn't sure.</span></h2>
+    <p class="lede">Most apps always give an answer. AI Agropreneur tells you how much to trust it, and holds back chemical advice until the evidence is there.</p>
+    <div class="ladder">
+      <div class="rung"><div class="bar"><i style="width:100%"></i></div><b>High</b><span>Clear signs. Treatment guidance shown.</span></div>
+      <div class="rung"><div class="bar"><i style="width:68%"></i></div><b>Medium</b><span>Likely. Look-alikes listed with how to tell them apart.</span></div>
+      <div class="rung"><div class="bar"><i style="width:36%"></i></div><b>Low</b><span>Flagged for expert review. Chemicals held back.</span></div>
+      <div class="rung"><div class="bar"><i style="width:10%"></i></div><b>Not enough evidence</b><span>Asks for another photo and a few quick field questions.</span></div>
+    </div>
+    <p class="dim" style="max-width:60ch">No invented doses. Product use always follows the registered label.</p>
+  </div>
+</section>
+
+<!-- 6. USP -->
+<section class="slide" id="usp">
+  <div class="wrap center">
+    <p class="eyebrow">What makes it different</p>
+    <h2>Others identify.<br><span class="grad">We follow through.</span></h2>
+    <div class="chain" aria-label="Scan, decide, buy, record, prepare for myGAP">
+      <span class="node">Scan</span><span class="arr">→</span>
+      <span class="node">Decide</span><span class="arr">→</span>
+      <span class="node">Buy</span><span class="arr">→</span>
+      <span class="node">Record</span><span class="arr">→</span>
+      <span class="node grad">myGAP-ready</span>
+    </div>
+    <div class="usps">
+      <div class="usp"><span class="num">USP · ONE</span><h3>The whole journey, connected</h3><p>The diagnosis flows into the product you buy, the spray you record, the waiting period before harvest and the myGAP report. Nothing to retype.</p></div>
+      <div class="usp"><span class="num">USP · TWO</span><h3>Backed by a cooperative</h3><p>Built with Koperasi Agropreneur Nasional Berhad. Farmers' demand comes together, so better prices and trusted supply can follow.</p></div>
+      <div class="usp"><span class="num">USP · THREE</span><h3>AI plus real agronomists</h3><p>Machines do the first look. People check the hard cases. Every correction is kept and makes the next answer better.</p></div>
+      <div class="usp"><span class="num">USP · FOUR</span><h3>Made for here</h3><p>Southeast Asian crops, Malaysian myGAP rules, and Bahasa Melayu, English and 中文 from the first screen.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. Tech -->
+<section class="slide" id="tech">
+  <div class="wrap">
+    <div class="center wrap" style="gap:18px">
+      <p class="eyebrow">Under the hood</p>
+      <h2>Built on the<br><span class="grad">latest generation of AI.</span></h2>
+      <p class="lede">We don't bet on a single model. We combine the best tools for each job, and swap in better ones as they arrive.</p>
+    </div>
+    <div class="stack">
+      <div class="layer"><span class="ph-k">See</span><h3>Multimodal vision AI</h3><p><b>GPT-5.4-mini</b> reads the photo, weighs one main diagnosis against up to three alternatives and returns a structured, checkable answer.</p></div>
+      <div class="layer"><span class="ph-k">Identify</span><h3>Species recognition</h3><p><b>Pl@ntNet</b> confirms which plant it is first, so the diagnosis starts from the right crop.</p></div>
+      <div class="layer"><span class="ph-k">Double-check</span><h3>Decisions</h3><p><b>GPT-6 Luna Decisions</b> answers typed yes/no questions about the photo. More on this in a moment.</p></div>
+      <div class="layer"><span class="ph-k">Route</span><h3>Model gateway</h3><p><b>OpenRouter</b> lets us move between AI providers without rebuilding the app.</p></div>
+      <div class="layer"><span class="ph-k">Store</span><h3>Serverless Postgres</h3><p><b>Neon</b> holds farm records, with every row tied to its owner and checked on the server.</p></div>
+      <div class="layer"><span class="ph-k">Protect</span><h3>Secure sign-in</h3><p><b>Supabase</b> handles accounts and keeps scan photos in private storage with short-lived links.</p></div>
+      <div class="layer"><span class="ph-k">Run anywhere</span><h3>Installable web app</h3><p><b>React</b> and a PWA shell. Add it to your home screen. No app store, works on any phone.</p></div>
+      <div class="layer"><span class="ph-k">Connect</span><h3>Store and weather</h3><p><b>WooCommerce</b> powers the KANB store. <b>Open-Meteo</b> brings local forecasts.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. One more thing -->
+<section class="slide omt" id="decisions">
+  <div class="wrap center">
+    <p class="omt-title">One more thing.</p>
+    <h2>Meet <span class="grad">Decisions.</span><br>A second opinion, built in.</h2>
+    <p class="lede">After the main AI makes its call, a second model looks at the same photo and answers precise questions. It doesn't write an essay. It answers yes, no or unclear.</p>
+    <div class="flow">
+      <div class="fbox"><span class="ph-k">Step one</span><h3>The diagnosis</h3><p class="dim">GPT-5.4-mini proposes the most likely problem and its look-alikes.</p></div>
+      <span class="fa" aria-hidden="true">→</span>
+      <div class="fbox hl"><span class="ph-k" style="color:var(--paddy)">Step two · Decisions</span><h3>Typed questions</h3>
+        <div class="qa">
+          <div>Is the photo clear enough?<em>yes / no / unclear</em></div>
+          <div>Is there abnormal tissue?<em>yes / no / unclear</em></div>
+          <div>Does the image support this diagnosis?<em>yes / no / unclear</em></div>
+        </div>
+      </div>
+      <span class="fa" aria-hidden="true">→</span>
+      <div class="fbox"><span class="ph-k">Step three</span><h3>A safer answer</h3><p class="dim">If the two disagree, the case is marked for a closer look before anyone sprays.</p></div>
+    </div>
+    <div class="rules">
+      <div class="rule"><h3>It can only add caution</h3><p>Decisions can ask for review. It can never remove a warning, raise confidence or unlock a treatment.</p></div>
+      <div class="rule"><h3>It catches false comfort</h3><p>If one model says "treat" and the other sees a healthy plant, that conflict is caught.</p></div>
+      <div class="rule"><h3>Your consent first</h3><p>It only runs for farmers who opted in to help improve the AI, with strict limits on time and cost.</p></div>
+    </div>
+    <span class="trial">Now in controlled trial</span>
+  </div>
+</section>
+
+<!-- 9. Competitors -->
+<section class="slide" id="field">
+  <div class="wrap">
+    <div class="center wrap" style="gap:18px">
+      <p class="eyebrow">The landscape</p>
+      <h2>Great tools exist.<br><span class="dim">None connect it all.</span></h2>
+      <p class="lede">We respect the people building agritech in Malaysia and around the world. Here is where we stand.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Platform</th><th>Known for</th><th>Where AI Agropreneur goes further</th></tr></thead>
+        <tbody>
+          <tr class="ours"><td>AI Agropreneur<br><span class="tag">Malaysia · KANB</span></td><td class="us">Photo diagnosis with confidence levels, expert review, product checks, store, farm records and myGAP in one app.</td><td class="us">The connected journey, from first scan to harvest record.</td></tr>
+          <tr><td><span class="dot" style="background:var(--paddy)"></span>MyPadiManager<br><span class="tag">Malaysia · MARDI</span></td><td>Helping paddy farmers manage cultivation more systematically.</td><td>Covers many crops beyond paddy, adds photo diagnosis and a store.</td></tr>
+          <tr><td><span class="dot" style="background:var(--paddy)"></span>AgriAssist<br><span class="tag">Malaysia · ProLadang</span></td><td>Satellite and AI monitoring for selected paddy pests and diseases.</td><td>Works from any phone photo, on fruits, vegetables, palm and rubber too.</td></tr>
+          <tr><td><span class="dot" style="background:var(--leaf)"></span>Plantix<br><span class="tag">Germany / India · in Malaysia via Ancom</span></td><td>Large AI crop-health app for diseases, pests and nutrient gaps.</td><td>Built around Malaysian myGAP, local cooperative supply and expert review.</td></tr>
+          <tr><td><span class="dot" style="background:var(--leaf)"></span>Agrio<br><span class="tag">Israel</span></td><td>Disease ID, scouting reports and team tasks for growers and advisors.</td><td>Made for smallholders, with BM and 中文, and a store a tap away.</td></tr>
+          <tr><td><span class="dot" style="background:var(--leaf)"></span>PlantVillage Nuru<br><span class="tag">USA / Africa · nonprofit</span></td><td>Free offline diagnosis for key crops, used in field programs.</td><td>Covers Southeast Asian crops and goes on to products, records and compliance.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cmp">
+      <div><b>Versus local tools</b><span>Most focus on one crop or one service. We cover the farm, end to end.</span></div>
+      <div><b>Versus global apps</b><span>Strong AI, built for other markets. We are built for Malaysian rules, languages and supply.</span></div>
+      <div><b>Versus asking around</b><span>Always on, gives a careful answer, and keeps a record of what you did.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. Trust -->
+<section class="slide" id="trust">
+  <div class="wrap">
+    <div class="center wrap" style="gap:18px">
+      <p class="eyebrow">Privacy</p>
+      <h2>Your farm.<br><span class="grad">Your data.</span></h2>
+    </div>
+    <div class="trust">
+      <div><h3>You choose</h3><p>We ask before keeping any scan photo. Change your mind any time, and your choice is respected from then on.</p></div>
+      <div><h3>Locked down</h3><p>Photos sit in private storage. Records are only readable by their owner, checked on our server on every request.</p></div>
+      <div><h3>No secrets in the app</h3><p>AI and database keys never reach your phone. Everything sensitive stays on the server.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. Availability -->
+<section class="slide" id="available">
+  <div class="wrap center">
+    <p class="eyebrow">Available now</p>
+    <h1 style="font-size:clamp(44px,8vw,108px)">Grow with<br><span class="grad">confidence.</span></h1>
+    <p class="lede">Open it in your browser. Add it to your home screen. Start your first scan in seconds.</p>
+    <span class="url">ai.kanb.coop.my</span>
+    <div class="langs"><span>Bahasa Melayu</span><span>English</span><span>中文</span></div>
+  </div>
+</section>
+
+<footer><p>AI Agropreneur gives AI-assisted guidance, not a confirmed diagnosis. Always follow registered product labels and seek expert advice for serious cases. myGAP tools support recordkeeping and self-assessment; certification is granted by the Department of Agriculture. Competitor descriptions are based on public information.</p></footer>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  const dots = [...document.querySelectorAll('.chapters a')];
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const i = slides.indexOf(e.target);
+      dots.forEach((d, j) => d.classList.toggle('on', j === i));
+    });
+  }, { threshold: 0.45 });
+  slides.forEach(s => io.observe(s));
+  const current = () => {
+    const mid = window.innerHeight / 2;
+    let idx = 0;
+    slides.forEach((s, i) => { if (s.getBoundingClientRect().top <= mid) idx = i; });
+    return idx;
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input,textarea')) return;
+    const next = ['ArrowDown', 'PageDown', ' '].includes(e.key);
+    const prev = ['ArrowUp', 'PageUp'].includes(e.key);
+    if (!next && !prev) return;
+    e.preventDefault();
+    const i = Math.max(0, Math.min(slides.length - 1, current() + (next ? 1 : -1)));
+    slides[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+})();
+</script>
