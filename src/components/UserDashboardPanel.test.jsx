@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
+import { saveDailyNote } from '../utils/localStorage';
 import UserDashboardPanel from './UserDashboardPanel.jsx';
 
 const routerMocks = vi.hoisted(() => ({
@@ -186,9 +187,12 @@ vi.mock('./dashboard/PlotsTab', () => ({
 }));
 
 vi.mock('./dashboard/NotesTab', () => ({
-    default: ({ noteForm }) => (
+    default: ({ noteForm, setNoteForm, handleAddNote, savingNote, saveError }) => (
         <div data-testid="notes-tab">
             {noteForm.activity_type}|{noteForm.chemical_name}|{noteForm.note}
+            <button onClick={() => setNoteForm(current => ({...current, activity_type:'scout', disease_name_observed:'Observed spots', note:''}))}>Prepare Scout</button>
+            <button disabled={savingNote} onClick={() => handleAddNote({preventDefault(){}})}>Submit activity</button>
+            {saveError && <p role="alert">{saveError}</p>}
         </div>
     ),
 }));
@@ -278,6 +282,19 @@ describe('UserDashboardPanel', () => {
         fireEvent.keyDown(document.activeElement, {key:'Escape'});
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(trigger).toHaveFocus();
+    });
+
+    it('recovers a rejected Scout save and keeps the observation for retry', async () => {
+        saveDailyNote.mockRejectedValueOnce(new Error('Storage unavailable')).mockResolvedValueOnce({id:'saved-scout'});
+        render(<UserDashboardPanel />);
+        fireEvent.click(await screen.findByRole('button',{name:/Daily Log/}));
+        fireEvent.click(screen.getByRole('button',{name:'Prepare Scout'}));
+        fireEvent.click(screen.getByRole('button',{name:'Submit activity'}));
+        expect(await screen.findByRole('alert')).toHaveTextContent('Your entry is still here');
+        expect(screen.getByRole('button',{name:'Submit activity'})).toBeEnabled();
+        expect(saveDailyNote).toHaveBeenCalledWith(expect.objectContaining({disease_name_observed:'Observed spots',note:''}), 'user-1');
+        fireEvent.click(screen.getByRole('button',{name:'Submit activity'}));
+        await vi.waitFor(()=>expect(saveDailyNote).toHaveBeenCalledTimes(2));
     });
 
 });

@@ -99,6 +99,7 @@ const UserDashboardPanel = () => {
     const [noteForm,   setNoteForm]   = useState(EMPTY_FORM);
     const [addingNote, setAddingNote] = useState(false);
     const [savingNote, setSavingNote] = useState(false);
+    const [noteSaveError, setNoteSaveError] = useState('');
 
     const [plotForm,       setPlotForm]       = useState({ name: '', cropType: '', area: '', unit: 'acres', soil_ph: '', npk_n: '', npk_p: '', npk_k: '' });
     const [addingPlot,     setAddingPlot]     = useState(false);
@@ -299,73 +300,88 @@ const UserDashboardPanel = () => {
 
     const handleAddNote = async (e) => {
         e.preventDefault();
-        if (!noteForm.note.trim() && !noteForm.chemical_name.trim()) return;
+        if (savingNote) return;
+        setNoteSaveError('');
+        const hasRequiredDetails = ['spray', 'fertilize'].includes(noteForm.activity_type)
+            ? Boolean(noteForm.chemical_name.trim())
+            : noteForm.activity_type === 'scout' ? Boolean(noteForm.disease_name_observed.trim())
+            : noteForm.activity_type === 'harvest' ? Number(noteForm.kg_harvested) > 0
+            : Boolean(noteForm.note.trim());
+        if (!hasRequiredDetails) {
+            setNoteSaveError(label('profile.activityContentRequired', 'Add an observation or activity detail before saving.'));
+            return;
+        }
         setSavingNote(true);
+        try {
 
-        // Photo upload: use Supabase Storage if available, else keep inline base64
-        let photoUrl = null;
-        let photoPath = null;
-        if (noteForm.photo_base64) {
-            if (user?.id && supabase) {
-                try {
-                    const path = `${user.id}/note_${Date.now()}.jpg`;
-                    const upload = await uploadPrivateImage({
-                        base64: noteForm.photo_base64,
-                        userId: user.id,
-                        path,
-                    });
-                    photoUrl = upload.signedUrl || noteForm.photo_base64;
-                    photoPath = upload.path || null;
-                } catch {
+            // Photo upload: use Supabase Storage if available, else keep inline base64
+            let photoUrl = null;
+            let photoPath = null;
+            if (noteForm.photo_base64) {
+                if (user?.id && supabase) {
+                    try {
+                        const path = `${user.id}/note_${Date.now()}.jpg`;
+                        const upload = await uploadPrivateImage({
+                            base64: noteForm.photo_base64,
+                            userId: user.id,
+                            path,
+                        });
+                        photoUrl = upload.signedUrl || noteForm.photo_base64;
+                        photoPath = upload.path || null;
+                    } catch {
+                        photoUrl = noteForm.photo_base64;
+                    }
+                } else {
                     photoUrl = noteForm.photo_base64;
                 }
+            }
+
+            const saved = await saveDailyNote({
+                ...noteForm,
+                plot_id:             noteForm.plot_id             || null,
+                chemical_name:       noteForm.chemical_name       || null,
+                chemical_qty:        noteForm.chemical_qty        || null,
+                application_timing:  noteForm.application_timing  || null,
+                temperature_am:      noteForm.temperature_am !== '' ? Number(noteForm.temperature_am) : null,
+                humidity:            noteForm.humidity       !== '' ? Number(noteForm.humidity)       : null,
+                growth_stage:        noteForm.growth_stage        || null,
+                pest_notes:          noteForm.pest_notes          || null,
+                disease_incidence:   noteForm.disease_incidence   !== '' ? Number(noteForm.disease_incidence)   : null,
+                disease_name_observed: noteForm.disease_name_observed || null,
+                scout_severity:      noteForm.scout_severity       || null,
+                expense_amount:      noteForm.expense_amount       !== '' ? Number(noteForm.expense_amount)       : null,
+                expense_category:    noteForm.expense_category     || null,
+                kg_harvested:        noteForm.kg_harvested         !== '' ? Number(noteForm.kg_harvested)         : null,
+                price_per_kg:        noteForm.price_per_kg         !== '' ? Number(noteForm.price_per_kg)         : null,
+                quality_grade:       noteForm.quality_grade        || null,
+                buyer_name:          noteForm.buyer_name           || null,
+                pruned_count:        noteForm.pruned_count         !== '' ? Number(noteForm.pruned_count)         : null,
+                pruning_type:        noteForm.pruning_type         || null,
+                inspection_type:     noteForm.inspection_type      || null,
+                inspection_status:   noteForm.inspection_status    || null,
+                photo_url:           photoUrl,
+                photo_path:          photoPath,
+            }, user?.id ?? null);
+
+            if (saved) {
+                const cleanupNotice = consumeStorageCleanupNotice();
+                setNotes(prev => [saved, ...prev]);
+                setNoteForm(EMPTY_FORM);
+                setAddingNote(false);
+                if (cleanupNotice) {
+                    notifyWarning(
+                        label('common.storageCleanupNotice', 'Old records were cleaned up to save your latest data.'),
+                    );
+                }
+                notifySuccess(label('common.savedSuccess', 'Activity log saved!'));
             } else {
-                photoUrl = noteForm.photo_base64;
+                setNoteSaveError(label('profile.activitySaveFailed', 'Could not save your activity. Your entry is still here. Please try again.'));
             }
+        } catch {
+            setNoteSaveError(label('profile.activitySaveFailed', 'Could not save your activity. Your entry is still here. Please try again.'));
+        } finally {
+            setSavingNote(false);
         }
-
-        const saved = await saveDailyNote({
-            ...noteForm,
-            plot_id:             noteForm.plot_id             || null,
-            chemical_name:       noteForm.chemical_name       || null,
-            chemical_qty:        noteForm.chemical_qty        || null,
-            application_timing:  noteForm.application_timing  || null,
-            temperature_am:      noteForm.temperature_am !== '' ? Number(noteForm.temperature_am) : null,
-            humidity:            noteForm.humidity       !== '' ? Number(noteForm.humidity)       : null,
-            growth_stage:        noteForm.growth_stage        || null,
-            pest_notes:          noteForm.pest_notes          || null,
-            disease_incidence:   noteForm.disease_incidence   !== '' ? Number(noteForm.disease_incidence)   : null,
-            disease_name_observed: noteForm.disease_name_observed || null,
-            scout_severity:      noteForm.scout_severity       || null,
-            expense_amount:      noteForm.expense_amount       !== '' ? Number(noteForm.expense_amount)       : null,
-            expense_category:    noteForm.expense_category     || null,
-            kg_harvested:        noteForm.kg_harvested         !== '' ? Number(noteForm.kg_harvested)         : null,
-            price_per_kg:        noteForm.price_per_kg         !== '' ? Number(noteForm.price_per_kg)         : null,
-            quality_grade:       noteForm.quality_grade        || null,
-            buyer_name:          noteForm.buyer_name           || null,
-            pruned_count:        noteForm.pruned_count         !== '' ? Number(noteForm.pruned_count)         : null,
-            pruning_type:        noteForm.pruning_type         || null,
-            inspection_type:     noteForm.inspection_type      || null,
-            inspection_status:   noteForm.inspection_status    || null,
-            photo_url:           photoUrl,
-            photo_path:          photoPath,
-        }, user?.id ?? null);
-
-        if (saved) {
-            const cleanupNotice = consumeStorageCleanupNotice();
-            setNotes(prev => [saved, ...prev]);
-            setNoteForm(EMPTY_FORM);
-            setAddingNote(false);
-            if (cleanupNotice) {
-                notifyWarning(
-                    label('common.storageCleanupNotice', 'Old records were cleaned up to save your latest data.'),
-                );
-            }
-            notifySuccess(label('common.savedSuccess', 'Activity log saved!'));
-        } else {
-            notifyError(label('error.saveFailed', 'Failed to save. Please try again.'));
-        }
-        setSavingNote(false);
     };
 
     const handleAddPlot = async (e) => {
@@ -573,6 +589,7 @@ const UserDashboardPanel = () => {
                             enhanceText={enhanceText}
                             setEnhanceText={setEnhanceText}
                             savingNote={savingNote}
+                            saveError={noteSaveError}
                             notes={notes}
                             ACTIVITY_BADGE_COLOR={ACTIVITY_BADGE_COLOR}
                             relDate={relDate}

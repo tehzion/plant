@@ -64,6 +64,7 @@ const NotesTab = ({
     enhanceText,
     setEnhanceText,
     savingNote,
+    saveError,
     notes,
     ACTIVITY_BADGE_COLOR,
     relDate,
@@ -119,7 +120,7 @@ const NotesTab = ({
             </div>
 
             <div className="udp-tab-actions notes-actions">
-                <button className="udp-add-btn" onClick={() => setAddingNote((value) => !value)}>
+                <button className="udp-add-btn" disabled={savingNote} onClick={() => setAddingNote((value) => !value)}>
                     {addingNote ? <X size={16} /> : <Plus size={16} />}
                     {addingNote ? label('common.cancel', 'Cancel') : label('profile.addNote', 'Add Log Entry')}
                 </button>
@@ -140,6 +141,7 @@ const NotesTab = ({
                         onAutoEnhance={onAutoEnhance}
                         onSubmit={handleAddNote}
                         savingNote={savingNote}
+                        saveError={saveError}
                     />
                 </div>
             )}

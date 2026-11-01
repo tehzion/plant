@@ -1,6 +1,22 @@
 const profileTranslations = {
     "en": {
         "profile": {
+            "growthStage": "Growth Stage",
+            "diseaseIncidence": "Disease Incidence (%)",
+            "dailyLogFeedHint": "Keep spraying, scouting, harvest, and expenses organized in one place.",
+            "severity": "Severity",
+
+            "activityDetails": "What happened in the field?",
+            "activityRequiredHint": "Record the activity below. Fields marked * are required; optional sections can be skipped.",
+            "activityConditions": "Field conditions (optional)",
+            "activityCosts": "Costs (optional)",
+            "activityPhoto": "Attach a field photo (optional)",
+            "activitySaving": "Saving your activity\u2026",
+            "activitySaveHint": "Your entry stays here until it is saved successfully.",
+            "activitySave": "Save activity",
+            "activitySaveFailed": "Could not save your activity. Your entry is still here. Please try again.",
+            "activityContentRequired": "Add an observation or activity detail before saving.",
+
             "verifyNow": "Verify Profile",
             "urgentAlerts": "Alerts",
             "browseFeatures": "Explore Features",
@@ -288,6 +304,22 @@ const profileTranslations = {
     },
     "ms": {
         "profile": {
+            "growthStage": "Peringkat pertumbuhan",
+            "diseaseIncidence": "Kejadian penyakit (%)",
+            "dailyLogFeedHint": "Susun rekod semburan, tinjauan, tuaian dan perbelanjaan di satu tempat.",
+            "severity": "Keterukan",
+
+            "activityDetails": "Apa yang berlaku di ladang?",
+            "activityRequiredHint": "Catat aktiviti di bawah. Medan bertanda * wajib diisi; bahagian pilihan boleh dilangkau.",
+            "activityConditions": "Keadaan ladang (pilihan)",
+            "activityCosts": "Kos (pilihan)",
+            "activityPhoto": "Lampirkan foto ladang (pilihan)",
+            "activitySaving": "Menyimpan aktiviti\u2026",
+            "activitySaveHint": "Catatan kekal di sini sehingga berjaya disimpan.",
+            "activitySave": "Simpan aktiviti",
+            "activitySaveFailed": "Aktiviti gagal disimpan. Catatan anda masih di sini. Cuba lagi.",
+            "activityContentRequired": "Tambah pemerhatian atau butiran aktiviti sebelum menyimpan.",
+
             "verifyNow": "Lengkapkan profil",
             "urgentAlerts": "Amaran",
             "browseFeatures": "Ciri ladang",
@@ -575,6 +607,22 @@ const profileTranslations = {
     },
     "zh": {
         "profile": {
+            "growthStage": "\u751f\u957f\u9636\u6bb5",
+            "diseaseIncidence": "\u75c5\u5bb3\u53d1\u751f\u7387\uff08%\uff09",
+            "dailyLogFeedHint": "\u96c6\u4e2d\u8bb0\u5f55\u55b7\u65bd\u3001\u5de1\u67e5\u3001\u6536\u83b7\u548c\u8d39\u7528\u3002",
+            "severity": "\u4e25\u91cd\u7a0b\u5ea6",
+
+            "activityDetails": "\u7530\u95f4\u53d1\u751f\u4e86\u4ec0\u4e48\uff1f",
+            "activityRequiredHint": "\u8bf7\u8bb0\u5f55\u6d3b\u52a8\u3002\u5e26 * \u7684\u9879\u76ee\u4e3a\u5fc5\u586b\uff0c\u5176\u4ed6\u90e8\u5206\u53ef\u4ee5\u8df3\u8fc7\u3002",
+            "activityConditions": "\u7530\u95f4\u6761\u4ef6\uff08\u53ef\u9009\uff09",
+            "activityCosts": "\u8d39\u7528\uff08\u53ef\u9009\uff09",
+            "activityPhoto": "\u6dfb\u52a0\u7530\u95f4\u7167\u7247\uff08\u53ef\u9009\uff09",
+            "activitySaving": "\u6b63\u5728\u4fdd\u5b58\u6d3b\u52a8\u2026",
+            "activitySaveHint": "\u4fdd\u5b58\u6210\u529f\u524d\uff0c\u586b\u5199\u7684\u5185\u5bb9\u4f1a\u4fdd\u7559\u5728\u8fd9\u91cc\u3002",
+            "activitySave": "\u4fdd\u5b58\u6d3b\u52a8",
+            "activitySaveFailed": "\u65e0\u6cd5\u4fdd\u5b58\u6d3b\u52a8\u3002\u586b\u5199\u7684\u5185\u5bb9\u4ecd\u5728\uff0c\u8bf7\u91cd\u8bd5\u3002",
+            "activityContentRequired": "\u4fdd\u5b58\u524d\uff0c\u8bf7\u6dfb\u52a0\u89c2\u5bdf\u8bb0\u5f55\u6216\u6d3b\u52a8\u8be6\u60c5\u3002",
+
             "verifyNow": "\u5b8c\u5584\u8d44\u6599",
             "urgentAlerts": "\u63d0\u9192",
             "browseFeatures": "\u519c\u573a\u529f\u80fd",

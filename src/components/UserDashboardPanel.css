@@ -3657,3 +3657,23 @@
 }
 .farm-workspace .udp-section-title { font-family: var(--font-heading); font-size: 1.5rem; }
 .farm-workspace .udp-section-subtitle { font-size: 1rem; line-height: 1.6; }
+
+/* Activity entry: observations first; optional context stays within reach. */
+.activity-editable, .activity-primary { min-width: 0; border: 0; padding: 0; margin: 0; }
+.activity-editable { display: grid; gap: 24px; }
+.activity-primary { display: grid; gap: 20px; border-top: 1px solid var(--color-border); padding-top: 20px; }
+.activity-primary legend { float: left; width: 100%; padding: 0; font-family: var(--font-heading); font-size: 1.25rem; font-weight: 600; }
+.activity-form-hint { margin: 0; max-width: 65ch; font-size: 1rem; line-height: 1.6; color: var(--color-text-secondary); }
+.activity-optional { min-width: 0; border-top: 1px solid var(--color-border); }
+.activity-optional summary { min-height: 48px; padding: 14px 0; cursor: pointer; font-weight: 600; font-size: 1rem; }
+.activity-optional-body { display: grid; gap: 20px; padding-top: 8px; }
+.activity-form :is(.udp-form-row, .udp-form-grid) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.activity-form .udp-activity-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.activity-form .udp-activity-chip { padding: 10px 16px; }
+.activity-form .udp-submit-btn { margin-top: 0; min-height: 48px; }
+.activity-save-status { color: var(--color-text-secondary); font-size: 1rem; line-height: 1.5; margin: 0; }
+.activity-save-error { color: var(--color-danger-ink, var(--color-severe)); background: var(--color-danger-bg); padding: 14px; border-radius: var(--radius-sm); line-height: 1.6; margin: 0; }
+.activity-photo-input { position: absolute; width: 1px; height: 1px; padding: 0; clip-path: inset(50%); overflow: hidden; }
+.activity-form .udp-photo-upload-label:focus-within, .activity-optional summary:focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }
+.activity-form .udp-photo-remove-btn { min-width: 44px; min-height: 44px; }
+@media (max-width: 640px) { .activity-form :is(.udp-form-row, .udp-form-grid) { grid-template-columns: minmax(0, 1fr); } }
