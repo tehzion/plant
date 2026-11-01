@@ -63,6 +63,7 @@ const commonTranslations = {
             "farmer": "Agropreneur",
             "locating": "Locating...",
             "setLocation": "Set Location",
+            "setLocationShort": "Set",
             "comingSoonTitle": "Coming Soon",
             "featureUnderDev": "This feature is currently under development.",
             "dateLocale": "en-MY",
@@ -173,6 +174,7 @@ const commonTranslations = {
             "farmer": "Agropreneur",
             "locating": "Menentukan lokasi...",
             "setLocation": "Tetapkan Lokasi",
+            "setLocationShort": "Tetapkan",
             "comingSoonTitle": "Akan Datang",
             "featureUnderDev": "Ciri ini sedang dalam pembangunan."
         }
@@ -243,6 +245,7 @@ const commonTranslations = {
             "farmer": "朋友",
             "locating": "定位中...",
             "setLocation": "设置位置",
+            "setLocationShort": "设置",
             "comingSoonTitle": "即将推出",
             "featureUnderDev": "此功能正在开发中。",
             "unknownLocation": "未知位置",

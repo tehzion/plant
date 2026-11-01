@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Sun, CloudSun, CloudRain, Snowflake, CloudLightning } from 'lucide-react';
+import { MapPin, Sun, CloudSun, CloudRain, Snowflake, CloudLightning, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 
 const HeroSection = ({
@@ -10,6 +10,7 @@ const HeroSection = ({
     weatherTemp,
     weatherIcon,
     weatherError,
+    onWeatherRetry,
 }) => {
     const { t } = useLanguage();
     const hasWeatherTemp = Number.isFinite(weatherTemp);
@@ -21,12 +22,18 @@ const HeroSection = ({
         })()
         : '';
 
+    // No weather to show: the pill turns into a retry button, and the reason
+    // stays in its accessible name instead of a red line under the shelf.
+    const showWeatherRetry = !hasWeatherTemp && Boolean(weatherError);
+    const showCachedNote = hasWeatherTemp && Boolean(weatherError);
+
     const translatedLocation = locationName ? t(`common.${locationName}`) : '';
-    const resolvedLocation = locationName
+    // A missing location is something the farmer can fix, so the pill asks for it.
+    const resolvedLocation = locationName && locationName !== 'common.locationNA'
         ? (locationName.startsWith('common.')
             ? t(locationName)
             : (translatedLocation !== `common.${locationName}` ? translatedLocation : locationName))
-        : (isLocating ? t('common.locating') : t('common.setLocation'));
+        : (isLocating ? t('common.locating') : t('common.setLocationShort'));
 
     const renderWeatherIcon = () => {
         switch (weatherIcon) {
@@ -91,20 +98,38 @@ const HeroSection = ({
                         </span>
                     </button>
 
-                    <div className="superapp-stat-pill home-weather-pill">
-                        <span className="superapp-stat-pill-label">
-                            {t('profile.weatherForecast') || 'Weather'}
-                        </span>
-                        <div className="home-weather-row">
-                            {renderWeatherIcon()}
-                            <span className="superapp-stat-pill-value home-weather-value">
-                                {hasWeatherTemp ? `${Math.round(weatherTemp)}°C` : '--'}
+                    {showWeatherRetry ? (
+                        <button
+                            type="button"
+                            className="superapp-stat-pill home-weather-pill home-weather-pill--retry"
+                            onClick={onWeatherRetry}
+                            aria-label={`${resolvedWeatherNote} ${t('common.retry')}`}
+                            title={resolvedWeatherNote}
+                        >
+                            <span className="superapp-stat-pill-label">
+                                {t('profile.weatherForecast') || 'Weather'}
                             </span>
+                            <span className="home-weather-row">
+                                <RefreshCw size={16} strokeWidth={2} aria-hidden="true" />
+                                <span className="home-weather-retry-text">{t('common.retry')}</span>
+                            </span>
+                        </button>
+                    ) : (
+                        <div className="superapp-stat-pill home-weather-pill">
+                            <span className="superapp-stat-pill-label">
+                                {t('profile.weatherForecast') || 'Weather'}
+                            </span>
+                            <div className="home-weather-row">
+                                {renderWeatherIcon()}
+                                <span className="superapp-stat-pill-value home-weather-value">
+                                    {hasWeatherTemp ? `${Math.round(weatherTemp)}°C` : '--'}
+                                </span>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {weatherError && resolvedWeatherNote && (
+                {showCachedNote && resolvedWeatherNote && (
                     <div className="weather-error-note">
                         {resolvedWeatherNote}
                     </div>
