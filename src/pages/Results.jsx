@@ -11,7 +11,8 @@ import DiseaseResult from '../components/DiseaseResult';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 
-import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList, MessageSquareText } from 'lucide-react';
+import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList, MessageSquareText, History as HistoryIcon, ScanLine } from 'lucide-react';
+import { SCAN_PATH } from '../components/navItems.js';
 import { showToast } from '../utils/toast';
 
 import { getScanResultState, getStandardizedStatus } from '../utils/statusUtils';
@@ -178,12 +179,21 @@ const Results = () => {
     return (
       <div className="results">
         <div className="container results-layout">
-          <div className="results-error app-surface app-empty-state">
-            <h2>{t('history.noHistory')}</h2>
-            <p>{t('history.noHistoryMessage')}</p>
-            <button onClick={() => navigate('/')} className="btn btn-primary">
-              {t('common.back')}
-            </button>
+          {/* Reached from an old or shared link: the farmer may have plenty of
+              history, it is only this scan that is missing on this phone. */}
+          <div className="results-error app-surface app-empty-state" role="status">
+            <h1 className="results-error-title">{t('history.scanNotFound')}</h1>
+            <p>{t('history.scanNotFoundMessage')}</p>
+            <div className="results-error-actions">
+              <button type="button" onClick={() => navigate('/history')} className="btn btn-primary">
+                <HistoryIcon size={18} aria-hidden="true" />
+                <span>{t('nav.history')}</span>
+              </button>
+              <button type="button" onClick={() => navigate(SCAN_PATH)} className="btn btn-secondary">
+                <ScanLine size={18} aria-hidden="true" />
+                <span>{t('nav.checkPlant')}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -9,33 +9,25 @@ const NotFound = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="not-found-page page fade-in">
+        <div className="not-found-page page">
             <div className="container center-content">
                 <div className="error-card">
-                    <span className="error-kicker">KANB</span>
-                    <div className="icon-wrapper bounce-in">
-                        <Sprout size={64} className="error-icon" />
+                    <div className="icon-wrapper" aria-hidden="true">
+                        <Sprout size={40} className="error-icon" />
                     </div>
 
-                    <h1 className="error-code">404</h1>
-                    <h2 className="error-title">
-                        Oops! Plant Not Found
-                    </h2>
-
-                    <p className="error-message">
-                        The path you&apos;ve taken seems to be overgrown or doesn&apos;t exist.
-                        Let&apos;s get you back to the main farm.
-                    </p>
+                    <h1 className="error-title">{t('common.notFoundTitle')}</h1>
+                    <p className="error-message">{t('common.notFoundMessage')}</p>
 
                     <div className="action-buttons">
-                        <button onClick={() => navigate(-1)} className="btn btn-secondary">
-                            <ArrowLeft size={18} />
-                            <span>Go Back</span>
+                        <button type="button" onClick={() => navigate('/')} className="btn btn-primary">
+                            <Home size={18} aria-hidden="true" />
+                            <span>{t('common.backToHome')}</span>
                         </button>
 
-                        <button onClick={() => navigate('/')} className="btn btn-primary">
-                            <Home size={18} />
-                            <span>Back to Home</span>
+                        <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary">
+                            <ArrowLeft size={18} aria-hidden="true" />
+                            <span>{t('common.goBack')}</span>
                         </button>
                     </div>
                 </div>

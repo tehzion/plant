@@ -1,5 +1,7 @@
 /* Shared interaction and field UI primitives. */
-:root { --mobile-nav-clearance: 84px; --color-action: #2e6b3f; --color-review-bg: #fffbeb; --color-review-ink: #92400e; }
+/* On phones the chat button floats 76-128px above the bottom edge; the extra
+   clearance lets the end of every page scroll clear of it. */
+:root { --mobile-nav-clearance: 84px; --assistant-fab-clearance: 44px; --color-action: #2e6b3f; --color-review-bg: #fffbeb; --color-review-ink: #92400e; }
 html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-area-inset-bottom, 0px)); }
 .btn-primary { background: var(--color-action); }
 .app-header__refresh-btn, .custom-modal-close { min-width: 44px; min-height: 44px; }
@@ -27,7 +29,7 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
 .quick-actions .action-btn { font-size: .875rem; }
 @media (max-width: 768px) {
  .app { padding-bottom: 0; }
- .app .main-content { padding-bottom: calc(var(--mobile-nav-clearance) + env(safe-area-inset-bottom, 0px)); }
+ .app .main-content { padding-bottom: calc(var(--mobile-nav-clearance) + var(--assistant-fab-clearance) + env(safe-area-inset-bottom, 0px)); }
  .page { padding-bottom: 24px !important; }
  .nav-item-label { overflow-wrap: anywhere; line-height: 1.25 !important; }
  .app-header__status-cluster { flex-wrap: wrap; }
