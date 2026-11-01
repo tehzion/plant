@@ -17,6 +17,12 @@ const categories = [
   { id: 'weed-control', nameKey: 'Weed Control', translationKey: 'home.categoryWeedControl', icon: <Flower2 size={32} color="#EF4444" /> },
 ];
 
+// For now farmers choose only from the categories the AI handles best: Vegetables and Fruits hold the
+// crops it knows well (tomato, chilli, potato, mango) and Rice has look-alike checks. Add an id here to
+// bring a category back.
+const offeredCategoryIds = ['rice', 'vegetables', 'fruits'];
+const offeredCategories = categories.filter((category) => offeredCategoryIds.includes(category.id));
+
 // Broad categories get an optional specific-crop choice; the English name is sent to the API.
 const specificCrops = {
   Vegetables: ['Tomato', 'Chilli', 'Cucumber', 'Brinjal', 'Okra', 'Cabbage', 'Mustard greens', 'Water spinach', 'Long bean', 'Potato'],
@@ -37,7 +43,7 @@ const PlantCategorySelector = ({ selected, onSelect, crop = '', onCropSelect, di
       <h3 className="category-title">{t('home.selectCategory')}</h3>
       <p className="category-subtitle">{t('home.selectCategorySubtitle')}</p>
       <div className="category-grid">
-        {categories.map((category) => (
+        {offeredCategories.map((category) => (
           <button
             type="button"
             key={category.id}
