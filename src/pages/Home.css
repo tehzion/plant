@@ -1078,6 +1078,16 @@
   background: #ffffff;
 }
 
+/* "Try again" is wider than a temperature, so the retry card stacks its
+   label above the action to stay on one row with the location card. */
+.home-hero-shelf .home-weather-pill--retry {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 12px;
+}
+
 .home-hero-shelf .superapp-stat-pill-label {
   font-size: var(--font-size-xs);
   font-weight: 500;
