@@ -109,8 +109,7 @@ const NotesTab = ({
         <div className="notes-shell">
             <div className="notes-hero">
                 <div className="notes-hero-copy">
-                    <span className="notes-hero-kicker">{label('profile.tabNotes', 'Daily Log')}</span>
-                    <h3 className="notes-hero-title">{pendingLabel}</h3>
+                    <h2 className="notes-hero-title">{pendingLabel}</h2>
                     <p className="notes-hero-subtitle">{pendingHint}</p>
                 </div>
                 <div className="notes-hero-pill">

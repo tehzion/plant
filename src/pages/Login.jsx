@@ -36,8 +36,8 @@ const Login = () => {
     // Already logged in: show the full dashboard panel.
     if (user) {
         return (
-            <div className="login-page" style={{ alignItems: 'flex-start', paddingTop: '16px' }}>
-                <div style={{ width: '100%', maxWidth: 'var(--width-superapp, 680px)', margin: '0 auto' }}>
+            <div className="farm-workspace page">
+                <div className="farm-workspace-shell">
                     <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
                         <UserDashboardPanel />
                     </Suspense>

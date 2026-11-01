@@ -1,6 +1,15 @@
 const profileTranslations = {
     "en": {
         "profile": {
+            "verifyNow": "Verify Profile",
+            "urgentAlerts": "Alerts",
+            "browseFeatures": "Explore Features",
+            "actionsRequired": "actions required",
+            "seasonalOutlook": "Seasonal Outlook",
+            "viewChecklist": "View Checklist",
+            "liveStats": "Farm records",
+            "totalLog": "Logs",
+
             "orderHistoryRecovery": "Some older orders need store verification. Contact the store with your order number to recover access.",
             "dataLoadFailed": "Farm records could not be loaded. Please retry before viewing reports.",
             "title": "Your Farm Dashboard",
@@ -279,6 +288,15 @@ const profileTranslations = {
     },
     "ms": {
         "profile": {
+            "verifyNow": "Lengkapkan profil",
+            "urgentAlerts": "Amaran",
+            "browseFeatures": "Ciri ladang",
+            "actionsRequired": "tindakan diperlukan",
+            "seasonalOutlook": "Gambaran musim",
+            "viewChecklist": "Lihat senarai semak",
+            "liveStats": "Rekod ladang",
+            "totalLog": "Log",
+
             "orderHistoryRecovery": "Sesetengah pesanan lama memerlukan pengesahan kedai. Hubungi kedai dengan nombor pesanan anda untuk memulihkan akses.",
             "dataLoadFailed": "Rekod ladang tidak dapat dimuatkan. Sila cuba lagi sebelum melihat laporan.",
             "title": "Papan Pemuka Ladang",
@@ -363,7 +381,7 @@ const profileTranslations = {
             "notes": "Nota / Catatan",
             "notePlaceholder": "Catat pemerhatian tambahan hari ini...",
             "noNotes": "Tiada entri log harian lagi. Rekod aktiviti ladang anda di sini.",
-            "tabOverview": "Gambaran Keseluruhan",
+            "tabOverview": "Ringkasan",
             "tabReports": "Laporan",
             "tabPlots": "Petak",
             "tabNotes": "Log Harian",
@@ -557,6 +575,15 @@ const profileTranslations = {
     },
     "zh": {
         "profile": {
+            "verifyNow": "\u5b8c\u5584\u8d44\u6599",
+            "urgentAlerts": "\u63d0\u9192",
+            "browseFeatures": "\u519c\u573a\u529f\u80fd",
+            "actionsRequired": "\u9879\u5f85\u529e",
+            "seasonalOutlook": "\u5b63\u8282\u5c55\u671b",
+            "viewChecklist": "\u67e5\u770b\u68c0\u67e5\u6e05\u5355",
+            "liveStats": "\u519c\u573a\u8bb0\u5f55",
+            "totalLog": "\u65e5\u5fd7",
+
             "orderHistoryRecovery": "部分旧订单需要商店核实。请提供订单号联系商店，以恢复访问权限。",
             "dataLoadFailed": "无法加载农场记录。请重试后再查看报告。",
             "title": "您的农场仪表板",

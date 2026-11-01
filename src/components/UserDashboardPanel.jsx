@@ -453,14 +453,12 @@ const UserDashboardPanel = () => {
             </div>
 
             {/* ── Feature Browser (Explore Features) ── */}
-            <div className="udp-category-header udp-category-header--compact">
-                <span className="udp-category-title">{label('profile.browseFeatures', 'Explore Features')}</span>
-            </div>
-            <div className="udp-shelf-container udp-shelf-container--compact">
+            <div className="udp-shelf-container udp-shelf-container--compact farm-workspace-nav" role="group" aria-label={label('profile.browseFeatures', 'Explore Features')}>
                 {TABS.map(t2 => (
                     <button
                         key={t2.id}
                         className={`udp-utility-card ${tab === t2.id ? 'active' : ''}`}
+                        aria-pressed={tab === t2.id}
                         onClick={() => setTab(t2.id)}
                     >
                         <div className={`udp-utility-icon-box ${tab === t2.id ? 'active' : ''}`}>
