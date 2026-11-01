@@ -18,16 +18,17 @@ const REMINDER_OPT_IN_KEY = 'plant_reminders_opt_in';
 
 export const getFieldAnswers = (scanId) => (scanId ? read(ANSWERS_KEY, {})[scanId] || {} : {});
 
-export const saveFieldAnswer = (scanId, question, answer) => {
-    if (!scanId || !question) return {};
+export const saveFieldAnswerWithStatus = (scanId, question, answer) => {
+    if (!scanId || !question) return { answers: {}, saved: false };
     const all = read(ANSWERS_KEY, {});
     const next = { ...(all[scanId] || {}), [question]: answer };
     // Keep the store bounded: the 100 most recently answered scans.
     const entries = Object.entries({ ...all, [scanId]: { ...next, _at: Date.now() } })
         .sort(([, a], [, b]) => (b._at || 0) - (a._at || 0)).slice(0, 100);
-    write(ANSWERS_KEY, Object.fromEntries(entries));
-    return next;
+    return { answers: next, saved: write(ANSWERS_KEY, Object.fromEntries(entries)) };
 };
+
+export const saveFieldAnswer = (...args) => saveFieldAnswerWithStatus(...args).answers;
 
 export const LOG_DEFAULT_FIELDS = ['plot_id', 'crop', 'operator'];
 export const getLogDefaults = () => read(LOG_DEFAULTS_KEY, {});

@@ -1,3 +1,4 @@
+vi.mock('../components/ScanServiceNotice.jsx', () => ({ default: () => null }));
 vi.mock('../components/ScanFollowUpTracker.jsx', () => ({ default: () => null }));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -127,7 +128,7 @@ describe('Results', () => {
     render(<Results />);
 
     await waitFor(() => {
-      expect(screen.getByRole('img', { name: /plant photo/i })).toHaveAttribute('src', 'https://example.com/tree.jpg');
+      expect(screen.getByRole('img', { name: /photo of coconut/i })).toHaveAttribute('src', 'https://example.com/tree.jpg');
     });
   });
 
@@ -196,6 +197,7 @@ describe('Results', () => {
     render(<Results />);
 
     fireEvent.click(await screen.findByText('More details', { selector: 'summary' }));
+    fireEvent.click(await screen.findByText('Product suggestions', { selector: 'summary h2' }));
     await waitFor(() => {
       const diseaseView = productRecommendationProps.find((props) => props.displayMode === 'disease');
       const nutritionView = productRecommendationProps.find((props) => props.displayMode === 'nutrition');

@@ -1,29 +1,35 @@
-# Plant-check critique fixes: validation
+# Plant-check refinement: final validation
 
-Implemented on `fix/plant-check-critique`, based on PR #25 (`fix/p1-audit`, 24fee257). PR #25 was open when work began. Keep this PR stacked until #25 merges; do not merge without the user's instruction.
+Updated 2 November 2026 (Asia/Kuala_Lumpur) on `fix/plant-check-critique`, stacked on PR #25 (`fix/p1-audit`, 24fee257). PR #26 remains unmerged; merge only on the user's instruction.
+
+## Result
+
+Independent Impeccable Assessment A: **36/40 — Excellent**, exceeding the requested 35/40. Historical checkpoints: initial handoff 22/40 → first PR refinement 28/40 → final independent review 36/40. Full scored report and independent technical evidence are archived in `.impeccable/critique/`.
 
 ## Delivered
 
-- Results reads diagnosis + photo → up to three immediate steps → state-specific primary action → watch/recheck → one more-details disclosure. Confident treatment includes its original treatment/dose text and a local product-label reminder. The treatment button starts an in-place persistent checklist; healthy opens a 14-day recheck; other rechecks use three days.
-- Distinct retake, healthy, uncertain and disease headlines/icons/tints. No severity on the healthy summary/form. Products/nutrition stay hidden for review/retake. Treatment eligibility and shared decision policy are unchanged; look-alikes and expert-review notes remain.
-- One log-care action, secondary photo retained in details, translated pathogen type, secondary Latin name, no ambiguous score estimate in the main result, and no clipped tabs. A shared quiet notice replaces duplicate catalog failures.
-- Capture keeps one counter, defaults subject to whole plant, remembers crop and scale (acre as first-use default), shows four common crop categories and an Other disclosure, excludes weed control as a crop, and scrolls to the top after transitions/errors. Blur feedback is inline. Retake reason survives the recovery route. Failure copy says the photo is retained.
-- Mobile body text is 16px, Results H1 26px, buttons inherit fonts, primary targets are at least 48px and the history back link is 44px. History uses the history icon. Health status no longer flickers through checking between failures. Literal place names no longer become missing translation keys.
+- Diagnosis and photo → up to three immediate steps → result-specific action → watch/recheck → grouped optional details. No clipped tabs or repeated diagnosis/status. The treatment/dose remains source advice, with a local label reminder. Starting treatment opens a persistent, reversible checklist with progress and a three-day recheck; healthy uses 14 days.
+- Checklist completion and field answers use source keys, retaining progress across translated labels. Storage failures explicitly say checks are temporary.
+- Saved translations are bounded, scoped per account and source content, and exclude images, tokens and location. First-time unavailable translation shows local checks and expert recovery rather than unreadable treatment. The immutable source determines decision/treatment policy; translated text cannot change eligibility, confidence or expert-review flags.
+- Retake asks for both photo views, opens both controls, removes optional wording for the requested closeup and requires both before Next. Mixed-language retake uses one local instruction and puts Retake before optional source advice. No care-log/followup controls clutter this state.
+- Capture has one set of photo tips, remembered crop/scale, four common categories, whole-plant defaults, consistent steps and deliberate focus. Service state is shared across header and capture, explains what is available during outage, offers retry and prevents a known-failing analysis request. Header says “Checks paused,” with no checking flicker.
+- Explicit local capture drafts store both photo blobs plus crop/scale/context/step in owner-scoped IndexedDB. Save confirms an actual time; Resume is explicit, restores preparation after reload, and never restarts a network analysis. Saved drafts clear after successful analysis; discarding prompts confirmation. Save failures preserve the current photos. Cancel explains that unsaved work is lost while saved drafts remain.
+- Photo failure fallback, contextual expert help, directly accessible care logging, lazy product details, two sharing/export actions and separately disclosed feedback. Large controls, 16px field/result body text, coherent headings and visible keyboard focus preserve the brand.
 
-## Verification
+## Checks
 
-- `npx vitest run`: 121 files, 612 tests passed.
-- `npm run build`: passed. Existing Vite chunk-size and mixed static/dynamic import warnings remain.
-- `npm run check:translations:strict`: passed; EN/BM/ZH keys aligned.
-- Targeted ESLint: zero errors; existing unused-variable/hook-dependency warnings remain.
-- Impeccable detector: one scan of 21 changed JSX files, zero findings. Read-only browser evaluation prevented the optional overlay injection.
-- Independent two-agent critique: 28/40 (Good), up from handoff's 22/40; below the aspirational 30+ target. See `.impeccable/critique/` for the complete report and remaining limitations.
-- Native browser: all four result states in BM/EN at mobile sizes, with 360/375px geometry checks. Rice result at 375×812 measured 1,340px document height, scrollWidth 375px, primary action at y=673–721. Photo/diagnosis/steps/action were visible without opening a tab or accordion. Final BM uncertain result measured scrollWidth 360px and a 48px primary action.
-- Verified treatment checklist focus and persisted checks, healthy prefilled recheck/focus, retake-to-capture navigation, capture steps 1/2, and unavailable-backend failure with the photo retained. Unit coverage verifies blur rejection with parent-handled feedback and no covering toast, crop disclosure, preference persistence, state headlines/actions and treatment gating.
-- Seeded disposable demo scans with a synthetic image; no real disease diagnosis or chemical efficacy was inferred from it. Did not send WhatsApp messages or feedback. Network translation and live AI inference were unavailable locally.
+- `npx vitest run`: **127 files / 630 tests passed**.
+- `npm run build`: passed; existing chunk-size and mixed import warnings remain.
+- `npm run check:translations:strict`: passed, EN/BM/ZH keys aligned.
+- Targeted ESLint: zero errors, eight existing unused/hook warnings.
+- Impeccable detector: **0 findings** across 17 changed/new JSX targets; one scan, no read-only overlay bypass.
+- Native browser: BM four-state results at 375px, EN four-state results at 360px, unique H1, no horizontal overflow, paragraph/list/label text 16px and effective targets ≥44px. Checkbox labels supply the touch target around native 24px inputs.
+- Computed contrast: 30 visible cached EN rice text elements, minimum **6.381:1**, none below 4.5:1. Final capture description polish measured visible body text only at 16px, scrollWidth=375.
+- Independent native verification of language-stable checklist progress, retake context, missing-photo fallback, translation failure, service retry, actual draft Save → reload → Resume with both images and updated times, without analysis starting.
+- Regression coverage includes source-policy preservation, cache/owner isolation, malformed cache and failed writes, stable action keys, true first-checkbox focus, recovery-form retry/date checks, shared service subscriptions, draft photo/context restoration and explicit save/resume feedback.
 
-## Cleanup and limits
+## Limits and cleanup
 
-Used direct Vite with `VITE_ENABLE_DEMO_AUTH=true` on 127.0.0.1:5175 because preview_start is not exposed here; did not modify the user's launch configuration. Temporary seed page/image were removed, demo session/records and test preferences cleared, and the dev server stopped. The original checkout and its existing uncommitted launch/worktree files were preserved.
+Synthetic images/results are interface fixtures, not proof of diagnosis quality. Browser cached translation was simulated valid API output. Live AI success and first-time live translation were unavailable locally. No WhatsApp or feedback message was sent. Full screen-reader and 200% zoom audits remain unverified; computed contrast was not pixel sampled. Live disk-quota and cross-account failures were not induced; those paths use tests.
 
-Original-language saved analysis still requires the translation service; local UI copy remains translated and clearly identifies source-language advice. Full screen-reader/contrast measurements and live AI success were not verified. No backend, decision policy, shadow-checker or Stageshow changes.
+Used demo Vite on 127.0.0.1:5175 without editing the user's launch configuration. Disposable QA records, drafts, cache entries, files and session flag were cleaned, temporary viewport overrides reset and server stopped. Original checkout changes were preserved. No backend decision, shadow-checker or Stageshow changes.

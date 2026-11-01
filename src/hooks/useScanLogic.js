@@ -1,3 +1,4 @@
+import { discardCaptureDraft } from '../utils/captureDraft.js';
 import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease, analyzeLocalImageQuality } from '../utils/diseaseDetection';
@@ -13,6 +14,8 @@ import { showToast } from '../utils/toast.js';
 // Scan state reducer
 const scanReducer = (state, action) => {
     switch (action.type) {
+        case 'RESTORE_DRAFT':
+            return { ...initialScanState, ...action.payload, loading: false, error: '', errorCode: '', currentStep: action.payload.selectedImage ? Math.min(action.payload.currentStep || 1, 2) : 1 };
         case 'SET_IMAGE':
             return { ...state, selectedImage: action.payload, error: '', errorCode: '' };
         case 'SET_LEAF_IMAGE':
@@ -76,7 +79,7 @@ const initialScanState = {
 
 export const useScanLogic = () => {
     const { language, t } = useLanguage();
-    const { user } = useAuth();
+    const { user, guestId } = useAuth();
     const [state, dispatch] = useReducer(scanReducer, initialScanState, initial => {
         try {
             const saved = JSON.parse(localStorage.getItem('plant_capture_preferences') || '{}');
@@ -106,6 +109,7 @@ export const useScanLogic = () => {
         // Use setStepClear when you explicitly want to dismiss any error too.
         const setStep = (step) => dispatchAction('SET_STEP', step);
         const setStepClear = (step) => dispatchAction('SET_STEP_CLEAR', step);
+        const restoreDraft = draft => dispatchAction('RESTORE_DRAFT', { selectedImage: draft.selectedImage, selectedLeafImage: draft.selectedLeafImage, selectedCategory: draft.selectedCategory, selectedCrop: draft.selectedCrop, selectedScale: draft.selectedScale, scaleQuantity: draft.scaleQuantity, currentStep: draft.currentStep });
         const resetScan = () => dispatchAction('RESET_SCAN');
         const setError = (payload) => dispatchAction('SET_ERROR', payload);
 
@@ -202,6 +206,7 @@ export const useScanLogic = () => {
                 }
 
                 // ── Sync: Auto-log a "Scouting" activity for the dashboard ──────
+                await discardCaptureDraft(user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null).catch(() => {});
                 dispatch({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;
             };
@@ -268,10 +273,11 @@ export const useScanLogic = () => {
             setStep,
             setStepClear,
             resetScan,
+            restoreDraft,
             setError,
             performAnalyze
         };
-    }, [language, t, stateRef, user]);
+    }, [language, t, stateRef, user, guestId]);
 
     return {
         state,

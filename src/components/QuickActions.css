@@ -118,3 +118,6 @@
     min-width: 146px;
   }
 }
+.quick-actions--compact { margin: 0; padding: 0; width: 100%; }
+.quick-actions--compact .actions-container { justify-content: flex-start; }
+.quick-actions--compact .action-btn { flex-direction: row; gap: 8px; font: inherit; min-height: 48px; border: 1px solid var(--color-border); }

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
 import { DEMO_SCANS } from '../utils/demoData';
+import CaptureDraftControl from '../components/CaptureDraftControl.jsx';
 import CameraUpload from '../components/CameraUpload';
 import DataConsentToggle from '../components/DataConsentToggle';
 import PlantCategorySelector from '../components/PlantCategorySelector';
@@ -31,6 +32,8 @@ import DueReminders from '../components/home/DueReminders';
 import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
+import ScanServiceNotice from '../components/ScanServiceNotice.jsx';
+import { useScanService } from '../hooks/useScanService.js';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
 import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
 import { isFollowUpDue } from '../utils/uiCopy.js';
@@ -44,6 +47,9 @@ const Home = () => {
   };
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
+  const scanService = useScanService();
+  const [leafExpanded, setLeafExpanded] = useState(Boolean(routerLocation.state?.retakeReason));
+  const stepHeading = useRef(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Custom Hooks
@@ -51,7 +57,7 @@ const Home = () => {
   const { location, locationName, isLocating, getLocation, setLocationName } = useLocation();
   const { weatherTemp, weatherIcon, forecast, error: weatherError, fetchWeather } = useWeather();
   const { state: scanState, actions: scanActions } = useScanContext();
-  const { user } = useAuth();
+  const { user, guestId } = useAuth();
   const isMounted = useRef(true);
   const selectedCategoryRef = useRef('');
 
@@ -112,7 +118,8 @@ const Home = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [currentStep, error, photoQualityIssue]);
+    if (!photoQualityIssue && viewMode === 'scan') stepHeading.current?.focus({ preventScroll: true });
+  }, [currentStep, error, photoQualityIssue, viewMode]);
 
   const steps = [
     { label: t('home.step1') },
@@ -329,6 +336,7 @@ const Home = () => {
   };
 
   const handleNextStep = async () => {
+    if (currentStep === 2 && await scanService.retry() !== 'online') return;
     if (currentStep === 1 && !selectedImage) {
       scanActions.setError(t('home.errorNoImage'));
       return;
@@ -350,6 +358,7 @@ const Home = () => {
   };
 
   const handleRetryAnalysis = async () => {
+    if (await scanService.retry() !== 'online') return;
     if (!selectedImage) {
       scanActions.setStep(1);
       scanActions.setError(t('home.errorNoImage'));
@@ -379,6 +388,13 @@ const Home = () => {
     });
   };
 
+  const captureDraftControl = <CaptureDraftControl owner={user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null} state={{ ...scanState, captureContext, retakeReason: routerLocation.state?.retakeReason || '' }} onResume={draft => {
+    scanActions.restoreDraft(draft);
+    setCaptureContext(draft.captureContext);
+    setLeafExpanded(Boolean(draft.retakeReason || draft.selectedLeafImage));
+    navigate('/?scan=true', { state: { retakeReason: draft.retakeReason } });
+    requestAnimationFrame(() => stepHeading.current?.focus({ preventScroll: true }));
+  }} />;
   const showHomeSkeleton = viewMode === 'dashboard' && !historyLoaded;
 
   const renderHomeSkeleton = () => (
@@ -498,6 +514,7 @@ const Home = () => {
                 weatherError={weatherError}
                 onWeatherRetry={handleWeatherRetry}
               />
+              {captureDraftControl}
 
               <EventProductHero
                 onScan={handleStartScan}
@@ -619,11 +636,13 @@ const Home = () => {
                 {isConnectionFailure ? <WifiOff size={24} /> : <AlertCircle size={24} />}
               </div>
               <div className="analysis-failure-copy">
-                <h1>{isConnectionFailure
+                <h1 ref={stepHeading} tabIndex={-1}>{isConnectionFailure
                   ? label('home.noInternetTitle', 'No internet connection')
                   : label('home.analysisFailedTitle', 'The check could not finish')}</h1>
                 <p className="analysis-failure-message">{error}</p>
                 <p>{t('results.photoKept')}</p>
+                {captureDraftControl}
+                <ScanServiceNotice capture />
               </div>
               <div className="analysis-failure-actions">
                 <button type="button" className="btn btn-primary" onClick={handleRetryAnalysis}>
@@ -668,12 +687,13 @@ const Home = () => {
                       <ScanLine size={24} />
                     </div>
                     <div className="leaf-card-text">
-                      <h1 className="scan-step-title mb-xs">{t('home.step1Title')}</h1>
-                      <p>{t('home.step1Desc')}</p>
+                      <h1 ref={stepHeading} tabIndex={-1} className="scan-step-title mb-xs">{t('home.step1Title')}</h1>
+                      {!routerLocation.state?.retakeReason && <p>{t('home.step1Desc')}</p>}
                     </div>
                   </div>
 
-                  {routerLocation.state?.retakeReason && <aside className="scan-retake-context" role="note"><p>{routerLocation.state.retakeReason}</p><p>{t('results.retakeHint')}</p></aside>}
+                  {!selectedImage && !selectedLeafImage && captureDraftControl}
+                  {routerLocation.state?.retakeReason && <aside className="scan-retake-context" role="note"><p>{routerLocation.state.retakeReason}</p><p>{t('results.retakeSequence')}</p></aside>}
                   {photoQualityIssue && <ScanPhotoGuidance plantPart={captureContext.plantPart} captureRole={photoQualityIssue.role} qualityIssue={photoQualityIssue.code} onDismissIssue={() => setPhotoQualityIssue(null)} />}
                   {/* Main Image Upload */}
                   <div className="mb-lg">
@@ -685,33 +705,35 @@ const Home = () => {
                     />
                   </div>
 
-                  <details className="ui-disclosure">
-                    <summary>{t('results.optionalSymptoms')}</summary>
-                    <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
-                  </details>
                   {/* Leaf Image Upload (Optional) */}
-                  <details className="leaf-upload-card ui-disclosure mb-lg fade-in-delayed" open={selectedLeafImage ? true : undefined}>
-                    <summary>{t('home.addLeafPhoto')}</summary>
-                    <div className="leaf-card-header">
+                  <details className="leaf-upload-card ui-disclosure mb-lg fade-in-delayed" open={Boolean(selectedLeafImage) || leafExpanded} onToggle={event => setLeafExpanded(event.currentTarget.open)}>
+                    <summary>{t(routerLocation.state?.retakeReason ? 'results.retakeCloseup' : 'home.addLeafPhoto')}</summary>
+                    {!routerLocation.state?.retakeReason && <div className="leaf-card-header">
                       <div className="leaf-icon-circle">
                         <Leaf size={20} />
                       </div>
                       <div className="leaf-card-text">
-                        <h2>{t('home.addLeafPhoto')}</h2>
                         <p>{t('home.leafDescription') || "For better accuracy, add a close-up photo of affected leaves"}</p>
                       </div>
-                    </div>
+                    </div>}
                     <CameraUpload
                       onImageCapture={file => { setPhotoQualityIssue(null); scanActions.handleLeafImageCapture(file); }}
                       captureRole="closeup"
+                      required={Boolean(routerLocation.state?.retakeReason)}
                       onQualityIssue={(code, role) => setPhotoQualityIssue({ code, role })}
                       currentImage={selectedLeafImage}
                     />
                   </details>
 
+                  <details className="ui-disclosure">
+                    <summary>{t('results.optionalSymptoms')}</summary>
+                    <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
+                  </details>
+                  {(selectedImage || selectedLeafImage) && captureDraftControl}
+                  <ScanServiceNotice capture />
                   <div className="step-actions mt-xl">
                     <button className="btn btn-secondary" onClick={handleResetAndClose}>{t('common.cancel')}</button>
-                    <button className="btn btn-primary" onClick={handleNextStep} disabled={!selectedImage}>{t('common.next')}</button>
+                    <button className="btn btn-primary" onClick={handleNextStep} disabled={!selectedImage || Boolean(routerLocation.state?.retakeReason && !selectedLeafImage)}>{t('common.next')}</button>
                   </div>
 
 
@@ -721,7 +743,7 @@ const Home = () => {
               {currentStep === 2 && (
                 <div className="step-wrapper">
                   <div className="step-header mb-lg mt-xl">
-                    <h1 className="scan-step-title">{t('home.step2Title')}</h1>
+                    <h1 ref={stepHeading} tabIndex={-1} className="scan-step-title">{t('home.step2Title')}</h1>
                     <p>{t('home.step2Desc')}</p>
                   </div>
                   <PlantCategorySelector
@@ -744,9 +766,11 @@ const Home = () => {
 
                   <DataConsentToggle disabled={loading} />
 
+                  {(selectedImage || selectedLeafImage) && captureDraftControl}
+                  <ScanServiceNotice capture />
                   <div className="step-actions">
                     <button className="btn btn-secondary" onClick={scanActions.prevStep}>{t('common.back')}</button>
-                    <button className="btn btn-primary" onClick={handleNextStep}>{t('home.analyzeButton')}</button>
+                    <button className="btn btn-primary" disabled={scanService.checking || ['offline', 'unavailable'].includes(scanService.status)} onClick={handleNextStep}>{t('home.analyzeButton')}</button>
                   </div>
                 </div>
               )}

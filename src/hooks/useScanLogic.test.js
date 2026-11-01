@@ -66,6 +66,14 @@ describe('useScanLogic', () => {
         expect(result.current.state.selectedScale).toBe('acre');
     });
 
+    it('resumes prepared photos without resuming an old network request', () => {
+        const { result } = renderHook(() => useScanLogic());
+        const photo = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' });
+        act(() => result.current.actions.restoreDraft({ selectedImage: photo, selectedLeafImage: photo, selectedCategory: 'Rice', selectedCrop: '', selectedScale: 'acre', scaleQuantity: 2, currentStep: 3, loading: true, error: 'old failure' }));
+        expect(result.current.state).toMatchObject({ selectedImage: photo, selectedCategory: 'Rice', currentStep: 2, loading: false, error: '' });
+        expect(diseaseDetectionMocks.analyzePlantDisease).not.toHaveBeenCalled();
+    });
+
     it('uses the immediate selected crop override when analysis starts', async () => {
         const { result } = renderHook(() => useScanLogic());
         const image = new File(['leaf'], 'leaf.jpg', { type: 'image/jpeg' });

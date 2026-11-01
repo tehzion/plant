@@ -31,6 +31,21 @@ describe('TodayPlanCard', () => {
         expect(screen.getByRole('button', { name: 'Yes' })).toHaveAttribute('aria-pressed', 'true');
     });
 
+    it('keeps action checks and field answers when translated labels change', () => {
+        const source = { ...result, treatmentEligible: true, treatments: ['Original treatment'] };
+        const { rerender } = render(<TodayPlanCard result={source} sourceResult={source} planStarted scanId="scan-language" />);
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Check nearby plants' }));
+        const translated = { ...source, treatments: ['Rawatan asal'], immediateActions: ['Buang daun', 'Periksa pokok berdekatan', 'Kekalkan daun kering'] };
+        rerender(<TodayPlanCard result={translated} sourceResult={source} planStarted scanId="scan-language" />);
+        expect(screen.getByRole('checkbox', { name: 'Periksa pokok berdekatan' })).toBeChecked();
+    });
+
+    it('focuses the first real action when supporting information is also present', () => {
+        render(<TodayPlanCard result={result} planStarted scanId="scan-focus" />);
+        expect(screen.getByRole('checkbox', { name: 'Remove badly affected leaves' })).toHaveFocus();
+        expect(screen.queryByRole('checkbox', { name: 'A close-up of one affected leaf' })).not.toBeInTheDocument();
+    });
+
     it('uses a consistent recheck interval and does not leak treatment when review is needed', () => {
         expect(recheckDays({ treatmentEligible: true })).toBe(3);
         expect(recheckDays({ healthy: true })).toBe(14);

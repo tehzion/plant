@@ -576,3 +576,29 @@ body:has(.results) .assistant-widget:not(.is-open) { display: none; }
 .today-plan__actions:has(.today-plan__check) { list-style: none; padding-left: 0; }
 
 .detail-item:has(.fungus-icon) .detail-value { font-size: .875rem; font-style: italic; }
+
+/* Detail groups keep each secondary decision small and leave the field task first. */
+.results-detail-group { border-top: 1px solid var(--color-border); padding-block: 4px; }
+.results-detail-group > summary { min-height: 52px; padding-block: 12px; cursor: pointer; }
+.results-detail-group > summary h2 { display: inline; margin: 0; font-size: 1.125rem; }
+.results-detail-group > :not(summary) { margin-block: 12px; }
+.results-detail-group h3 { margin-block: 20px 8px; }
+.results-detail-group ul { line-height: 1.6; }
+.results-original-advice summary { min-height: 44px; cursor: pointer; padding-block: 10px; }
+.results-original-advice [lang] { padding-block: 8px; }
+.scan-decision__photo-link { display: block; flex-shrink: 0; border-radius: var(--radius-md); }
+.scan-decision__photo-link:focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 4px; }
+.scan-decision__photo-missing { display: block; flex: 0 0 88px; font-size: .875rem; line-height: 1.4; color: var(--color-text-secondary); }
+.results-language-saved { margin: 0; color: var(--color-text-secondary); font-size: .875rem; }
+.results .analysis-language { padding: 0; background: transparent; }
+.results .analysis-language p { margin-block: 0 12px; }
+.results :is(button, a, summary, input, select, textarea):focus-visible,
+.step-content :is(button, summary, input, select, textarea):focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }
+.results .today-plan__actions:has(.today-plan__check) { gap: 12px; }
+.results .today-plan__check { min-height: 44px; align-items: center; }
+.results .today-plan__check input { height: 24px; min-height: 24px; margin: 10px 0; }
+.results .today-plan__started { border-top: 1px solid var(--color-border); padding-top: 12px; }
+@media (prefers-reduced-motion: reduce) {
+ .results *, .scan-followup-tracker * { scroll-behavior: auto; animation: none !important; transition: none !important; }
+}
+.results-feedback-details > summary { min-height: 44px; padding-block: 12px; cursor: pointer; font-weight: 600; }

@@ -1553,3 +1553,13 @@
 .analysis-failure-copy h1 { font-size: 1.25rem; }
 .category-icon { color: var(--color-primary-dark); }
 .scan-photo-guidance__heading h2 { font-size: 1.125rem; }
+.scan-retake-context { margin-bottom: 20px; padding-block: 12px; border-block: 1px solid var(--color-border); }
+.scan-retake-context p { margin-block: 4px; line-height: 1.5; }
+.scan-step-title:focus, .analysis-failure-copy h1:focus { outline: none; }
+.capture-draft-control { margin-block: 16px; padding-block: 16px; border-block: 1px solid var(--color-border); }
+.capture-draft-control h2 { font-size: 1.25rem; margin-bottom: 8px; }
+.capture-draft-control p { margin-block: 8px; line-height: 1.5; }
+.capture-draft-control .ui-action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.capture-draft-control .btn { min-height: 44px; white-space: normal; }
+/* Field instructions keep the same reading size as Results. */
+.scan-page :is(p, li, label), .capture-draft-control p { font-size: 1rem; }

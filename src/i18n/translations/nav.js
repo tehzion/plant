@@ -25,7 +25,7 @@ const navTranslations = {
             statusOffline: 'Offline: saved records only',
             statusCheckingShort: 'Checking…',
             statusOfflineShort: 'Offline',
-            statusUnavailableShort: 'Down',
+            statusUnavailableShort: 'Checks paused',
             refresh: 'Reload app',
             pageResult: 'Check result',
             pageNutrition: 'Nutrition',

@@ -7,7 +7,7 @@ import { getImageQualityGuidance } from '../utils/diseaseDetection';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import './CameraUpload.css';
 
-const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, captureRole = 'whole' }) => {
+const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, required = false, captureRole = 'whole' }) => {
     const { t, language } = useLanguage();
     const qualityCopy = getScanQualityCopy(language);
     const { notifyError, notifyInfo } = useNotifications();
@@ -21,7 +21,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
         return value && value !== key ? value : fallback;
     };
     const stepLabel = captureRole === 'closeup'
-        ? label('assessment.ux.stepCloseup', 'Close-up of the worst leaf (optional)')
+        ? required ? t('results.retakeCloseup') : label('assessment.ux.stepCloseup', 'Close-up of the worst leaf (optional)')
         : captureRole === 'whole' ? label('assessment.ux.stepWhole', 'Whole plant') : '';
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
@@ -258,8 +258,8 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
     };
 
     return (
-        <div className="camera-upload" aria-describedby={`camera-upload-guidance-${captureRole}`}>
-            {stepLabel && !isCameraOpen && <p className="camera-upload-step">{stepLabel}</p>}
+        <div className="camera-upload" role="group" aria-label={stepLabel}>
+            {stepLabel && captureRole === 'whole' && !isCameraOpen && <p className="camera-upload-step">{stepLabel}</p>}
             {isCameraOpen ? (
                 <div className="camera-modal" ref={cameraDialogRef} role="dialog" aria-modal="true" aria-label={t('common.takePhoto')}>
                     <div className="video-container">
@@ -319,13 +319,12 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         <Image size={32} className="btn-icon-large" />
                         <span>{t('common.uploadGallery')}</span>
                     </button>
-                    <div id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance">
-                        <strong>{qualityCopy.photoGuidance.tipsTitle}</strong>
-                        <p>{qualityCopy.photoGuidance.intro}</p>
+                    <details id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance" hidden={captureRole !== 'whole'}>
+                        <summary>{qualityCopy.photoGuidance.tipsTitle}</summary>
                         <ul>
                             {qualityCopy.photoGuidance.tips.slice(0, 3).map((tip) => <li key={tip}>{tip}</li>)}
                         </ul>
-                    </div>
+                    </details>
                 </div>
             )}
 
