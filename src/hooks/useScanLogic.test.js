@@ -36,6 +36,7 @@ vi.mock('../utils/toast.js', () => ({
 describe('useScanLogic', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        localStorage.clear();
         diseaseDetectionMocks.analyzeLocalImageQuality.mockResolvedValue({
             requiresRetake: false,
         });
@@ -46,6 +47,23 @@ describe('useScanLogic', () => {
         });
         storageMocks.saveScan.mockResolvedValue({ id: 'scan-1' });
         storageMocks.consumeStorageCleanupNotice.mockReturnValue(null);
+    });
+
+    it('remembers crop and scale across scans and remounts', () => {
+        const first = renderHook(() => useScanLogic());
+        expect(first.result.current.state.selectedScale).toBe('acre');
+        act(() => { first.result.current.actions.setCategory('Vegetables'); first.result.current.actions.setCrop('Chilli'); first.result.current.actions.setScale('tree'); });
+        act(() => first.result.current.actions.resetScan());
+        expect(first.result.current.state.selectedCrop).toBe('Chilli');
+        first.unmount();
+        const second = renderHook(() => useScanLogic());
+        expect(second.result.current.state).toMatchObject({ selectedCategory: 'Vegetables', selectedCrop: 'Chilli', selectedScale: 'tree' });
+    });
+
+    it('uses safe defaults when saved capture preferences are invalid', () => {
+        localStorage.setItem('plant_capture_preferences', '{invalid');
+        const { result } = renderHook(() => useScanLogic());
+        expect(result.current.state.selectedScale).toBe('acre');
     });
 
     it('uses the immediate selected crop override when analysis starts', async () => {

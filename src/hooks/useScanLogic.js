@@ -53,7 +53,7 @@ const scanReducer = (state, action) => {
                 currentStep: 3,
             };
         case 'RESET_SCAN':
-            return { ...initialScanState };
+            return { ...initialScanState, selectedCategory: state.selectedCategory, selectedCrop: state.selectedCrop, selectedScale: state.selectedScale };
         default:
             return state;
     }
@@ -64,7 +64,7 @@ const initialScanState = {
     selectedLeafImage: null,
     selectedCategory: '',
     selectedCrop: '',
-    selectedScale: 'personal',
+    selectedScale: 'acre',
     scaleQuantity: 1,
     currentStep: 1,
     loading: false,
@@ -77,7 +77,15 @@ const initialScanState = {
 export const useScanLogic = () => {
     const { language, t } = useLanguage();
     const { user } = useAuth();
-    const [state, dispatch] = useReducer(scanReducer, initialScanState);
+    const [state, dispatch] = useReducer(scanReducer, initialScanState, initial => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('plant_capture_preferences') || '{}');
+            return { ...initial, selectedCategory: saved.category || '', selectedCrop: saved.crop || '', selectedScale: ['acre', 'tree', 'personal'].includes(saved.scale) ? saved.scale : initial.selectedScale };
+        } catch { return initial; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem('plant_capture_preferences', JSON.stringify({ category: state.selectedCategory, crop: state.selectedCrop, scale: state.selectedScale })); } catch { /* storage may be unavailable */ }
+    }, [state.selectedCategory, state.selectedCrop, state.selectedScale]);
     const stateRef = useRef(state);
     useEffect(() => {
         stateRef.current = state;
@@ -171,7 +179,7 @@ export const useScanLogic = () => {
                     leafImage: leafImageThumbnail,
                     ...result,
                     analysisLanguage: language,
-                    plantPart: currentState.captureContext?.plantPart || 'leaf',
+                    plantPart: currentState.captureContext?.plantPart || 'whole',
                     captureContext: currentState.captureContext || null,
                     healthStatus: standardizedHealthStatus,
                     disease: result.disease,

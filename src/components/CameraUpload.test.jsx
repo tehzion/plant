@@ -137,5 +137,6 @@ describe('CameraUpload', () => {
         fireEvent.change(input, { target: { files: [new File(['img'], 'dark.jpg', { type: 'image/jpeg' })] } });
 
         await waitFor(() => expect(onQualityIssue).toHaveBeenCalledWith('IMAGE_TOO_DARK', 'whole'));
+        expect(notifyErrorMock).not.toHaveBeenCalled();
     });
 });

@@ -7,7 +7,7 @@ const ScanCaptureContext = ({ value, onChange, disabled }) => {
     const update = (key, next) => onChange({ ...value, [key]: next });
     return <fieldset className="scan-capture-context" disabled={disabled}>
         <legend>{copy.contextTitle}</legend>
-        <label>{copy.plantPart}<select value={value.plantPart || 'leaf'} onChange={event => update('plantPart', event.target.value)}>
+        <label>{copy.plantPart}<select value={value.plantPart || 'whole'} onChange={event => update('plantPart', event.target.value)}>
             {['leaf', 'fruit', 'stem', 'whole'].map(part => <option value={part} key={part}>{copy[part]}</option>)}
         </select></label>
         {['duration', 'affected', 'recentTreatment'].map(field => <label key={field}>{copy[field]}

@@ -21,8 +21,8 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
         return value && value !== key ? value : fallback;
     };
     const stepLabel = captureRole === 'closeup'
-        ? label('assessment.ux.stepCloseup', 'Step 2 of 2: Close-up of the worst leaf (optional)')
-        : captureRole === 'whole' ? label('assessment.ux.stepWhole', 'Step 1 of 2: Whole plant') : '';
+        ? label('assessment.ux.stepCloseup', 'Close-up of the worst leaf (optional)')
+        : captureRole === 'whole' ? label('assessment.ux.stepWhole', 'Whole plant') : '';
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
 
@@ -144,7 +144,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
             onQualityIssue?.(guidance.code || guidance.messageKey || 'IMAGE_QUALITY', captureRole);
 
-            notifyError(t(guidance.messageKey), {
+            if (!onQualityIssue) notifyError(t(guidance.messageKey), {
                 actionLabel: t('common.uploadGallery'),
                 action: openGalleryPicker,
             });

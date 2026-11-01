@@ -22,6 +22,15 @@ describe('PlantCategorySelector', () => {
     expect(onSelect).toHaveBeenCalledWith('Durian');
   });
 
+  it('keeps uncommon crops behind a disclosure and excludes weed control', () => {
+    render(<PlantCategorySelector selected="" onSelect={vi.fn()} />);
+    expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: 'home.categoryCoconut' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'results.moreCrops' }));
+    expect(screen.getByRole('button', { name: 'home.categoryCoconut' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'home.categoryWeedControl' })).not.toBeInTheDocument();
+  });
+
   it('marks the selected crop button as pressed', () => {
     render(<PlantCategorySelector selected="Durian" onSelect={vi.fn()} />);
 

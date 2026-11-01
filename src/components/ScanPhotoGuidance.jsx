@@ -27,7 +27,7 @@ const ScanPhotoGuidance = ({
             <div className="scan-photo-guidance__heading">
                 <div className="scan-photo-guidance__icon" aria-hidden="true"><SubjectIcon size={20} /></div>
                 <div>
-                    <h3>{issueMessage ? copy.retakeTitle : copy.title}</h3>
+                    <h2>{issueMessage ? copy.retakeTitle : copy.title}</h2>
                     <p>{issueMessage || copy.intro}</p>
                 </div>
                 {issueMessage && onDismissIssue && (

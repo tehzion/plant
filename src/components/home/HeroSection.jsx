@@ -27,7 +27,7 @@ const HeroSection = ({
     const showWeatherRetry = !hasWeatherTemp && Boolean(weatherError);
     const showCachedNote = hasWeatherTemp && Boolean(weatherError);
 
-    const translatedLocation = locationName ? t(`common.${locationName}`) : '';
+    const translatedLocation = locationName?.startsWith('common.') ? t(locationName) : locationName;
     // A missing location is something the farmer can fix, so the pill asks for it.
     const resolvedLocation = locationName && locationName !== 'common.locationNA'
         ? (locationName.startsWith('common.')

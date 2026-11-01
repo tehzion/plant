@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { RotateCcw, Download, Share2, Save, Loader2 } from 'lucide-react';
+import { RotateCcw, Download, Share2, History, Loader2 } from 'lucide-react';
 import './QuickActions.css';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
@@ -40,7 +40,7 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
         </button>
 
         <button onClick={onSaveHistory} className="action-btn">
-          <span className="icon"><Save size={20} /></span>
+          <span className="icon"><History size={20} /></span>
           <span className="label">{getScanQualityCopy(language).viewHistory}</span>
         </button>
       </div>

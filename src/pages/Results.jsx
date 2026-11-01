@@ -1,30 +1,30 @@
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
-import { getUiCopy } from '../utils/uiCopy.js';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import QuickActions from '../components/QuickActions';
-import TabbedResults from '../components/TabbedResults';
-import DiseaseResult from '../components/DiseaseResult';
+import DiseaseResultSections from '../components/disease-result/DiseaseResultSections';
+import { buildProductDiagnosisPayload, createProductConsultationFromDiagnosis } from '../utils/liveProductRecommendations.js';
+import { localDateKey } from '../utils/farmerPrefs.js';
+import { normalizeDiseaseResult } from '../utils/diseaseResultUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 
-import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList, MessageSquareText, History as HistoryIcon, ScanLine } from 'lucide-react';
+import { Sprout, MapPin, ExternalLink, ClipboardList, MessageSquareText, History as HistoryIcon, ScanLine } from 'lucide-react';
 import { SCAN_PATH } from '../components/navItems.js';
 import { showToast } from '../utils/toast';
 
-import { getScanResultState, getStandardizedStatus } from '../utils/statusUtils';
 import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
-import { getNutrientNames, normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
+import { getNutrientNames } from '../utils/nutritionUtils.js';
 import { localizeStoredAnalysisResult as refreshStoredAnalysisLanguage } from '../utils/diseaseDetection.js';
 import { buildFollowUpDraftFromScan, saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
 import { buildScanResultModel } from '../utils/scanResultModel.js';
 import ScanDecisionSummary, { nextScanStep } from '../components/ScanDecisionSummary.jsx';
-import TodayPlanCard from '../components/results/TodayPlanCard.jsx';
+import TodayPlanCard, { recheckDays } from '../components/results/TodayPlanCard.jsx';
 import { fetchScanExpertReview } from '../utils/expertReview.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { confidencePercent } from '../../shared/scanResultPolicy.js';
@@ -32,10 +32,6 @@ import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
 import { useProductRecommendations } from '../hooks/useProductRecommendations.js';
 import { buildAssistantScanContext, openAssistant, setAssistantScanContext } from '../utils/assistantContext.js';
 
-const TreatmentRecommendations = lazyWithRetry(
-  () => import('../components/TreatmentRecommendations'),
-  'results-treatment-recommendations',
-);
 const NutritionalAnalysis = lazyWithRetry(
   () => import('../components/NutritionalAnalysis'),
   'results-nutritional-analysis',
@@ -43,10 +39,6 @@ const NutritionalAnalysis = lazyWithRetry(
 const ProductRecommendations = lazyWithRetry(
   () => import('../components/ProductRecommendations'),
   'results-product-recommendations',
-);
-const HealthyCarePlan = lazyWithRetry(
-  () => import('../components/HealthyCarePlan'),
-  'results-healthy-care-plan',
 );
 const FeedbackWidget = lazyWithRetry(
   () => import('../components/FeedbackWidget'),
@@ -59,22 +51,16 @@ const RESULTS_SECTION_FALLBACK = (
   </div>
 );
 
-const RESULT_TAB_KEYS = ['disease', 'care', 'nutrition', 'products'];
-
-const getResultTabIndex = (value) => {
-  const index = RESULT_TAB_KEYS.indexOf(value);
-  return index >= 0 ? index : 0;
-};
-
 const Results = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const [activeResultTab, setActiveResultTab] = useState(() => getResultTabIndex(requestedTab));
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(requestedTab));
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [scan, setScan] = useState(null);
+  const [planStarted, setPlanStarted] = useState(false);
   const [recheckRequest, setRecheckRequest] = useState(null);
   const [expertReview, setExpertReview] = useState(null);
   const [originalScan, setOriginalScan] = useState(null);
@@ -84,18 +70,6 @@ const Results = () => {
   const [translationError, setTranslationError] = useState(false);
   const enhancementCopy = getEnhancementCopy(language);
   const [scanLoading, setScanLoading] = useState(true);
-  useEffect(() => {
-    setActiveResultTab(getResultTabIndex(requestedTab));
-  }, [requestedTab]);
-
-  const selectResultTab = useCallback((index) => {
-    setActiveResultTab(index);
-    const nextParams = new URLSearchParams(searchParams);
-    if (index === 0) nextParams.delete('tab');
-    else nextParams.set('tab', RESULT_TAB_KEYS[index]);
-    setSearchParams(nextParams, { replace: true });
-  }, [searchParams, setSearchParams]);
-
   const label = useCallback((key, fallback) => {
     const translated = t(key);
     return translated && translated !== key ? translated : fallback;
@@ -103,6 +77,7 @@ const Results = () => {
 
   useEffect(() => {
     setScanLoading(true);
+    setPlanStarted(false);
     Promise.resolve(getScanById(id, user?.id ?? null))
       .then(result => {
         setScan(result);
@@ -145,7 +120,7 @@ const Results = () => {
     disease: result.disease || '',
     scanResult: result,
     language,
-    enabled: Boolean(scan && !scanLoading),
+    enabled: Boolean(scan && !scanLoading && !result.needsReview && detailsOpen),
     scanId: scan?.id || '',
     feedbackToken: scan?.feedbackToken || '',
   });
@@ -223,19 +198,12 @@ const Results = () => {
     && locationNameValue !== t('common.locationNA')
   );
 
-  const standardizedStatus = result.healthStatus;
   const healthy = result.healthy;
   const followUpDraft = buildFollowUpDraftFromScan({
     ...result,
   }, language);
-  const followUpActionLabel = followUpDraft.activity_type === 'inspect'
-    ? label('results.logRoutineCheck', 'Log routine check')
-    : followUpDraft.activity_type === 'scout'
-      ? label('results.logFieldScouting', 'Log field scouting')
-      : label('results.logTreatmentAction', 'Log treatment action');
-
   const handleScanAgain = () => {
-    navigate('/?scan=true');
+    navigate('/?scan=true', result.requiresRetake ? { state: { retakeReason: result.retakeReason || t('results.retakeHint') } } : undefined);
   };
 
   const handleLogFollowUp = () => {
@@ -495,99 +463,64 @@ ${t('pdf.generatedBy')}
     navigate('/history');
   };
 
-  // Prepare tabs for TabbedResults
-  const tabs = [
-    {
-      icon: <Search size={20} />,
-      title: t('results.diseaseInfo'),
-      content: <DiseaseResult result={result} image={scan.image || scan.image_url} leafImage={scan.leafImage || scan.leaf_image_url} />
-    },
-    {
-      icon: <Pill size={20} />,
-      title: healthy ? t('results.care') : result.needsReview ? label('results.nextChecks', 'Next checks') : t('results.treatment'),
-      content: (
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <div>
-            {!healthy ? (
-              <TreatmentRecommendations result={result} />
-            ) : (
-              <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
-            )}
-          </div>
-        </Suspense>
-      )
-    },
-    {
-      icon: <Sprout size={20} />,
-      title: t('results.nutrition'),
-      badge: normalizedNutrition.status === 'confirmed' ? '!' : (normalizedNutrition.status === 'possible' ? '?' : null),
-      content: (
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <NutritionalAnalysis
-            nutritionalIssues={normalizedNutrition}
-            fertilizerRecommendations={scan.fertilizerRecommendations}
-            scanResult={result}
-          />
-          <ProductRecommendations
-            plantType={result.plantType}
-            disease={result.disease}
-            farmScale={result.farmScale}
-            scanResult={result}
-            displayMode="nutrition"
-            recommendationState={productRecommendationState}
-          />
-        </Suspense>
-      )
-    },
-    {
-      icon: <ShoppingBag size={20} />,
-      title: t('results.products'),
-      content: (
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <div>
-            <ProductRecommendations
-              plantType={scan.plantType}
-              disease={result.disease}
-              farmScale={result.farmScale}
-              scanResult={result}
-              displayMode="disease"
-              recommendationState={productRecommendationState}
-            />
-          </div>
-        </Suspense>
-      )
-    }
-  ];
+  const detailedResult = normalizeDiseaseResult(result, t);
+  const suggestRecheck = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + recheckDays(result));
+    setRecheckRequest({ date: localDateKey(date), at: Date.now() });
+  };
+  const startTreatmentPlan = () => {
+    setPlanStarted(true);
+  };
 
   return (
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
-        <ScanDecisionSummary result={result} expertReview={expertReview} />
+        <ScanDecisionSummary result={result} expertReview={expertReview} image={scan.image || scan.image_url} />
         {(originalScan?.analysisLanguage || originalScan?.language) !== language && <section className="analysis-language ui-card ui-card--compact" aria-busy={translating}>
-          <p>{enhancementCopy.source}: {enhancementCopy.languages[originalScan?.analysisLanguage || originalScan?.language] || originalScan?.analysisLanguage || originalScan?.language || enhancementCopy.unknown}</p>
-          {scan.analysisLanguage === language && <p role="status">{enhancementCopy.translated}</p>}
+          <p role="status">{scan.analysisLanguage === language ? enhancementCopy.translated : t('results.analysisLanguageHint').replace('{language}', enhancementCopy.languages[originalScan?.analysisLanguage || originalScan?.language] || enhancementCopy.unknown)}</p>
           <div className="ui-action-row">
             <button className="btn btn-secondary" disabled={translating || scan.analysisLanguage === language} onClick={translateAnalysis}>{translating ? enhancementCopy.translating : enhancementCopy.translate}</button>
             {scan.analysisLanguage !== (originalScan?.analysisLanguage || originalScan?.language) && <button className="btn btn-secondary" disabled={translating} onClick={() => setScan(current => ({ ...originalScan, followUp: current.followUp, plot_id: current.plot_id }))}>{enhancementCopy.original}</button>}
           </div>
           {translationError && <p role="alert">{enhancementCopy.failed}</p>}
         </section>}
-        <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
+        <TodayPlanCard key={id} result={result} scanId={id} planStarted={planStarted} onSetRecheck={suggestRecheck} />
         <div className="results-next-action">
-          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
-            {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
+          <button type="button" className="btn btn-primary" disabled={planStarted && result.treatmentEligible} onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => window.open(createProductConsultationFromDiagnosis(buildProductDiagnosisPayload({ plantType: result.plantType, disease: result.disease, scanResult: result }), undefined, language).url, '_blank', 'noopener,noreferrer') : healthy ? suggestRecheck : startTreatmentPlan}>
+            {t(`results.${result.requiresRetake ? 'actionRetake' : result.needsReview ? 'actionExpert' : healthy ? 'actionHealthy' : planStarted ? 'planStarted' : 'actionTreat'}`)}
           </button>
-          <button className="btn btn-secondary" onClick={openAssistant}>
-            <MessageSquareText size={18} aria-hidden="true" /> {label('assistant.askAboutResult', 'Ask about this result')}
-          </button>
+          {result.needsReview && !result.requiresRetake && <p className="results-expert-channel">{t('results.expertChannel')}</p>}
         </div>
-        <div className="results-content-grid">
-        {/* Tabbed Results */}
-        <div id="results-diagnostics" className="results-diagnostics fade-slide-up" style={{ animationDelay: '0.1s' }}>
-          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={selectResultTab} />
-        </div>
-
-        <aside className="results-sidebar">
+        {!result.requiresRetake && <section className="results-watch" aria-labelledby="watch-title">
+          <h2 id="watch-title">{t('results.watchTitle')}</h2>
+          <p>{t(healthy ? 'results.watchHealthy' : 'results.watchDisease')}</p>
+        </section>}
+        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} healthy={healthy} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
+        <details className="results-more" open={detailsOpen} onToggle={event => setDetailsOpen(event.currentTarget.open)}>
+          <summary>{t('results.moreDetails')}</summary>
+          {detailsOpen && <div className="results-more__content">
+          <h2>{t('results.evidenceTitle')}</h2>
+          {(scan.leafImage || scan.leaf_image_url) && <img className="results-detail-photo" src={scan.leafImage || scan.leaf_image_url} alt={t('home.addLeafPhoto')} loading="lazy" />}
+          <DiseaseResultSections normalized={{ ...detailedResult, showDemoModeWarning: false }} t={t} />
+          {result.diagnosticEvidence.evidenceFor.length > 0 && <ul>{result.diagnosticEvidence.evidenceFor.map((item, i) => <li key={i}>{item}</li>)}</ul>}
+          {[...new Set([result.abstainReason, ...result.diagnosticEvidence.evidenceAgainst].filter(Boolean))].map((item, i) => <p key={i}>{item}</p>)}
+          {!result.needsReview && <Suspense fallback={RESULTS_SECTION_FALLBACK}>
+            <h2>{t('results.nutrition')}</h2>
+            <NutritionalAnalysis nutritionalIssues={normalizedNutrition} fertilizerRecommendations={scan.fertilizerRecommendations} scanResult={result} />
+            {!productRecommendationState.error && <ProductRecommendations plantType={result.plantType} disease={result.disease} farmScale={result.farmScale} scanResult={result} displayMode="nutrition" recommendationState={productRecommendationState} />}
+            <h2>{t('results.products')}</h2>
+            {productRecommendationState.error ? <div className="results-catalog-notice" role="status"><p>{t('results.catalogUnavailable')}</p><button type="button" className="btn btn-secondary" onClick={productRecommendationState.retry}>{t('common.retry')}</button></div> : <ProductRecommendations plantType={result.plantType} disease={result.disease} farmScale={result.farmScale} scanResult={result} displayMode="disease" recommendationState={productRecommendationState} />}
+          </Suspense>}
+          {!result.needsReview && <section>
+            <h2>{healthy ? t('results.care') : t('results.prevention')}</h2>
+            <ul>{result.prevention.map((item, i) => <li key={i}>{item}</li>)}</ul>
+            {healthy && ['dailyCare', 'weeklyCare', 'monthlyCare', 'bestPractices'].map(key => result.healthyCarePlan?.[key]?.length > 0 && <div key={key}><h3>{t(`results.${key}`)}</h3><ul>{result.healthyCarePlan[key].map((item, i) => <li key={i}>{item}</li>)}</ul></div>)}
+          </section>}
+          {result.treatmentEligible && result.treatments.length > 1 && <section id="results-plan" className="results-treatment-plan">
+            <h2>{t('results.treatments')}</h2>
+            {result.treatments.length > 1 && <ol start={2}>{result.treatments.slice(1).map((item, i) => <li key={i}>{item}</li>)}</ol>}
+          </section>}
         {/* Scan Metadata Card - Modern Design */}
         <details className="scan-metadata-card app-surface app-surface--soft results-secondary">
           <summary className="results-section-kicker">{scanCopy.scanDetails}</summary>
@@ -636,7 +569,7 @@ ${t('pdf.generatedBy')}
                               'Palm/Rubber': 130, 'Palm Oil': 55, 'Vegetables': 0, 'Fruits': 0,
                               'Rice': 0, 'Weed Control': 0
                             };
-                            const density = densityMap[categoryRaw] || 50;
+                            const density = densityMap[categoryRaw] ?? 50;
                             if (density === 0) return '';
                             return `${Math.round(scan.scaleQuantity * density).toLocaleString()} ${t('home.trees')}`;
                           })()}
@@ -707,36 +640,8 @@ ${t('pdf.generatedBy')}
           </div>
         </details>
 
-        <section className="results-followup-group">
-        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
-        <div className="follow-up-card app-surface app-surface--soft">
-          <div className="follow-up-icon">
-            <ClipboardList size={22} />
-          </div>
-          <div className="follow-up-copy">
-            <div className="results-section-kicker">{label('results.followUpKicker', 'Farm follow-up')}</div>
-            <h3>{label('results.followUpTitle', 'Turn this scan into a farm log')}</h3>
-            <p>
-              {healthy
-                ? label('results.followUpHealthyDesc', 'A routine inspection draft is ready for the Daily Log.')
-                : followUpDraft.activity_type === 'scout'
-                  ? label('results.followUpScoutDesc', 'A scouting draft is ready so you can verify the issue in the field.')
-                  : label('results.followUpTreatmentDesc', 'A treatment draft is ready with the diagnosis, severity, and suggested actions.')}
-              {' '}
-              {user
-                ? label('results.followUpSignedInHint', 'Review and save it in your Daily Log.')
-                : label('results.followUpLoginHint', 'Sign in or use the demo account to save it.')}
-            </p>
-          </div>
-          <button type="button" className="follow-up-btn btn btn-primary" onClick={handleLogFollowUp}>
-            <ClipboardList size={16} />
-            <span>{followUpActionLabel}</span>
-          </button>
-        </div>
-
-        </section>
-        </aside>
-        </div>
+        <button type="button" className="btn btn-secondary" onClick={handleLogFollowUp}><ClipboardList size={18} aria-hidden="true" />{t('results.logCare')}</button>
+        <button type="button" className="btn btn-secondary" onClick={openAssistant}><MessageSquareText size={18} aria-hidden="true" />{t('assistant.askAboutResult')}</button>
         {/* Quick Actions Bar */}
         <QuickActions
           onScanAgain={handleScanAgain}
@@ -749,6 +654,8 @@ ${t('pdf.generatedBy')}
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>
           <FeedbackWidget scanId={id} scan={scan} />
         </Suspense>
+        </div>}
+        </details>
 
 
 

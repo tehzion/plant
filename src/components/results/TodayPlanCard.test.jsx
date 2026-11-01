@@ -31,13 +31,11 @@ describe('TodayPlanCard', () => {
         expect(screen.getByRole('button', { name: 'Yes' })).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('suggests a re-check date matched to the result', () => {
-        const onSetRecheck = vi.fn();
-        render(<TodayPlanCard result={{ ...result, treatmentEligible: true }} scanId="scan-1" onSetRecheck={onSetRecheck} />);
-        fireEvent.click(screen.getByRole('button', { name: /Set a re-check date/ }));
-        const expected = new Date(); expected.setDate(expected.getDate() + 5);
-        expect(onSetRecheck.mock.calls[0][0].date).toBe(`${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`);
+    it('uses a consistent recheck interval and does not leak treatment when review is needed', () => {
+        expect(recheckDays({ treatmentEligible: true })).toBe(3);
         expect(recheckDays({ healthy: true })).toBe(14);
         expect(recheckDays({ requiresRetake: true })).toBeNull();
+        render(<TodayPlanCard result={{ treatments: ['Do not show this'], needsReview: true }} scanId="scan-1" />);
+        expect(screen.queryByText('Do not show this')).not.toBeInTheDocument();
     });
 });

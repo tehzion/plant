@@ -12,7 +12,7 @@ import { localDateKey } from '../utils/farmerPrefs.js';
 
 // openRequest ({ date, at }) lets the result page open this form with a
 // suggested re-check date without the farmer hunting for it.
-const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
+const ScanFollowUpTracker = ({ scan, onSaved, healthy = false, openRequest = null }) => {
     const { language, t } = useLanguage();
     const { user } = useAuth();
     const copy = getScanQualityCopy(language);
@@ -70,11 +70,11 @@ const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
             </select></label>
             <label>{copy.date}<input type="date" value={form.nextCheckDate} onChange={e => update('nextCheckDate', e.target.value)} /></label>
             <label>{copy.outcome}<select value={form.outcome} onChange={e => update('outcome', e.target.value)}>
-                {['pending', 'improving', 'unchanged', 'worsening', 'resolved'].map(state => <option value={state} key={state}>{copy[state]}</option>)}
+                {['pending', 'improving', 'unchanged', 'worsening', 'resolved'].map(state => <option value={state} key={state}>{healthy && state === 'unchanged' ? t('results.stillHealthy') : copy[state]}</option>)}
             </select></label>
-            <label>{copy.severity}<select value={form.severity} onChange={e => update('severity', e.target.value)}>
+            {!healthy && <label>{copy.severity}<select value={form.severity} onChange={e => update('severity', e.target.value)}>
                 <option value="">—</option>{['mild', 'moderate', 'severe', 'critical'].map(state => <option value={state} key={state}>{t(`results.${state}`)}</option>)}
-            </select></label>
+            </select></label>}
             <label>{copy.symptoms}<textarea maxLength={2000} value={form.note} onChange={e => update('note', e.target.value)} /></label>
             <label>{t('results.plantPhoto')}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setPhoto(e.target.files?.[0] || null)} /></label>
             <button type="submit" className="btn btn-primary">{saving ? t('common.loading') : copy.save}</button>

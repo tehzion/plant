@@ -29,9 +29,7 @@ const resolveLocationLabel = (scan, t) => {
     if (!locationName) return '';
     if (locationName.startsWith('common.')) return t(locationName);
 
-    const translationKey = `common.${locationName}`;
-    const translated = t(translationKey);
-    return translated && translated !== translationKey ? translated : locationName;
+    return locationName;
 };
 
 const formatScanDate = (timestamp, locale) => {

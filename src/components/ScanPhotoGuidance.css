@@ -23,12 +23,12 @@
   border-radius: 12px;
 }
 
-.scan-photo-guidance h3,
+.scan-photo-guidance h2,
 .scan-photo-guidance p {
   margin: 0;
 }
 
-.scan-photo-guidance h3 {
+.scan-photo-guidance h2 {
   color: var(--text-primary, var(--color-text-primary));
   font-size: 1rem;
 }
@@ -36,15 +36,15 @@
 .scan-photo-guidance__heading p {
   margin-top: 4px;
   color: var(--text-secondary, var(--color-text-secondary));
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.45;
 }
 
 .scan-photo-guidance__dismiss {
   display: grid;
   place-items: center;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   margin-left: auto;
   color: var(--text-secondary, var(--color-text-secondary));
   background: transparent;

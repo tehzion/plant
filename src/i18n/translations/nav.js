@@ -63,7 +63,7 @@ const navTranslations = {
             statusOffline: 'Luar talian: rekod tersimpan sahaja',
             statusCheckingShort: 'Menyemak…',
             statusOfflineShort: 'Luar talian',
-            statusUnavailableShort: 'Gangguan',
+            statusUnavailableShort: 'Semakan tergendala',
             refresh: 'Muat semula aplikasi',
             pageResult: 'Keputusan semakan',
             pageNutrition: 'Pemakanan',

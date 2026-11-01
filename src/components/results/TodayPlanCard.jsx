@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { CalendarCheck, CheckCircle2, ListChecks } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ListChecks } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { getScanQualityCopy } from '../../../shared/scanQualityCopy.js';
-import { getFieldAnswers, localDateKey, saveFieldAnswer } from '../../utils/farmerPrefs.js';
+import { getFieldAnswers, saveFieldAnswer } from '../../utils/farmerPrefs.js';
 import { nextScanStep } from '../ScanDecisionSummary.jsx';
 import './TodayPlanCard.css';
 
@@ -13,12 +13,12 @@ const ANSWER_FALLBACKS = { yes: 'Yes', no: 'No', unsure: 'Not sure' };
 export const recheckDays = (result = {}) => {
     if (result.requiresRetake) return null;
     if (result.healthy) return 14;
-    return result.treatmentEligible ? 5 : 3;
+    return 3;
 };
 
 // The first thing a farmer sees after the headline: up to three actions, the
-// field questions as tap answers, and one button to set a re-check date.
-const TodayPlanCard = ({ result, scanId, onSetRecheck }) => {
+// field questions as tap answers, and an optional treatment checklist.
+const TodayPlanCard = ({ result, scanId, planStarted = false, onSetRecheck }) => {
     const { language, t } = useLanguage();
     const copy = getScanQualityCopy(language);
     const label = (key, fallback) => {
@@ -26,32 +26,34 @@ const TodayPlanCard = ({ result, scanId, onSetRecheck }) => {
         return value && value !== key ? value : fallback;
     };
     const assessment = result.structuredAssessment?.assessment || {};
-    const actions = (Array.isArray(result.immediateActions) ? result.immediateActions : []).filter(Boolean).slice(0, 3);
+    const immediate = (Array.isArray(result.immediateActions) ? result.immediateActions : []).filter(Boolean);
+    const treatment = result.treatmentEligible ? result.treatments?.[0] : null;
+    const actions = result.needsReview ? [t(result.requiresRetake ? 'results.retakeHint' : 'results.nextChecksAdvice')] : [...new Set([treatment, ...immediate].filter(Boolean))].slice(0, 3);
     const questions = assessment.follow_up_questions || [];
     const infoNeeded = assessment.additional_information_needed || [];
     const [answers, setAnswers] = useState(() => getFieldAnswers(scanId));
-    const days = recheckDays(result);
-
+    const firstAction = useRef(null);
+    useEffect(() => {
+        if (planStarted) firstAction.current?.focus();
+    }, [planStarted]);
     const answer = (question, value) => setAnswers(saveFieldAnswer(scanId, question, value));
-    const suggestRecheck = () => {
-        const date = new Date();
-        date.setDate(date.getDate() + days);
-        onSetRecheck?.({ date: localDateKey(date), at: Date.now() });
-    };
 
     return (
         <section className="today-plan app-surface" aria-labelledby="today-plan-title">
-            <h2 id="today-plan-title"><ListChecks size={20} aria-hidden="true" /> {label('assessment.ux.todayTitle', 'What to do today')}</h2>
+            <h2 id="today-plan-title"><ListChecks size={20} aria-hidden="true" /> {t('results.doNow')}</h2>
             <ol className="today-plan__actions">
                 {(actions.length ? actions : [nextScanStep(result, copy) || label('assessment.ux.todayFallback', '')]).map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <li key={index}>{planStarted ? <label className="today-plan__check"><input ref={index === 0 ? firstAction : undefined} type="checkbox" checked={answers[`care:${item}`] === 'yes'} onChange={event => answer(`care:${item}`, event.target.checked ? 'yes' : 'no')} />{item}</label> : item}</li>
                 ))}
             </ol>
 
+            {planStarted && <div className="today-plan__started"><p role="status">{t('results.planIntro')}</p><button type="button" className="btn btn-secondary" onClick={onSetRecheck}>{t('results.setRecheck')}</button></div>}
+            {result.treatmentEligible && <p className="today-plan__label">{t('results.followLabel')}</p>}
+            {(infoNeeded.length > 0 || questions.length > 0) && <details className="today-plan__questions"><summary>{t('assessment.questionsTitle')}</summary>
             {infoNeeded.length > 0 && (
                 <div className="today-plan__block">
                     <h3>{label('assessment.infoNeededTitle', 'What would help confirm this')}</h3>
-                    <ul>{infoNeeded.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                    <ul>{infoNeeded.map((item, index) => <li key={index}>{planStarted ? <label className="today-plan__check"><input ref={index === 0 ? firstAction : undefined} type="checkbox" checked={answers[`care:${item}`] === 'yes'} onChange={event => answer(`care:${item}`, event.target.checked ? 'yes' : 'no')} />{item}</label> : item}</li>)}</ul>
                 </div>
             )}
 
@@ -81,14 +83,7 @@ const TodayPlanCard = ({ result, scanId, onSetRecheck }) => {
                 </div>
             )}
 
-            {days && (
-                <div className="today-plan__recheck">
-                    <p>{label('assessment.ux.checkAgainHint', 'Check the same plant again in {days} days.').replace('{days}', days)}</p>
-                    <button type="button" className="btn btn-secondary" onClick={suggestRecheck}>
-                        <CalendarCheck size={18} aria-hidden="true" /> {label('assessment.ux.checkAgain', 'Set a re-check date')}
-                    </button>
-                </div>
-            )}
+            </details>}
         </section>
     );
 };

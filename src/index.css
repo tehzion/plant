@@ -967,13 +967,13 @@ p {
     /* â†“ from 1.35rem */
     --font-size-xl: 1.05rem;
     /* â†“ from 1.15rem */
-    --font-size-lg: 0.95rem;
+    --font-size-lg: 1.125rem;
     /* â†“ from 1.05rem */
-    --font-size-base: 0.9rem;
+    --font-size-base: 1rem;
     /* â†“ from 0.95rem */
-    --font-size-sm: 0.8rem;
+    --font-size-sm: 0.9375rem;
     /* â†“ from 0.85rem */
-    --font-size-xs: 0.75rem;
+    --font-size-xs: 0.875rem;
     /* â†“ from 0.75rem */
 
     /* Optimized spacing for mobile (15-25% reduction) */
@@ -3053,3 +3053,6 @@ p {
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
+
+button, input, select, textarea { font: inherit; }
+button { min-height: 44px; }

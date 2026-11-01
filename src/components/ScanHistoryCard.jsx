@@ -52,7 +52,7 @@ const ScanHistoryCard = ({ scan, onDelete }) => {
   const locationLabel = scan.locationName
     ? scan.locationName.startsWith('common.')
       ? safeLabel(scan.locationName, scan.locationName.replace(/^common\./, ''))
-      : safeLabel(`common.${scan.locationName}`, scan.locationName)
+      : scan.locationName
     : '';
   const previewSrc = scan.image || scan.image_url || scan.leafImage || scan.leaf_image_url;
 

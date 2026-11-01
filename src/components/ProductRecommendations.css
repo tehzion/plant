@@ -29,7 +29,8 @@
 }
 
 .product-state--error .product-state-title {
-  color: var(--color-severe);
+  color: var(--color-text-secondary);
+  font-weight: 500;
 }
 
 .product-state-hint {

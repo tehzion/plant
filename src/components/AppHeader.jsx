@@ -29,7 +29,7 @@ const AppHeader = ({ isHome }) => {
             return;
         }
 
-        setSystemStatus((current) => (current === 'online' ? current : 'checking'));
+        // Keep the last confirmed status while checking again.
 
         try {
             await checkHealthOnce();
@@ -102,7 +102,7 @@ const AppHeader = ({ isHome }) => {
                     </Link>
 
                     <div className="app-header__actions">
-                        <span
+                        {['offline', 'unavailable'].includes(systemStatus) && <span
                             className={`app-header__status app-header__status--${systemStatus}`}
                             role="status"
                             title={statusLabel}
@@ -112,7 +112,7 @@ const AppHeader = ({ isHome }) => {
                             {systemStatus !== 'online' && (
                                 <span className="app-header__status-text-short">{statusShortLabel}</span>
                             )}
-                        </span>
+                        </span>}
                         <button
                             onClick={() => window.location.reload()}
                             className="app-header__refresh-btn"

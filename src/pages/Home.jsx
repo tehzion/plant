@@ -32,11 +32,11 @@ import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
-import { getEnhancementCopy } from '../utils/enhancementCopy.js';
+import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
 import { isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
-  const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
+  const [captureContext, setCaptureContext] = useState({ plantPart: 'whole' });
   const { t, language } = useLanguage();
   const label = (key, fallback) => {
     const value = t(key);
@@ -108,7 +108,11 @@ const Home = () => {
   });
   const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
   const [analysisPreviewUrl, setAnalysisPreviewUrl] = useState('');
-  const [, setPhotoQualityIssue] = useState(null);
+  const [photoQualityIssue, setPhotoQualityIssue] = useState(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentStep, error, photoQualityIssue]);
 
   const steps = [
     { label: t('home.step1') },
@@ -615,11 +619,11 @@ const Home = () => {
                 {isConnectionFailure ? <WifiOff size={24} /> : <AlertCircle size={24} />}
               </div>
               <div className="analysis-failure-copy">
-                <h2>{isConnectionFailure
+                <h1>{isConnectionFailure
                   ? label('home.noInternetTitle', 'No internet connection')
-                  : label('home.analysisFailedTitle', 'The check could not finish')}</h2>
+                  : label('home.analysisFailedTitle', 'The check could not finish')}</h1>
                 <p className="analysis-failure-message">{error}</p>
-                {errorSupportHint && <p>{errorSupportHint}</p>}
+                <p>{t('results.photoKept')}</p>
               </div>
               <div className="analysis-failure-actions">
                 <button type="button" className="btn btn-primary" onClick={handleRetryAnalysis}>
@@ -669,6 +673,8 @@ const Home = () => {
                     </div>
                   </div>
 
+                  {routerLocation.state?.retakeReason && <aside className="scan-retake-context" role="note"><p>{routerLocation.state.retakeReason}</p><p>{t('results.retakeHint')}</p></aside>}
+                  {photoQualityIssue && <ScanPhotoGuidance plantPart={captureContext.plantPart} captureRole={photoQualityIssue.role} qualityIssue={photoQualityIssue.code} onDismissIssue={() => setPhotoQualityIssue(null)} />}
                   {/* Main Image Upload */}
                   <div className="mb-lg">
                     <CameraUpload
@@ -680,7 +686,7 @@ const Home = () => {
                   </div>
 
                   <details className="ui-disclosure">
-                    <summary>{getEnhancementCopy(language).optionalContext}</summary>
+                    <summary>{t('results.optionalSymptoms')}</summary>
                     <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
                   </details>
                   {/* Leaf Image Upload (Optional) */}
@@ -691,7 +697,7 @@ const Home = () => {
                         <Leaf size={20} />
                       </div>
                       <div className="leaf-card-text">
-                        <h3>{t('home.addLeafPhoto') || "Add Leaf Close-up (Optional)"}</h3>
+                        <h2>{t('home.addLeafPhoto')}</h2>
                         <p>{t('home.leafDescription') || "For better accuracy, add a close-up photo of affected leaves"}</p>
                       </div>
                     </div>

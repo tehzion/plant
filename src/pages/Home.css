@@ -1508,7 +1508,7 @@
   color: var(--color-warning-ink);
 }
 
-.analysis-failure-copy h2 {
+.analysis-failure-copy h1 {
   margin: 0 0 6px;
   font-size: var(--font-size-lg);
   line-height: 1.35;
@@ -1549,3 +1549,7 @@
 .scan-step-title {
   font-size: var(--font-size-2xl);
 }
+
+.analysis-failure-copy h1 { font-size: 1.25rem; }
+.category-icon { color: var(--color-primary-dark); }
+.scan-photo-guidance__heading h2 { font-size: 1.125rem; }
