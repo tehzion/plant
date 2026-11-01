@@ -2,6 +2,13 @@ const loginTranslations = {
     "en": {
         "login": {
             "welcomeBack": "Welcome Back",
+            "farmIntroTitle": "My farm",
+            "farmIntroSubtitle": "Sign in to keep your farm records safe and with you on any phone.",
+            "farmIntroPlots": "Your farm plots and crops",
+            "farmIntroLogs": "Activity logs for myGAP",
+            "farmIntroHistory": "Scan history on every device",
+            "farmIntroGuest": "Continue without an account",
+            "farmIntroGuestNote": "Your scans are still saved on this phone.",
             "subtitle": "Sign in to access your farm data",
             "email": "Email Address",
             "password": "Password",
@@ -38,6 +45,13 @@ const loginTranslations = {
     "ms": {
         "login": {
             "welcomeBack": "Selamat Kembali",
+            "farmIntroTitle": "Ladang saya",
+            "farmIntroSubtitle": "Log masuk supaya rekod ladang anda selamat dan boleh dibuka di mana-mana telefon.",
+            "farmIntroPlots": "Petak dan tanaman ladang anda",
+            "farmIntroLogs": "Log aktiviti untuk myGAP",
+            "farmIntroHistory": "Sejarah semakan di semua peranti",
+            "farmIntroGuest": "Teruskan tanpa akaun",
+            "farmIntroGuestNote": "Semakan anda masih disimpan dalam telefon ini.",
             "subtitle": "Log masuk untuk akses data ladang anda",
             "email": "Alamat Emel",
             "password": "Kata Laluan",
@@ -74,6 +88,13 @@ const loginTranslations = {
     "zh": {
         "login": {
             "welcomeBack": "欢迎回来",
+            "farmIntroTitle": "我的农场",
+            "farmIntroSubtitle": "登录后，农场记录会安全保存，并可在任何手机上查看。",
+            "farmIntroPlots": "您的地块和作物",
+            "farmIntroLogs": "myGAP 活动日志",
+            "farmIntroHistory": "所有设备上的检查记录",
+            "farmIntroGuest": "不登录继续使用",
+            "farmIntroGuestNote": "您的检查记录仍保存在这部手机上。",
             "subtitle": "登录以访问您的农场数据",
             "email": "电子邮件地址",
             "password": "密码",

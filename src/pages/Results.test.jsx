@@ -23,8 +23,10 @@ vi.mock('../i18n/i18n.jsx', () => ({
   useLanguage: () => ({
     language: 'en',
     t: (key) => ({
-      'history.noHistory': 'No history',
-      'history.noHistoryMessage': 'No saved scan found.',
+      'history.scanNotFound': 'Scan not found',
+      'history.scanNotFoundMessage': "This scan isn't saved on this phone.",
+      'nav.history': 'History',
+      'nav.checkPlant': 'Check plant health',
       'common.back': 'Back',
       'results.diseaseInfo': 'Disease Info',
       'results.treatment': 'Treatment',
@@ -145,15 +147,19 @@ describe('Results', () => {
     });
   });
 
-  it('shows the no-history state when scan lookup fails', async () => {
+  it('says this scan is missing, not that history is empty, when lookup fails', async () => {
     getScanByIdMock.mockRejectedValue(new Error('lookup failed'));
 
     render(<Results />);
 
-    await waitFor(() => {
-      expect(screen.getByText('No history')).toBeInTheDocument();
-      expect(screen.getByText('No saved scan found.')).toBeInTheDocument();
-    });
+    expect(await screen.findByRole('heading', { name: 'Scan not found' })).toBeInTheDocument();
+    expect(screen.getByText("This scan isn't saved on this phone.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    expect(navigateMock).toHaveBeenCalledWith('/history');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check plant health' }));
+    expect(navigateMock).toHaveBeenCalledWith('/?scan=true');
   });
 
   it('saves a follow-up draft and navigates to the profile daily log', async () => {

@@ -26,19 +26,6 @@
     margin-bottom: 24px;
 }
 
-.login-kicker {
-    display: inline-flex;
-    margin-bottom: 12px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: #eef3ec;
-    color: #2e6b3f;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
 .login-title {
     font-family: var(--font-heading);
     font-size: var(--font-size-3xl);
@@ -263,6 +250,79 @@
     text-align: center;
     font-size: 0.95rem;
     color: #5c615a;
+}
+
+/* Signed-out "My farm" intro */
+.farm-intro-list {
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+}
+
+.farm-intro-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.farm-intro-list svg {
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.farm-intro-register {
+    width: 100%;
+    margin-top: 10px;
+    min-height: 48px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--color-primary-dark);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.farm-intro-register:hover {
+    border-color: var(--color-primary);
+}
+
+.farm-intro-guest {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border-light);
+    text-align: center;
+}
+
+.farm-intro-guest-btn {
+    min-height: 44px;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    color: var(--color-primary-dark);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.farm-intro-guest p {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.farm-intro-register:focus-visible,
+.farm-intro-guest-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .toggle-btn {

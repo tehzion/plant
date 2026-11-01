@@ -25,50 +25,24 @@
     border: 1px solid rgba(46, 107, 63, 0.1);
 }
 
-.error-kicker {
-    display: inline-flex;
-    margin-bottom: 20px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: #eef3ec;
-    color: #2e6b3f;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .icon-wrapper {
-    width: 100px;
-    height: 100px;
+    width: 72px;
+    height: 72px;
     background: var(--color-primary-light);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 32px;
+    margin: 0 auto 24px;
     color: var(--color-primary);
-}
-
-.error-code {
-    font-size: 4rem;
-    font-weight: 700;
-    color: var(--color-primary);
-    margin: 0 0 -20px;
-    line-height: 1;
-    opacity: 0.2;
-    position: relative;
-    z-index: 0;
-    font-family: var(--font-heading);
 }
 
 .error-title {
     font-size: 1.75rem;
     color: #262a26;
     font-weight: 700;
-    margin: 16px 0 12px;
-    position: relative;
-    z-index: 1;
+    margin: 0 0 12px;
+    text-wrap: balance;
     font-family: var(--font-heading);
 }
 
