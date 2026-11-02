@@ -34,7 +34,7 @@ import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
 import { createScanCapability, hashIdentity, verifyScanCapability } from './utils/scanCapability.js';
-import { classifyAnalysisFailure } from './utils/analysisErrors.js';
+import { classifyAnalysisFailure, getAiProviderStatus, recordAnalysisSuccess } from './utils/analysisErrors.js';
 import { chatWithAssistant } from './services/assistantService.js';
 import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
@@ -93,8 +93,8 @@ const cacheResult = (key, value, ttl) => {
 
 // Security Headers & Middlewares
 // The browser talks to Supabase (auth, storage), weather and place lookup directly,
-// and shows store and scan photos from other hosts, so helmet's 'self'-only default
-// would block sign-in and those images on the deployed app.
+// shows store and scan photos from other hosts and embeds the store, so helmet's
+// 'self'-only default would block sign-in, those images and the Shop tab.
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -108,6 +108,8 @@ app.use(helmet({
                 'https://fonts.gstatic.com',
             ],
             imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            // The dashboard Shop tab embeds the KANB store catalogue.
+            frameSrc: ["'self'", 'https://www.kanb.coop.my', 'https://kanb.coop.my'],
             mediaSrc: ["'self'", 'blob:'],
         },
     },
@@ -191,6 +193,7 @@ app.get('/api/health', (req, res) => {
         message: 'Plant Analysis API',
         uptimeSeconds: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
+        ai: getAiProviderStatus(),
         ...(!isProduction && {
             config: {
                 aiProvider: resolveAiProvider().provider,
@@ -744,6 +747,7 @@ app.post('/api/analyze', async (req, res, next) => {
             ));
             analysisResult = tracked.result;
             analysisUsage = tracked.usage;
+            recordAnalysisSuccess();
         } catch (analysisError) {
             if (requestController.signal.aborted) throw analysisError;
             const failure = classifyAnalysisFailure(analysisError, language);
