@@ -76,15 +76,15 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.addToCart': 'Add to Cart',
             'results.itemsSelected': 'Items Selected',
             'results.buySelected': 'Buy Selected Products',
-            'results.ourTrustedSuppliers': 'Our Trusted Suppliers',
+            'results.kanbContactTitle': 'Talk to KANB',
+            'results.kanbContactDesc': 'Message the KANB team.',
+            'results.kanbBrowseStore': 'Browse the KANB store',
             'results.fallbackProductsTitle': 'Fallback Store Suggestions',
             'results.fallbackProductsLabel': 'Fallback products',
             'results.fallbackProductsDesc': 'Fallback description',
             'home.treeScale': 'Per Tree',
             'results.perTreeTitle': 'Per Tree',
             'results.perTreeNote': 'Per-tree guidance',
-            'results.guanChongDesc': 'Supplier desc',
-            'results.tanAgroDesc': 'Supplier desc',
         }[key] || key),
     }),
 }));
@@ -98,19 +98,11 @@ vi.mock('../utils/toast', () => ({
 }));
 
 vi.mock('../data/productRecommendations.js', () => ({
-    suppliers: {
-        guanChongAgro: {
-            name: 'Guan Chong Agro',
-            description: 'results.guanChongDesc',
-            address: 'Address 1',
-            phone: '123',
-        },
-        tanAgro: {
-            name: 'Tan Agro',
-            description: 'results.tanAgroDesc',
-            address: 'Address 2',
-            phone: '456 / 789',
-        },
+    kanbContact: {
+        name: 'KANB Agropreneur Nasional',
+        whatsapp: '+60146193328',
+        whatsappDisplay: '+60 14-619 3328',
+        email: 'agropreneurnasional@gmail.com',
     },
 }));
 
@@ -678,6 +670,28 @@ describe('ProductRecommendations', () => {
         expect(await screen.findByText('No disease-control products recommended')).toBeInTheDocument();
         expect(screen.queryByText('Consultation recommended')).not.toBeInTheDocument();
         expect(screen.queryByText('NPK Maintenance')).not.toBeInTheDocument();
+    });
+
+    it('points farmers to KANB, not third-party suppliers', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Healthy Plant"
+                scanResult={{ resultState: 'healthy', healthStatus: 'healthy' }}
+                displayMode="disease"
+                recommendationState={{
+                    loading: false,
+                    error: null,
+                    errorCode: '',
+                    data: { diseaseControl: [], fertilizers: [], supplements: [], otherPopular: [], consultation: null, storeUrl: '' },
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('Talk to KANB')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'WhatsApp +60 14-619 3328' })).toHaveAttribute('href', 'https://wa.me/60146193328');
+        expect(screen.getByRole('link', { name: 'agropreneurnasional@gmail.com' })).toHaveAttribute('href', 'mailto:agropreneurnasional@gmail.com');
+        expect(screen.queryByText(/Guan Chong|Tan Agro/)).not.toBeInTheDocument();
     });
 
     it('shows a direct empty disease-control state for nutrition-primary results', async () => {
