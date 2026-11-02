@@ -46,6 +46,22 @@ describe('CameraUpload', () => {
         getImageQualityGuidanceMock.mockResolvedValue({ accepted: true });
     });
 
+    it('uses one shared tips disclosure and removes optional wording for requested close-ups', () => {
+        const { rerender } = render(<CameraUpload onImageCapture={vi.fn()} />);
+        expect(screen.getByText('Before you capture', { selector: 'summary' })).toBeInTheDocument();
+        rerender(<CameraUpload onImageCapture={vi.fn()} captureRole="closeup" required />);
+        expect(screen.getByRole('group', { name: 'results.retakeCloseup' })).toBeInTheDocument();
+        expect(screen.queryByText(/Step 2 of 2/)).not.toBeInTheDocument();
+    });
+
+    it('removes the selected file from capture state when its preview is deleted', async () => {
+        const onImageCapture = vi.fn();
+        render(<CameraUpload currentImage="data:image/jpeg;base64,eA==" onImageCapture={onImageCapture} />);
+        const remove = await screen.findByRole('button', { name: 'Clear Image' });
+        fireEvent.click(remove);
+        expect(onImageCapture).toHaveBeenCalledWith(null);
+    });
+
     it('shows a toast error for non-image files', () => {
         const { container } = render(<CameraUpload onImageCapture={vi.fn()} />);
         const input = container.querySelector('input[type="file"][accept="image/*"]');
@@ -137,5 +153,6 @@ describe('CameraUpload', () => {
         fireEvent.change(input, { target: { files: [new File(['img'], 'dark.jpg', { type: 'image/jpeg' })] } });
 
         await waitFor(() => expect(onQualityIssue).toHaveBeenCalledWith('IMAGE_TOO_DARK', 'whole'));
+        expect(notifyErrorMock).not.toHaveBeenCalled();
     });
 });

@@ -955,14 +955,14 @@ const ProductRecommendations = ({
          <div className="checkout-bar-container">
            <div className="checkout-bar app-surface">
              <div className="checkout-info">
-               <span className="checkout-count">{checkoutEligibleIds.length} {t('results.itemsSelected') || 'Items Selected'}</span>
+               <span className="checkout-count" role="status" aria-live="polite" aria-atomic="true">{getLabel(t, checkoutEligibleIds.length === 1 ? 'results.itemSelected' : 'results.itemsSelected', checkoutEligibleIds.length === 1 ? '{count} item selected' : '{count} items selected').replace('{count}', checkoutEligibleIds.length)}</span>
                {!storeUrl && (
                  <span className="checkout-note">{t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.'}</span>
                )}
              </div>
              <button onClick={handleCheckout} className="checkout-button" disabled={!canCheckout}>
                <ShoppingCart size={18} />
-               <span>{t('results.buySelected') || 'Buy Selected Products'}</span>
+               <span>{getLabel(t, 'results.buySelected', 'Buy selected products')}</span>
              </button>
            </div>
          </div>

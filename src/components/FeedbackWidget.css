@@ -2,7 +2,7 @@
   margin-top: 20px;
   padding: 16px;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid rgba(5, 150, 105, 0.12);
   box-shadow: 0 10px 24px rgba(31, 35, 32, 0.06);
 }
@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #2e6b3f;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -20,12 +20,12 @@
   gap: 12px;
   align-items: flex-start;
   margin-bottom: 14px;
-  color: #1f2320;
+  color: var(--color-text-primary);
 }
 
 .feedback-header p {
   margin: 4px 0 0;
-  color: #4c514b;
+  color: var(--color-text-secondary);
   font-size: 0.95rem;
 }
 
@@ -37,9 +37,9 @@
 }
 
 .feedback-choice {
-  border: 1px solid #d3cec4;
-  background: #faf8f4;
-  color: #1f2320;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
   border-radius: 12px;
   padding: 12px;
   font-weight: 600;
@@ -48,9 +48,9 @@
 }
 
 .feedback-choice.active {
-  border-color: #2e6b3f;
-  background: #eef3ec;
-  color: #2e6b3f;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .feedback-form {
@@ -66,18 +66,18 @@
 
 .feedback-field span {
   font-size: 0.92rem;
-  color: #3a3f3a;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .feedback-field input,
 .feedback-field textarea,
 .feedback-field select {
-  border: 1px solid #d3cec4;
+  border: 1px solid var(--color-border-strong);
   border-radius: 10px;
   padding: 10px 12px;
   font: inherit;
-  background: #fff;
+  background: var(--color-bg-card);
 }
 
 .feedback-submit {

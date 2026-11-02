@@ -52,7 +52,7 @@
 
 .scale-button.selected {
   border-color: var(--color-primary);
-  background: var(--color-bg-primary);
+  background: var(--color-bg-card);
   box-shadow: none;
 }
 
@@ -70,7 +70,7 @@
   justify-content: center;
   height: 50px;
   width: 50px;
-  background: #f2efe9;
+  background: var(--color-bg-muted);
   border-radius: 50%;
 }
 

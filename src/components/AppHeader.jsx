@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import LanguageSelector from './LanguageSelector';
 import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react';
-import { checkHealthOnce, hasRecentHealth } from '../utils/serverHealth.js';
+import { useScanService } from '../hooks/useScanService.js';
 import './AppHeader.css';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { NAV_ITEMS, getBackTarget, isNavItemActive } from './navItems.js';
@@ -13,61 +13,7 @@ const AppHeader = ({ isHome }) => {
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
     const location = useLocation();
     const navigate = useNavigate();
-    const [systemStatus, setSystemStatus] = useState(() => {
-        if (typeof navigator !== 'undefined' && !navigator.onLine) return 'offline';
-        return hasRecentHealth() ? 'online' : 'checking';
-    });
-
-    const refreshSystemStatus = useCallback(async () => {
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            setSystemStatus('offline');
-            return;
-        }
-
-        if (hasRecentHealth()) {
-            setSystemStatus('online');
-            return;
-        }
-
-        setSystemStatus((current) => (current === 'online' ? current : 'checking'));
-
-        try {
-            await checkHealthOnce();
-            setSystemStatus('online');
-        } catch {
-            setSystemStatus(navigator.onLine ? 'unavailable' : 'offline');
-        }
-    }, []);
-
-    useEffect(() => {
-        refreshSystemStatus();
-
-        const handleOnline = () => {
-            setSystemStatus('checking');
-            refreshSystemStatus();
-        };
-        const handleOffline = () => setSystemStatus('offline');
-        const handleFocus = () => refreshSystemStatus();
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                refreshSystemStatus();
-            }
-        };
-
-        const interval = window.setInterval(refreshSystemStatus, 60000);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        window.addEventListener('focus', handleFocus);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            window.clearInterval(interval);
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-            window.removeEventListener('focus', handleFocus);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [refreshSystemStatus]);
+    const { status: systemStatus } = useScanService();
 
     const statusLabel = systemStatus === 'online'
         ? label('nav.statusOnline', 'Connected')
@@ -102,7 +48,7 @@ const AppHeader = ({ isHome }) => {
                     </Link>
 
                     <div className="app-header__actions">
-                        <span
+                        {['offline', 'unavailable'].includes(systemStatus) && <span
                             className={`app-header__status app-header__status--${systemStatus}`}
                             role="status"
                             title={statusLabel}
@@ -112,7 +58,7 @@ const AppHeader = ({ isHome }) => {
                             {systemStatus !== 'online' && (
                                 <span className="app-header__status-text-short">{statusShortLabel}</span>
                             )}
-                        </span>
+                        </span>}
                         <button
                             onClick={() => window.location.reload()}
                             className="app-header__refresh-btn"

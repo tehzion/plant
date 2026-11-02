@@ -8,7 +8,7 @@ import {
   isNetworkUnavailableError,
   isTimeoutError,
 } from './networkRequest.js';
-import { getDataConsent } from './dataConsent';
+import { normalizeDataConsent } from '../../shared/dataConsent.js';
 // In local dev, we might need localhost:3002 if not using a proxy.
 const API_URL = import.meta.env.VITE_API_URL || '';
 const HEALTH_URL = `${API_URL}/api/health`;
@@ -292,7 +292,7 @@ export const analyzePlantDisease = async (
   language = 'en',
   location = null,
   imageQuality = null,
-  { crop = '' } = {}
+  { crop = '', dataConsent = null } = {}
 ) => {
   const payload = {
     scanId: crypto.randomUUID(),
@@ -303,7 +303,7 @@ export const analyzePlantDisease = async (
     language,
     location,
     imageQuality,
-    dataConsent: getDataConsent()
+    dataConsent: normalizeDataConsent(dataConsent)
   };
 
   try {

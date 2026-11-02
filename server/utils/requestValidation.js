@@ -79,7 +79,7 @@ export const validateApiRequest = (req, _res, next) => {
             case '/assistant-feedback':
                 if (!['up', 'down'].includes(body.rating)) throw fail('rating must be up or down');
                 text(body.question, 'question', 1500);
-                text(body.answer, 'answer', 3000, true);
+                text(body.answer, 'answer', 3000);
                 text(body.page, 'page', 50);
                 if (body.scanStatus != null && !['diagnosed', 'healthy', 'review', 'retake'].includes(body.scanStatus)) throw fail('Invalid scan status');
                 break;

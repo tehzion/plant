@@ -25,7 +25,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   font-family: var(--font-family);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   border-radius: 10px;
@@ -49,14 +49,14 @@
 
 .action-btn.primary {
   background: var(--gradient-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   box-shadow: none;
   flex: 1.15;
 }
 
 .action-btn.primary:hover:not(:disabled) {
   background: var(--gradient-primary-hover);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .action-btn .icon {
@@ -118,3 +118,6 @@
     min-width: 146px;
   }
 }
+.quick-actions--compact { margin: 0; padding: 0; width: 100%; }
+.quick-actions--compact .actions-container { justify-content: flex-start; }
+.quick-actions--compact .action-btn { flex-direction: row; gap: 8px; font: inherit; min-height: 48px; border: 1px solid var(--color-border); }

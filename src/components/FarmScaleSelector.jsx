@@ -23,7 +23,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
       'Weed Control': 0,
     };
 
-    const density = densityMap[category] || 50;
+    const density = densityMap[category] ?? 50;
     if (density === 0) return t('home.variableEstimate');
 
     return Math.round(acres * density).toLocaleString();
@@ -32,7 +32,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
   const scales = [
     {
       id: 'acre',
-      icon: <Map size={40} color="#16A34A" />,
+      icon: <Map size={40} />,
       name: t('home.acreScale'),
       description: t('home.acreDesc'),
       details: t('home.acreDetail'),
@@ -43,7 +43,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
     },
     {
       id: 'tree',
-      icon: <TreeDeciduous size={40} color="#16A34A" />,
+      icon: <TreeDeciduous size={40} />,
       name: t('home.treeScale'),
       description: t('home.treeDesc'),
       details: t('home.treeDetail'),
@@ -54,7 +54,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
     },
     {
       id: 'personal',
-      icon: <Home size={40} color="#EA580C" />,
+      icon: <Home size={40} />,
       name: t('home.personalScale'),
       description: t('home.personalDesc'),
       details: t('home.personalDetail'),
@@ -69,7 +69,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
 
   return (
     <div className="farm-scale-selector">
-      <h3 className="selector-title">{t('home.selectScale')}</h3>
+      <h2 className="selector-title">{t('home.selectScale')}</h2>
       <p className="selector-subtitle">{t('home.selectScaleSubtitle')}</p>
 
       <div className="scale-grid">
@@ -98,15 +98,17 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
 
       {selectedScaleData && selectedScaleData.hasQuantity && (
         <div className="quantity-input-container quantity-input-reveal mt-md">
-          <label className="quantity-label">{selectedScaleData.quantityLabel}</label>
+          <label htmlFor="scan-scale-quantity" className="quantity-label">{selectedScaleData.quantityLabel}</label>
           <div className="input-with-unit">
             <input
+              id="scan-scale-quantity"
               type={selectedScaleData.inputType}
               value={quantity || ''}
               onChange={(e) => onQuantityChange(e.target.value)}
               placeholder="0"
               className="quantity-input"
-              min="1"
+              min={selected === 'acre' ? '0.01' : '1'}
+              step={selected === 'acre' ? 'any' : '1'}
               disabled={disabled}
             />
             <span className="unit-label">{selectedScaleData.quantityUnit}</span>

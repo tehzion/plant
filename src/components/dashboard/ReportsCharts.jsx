@@ -67,6 +67,7 @@ const ReportsCharts = ({
         action={(
           <select
             className="udp-input rep-plot-select"
+            aria-label={label('profile.plots', 'Plots')}
             value={selectedPlotId}
             onChange={(event) => onSelectPlot(event.target.value)}
           >

@@ -237,8 +237,7 @@ const ReportsTab = ({
         <div className="udp-reports rep-shell">
             <div className="rep-hero">
                 <div className="rep-hero-copy">
-                    <span className="rep-hero-kicker">{label('profile.tabReports', 'Reports')}</span>
-                    <h3 className="rep-hero-title">{label('profile.financialSummary', 'Financial & Yield Summary')}</h3>
+                    <h2 className="rep-hero-title">{label('profile.financialSummary', 'Financial & Yield Summary')}</h2>
                     <p className="rep-hero-subtitle">{reportPrompt}</p>
                 </div>
                 <div className="rep-hero-pill">

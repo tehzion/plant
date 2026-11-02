@@ -50,7 +50,7 @@
 
 .category-btn.active {
   border-color: var(--color-primary);
-  background: var(--color-bg-primary);
+  background: var(--color-bg-card);
   box-shadow: none;
 }
 
@@ -62,7 +62,7 @@
 .category-icon {
   width: 50px;
   height: 50px;
-  background: #f2efe9;
+  background: var(--color-bg-muted);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -72,7 +72,7 @@
 }
 
 .category-icon.is-active {
-  background: #ffffff;
+  background: var(--color-bg-card);
 }
 
 .category-btn:hover:not(:disabled) .category-icon {
@@ -94,14 +94,14 @@
   right: 12px;
   width: 24px;
   height: 24px;
-  background: #3d7a4c;
+  background: var(--color-primary-accent);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  animation: plantCategoryScaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: plantCategoryScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 2;
 }
 
@@ -160,7 +160,7 @@
   padding: 10px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface, var(--color-bg-card));
   color: inherit;
 }
 

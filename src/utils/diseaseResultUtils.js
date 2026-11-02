@@ -127,7 +127,7 @@ export const normalizeDiseaseResult = (result, t) => {
             icon: 'bug',
             iconClassName: 'pathogen-icon',
             label: t('results.primaryCause'),
-            value: pathogenTypeRaw.charAt(0).toUpperCase() + pathogenTypeRaw.slice(1).toLowerCase(),
+            value: t(`results.pathogen${({ fungal: 'Fungal', fungus: 'Fungal', bacterial: 'Bacterial', bacteria: 'Bacterial', viral: 'Viral', virus: 'Viral', pest: 'Pest', insect: 'Pest' })[pathogenTypeRaw.toLowerCase()] || 'Other'}`),
         });
     }
 

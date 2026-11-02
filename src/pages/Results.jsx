@@ -1,30 +1,34 @@
+import { useDataOwner } from '../context/AuthContext';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
-import { getUiCopy } from '../utils/uiCopy.js';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getScanById } from '../utils/localStorage';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import QuickActions from '../components/QuickActions';
-import TabbedResults from '../components/TabbedResults';
-import DiseaseResult from '../components/DiseaseResult';
+import DiseaseResultSections from '../components/disease-result/DiseaseResultSections';
+import { buildProductDiagnosisPayload, createProductConsultationFromDiagnosis } from '../utils/liveProductRecommendations.js';
+import PlantCheckGuide from '../components/PlantCheckGuide.jsx';
+import ScanServiceNotice from '../components/ScanServiceNotice.jsx';
+import { getScanTranslation, cacheScanTranslation, localizedText, applyScanTranslation } from '../utils/scanLanguageCache.js';
+import { getFieldAnswers, saveFieldAnswerWithStatus, localDateKey } from '../utils/farmerPrefs.js';
+import { normalizeDiseaseResult } from '../utils/diseaseResultUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 
-import { Search, Pill, Sprout, ShoppingBag, MapPin, ExternalLink, ClipboardList, MessageSquareText, History as HistoryIcon, ScanLine } from 'lucide-react';
+import { Sprout, MapPin, ExternalLink, ClipboardList, MessageSquareText, History as HistoryIcon, ScanLine } from 'lucide-react';
 import { SCAN_PATH } from '../components/navItems.js';
 import { showToast } from '../utils/toast';
 
-import { getScanResultState, getStandardizedStatus } from '../utils/statusUtils';
 import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
-import { getNutrientNames, normalizeNutritionalIssues } from '../utils/nutritionUtils.js';
+import { getNutrientNames } from '../utils/nutritionUtils.js';
 import { localizeStoredAnalysisResult as refreshStoredAnalysisLanguage } from '../utils/diseaseDetection.js';
 import { buildFollowUpDraftFromScan, saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { lazyWithRetry } from '../utils/lazyWithRetry.js';
 import './Results.css';
 import { buildScanResultModel } from '../utils/scanResultModel.js';
 import ScanDecisionSummary, { nextScanStep } from '../components/ScanDecisionSummary.jsx';
-import TodayPlanCard from '../components/results/TodayPlanCard.jsx';
+import TodayPlanCard, { recheckDays } from '../components/results/TodayPlanCard.jsx';
 import { fetchScanExpertReview } from '../utils/expertReview.js';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { confidencePercent } from '../../shared/scanResultPolicy.js';
@@ -32,10 +36,6 @@ import ScanFollowUpTracker from '../components/ScanFollowUpTracker.jsx';
 import { useProductRecommendations } from '../hooks/useProductRecommendations.js';
 import { buildAssistantScanContext, openAssistant, setAssistantScanContext } from '../utils/assistantContext.js';
 
-const TreatmentRecommendations = lazyWithRetry(
-  () => import('../components/TreatmentRecommendations'),
-  'results-treatment-recommendations',
-);
 const NutritionalAnalysis = lazyWithRetry(
   () => import('../components/NutritionalAnalysis'),
   'results-nutritional-analysis',
@@ -43,10 +43,6 @@ const NutritionalAnalysis = lazyWithRetry(
 const ProductRecommendations = lazyWithRetry(
   () => import('../components/ProductRecommendations'),
   'results-product-recommendations',
-);
-const HealthyCarePlan = lazyWithRetry(
-  () => import('../components/HealthyCarePlan'),
-  'results-healthy-care-plan',
 );
 const FeedbackWidget = lazyWithRetry(
   () => import('../components/FeedbackWidget'),
@@ -59,22 +55,20 @@ const RESULTS_SECTION_FALLBACK = (
   </div>
 );
 
-const RESULT_TAB_KEYS = ['disease', 'care', 'nutrition', 'products'];
-
-const getResultTabIndex = (value) => {
-  const index = RESULT_TAB_KEYS.indexOf(value);
-  return index >= 0 ? index : 0;
-};
-
 const Results = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const [activeResultTab, setActiveResultTab] = useState(() => getResultTabIndex(requestedTab));
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(requestedTab));
   const { t, language } = useLanguage();
   const { user } = useAuth();
+    const dataOwner = useDataOwner();
   const [scan, setScan] = useState(null);
+  const [planStarted, setPlanStarted] = useState(() => getFieldAnswers(id, dataOwner)._planStarted === 'yes');
+  const [productsOpen, setProductsOpen] = useState(requestedTab === 'products');
+  const [cachedLanguage, setCachedLanguage] = useState(false);
+  const [planStorageError, setPlanStorageError] = useState(false);
   const [recheckRequest, setRecheckRequest] = useState(null);
   const [expertReview, setExpertReview] = useState(null);
   const [originalScan, setOriginalScan] = useState(null);
@@ -84,18 +78,6 @@ const Results = () => {
   const [translationError, setTranslationError] = useState(false);
   const enhancementCopy = getEnhancementCopy(language);
   const [scanLoading, setScanLoading] = useState(true);
-  useEffect(() => {
-    setActiveResultTab(getResultTabIndex(requestedTab));
-  }, [requestedTab]);
-
-  const selectResultTab = useCallback((index) => {
-    setActiveResultTab(index);
-    const nextParams = new URLSearchParams(searchParams);
-    if (index === 0) nextParams.delete('tab');
-    else nextParams.set('tab', RESULT_TAB_KEYS[index]);
-    setSearchParams(nextParams, { replace: true });
-  }, [searchParams, setSearchParams]);
-
   const label = useCallback((key, fallback) => {
     const translated = t(key);
     return translated && translated !== key ? translated : fallback;
@@ -103,17 +85,23 @@ const Results = () => {
 
   useEffect(() => {
     setScanLoading(true);
+    setPlanStarted(getFieldAnswers(id, dataOwner)._planStarted === 'yes');
+    setRecheckRequest(null);
+    let cancelled = false;
     Promise.resolve(getScanById(id, user?.id ?? null))
       .then(result => {
+        if (cancelled) return;
         setScan(result);
         setOriginalScan(result);
         setTranslationError(false);
         setScanLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setScan(null);
         setScanLoading(false);
       });
+    return () => { cancelled = true; };
   }, [id, user?.id]);
 
   // Expert reviews are optional extra context; a failed or offline lookup
@@ -134,18 +122,34 @@ const Results = () => {
       const localized = await refreshStoredAnalysisLanguage(originalScan, language);
       if (request !== translationRequest.current) return;
       if (localized?.analysisLanguage !== language) throw new Error('Translation unavailable');
-      setScan(current => current?.id === localized.id ? { ...current, ...localized, followUp: current.followUp, plot_id: current.plot_id } : current);
+      const cached = cacheScanTranslation(originalScan, localized, language, user?.id);
+      setCachedLanguage(cached);
+      setScan(current => current?.id === originalScan.id ? { ...applyScanTranslation(current, localized), analysisLanguage: language } : current);
     } catch { if (request === translationRequest.current) setTranslationError(true); }
     finally { if (request === translationRequest.current) setTranslating(false); }
   };
 
-  const result = useMemo(() => buildScanResultModel(scan || {}, language), [scan, language]);
+  useEffect(() => {
+    if (!originalScan) return;
+    const cached = getScanTranslation(originalScan, language, user?.id);
+    const text = cached || originalScan;
+    setScan(current => current?.id === originalScan.id ? { ...text, followUp: current.followUp, plot_id: current.plot_id } : current);
+    setCachedLanguage(Boolean(cached));
+  }, [originalScan, language, user?.id]);
+
+  const adviceLanguage = scan?.analysisLanguage || scan?.language;
+  const adviceReadable = !adviceLanguage || adviceLanguage === language;
+  const policyResult = useMemo(() => buildScanResultModel(originalScan || scan || {}, language), [originalScan, scan, language]);
+  const result = useMemo(() => {
+    const text = localizedText(scan);
+    return { ...applyScanTranslation(policyResult, scan), treatments: policyResult.treatmentEligible ? text.treatments || policyResult.treatments : [], immediateActions: policyResult.needsReview ? policyResult.immediateActions : text.immediateActions || policyResult.immediateActions, analysisLanguage: adviceLanguage };
+  }, [scan, policyResult, adviceLanguage]);
   const productRecommendationState = useProductRecommendations({
     plantType: result.plantType || '',
     disease: result.disease || '',
-    scanResult: result,
+    scanResult: policyResult,
     language,
-    enabled: Boolean(scan && !scanLoading),
+    enabled: Boolean(scan && !scanLoading && !result.needsReview && adviceReadable && detailsOpen && productsOpen),
     scanId: scan?.id || '',
     feedbackToken: scan?.feedbackToken || '',
   });
@@ -223,19 +227,12 @@ const Results = () => {
     && locationNameValue !== t('common.locationNA')
   );
 
-  const standardizedStatus = result.healthStatus;
   const healthy = result.healthy;
   const followUpDraft = buildFollowUpDraftFromScan({
     ...result,
   }, language);
-  const followUpActionLabel = followUpDraft.activity_type === 'inspect'
-    ? label('results.logRoutineCheck', 'Log routine check')
-    : followUpDraft.activity_type === 'scout'
-      ? label('results.logFieldScouting', 'Log field scouting')
-      : label('results.logTreatmentAction', 'Log treatment action');
-
   const handleScanAgain = () => {
-    navigate('/?scan=true');
+    navigate('/?scan=true', result.requiresRetake ? { state: { retakeReason: adviceReadable ? result.retakeReason || t('results.retakeSequence') : t('results.headlineretake') } } : undefined);
   };
 
   const handleLogFollowUp = () => {
@@ -495,99 +492,72 @@ ${t('pdf.generatedBy')}
     navigate('/history');
   };
 
-  // Prepare tabs for TabbedResults
-  const tabs = [
-    {
-      icon: <Search size={20} />,
-      title: t('results.diseaseInfo'),
-      content: <DiseaseResult result={result} image={scan.image || scan.image_url} leafImage={scan.leafImage || scan.leaf_image_url} />
-    },
-    {
-      icon: <Pill size={20} />,
-      title: healthy ? t('results.care') : result.needsReview ? label('results.nextChecks', 'Next checks') : t('results.treatment'),
-      content: (
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <div>
-            {!healthy ? (
-              <TreatmentRecommendations result={result} />
-            ) : (
-              <HealthyCarePlan carePlan={scan.healthyCarePlan} plantType={scan.plantType} />
-            )}
-          </div>
-        </Suspense>
-      )
-    },
-    {
-      icon: <Sprout size={20} />,
-      title: t('results.nutrition'),
-      badge: normalizedNutrition.status === 'confirmed' ? '!' : (normalizedNutrition.status === 'possible' ? '?' : null),
-      content: (
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <NutritionalAnalysis
-            nutritionalIssues={normalizedNutrition}
-            fertilizerRecommendations={scan.fertilizerRecommendations}
-            scanResult={result}
-          />
-          <ProductRecommendations
-            plantType={result.plantType}
-            disease={result.disease}
-            farmScale={result.farmScale}
-            scanResult={result}
-            displayMode="nutrition"
-            recommendationState={productRecommendationState}
-          />
-        </Suspense>
-      )
-    },
-    {
-      icon: <ShoppingBag size={20} />,
-      title: t('results.products'),
-      content: (
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <div>
-            <ProductRecommendations
-              plantType={scan.plantType}
-              disease={result.disease}
-              farmScale={result.farmScale}
-              scanResult={result}
-              displayMode="disease"
-              recommendationState={productRecommendationState}
-            />
-          </div>
-        </Suspense>
-      )
-    }
-  ];
+  const detailedResult = normalizeDiseaseResult(result, t);
+  const suggestRecheck = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + recheckDays(result));
+    setRecheckRequest({ date: localDateKey(date), at: Date.now() });
+  };
+  const handleAskExpert = () => window.open(createProductConsultationFromDiagnosis(buildProductDiagnosisPayload({ plantType: result.plantType, disease: result.disease, scanResult: result }), undefined, language).url, '_blank', 'noopener,noreferrer');
+  const startTreatmentPlan = () => {
+    const next = !planStarted;
+    setPlanStorageError(!saveFieldAnswerWithStatus(id, '_planStarted', next ? 'yes' : 'no', dataOwner).saved);
+    setPlanStarted(next);
+  };
 
   return (
     <div className="results page fade-in">
       <div className="container results-layout fade-slide-up">
-        <ScanDecisionSummary result={result} expertReview={expertReview} />
-        {(originalScan?.analysisLanguage || originalScan?.language) !== language && <section className="analysis-language ui-card ui-card--compact" aria-busy={translating}>
-          <p>{enhancementCopy.source}: {enhancementCopy.languages[originalScan?.analysisLanguage || originalScan?.language] || originalScan?.analysisLanguage || originalScan?.language || enhancementCopy.unknown}</p>
-          {scan.analysisLanguage === language && <p role="status">{enhancementCopy.translated}</p>}
-          <div className="ui-action-row">
-            <button className="btn btn-secondary" disabled={translating || scan.analysisLanguage === language} onClick={translateAnalysis}>{translating ? enhancementCopy.translating : enhancementCopy.translate}</button>
-            {scan.analysisLanguage !== (originalScan?.analysisLanguage || originalScan?.language) && <button className="btn btn-secondary" disabled={translating} onClick={() => setScan(current => ({ ...originalScan, followUp: current.followUp, plot_id: current.plot_id }))}>{enhancementCopy.original}</button>}
-          </div>
-          {translationError && <p role="alert">{enhancementCopy.failed}</p>}
+        <ScanDecisionSummary result={result} adviceReadable={adviceReadable} expertReview={expertReview} image={scan.image || scan.image_url} />
+        {!adviceReadable && !result.requiresRetake && <section className="analysis-language" aria-busy={translating}>
+          <p>{t('results.analysisLanguageHint').replace('{language}', enhancementCopy.languages[adviceLanguage] || enhancementCopy.unknown)}</p>
+          {(!result.treatmentEligible || result.requiresRetake) && <button type="button" className="btn btn-secondary" disabled={translating} onClick={translateAnalysis}>{t(translating ? 'results.translateBusy' : 'results.translateAdvice')}</button>}
+          {translationError && <p role="alert">{t('results.translationUnavailable')}</p>}
+          <button type="button" className="btn btn-secondary" onClick={handleAskExpert}>{t('results.actionExpert')}</button>
         </section>}
-        <TodayPlanCard result={result} scanId={id} onSetRecheck={setRecheckRequest} />
+        {cachedLanguage && adviceReadable && <p className="results-language-saved">{t('results.cachedTranslation')}</p>}
+        <TodayPlanCard key={`${id}-${language}`} result={result} sourceResult={policyResult} scanId={id} adviceReadable={adviceReadable} planStorageError={planStorageError} planStarted={planStarted && adviceReadable} onSetRecheck={suggestRecheck} />
         <div className="results-next-action">
-          <button className="btn btn-primary" onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? () => { selectResultTab(1); document.getElementById('results-diagnostics')?.scrollIntoView({ block: 'start' }); } : handleLogFollowUp}>
-            {result.requiresRetake ? getUiCopy(language).retake : result.needsReview ? getUiCopy(language).inspect : getUiCopy(language).care}
+          <button type="button" className="btn btn-primary" disabled={translating} aria-expanded={result.treatmentEligible && adviceReadable ? planStarted : undefined} aria-controls={result.treatmentEligible && adviceReadable ? 'today-plan' : undefined} onClick={result.requiresRetake ? handleScanAgain : result.needsReview ? handleAskExpert : healthy ? suggestRecheck : !adviceReadable ? translateAnalysis : startTreatmentPlan}>
+            {t(translating ? 'results.translateBusy' : !adviceReadable && result.treatmentEligible ? 'results.translateAdvice' : `results.${result.requiresRetake ? 'actionRetake' : result.needsReview ? 'actionExpert' : healthy ? 'actionHealthy' : planStarted ? 'closePlan' : 'actionTreat'}`)}
           </button>
-          <button className="btn btn-secondary" onClick={openAssistant}>
-            <MessageSquareText size={18} aria-hidden="true" /> {label('assistant.askAboutResult', 'Ask about this result')}
-          </button>
+          {result.needsReview && !result.requiresRetake && <p className="results-expert-channel">{t('results.expertChannel')}</p>}
         </div>
-        <div className="results-content-grid">
-        {/* Tabbed Results */}
-        <div id="results-diagnostics" className="results-diagnostics fade-slide-up" style={{ animationDelay: '0.1s' }}>
-          <TabbedResults tabs={tabs} activeIndex={activeResultTab} onTabChange={selectResultTab} />
-        </div>
-
-        <aside className="results-sidebar">
+        {!result.requiresRetake && <section className="results-watch" aria-labelledby="watch-title">
+          <h2 id="watch-title">{t('results.watchTitle')}</h2>
+          <p>{t(healthy ? 'results.watchHealthy' : 'results.watchDisease')}</p>
+        </section>}
+        <PlantCheckGuide />
+        <ScanServiceNotice />
+        {!result.requiresRetake && <button type="button" className="btn btn-secondary" onClick={handleLogFollowUp}><ClipboardList size={18} aria-hidden="true" />{t('results.logCare')}</button>}
+        {!result.requiresRetake && <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} healthy={healthy} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />}
+        <details className="results-more" open={detailsOpen} onToggle={event => setDetailsOpen(event.currentTarget.open)}>
+          <summary>{t('results.moreDetails')}</summary>
+          {detailsOpen && <div className="results-more__content">
+          <details className="results-detail-group" open><summary><h2>{t('results.evidenceTitle')}</h2></summary>
+          {(scan.leafImage || scan.leaf_image_url) && <img className="results-detail-photo" src={scan.leafImage || scan.leaf_image_url} alt={t('home.addLeafPhoto')} loading="lazy" />}
+          {adviceReadable && <DiseaseResultSections normalized={{ ...detailedResult, showDemoModeWarning: false }} t={t} />}
+          {adviceReadable && result.diagnosticEvidence.evidenceFor.length > 0 && <ul>{result.diagnosticEvidence.evidenceFor.map((item, i) => <li key={i}>{item}</li>)}</ul>}
+          {adviceReadable && [...new Set([result.abstainReason, ...result.diagnosticEvidence.evidenceAgainst].filter(Boolean))].map((item, i) => <p key={i}>{item}</p>)}
+          {result.needsReview && !result.requiresRetake && <section><h3>{t('results.expertHelp')}</h3><p>{t('results.expertHelpText')}</p></section>}
+          {!adviceReadable && <details className="results-original-advice"><summary>{t('results.sourceLanguageLabel').replace('{language}', enhancementCopy.languages[adviceLanguage] || enhancementCopy.unknown)}</summary><div lang={adviceLanguage}><p>{result.disease}</p>{result.retakeReason && <p>{result.retakeReason}</p>}<ul>{[...result.immediateActions, ...result.treatments].map((item, i) => <li key={i}>{item}</li>)}</ul></div></details>}
+          </details>
+          {!result.needsReview && adviceReadable && <details className="results-detail-group"><summary><h2>{t('results.detailsCare')}</h2></summary>
+            <h3>{healthy ? t('results.care') : t('results.prevention')}</h3>
+            <ul>{result.prevention.map((item, i) => <li key={i}>{item}</li>)}</ul>
+            {healthy && ['dailyCare', 'weeklyCare', 'monthlyCare', 'bestPractices'].map(key => result.healthyCarePlan?.[key]?.length > 0 && <div key={key}><h3>{t(`results.${key}`)}</h3><ul>{result.healthyCarePlan[key].map((item, i) => <li key={i}>{item}</li>)}</ul></div>)}
+            {result.treatmentEligible && result.treatments.length > 1 && <section><h3>{t('results.treatments')}</h3><ol start={2}>{result.treatments.slice(1).map((item, i) => <li key={i}>{item}</li>)}</ol></section>}
+            <Suspense fallback={RESULTS_SECTION_FALLBACK}><NutritionalAnalysis nutritionalIssues={normalizedNutrition} fertilizerRecommendations={scan.fertilizerRecommendations} scanResult={result} /></Suspense>
+          </details>}
+          {!result.needsReview && adviceReadable && <details className="results-detail-group" open={productsOpen} onToggle={event => setProductsOpen(event.currentTarget.open)}><summary><h2>{t('results.detailsProducts')}</h2></summary>
+            {productsOpen && <Suspense fallback={RESULTS_SECTION_FALLBACK}>
+              {productRecommendationState.error ? <div className="results-catalog-notice" role="status"><p>{t('results.catalogUnavailable')}</p><button type="button" className="btn btn-secondary" onClick={productRecommendationState.retry}>{t('common.retry')}</button></div> : <>
+                <ProductRecommendations plantType={result.plantType} disease={result.disease} farmScale={result.farmScale} scanResult={policyResult} displayMode="disease" recommendationState={productRecommendationState} />
+                <ProductRecommendations plantType={result.plantType} disease={result.disease} farmScale={result.farmScale} scanResult={policyResult} displayMode="nutrition" recommendationState={productRecommendationState} />
+              </>}
+            </Suspense>}
+          </details>}
+          <details className="results-detail-group"><summary><h2>{t('results.detailsTools')}</h2></summary>
         {/* Scan Metadata Card - Modern Design */}
         <details className="scan-metadata-card app-surface app-surface--soft results-secondary">
           <summary className="results-section-kicker">{scanCopy.scanDetails}</summary>
@@ -636,7 +606,7 @@ ${t('pdf.generatedBy')}
                               'Palm/Rubber': 130, 'Palm Oil': 55, 'Vegetables': 0, 'Fruits': 0,
                               'Rice': 0, 'Weed Control': 0
                             };
-                            const density = densityMap[categoryRaw] || 50;
+                            const density = densityMap[categoryRaw] ?? 50;
                             if (density === 0) return '';
                             return `${Math.round(scan.scaleQuantity * density).toLocaleString()} ${t('home.trees')}`;
                           })()}
@@ -707,38 +677,10 @@ ${t('pdf.generatedBy')}
           </div>
         </details>
 
-        <section className="results-followup-group">
-        <ScanFollowUpTracker key={`${id}-${user?.id || 'guest'}`} scan={scan} openRequest={recheckRequest} onSaved={metadata => setScan(current => ({ ...current, ...metadata }))} />
-        <div className="follow-up-card app-surface app-surface--soft">
-          <div className="follow-up-icon">
-            <ClipboardList size={22} />
-          </div>
-          <div className="follow-up-copy">
-            <div className="results-section-kicker">{label('results.followUpKicker', 'Farm follow-up')}</div>
-            <h3>{label('results.followUpTitle', 'Turn this scan into a farm log')}</h3>
-            <p>
-              {healthy
-                ? label('results.followUpHealthyDesc', 'A routine inspection draft is ready for the Daily Log.')
-                : followUpDraft.activity_type === 'scout'
-                  ? label('results.followUpScoutDesc', 'A scouting draft is ready so you can verify the issue in the field.')
-                  : label('results.followUpTreatmentDesc', 'A treatment draft is ready with the diagnosis, severity, and suggested actions.')}
-              {' '}
-              {user
-                ? label('results.followUpSignedInHint', 'Review and save it in your Daily Log.')
-                : label('results.followUpLoginHint', 'Sign in or use the demo account to save it.')}
-            </p>
-          </div>
-          <button type="button" className="follow-up-btn btn btn-primary" onClick={handleLogFollowUp}>
-            <ClipboardList size={16} />
-            <span>{followUpActionLabel}</span>
-          </button>
-        </div>
-
-        </section>
-        </aside>
-        </div>
+        <button type="button" className="btn btn-secondary" onClick={openAssistant}><MessageSquareText size={18} aria-hidden="true" />{t('assistant.askAboutResult')}</button>
         {/* Quick Actions Bar */}
         <QuickActions
+          compact
           onScanAgain={handleScanAgain}
           onDownload={handleDownload}
           onShare={handleShare}
@@ -746,9 +688,14 @@ ${t('pdf.generatedBy')}
         />
 
         {/* Feedback Widget */}
+        <details className="results-feedback-details"><summary>{t('feedback.title')}</summary>
         <Suspense fallback={RESULTS_SECTION_FALLBACK}>
           <FeedbackWidget scanId={id} scan={scan} />
         </Suspense>
+        </details>
+          </details>
+        </div>}
+        </details>
 
 
 

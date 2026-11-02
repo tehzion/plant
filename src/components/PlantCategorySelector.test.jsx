@@ -22,6 +22,7 @@ describe('PlantCategorySelector', () => {
     expect(onSelect).toHaveBeenCalledWith('Rice');
   });
 
+
   it('marks the selected crop button as pressed', () => {
     render(<PlantCategorySelector selected="Rice" onSelect={vi.fn()} />);
 

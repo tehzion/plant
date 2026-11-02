@@ -1,3 +1,4 @@
+import { hasAnalyticsConsent } from '../shared/privacy.js';
 import { applyDecisionCheck, checkDecisionShadow, resolveDecisionCheckMode } from './services/decisionShadowService.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
@@ -19,6 +20,7 @@ import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerReque
 import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
+import { consumeFreeScanQuota, scanQuotaMessage } from './services/scanQuotaService.js';
 import { trackAiUsage } from './utils/aiUsage.js';
 import { correctMygapLog, deleteMygapLog, listMygapLogRevisions } from './services/mygapRecordService.js';
 import { buildRecommendationSnapshot, saveRecommendationSnapshot } from './services/recommendationSnapshotService.js';
@@ -231,6 +233,9 @@ app.post('/api/data/:table', async (req, res, next) => {
     try {
         const { table } = req.params;
         if (getTelemetryDatasetNames().includes(table)) {
+            if (table === 'product_events' && !hasAnalyticsConsent((req.body?.payload || req.body)?.metadata?.analyticsConsent)) {
+                return res.status(202).json({ skipped: true, reason: 'optional_analytics_not_consented' });
+            }
             const user = await optionalAuthenticatedUser(req);
             const row = await insertTelemetryRow(table, req.body?.payload || req.body, {
                 userId: user?.id || null,
@@ -399,6 +404,8 @@ app.use('/api/analyze', async (req, res, next) => {
 app.use(aiRoutes, async (req, res, next) => {
     if (req.method !== 'POST') return next();
     try {
+        // Plant scans have their own allowance; other AI features cannot spend it.
+        if (req.baseUrl === '/api/analyze') return next();
         const quota = await consumeAiQuota({ identity: req.aiIdentity, limit: Number(process.env.AI_IDENTITY_DAILY_LIMIT) || 50 });
         if (!quota.allowed) {
             console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId, identity: req.aiIdentity }));
@@ -477,11 +484,11 @@ app.post('/api/ask', async (req, res, next) => {
         // 2. Check Cache
         const cachedAnswer = aiCache.get(cacheKey);
         if (cachedAnswer) {
-            console.log(`🧠 Cache HIT for question: "${question.substring(0, 30)}..."`);
+            console.log('Question cache hit');
             return res.json({ ...cachedAnswer, cached: true });
         }
 
-        console.log(`🧠 Cache MISS for question: "${question.substring(0, 30)}..." - Calling OpenAI...`);
+        console.log('Question cache miss');
 
         // 3. Call Service
         const answer = await withAbortableTimeout(
@@ -511,7 +518,11 @@ app.post('/api/ask', async (req, res, next) => {
 
 // Floating help assistant: short answers that link to encyclopedia entries,
 // live store products and the support team.
-app.post('/api/assistant/chat', async (req, res, next) => {
+const assistantBurstLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+    message: { error: 'ASSISTANT_RATE_LIMIT', message: 'Please slow down. You can ask up to 5 questions per minute.' },
+});
+app.post('/api/assistant/chat', assistantBurstLimiter, async (req, res, next) => {
     const requestController = new AbortController();
     const requestDeadline = setTimeout(() => requestController.abort(new Error('Assistant deadline exceeded')), Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000);
     const abortOnDisconnect = () => requestController.abort(new Error('Assistant request cancelled by client'));
@@ -665,7 +676,17 @@ app.post('/api/analyze', async (req, res, next) => {
             return res.status(400).json({ error: 'Image (treeImage) is required' });
         }
 
-        console.log(`📸 New Analysis Request - Category: ${category}${farmerCrop ? ` (${farmerCrop})` : ''}, Location: ${location || 'Not provided'}`);
+        const scanQuota = await consumeFreeScanQuota(req.aiIdentity || `ip:${req.ip || 'unknown'}`);
+        if (!scanQuota.allowed) {
+            return res.status(429).json({
+                error: scanQuotaMessage(language, scanQuota.limit),
+                code: 'FREE_SCAN_DAILY_LIMIT',
+                limit: scanQuota.limit,
+                resetTimeZone: 'Asia/Kuala_Lumpur',
+            });
+        }
+
+        console.log('Analysis request accepted');
 
         // 1. Generate Image Hash for Caching
         const cacheKey = buildAnalysisCacheKey({ ...req.body, crop: farmerCrop });
@@ -679,7 +700,7 @@ app.post('/api/analyze', async (req, res, next) => {
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
             logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category, dataConsent,
-                result: cachedResult, metadata: { language, location, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
+                result: cachedResult, metadata: { language, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
                 .catch(err => console.error('Data logging failed:', err.message));
             return res.json({ ...cachedResult, id: scanId, feedbackToken, cached: true });
         }
@@ -799,7 +820,6 @@ app.post('/api/analyze', async (req, res, next) => {
             result: finalResult,
             metadata: {
                 language,
-                location,
                 farmerCrop: farmerCrop || null,
                 source: identificationSource,
                 imageQuality,

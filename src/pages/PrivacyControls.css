@@ -1,0 +1,8 @@
+.privacy-controls .legal-section-card h2 { font-size: 1.3rem; margin-bottom: 1rem; }
+.privacy-controls .legal-section-card p { line-height: 1.7; margin: 1rem 0; color: var(--color-text-secondary); }
+.privacy-controls .privacy-choice { display: flex; align-items: flex-start; gap: .75rem; line-height: 1.5; margin: 1rem 0; cursor: pointer; }
+.privacy-controls input[type="checkbox"] { flex: 0 0 auto; inline-size: 1.2rem; block-size: 1.2rem; margin-block-start: .2rem; accent-color: var(--color-primary); }
+.privacy-controls .privacy-requests { padding-inline-start: 1.3rem; display: grid; gap: .8rem; }
+.privacy-controls a { overflow-wrap: anywhere; text-underline-offset: .2em; }
+.privacy-controls .privacy-status { min-block-size: 2rem; margin-block: 1.5rem; }
+.privacy-controls .btn { white-space: normal; min-height: 44px; }

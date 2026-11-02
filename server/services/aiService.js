@@ -1,3 +1,4 @@
+import { coarseLocation } from '../../shared/coarseLocation.js';
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { resolveAiProvider, isAiProviderConfigured } from '../utils/aiProvider.js';
 import { getScanQualityCopy, scoutCheckLines } from '../../shared/scanQualityCopy.js';
@@ -1611,7 +1612,7 @@ export function summarizeHarvestDataForAI(harvestData = []) {
             harvestKg: Number.isFinite(Number(entry.kg_harvested)) ? Number(entry.kg_harvested) : null,
             quality: entry.quality_grade || null,
             pricePerKg: Number.isFinite(Number(entry.price_per_kg)) ? Number(entry.price_per_kg) : null,
-            buyer: clipText(entry.buyer_name || '', 60) || null,
+            // Buyer identity is not required for harvest advice.
         }));
 }
 
@@ -3891,7 +3892,7 @@ Return JSON.`
  */
 export async function parseNaturalLanguageLog(text, language = 'en', options = {}) {
     try {
-        console.log(`🤖 Auto-Enhance Request: "${text.substring(0, 50)}..."`);
+        console.log('Farm log enhancement requested');
         const response = await createChatCompletion({
             model: OPENAI_PRIMARY_MODEL,
             response_format: { type: "json_object" },
@@ -3938,7 +3939,7 @@ Extract these exact fields (Return JSON):
 
         const content = cleanJsonString(response.choices[0].message.content);
         const parsed = normalizeParsedLogResult(JSON.parse(content));
-        console.log('✅ AI Parsed Result:', JSON.stringify(parsed, null, 2));
+        console.log('Farm log enhancement completed');
         return parsed;
     } catch (error) {
         console.error('❌ NLP Parsing failed:', error.message);
@@ -3957,17 +3958,18 @@ export async function generatePredictiveRisk(plots, logs, alerts, location, lang
         const summarizedLogs = summarizeFarmLogsForAI(logs);
         const summarizedAlerts = summarizeFarmAlertsForAI(alerts);
         
-        if (location && location.lat && location.lng) {
+        const area = coarseLocation(location);
+        if (area) {
             try {
                 // Fetch next 3 days weather forecast
                 const weatherRes = await withAbortableTimeout(
-                    (signal) => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=3`, { signal }),
+                    (signal) => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${area.lat}&longitude=${area.lng}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=3`, { signal }),
                     Number(process.env.WEATHER_REQUEST_TIMEOUT_MS) || 10000,
                     { signal: options.signal, timeoutMessage: 'Weather request timed out' },
                 );
                 if (weatherRes.ok) {
                     const weatherData = await weatherRes.json();
-                    weatherContext = `Live Weather Forecast (Next 3 Days - Lat: ${location.lat}, Lng: ${location.lng}):\n`;
+                    weatherContext = `Live Weather Forecast (Next 3 Days - approximate local area):\n`;
                     const daily = weatherData.daily;
                     if (daily && daily.time) {
                         for (let i = 0; i < daily.time.length; i++) {

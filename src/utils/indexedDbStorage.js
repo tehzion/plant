@@ -184,3 +184,44 @@ export const confirmLegacyCollectionRemoval = async ({ owner, legacyKey, storage
     storage?.removeItem(legacyKey);
     return true;
 };
+
+// Privacy controls operate on one explicit actor, including queued copies.
+// They never delete the shared database or another account's records.
+export const exportOwnerDeviceData = async (owner) => {
+    if (!owner) throw new Error('A data owner is required.');
+    const rows = {};
+    for (const name of ['records', 'photos', 'pendingOps']) {
+        rows[name] = await transaction(STORES[name], 'readonly', store => requestResult(store.index('owner').getAll(owner)));
+    }
+    rows.captureDrafts = await transaction(STORES.records, 'readonly', store => requestResult(store.index('owner').getAll(`capture:${owner}`)));
+    rows.metadata = (await transaction(STORES.metadata, 'readonly', store => requestResult(store.getAll())))
+        .filter(row => row.key.startsWith(`cloud-cache:${owner}:`) || row.key.startsWith(`indexeddb:migrated:${owner}:`));
+    return rows;
+};
+
+export const clearOwnerDeviceData = async (owner) => {
+    if (!owner) throw new Error('A data owner is required.');
+    const db = await openDatabase();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(Object.values(STORES), 'readwrite');
+        for (const name of ['records', 'photos', 'pendingOps']) {
+            const store = tx.objectStore(STORES[name]);
+            const cursor = store.openCursor();
+            cursor.onsuccess = () => {
+                const item = cursor.result;
+                if (!item) return;
+                if (item.value.owner === owner || (name === 'records' && item.value.owner === `capture:${owner}`)) item.delete();
+                item.continue();
+            };
+        }
+        const cursor = tx.objectStore(STORES.metadata).openCursor();
+        cursor.onsuccess = () => {
+            const item = cursor.result;
+            if (!item) return;
+            if (item.key.startsWith(`cloud-cache:${owner}:`) || item.key.startsWith(`indexeddb:migrated:${owner}:`)) item.delete();
+            item.continue();
+        };
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('Device data could not be cleared.')); };
+    });
+};

@@ -7,14 +7,12 @@ import { Search } from 'lucide-react';
 import './Encyclopedia.css';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { setAssistantPageTopic } from '../utils/assistantContext.js';
-import { useScrollEdges } from '../hooks/useScrollEdges.js';
 
 const Encyclopedia = () => {
   const { t, label, language } = useLanguage();
   const [searchParams] = useSearchParams();
   // ?q= lets the assistant link straight to one entry.
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
-  const categoryShelfRef = useScrollEdges();
   const linkedQuery = searchParams.get('q');
   useEffect(() => {
     if (linkedQuery) setSearchQuery(linkedQuery);
@@ -74,7 +72,7 @@ const Encyclopedia = () => {
   }, [searchQuery, selectedCategory]);
 
   return (
-    <div className="page encyclopedia-page slide-up">
+    <div className="page encyclopedia-page">
       <div className="encyclopedia-layout">
         <header className="encyclopedia-header">
           <h1 className="encyclopedia-page-title">{t('encyclopedia.title')}</h1>
@@ -101,7 +99,11 @@ const Encyclopedia = () => {
           </div>
 
           <div className="category-wrapper">
-            <div ref={categoryShelfRef} className="superapp-shelf-container encyclopedia-category-shelf scroll-fade">
+            <label className="encyclopedia-category-label" htmlFor="library-category">{t('encyclopedia.categoryLabel')}</label>
+            <select id="library-category" className="encyclopedia-category-select" value={selectedCategory} onChange={event => setSelectedCategory(event.target.value)}>
+              {categories.map(category => <option key={category} value={category}>{getCategoryLabel(category)}</option>)}
+            </select>
+            <div className="encyclopedia-category-shelf">
               {categories.map(category => {
                 const isActive = selectedCategory === category;
                 const labelText = getCategoryLabel(category);

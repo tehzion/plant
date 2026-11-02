@@ -1,3 +1,4 @@
+import { useDataOwner } from '../context/AuthContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -35,6 +36,7 @@ const MYGAP_TABS = [
 const MyGapPage = () => {
     const { t, language } = useLanguage();
     const { user } = useAuth();
+    const dataOwner = useDataOwner();
     const { notify } = useNotifications();
     const { getLocation } = useLocation();
 
@@ -52,11 +54,16 @@ const MyGapPage = () => {
         plots,
     } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
-    const [searchParams] = useSearchParams();
-    // Records are the daily task, so the log opens first; ?tab= deep-links a tab.
-    const [activeTab, setActiveTab] = useState(() => (
-        MYGAP_TABS.some((tab) => tab.id === searchParams.get('tab')) ? searchParams.get('tab') : 'logbook'
-    ));
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Records are the daily task, so the log opens first. The tab lives in ?tab=
+    // so links into myGAP switch tabs even when the page is already open.
+    const requestedTab = searchParams.get('tab');
+    const activeTab = MYGAP_TABS.some((tab) => tab.id === requestedTab) ? requestedTab : 'logbook';
+    const setActiveTab = (id) => setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.set('tab', id);
+        return next;
+    }, { replace: true });
     const tabsRef = useScrollEdges();
     // Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
     const handleTabKey = (event) => {
@@ -75,7 +82,7 @@ const MyGapPage = () => {
     const [editingLog, setEditingLog] = useState(null);
     // Plot, crop and operator rarely change between entries, so they are
     // remembered on this device and pre-filled.
-    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults() });
+    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults(dataOwner) });
     const [newLog, setNewLog] = useState(emptyLog);
     const [formKey, setFormKey] = useState(0);
     const label = createLabel(t);
@@ -104,7 +111,7 @@ const MyGapPage = () => {
     const handleAddLog = async (values) => {
         const entry = await saveLogEntry(values, user?.id ?? null);
         if (entry) {
-            rememberLogDefaults(values);
+            rememberLogDefaults(values, dataOwner);
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
             setNewLog(emptyLog());
@@ -153,8 +160,8 @@ const MyGapPage = () => {
         type: 'pesticide',
         target_pest: scan.disease || '',
         linked_scan_id: scan.id,
-        crop: scan.category || scan.plantType || getLogDefaults().crop || '',
-        plot_id: scan.plotId || scan.plot_id || getLogDefaults().plot_id || '',
+        crop: scan.category || scan.plantType || getLogDefaults(dataOwner).crop || '',
+        plot_id: scan.plotId || scan.plot_id || getLogDefaults(dataOwner).plot_id || '',
     });
 
     const recentScans = useMemo(() => (scanHistory || [])
@@ -205,7 +212,7 @@ const MyGapPage = () => {
 
     const saveHarvestReminder = () => {
         if (!phiResult) return;
-        const saved = addHarvestReminder({ date: localDateKey(phiResult.date), name: phiResult.pesticideName || t('mygap.safeHarvestDate') });
+        const saved = addHarvestReminder({ date: localDateKey(phiResult.date), name: phiResult.pesticideName || t('mygap.safeHarvestDate') }, dataOwner);
         notify({ type: saved ? 'success' : 'error', title: saved ? label('assessment.ux.harvestReminderSaved', 'Reminder saved') : t('common.error'), message: saved ? phiResult.date.toLocaleDateString() : t('common.error') });
     };
 

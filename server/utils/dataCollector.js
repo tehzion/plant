@@ -263,8 +263,9 @@ export const logAssistantFeedback = async (feedback) => {
     const record = {
         rating: feedback.rating,
         language: feedback.language || 'en',
-        question: feedback.question,
-        answer: feedback.answer,
+        // Ratings do not require a retained copy of the person's conversation.
+        question: '',
+        answer: '',
         page: feedback.page || null,
         scanStatus: feedback.scanStatus || null,
     };

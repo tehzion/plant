@@ -11,7 +11,7 @@
   padding: 0 36px 0 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: #ffffff;
+  background: var(--color-bg-card);
   color: var(--color-text-primary);
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
@@ -30,8 +30,8 @@
   right: 14px;
   width: 9px;
   height: 9px;
-  border-right: 2px solid #5c615a;
-  border-bottom: 2px solid #5c615a;
+  border-right: 2px solid var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-text-secondary);
   transform: translateY(-65%) rotate(45deg);
   pointer-events: none;
 }

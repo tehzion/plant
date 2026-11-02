@@ -74,7 +74,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.otherPopular': 'Other Popular Products',
             'results.viewProduct': 'View Product',
             'results.addToCart': 'Add to Cart',
-            'results.itemsSelected': 'Items Selected',
+            'results.itemsSelected': '{count} items selected',
             'results.buySelected': 'Buy Selected Products',
             'results.kanbContactTitle': 'Talk to KANB',
             'results.kanbContactDesc': 'Message the KANB team.',
@@ -186,7 +186,8 @@ describe('ProductRecommendations', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
 
         fireEvent.click(screen.getByText('Copper Guard'));
-        expect(await screen.findByText(/1 Items Selected/i)).toBeInTheDocument();
+        expect(await screen.findByText(/1 item selected/i)).toBeInTheDocument();
+        expect(screen.queryByText(/results\.items?Selected/)).not.toBeInTheDocument();
 
         rerender(
             <ProductRecommendations
@@ -205,7 +206,7 @@ describe('ProductRecommendations', () => {
         await waitFor(() => {
             expect(fetchMock).toHaveBeenCalledTimes(1);
         });
-        expect(screen.getByText(/1 Items Selected/i)).toBeInTheDocument();
+        expect(screen.getByText(/1 item selected/i)).toBeInTheDocument();
     });
 
     it('uses recent cached recommendations when the live catalog is unavailable', async () => {

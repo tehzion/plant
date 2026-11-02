@@ -1,5 +1,6 @@
 import { routerDecisionsRequest, parseRouterDecisions, shadowVeto, enforcementVeto, SHADOW_THRESHOLDS } from '../utils/decisionProtocol.js';
 import { assessScanDecision, getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
+import { normalizeDataConsent } from '../../shared/dataConsent.js';
 import { recordAiUsage } from '../utils/aiUsage.js';
 import { getScanQualityCopy, scoutCheckLines } from '../../shared/scanQualityCopy.js';
 
@@ -37,7 +38,7 @@ export function createDecisionShadowService({ env = process.env, fetchImpl = fet
         const skip = reason => ({ status: 'skipped', reason });
         const mode = resolveDecisionCheckMode(env);
         if (mode === 'off') return skip('disabled');
-        if (mode === 'shadow' && dataConsent?.aiImprovement !== true) return skip('improvement_consent_required');
+        if (mode === 'shadow' && !normalizeDataConsent(dataConsent).aiImprovement) return skip('improvement_consent_required');
         if (env.AI_PROVIDER !== 'openrouter' || !env.OPENROUTER_API_KEY) return skip('openrouter_unavailable');
         if (!/^(?:(?:openai\/)?gpt-5\.4-mini|google\/gemini-3\.8-flash)(?:-|$)/.test(prediction?.analysisMetadata?.model || '')) return skip('unsupported_primary_model');
         if (!prediction?.disease || !prediction?.plantType || signal?.aborted) return skip('incomplete_or_cancelled');

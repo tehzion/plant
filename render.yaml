@@ -8,6 +8,8 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
+      - key: FREE_SCAN_DAILY_LIMIT
+        value: '10'
       - key: NODE_ENV
         value: production
       - key: ORDER_ACCESS_SECRET

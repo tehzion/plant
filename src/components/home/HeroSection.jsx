@@ -27,7 +27,7 @@ const HeroSection = ({
     const showWeatherRetry = !hasWeatherTemp && Boolean(weatherError);
     const showCachedNote = hasWeatherTemp && Boolean(weatherError);
 
-    const translatedLocation = locationName ? t(`common.${locationName}`) : '';
+    const translatedLocation = locationName?.startsWith('common.') ? t(locationName) : locationName;
     // A missing location is something the farmer can fix, so the pill asks for it.
     const resolvedLocation = locationName && locationName !== 'common.locationNA'
         ? (locationName.startsWith('common.')
@@ -76,9 +76,9 @@ const HeroSection = ({
         <div className="dashboard-header home-hero-shell">
             <div className="hero-content home-hero-content">
                 <div className="greeting-container">
-                    <h2 className="greeting home-hero-greeting">
+                    <h1 className="greeting home-hero-greeting">
                         {greeting}, {t('common.farmer')}!
-                    </h2>
+                    </h1>
                 </div>
 
                 <div className="superapp-shelf-container home-hero-shelf">
