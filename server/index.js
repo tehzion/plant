@@ -92,7 +92,26 @@ const cacheResult = (key, value, ttl) => {
 };
 
 // Security Headers & Middlewares
-app.use(helmet());
+// The browser talks to Supabase (auth, storage), weather and place lookup directly,
+// and shows store and scan photos from other hosts, so helmet's 'self'-only default
+// would block sign-in and those images on the deployed app.
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            connectSrc: [
+                "'self'",
+                'https://*.supabase.co',
+                'wss://*.supabase.co',
+                'https://api.open-meteo.com',
+                'https://nominatim.openstreetmap.org',
+                'https://fonts.googleapis.com',
+                'https://fonts.gstatic.com',
+            ],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            mediaSrc: ["'self'", 'blob:'],
+        },
+    },
+}));
 app.use(compression());
 
 const parseOriginList = (value = '') => String(value || '')
