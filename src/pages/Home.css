@@ -1587,3 +1587,6 @@
 
 /* Keep the final dashboard section clear of both footer variants. */
 .dashboard .home-dashboard-stack { padding-bottom: clamp(40px, 5vw, 64px); }
+
+/* Offline: save the check to run when signal returns */
+.scan-queue-check { width: 100%; margin-top: var(--space-md); min-height: 48px; white-space: normal; }

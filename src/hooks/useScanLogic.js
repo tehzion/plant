@@ -129,7 +129,9 @@ export const useScanLogic = () => {
         const resetScan = () => dispatchAction('RESET_SCAN');
         const setError = (payload) => dispatchAction('SET_ERROR', payload);
 
-        const performAnalyze = async (location, locationName, overrides = {}) => {
+        // background runs a saved offline check from its own photos without
+        // touching the capture screen the farmer may be using.
+        const performAnalyze = async (location, locationName, overrides = {}, { background = false } = {}) => {
             const currentState = {
                 ...stateRef.current,
                 ...overrides,
@@ -138,7 +140,8 @@ export const useScanLogic = () => {
                 if (stateRef.current.owner !== owner) { const error = new Error('Capture account changed'); error.code = 'ANALYSIS_CANCELLED'; throw error; }
             };
             assertOwner();
-            dispatch({ type: 'START_ANALYSIS' });
+            const report = background ? () => {} : dispatch;
+            report({ type: 'START_ANALYSIS' });
 
             const analysisTask = async () => {
                 // AI disease assessment runs on the server; there is no local
@@ -148,7 +151,7 @@ export const useScanLogic = () => {
                     offlineError.code = 'ANALYSIS_OFFLINE';
                     throw offlineError;
                 }
-                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 0 });
+                report({ type: 'UPDATE_ANALYZING_STEP', payload: 0 });
                 const [treeQuality, leafQuality] = await Promise.all([
                     analyzeLocalImageQuality(currentState.selectedImage),
                     currentState.selectedLeafImage
@@ -182,7 +185,7 @@ export const useScanLogic = () => {
                         : Promise.resolve(null),
                 ]);
 
-                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 1 });
+                report({ type: 'UPDATE_ANALYZING_STEP', payload: 1 });
                 assertOwner();
                 const result = await analyzePlantDisease(
                     treeImageBase64,
@@ -194,7 +197,7 @@ export const useScanLogic = () => {
                     { crop: currentState.selectedCrop || '', dataConsent: getDataConsent(owner) }
                 );
 
-                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
+                report({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
                 const resultState = getScanResultState(result);
                 const standardizedHealthStatus = resultState === SCAN_RESULT_STATES.HEALTHY ? 'healthy'
                     : resultState === SCAN_RESULT_STATES.CONFIDENT_TREATMENT ? getStandardizedStatus(result) : 'unknown';
@@ -228,9 +231,9 @@ export const useScanLogic = () => {
                 }
 
                 // ── Sync: Auto-log a "Scouting" activity for the dashboard ──────
-                await discardCaptureDraft(user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null).catch(() => {});
+                if (!background) await discardCaptureDraft(user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null).catch(() => {});
                 assertOwner();
-                dispatch({ type: 'COMPLETE_ANALYSIS' });
+                report({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;
             };
 
@@ -260,7 +263,7 @@ export const useScanLogic = () => {
                             : err.status >= 500
                                 ? (t('home.errorAnalysisUnavailable') || 'The analysis service is temporarily unavailable. Please try again shortly.')
                                 : (qualityErrors[errorCode] || err.message || t('home.errorAnalysis'));
-                dispatch({
+                report({
                     type: 'SET_ERROR',
                     payload: {
                         message: errorMessage,

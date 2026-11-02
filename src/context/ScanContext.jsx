@@ -3,6 +3,8 @@ import { useScanLogic } from '../hooks/useScanLogic';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { useNotifications } from './NotificationProvider.jsx';
+import { useAuth } from './AuthContext';
+import { usePendingPlantCheckRunner } from '../hooks/usePendingPlantChecks.js';
 
 const ScanContext = createContext();
 
@@ -12,6 +14,10 @@ export const ScanProvider = ({ children }) => {
     const location = useLocation();
     const { t } = useLanguage();
     const { notify, dismissNotification } = useNotifications();
+    const { user, guestId } = useAuth();
+    const owner = user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null;
+    const loadingRef = useRef(state.loading);
+    useEffect(() => { loadingRef.current = state.loading; }, [state.loading]);
 
     // Track location for async operations
     const locationRef = useRef(location);
@@ -51,9 +57,9 @@ export const ScanProvider = ({ children }) => {
     // Enhanced Actions wrapper
     const wrappedActions = useMemo(() => ({
         ...logicActions,
-        performAnalyze: async (loc, locName) => {
+        performAnalyze: async (loc, locName, overrides) => {
             try {
-                const id = await logicActions.performAnalyze(loc, locName);
+                const id = await logicActions.performAnalyze(loc, locName, overrides);
 
                 // Dismiss any background notification immediately
                 if (backgroundNotifId.current) {
@@ -119,6 +125,30 @@ export const ScanProvider = ({ children }) => {
         },
         dismissNotification
     }), [dismissNotification, logicActions, navigate, notify, t]);
+
+    usePendingPlantCheckRunner({
+        owner,
+        isBusy: () => loadingRef.current,
+        analyze: check => logicActions.performAnalyze(check.location, check.locationName, {
+            selectedImage: check.selectedImage,
+            selectedLeafImage: check.selectedLeafImage,
+            selectedCategory: check.selectedCategory,
+            selectedCrop: check.selectedCrop,
+            selectedScale: check.selectedScale,
+            scaleQuantity: check.scaleQuantity,
+            captureContext: check.captureContext,
+        }, { background: true }),
+        onReady: scanId => {
+            const id = notify({
+                type: 'success',
+                message: t('results.pendingCheckReady'),
+                actionLabel: t('home.viewResults') || 'View Now',
+                duration: 0,
+                action: () => { navigate(`/results/${scanId}`); dismissNotification(id); },
+            });
+        },
+        onNeedsAttention: () => notify({ type: 'warning', message: t('results.pendingCheckNeedsAttention'), duration: 8000 }),
+    });
 
     return (
         <ScanContext.Provider value={{ state, actions: wrappedActions }}>
