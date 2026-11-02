@@ -1,7 +1,6 @@
-.history-page {
-    background:
-        radial-gradient(circle at top, rgba(46, 107, 63, 0.06), transparent 38%),
-        var(--color-bg-subtle);
+.page.history-page {
+    background: var(--color-bg-secondary, #f7f5f0);
+    color: var(--color-text-primary, #1f2320);
     min-height: 100vh;
 }
 

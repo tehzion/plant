@@ -459,7 +459,7 @@
 }
 
 .pillar-card {
-    background-color: var(--color-bg-light);
+    background-color: var(--color-bg-subtle);
     padding: var(--space-lg);
     border-radius: var(--radius-md);
     text-align: center;
@@ -522,7 +522,7 @@
 }
 
 .report-button:hover {
-    background-color: var(--color-bg-light);
+    background-color: var(--color-bg-subtle);
 }
 
 .button-group {

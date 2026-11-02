@@ -55,7 +55,7 @@
 
 .category-btn.active {
   border-color: var(--color-primary);
-  background: var(--color-bg-primary);
+  background: var(--color-bg-card);
   box-shadow: none;
 }
 
