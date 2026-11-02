@@ -1,8 +1,8 @@
 import { coarseLocation } from '../../shared/coarseLocation.js';
 import { validateDiagnosisStage } from '../utils/diagnosisValidation.js';
 import { resolveAiProvider, isAiProviderConfigured } from '../utils/aiProvider.js';
-import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
-import { assessScanDecision, getScanSectionPolicy, isNoIssueDiagnosis, isUnsureHealthy, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
+import { getScanQualityCopy, scoutCheckLines } from '../../shared/scanQualityCopy.js';
+import { assessScanDecision, getScanSectionPolicy, isCropUncertain, isNoIssueDiagnosis, isUnsureHealthy, lookAlikeLabel, SCAN_RESULT_STATES } from '../../shared/scanResultPolicy.js';
 import { buildStructuredAssessment, normalizeAlternativeConditions, redactDosageInstructions, resolveConfidenceLevel } from '../../shared/diseaseAssessment.js';
 export { SCAN_RESULT_STATES };
 import OpenAI from 'openai';
@@ -2151,11 +2151,16 @@ export async function identifyPlantWithGPTVision(imageBase64, category, options 
 /**
  * Get Malaysia-specific crop information
  */
-function getMalaysiaCropInfo(plantNetResult, category) {
-    if (!plantNetResult) return null;
+// scientificName only counts when the species check confirmed it; a crop the farmer chose counts on its own.
+export function getMalaysiaCropInfo(plantNetResult, category) {
+    const scientificName = String(plantNetResult?.scientificName || '').toLowerCase();
+    const categoryLower = String(category || '').toLowerCase();
+    const named = (scientific, ...words) => (scientific && scientificName.includes(scientific)) || words.some((word) => categoryLower.includes(word));
 
-    const scientificName = plantNetResult.scientificName.toLowerCase();
-    const categoryLower = category.toLowerCase();
+    if (named('oryza', 'rice', 'padi', 'paddy')) return { cropType: 'rice', info: MALAYSIA_CROP_KNOWLEDGE.rice };
+    if (named('capsicum', 'chilli', 'chili', 'cili')) return { cropType: 'chilli', info: MALAYSIA_CROP_KNOWLEDGE.chilli };
+    if (named('solanum lycopersicum', 'tomato')) return { cropType: 'tomato', info: MALAYSIA_CROP_KNOWLEDGE.tomato };
+    if (named('mangifera', 'mango', 'mangga')) return { cropType: 'mango', info: MALAYSIA_CROP_KNOWLEDGE.mango };
 
     // Match against Malaysian crop database
     if (scientificName.includes('durio') || categoryLower.includes('durian')) {
@@ -2250,7 +2255,7 @@ export const buildDiagnosisStagePrompt = ({
         ? `Species-assistant context is supplied as a separate assistant message. Confirmed species context: ${speciesContext.confirmed ? 'yes' : 'no'}. Category conflict: ${speciesContext.categoryConflict ? 'yes' : 'no'}.`
         : getSpeciesContextBlock(speciesAssessment, plantNetResult, category, language);
     const cropBlock = malaysiaCropInfo
-        ? `${isMalay ? 'KONTEKS TANAMAN MALAYSIA' : isChinese ? '马来西亚作物背景' : 'MALAYSIA CROP CONTEXT'}:\n${malaysiaCropInfo.info.commonDiseases.map((d) => `- ${d}`).join('\n')}\n${malaysiaCropInfo.info.nutrientIssues.map((n) => `- ${n}`).join('\n')}`
+        ? `${isMalay ? 'KONTEKS TANAMAN MALAYSIA' : isChinese ? '马来西亚作物背景' : 'MALAYSIA CROP CONTEXT'} (common problems of this crop; when the signs fit one, use its exact name rather than a generic label such as "Leaf Spot"):\n${malaysiaCropInfo.info.commonDiseases.map((d) => `- ${d}`).join('\n')}\n${malaysiaCropInfo.info.nutrientIssues.map((n) => `- ${n}`).join('\n')}`
         : '';
     const qualityBlock = buildImageQualityContext(imageQuality, language);
     const fewShotExamples = buildDiagnosisStageFewShotExamples(language);
@@ -2280,6 +2285,7 @@ Rules:
 - On tomato and potato, Early Blight, Late Blight and (on tomato) Leaf Mold look alike. Whenever you name one of them, list the others in differentialDiagnoses and state what separates them (Early Blight: concentric target rings, older leaves first; Late Blight: large water-soaked or greasy lesions with pale margins that spread fast, white growth underneath in humid conditions; Leaf Mold: yellow patches above with olive-green velvety growth underneath). Without that comparison the result is sent to expert review.
 - If the user-selected category names a specific crop (not a broad group such as Vegetables or Fruits), the farmer has stated what they grow: assume that crop unless the image clearly shows a different plant, set plantType to it, and compare against that crop's common diseases.
 - Compare visually similar conditions. In differentialDiagnoses list 0-3 OTHER conditions that remain genuinely plausible from the visible evidence (for example fungal vs bacterial leaf spot, nutrient deficiency, environmental stress). Never pad the list to reach three, never repeat the primary diagnosis, and return an empty list when nothing else is plausible.
+- If you call the plant healthy but any subtle sign is present or unclear, or your confidence is not high, still list in differentialDiagnoses the 1-3 diseases or pests of this crop that best fit the faint signs, so the farmer knows what to look for. Listing them does not change your healthy or unsure decision.
 - For every alternative give: supportingEvidence (visible features consistent with it), weakeningEvidence (visible features that argue against it) and distinguishingFeatures (what a farmer could check to tell it apart from the primary diagnosis).
 - Use standard, consistent disease names (e.g. "Early Blight", "Septoria Leaf Spot", "Anthracnose"). Put the causal organism in scientificName only when the visible evidence clearly supports it; otherwise leave it empty.
 - Express confidence with confidenceLevel: high, medium, low or insufficient_evidence. diagnosisConfidence is an estimate, not a calibrated probability.
@@ -2684,16 +2690,27 @@ export const mergeDiagnosisResult = ({
             filtered.disease = copy.inconclusive;
             filtered.healthStatus = 'unknown';
         }
-        filtered.immediateActions = [filtered.captureAssessment?.requiresRetake ? copy.nextRetake : copy.nextScout];
+        filtered.immediateActions = filtered.captureAssessment?.requiresRetake ? [copy.nextRetake] : [copy.nextScout, ...scoutCheckLines(filtered, language)];
         filtered.prevention = [];
     }
     const missingLookAlikes = assessScanDecision(filtered).missingLookAlikes;
     if (missingLookAlikes.length && !filtered.abstainReason) {
-        const names = [...new Set(missingLookAlikes)].join(', ');
+        const names = (lang) => [...new Set(missingLookAlikes)].map((name) => lookAlikeLabel(name, lang)).join(', ');
         filtered.abstainReason = translateText(language, {
-            en: `This looks similar to ${names}, which needs different control. An expert should confirm before any treatment.`,
-            ms: `Ini kelihatan serupa dengan ${names}, yang memerlukan kawalan berbeza. Pakar perlu mengesahkan sebelum sebarang rawatan.`,
-            zh: `该症状与${names}相似，而后者需要不同的防治方法。任何处理前应由专家确认。`,
+            en: `This looks similar to ${names('en')}, which needs different control. An expert should confirm before any treatment.`,
+            ms: `Ini kelihatan serupa dengan ${names('ms')}, yang memerlukan kawalan berbeza. Pakar perlu mengesahkan sebelum sebarang rawatan.`,
+            zh: `该症状与${names('zh')}相似，而后者需要不同的防治方法。任何处理前应由专家确认。`,
+        });
+    }
+    // Say why only when the crop doubt is what held treatment back.
+    const blockedByCrop = isCropUncertain(filtered) && assessScanDecision({
+        ...filtered, speciesAssessment: { ...filtered.speciesAssessment, farmerStatedCrop: true },
+    }).treatmentEligible;
+    if (blockedByCrop && !filtered.abstainReason) {
+        filtered.abstainReason = translateText(language, {
+            en: 'The crop could not be confirmed from the photo. Choose your crop and check again before any treatment.',
+            ms: 'Jenis tanaman tidak dapat disahkan daripada foto. Pilih tanaman anda dan semak semula sebelum sebarang rawatan.',
+            zh: '无法从照片确认作物种类。请选择您的作物后重新检查，再决定是否处理。',
         });
     }
 
@@ -2759,6 +2776,8 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
         const isChinese = language === 'zh';
 
         const speciesAssessment = assessSpeciesIdentification(plantNetResult, category);
+        // Lets the policy hold back treatment when nobody, farmer or species check, confirmed the crop.
+        if (typeof options.farmerStatedCrop === 'boolean') speciesAssessment.farmerStatedCrop = options.farmerStatedCrop;
         const speciesContext = buildSpeciesContext({
             plantNetResult,
             speciesAssessment,
@@ -2766,10 +2785,8 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             source: plantNetResult?.source || 'User category',
         });
 
-        // Use crop-specific knowledge only when species context is strong enough.
-        const malaysiaCropInfo = speciesContext.confirmed
-            ? getMalaysiaCropInfo(plantNetResult, category)
-            : null;
+        // Crop-specific knowledge comes from a confirmed species match or the crop the farmer chose.
+        const malaysiaCropInfo = getMalaysiaCropInfo(speciesContext.confirmed ? plantNetResult : null, category);
 
         const diagnosisPrompt = buildDiagnosisStagePrompt({
             plantNetResult,
@@ -2849,7 +2866,13 @@ export async function analyzeWithGPT4Mini(plantNetResult, treeImage, leafImage, 
             imageQuality,
         });
 
-        finalResult.analysisMetadata = { policyVersion: 4, provider: resolveAiProvider().provider, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
+        finalResult.analysisMetadata = { policyVersion: 5, provider: resolveAiProvider().provider, model: diagnosisResponse.model || OPENAI_PRIMARY_MODEL, diagnosisAttempts, generatedAt: new Date().toISOString() };
+        // What the farmer was shown, kept with the scan so a later rule change can make a saved
+        // result more cautious but never quietly upgrade it to treatment or healthy.
+        const shownDecision = assessScanDecision(finalResult);
+        finalResult.decisionSnapshot = { policyVersion: 5, resultState: shownDecision.resultState,
+            treatmentEligible: shownDecision.treatmentEligible, needsReview: shownDecision.needsReview,
+            decidedAt: finalResult.analysisMetadata.generatedAt };
         console.log('Analysis complete');
         return finalResult;
 

@@ -86,6 +86,8 @@ const assessmentTranslations = {
             "discoveryTitle": "Other catalogue products to ask about",
             "discoveryNote": "These are not confirmed treatments for this result. Check that the label covers your crop and problem, and ask an expert before use.",
             "discoveryCardNote": "Not confirmed for this result. Check the label for your crop before use.",
+            "recoveryTitle": "Help your plant recover",
+            "recoveryNote": "These KANB products support plant health while you deal with the problem. They do not cure the disease. Ask our team which spray is right.",
             "sync": {
                 "online": "Online",
                 "offline": "You are offline",
@@ -193,6 +195,8 @@ const assessmentTranslations = {
             "discoveryTitle": "Produk katalog lain untuk ditanya",
             "discoveryNote": "Produk ini bukan rawatan yang disahkan untuk keputusan ini. Pastikan label merangkumi tanaman dan masalah anda, dan rujuk pakar sebelum digunakan.",
             "discoveryCardNote": "Belum disahkan untuk keputusan ini. Semak label untuk tanaman anda sebelum digunakan.",
+            "recoveryTitle": "Bantu pokok anda pulih",
+            "recoveryNote": "Produk KANB ini membantu kesihatan pokok semasa anda menangani masalah ini. Ia tidak menyembuhkan penyakit. Tanya pasukan kami racun yang sesuai.",
             "sync": {
                 "online": "Dalam talian",
                 "offline": "Anda di luar talian",
@@ -300,6 +304,8 @@ const assessmentTranslations = {
             "discoveryTitle": "可咨询的其他目录产品",
             "discoveryNote": "这些并非针对此结果的已确认治疗产品。请确认标签涵盖您的作物和问题，并在使用前咨询专家。",
             "discoveryCardNote": "尚未针对此结果确认。使用前请核对标签是否适用于您的作物。",
+            "recoveryTitle": "帮助植株恢复",
+            "recoveryNote": "这些 KANB 产品可在您处理问题期间帮助植株保持健康，但不能治愈病害。请咨询我们的团队选择合适的喷剂。",
             "sync": {
                 "online": "在线",
                 "offline": "您目前处于离线状态",

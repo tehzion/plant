@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
+import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import { Camera, CircleHelp, ShieldCheck, Stethoscope } from 'lucide-react';
 
 export const nextScanStep = (result, copy) => result.requiresRetake ? copy.nextRetake
@@ -8,7 +9,7 @@ export const nextScanStep = (result, copy) => result.requiresRetake ? copy.nextR
 const ScanDecisionSummary = ({ result, expertReview = null, image, adviceReadable = true }) => {
     const [photoFailed, setPhotoFailed] = useState(false);
     useEffect(() => setPhotoFailed(false), [image]);
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const crop = result.plantType || result.category || t('common.unknown');
     const cropKeys = { padi: 'home.categoryRice', rice: 'home.categoryRice', cili: 'home.cropChilli', chilli: 'home.cropChilli', chili: 'home.cropChilli', vegetables: 'home.categoryVegetables', 'sayur-sayuran': 'home.categoryVegetables', fruits: 'home.categoryFruits', 'buah-buahan': 'home.categoryFruits', durian: 'home.categoryDurian' };
     const cropLabel = cropKeys[String(crop).toLowerCase()] ? t(cropKeys[String(crop).toLowerCase()]) : crop;
@@ -32,6 +33,7 @@ const ScanDecisionSummary = ({ result, expertReview = null, image, adviceReadabl
             <strong>{t('assessment.ux.expertReviewed')}</strong>
             <span>{expertReview.verdict === 'corrected' ? t('assessment.ux.expertCorrected').replace('{name}', expertReview.correctedDiagnosis || expertReview.correctedCrop || '') : t(expertReview.verdict === 'confirmed' ? 'assessment.ux.expertConfirmed' : 'assessment.ux.expertUncertain')}</span>
         </div>}
+        {result.urgent && !expertReview && <p className="scan-decision__urgent" role="alert">{getScanQualityCopy(language).urgent}</p>}
         {result.isDemo && <p>{t('results.demoModeDesc')}</p>}
     </section>;
 };

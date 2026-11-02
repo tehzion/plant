@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Wheat, Carrot, Apple, TreePalm, TreeDeciduous, Bean, Flame, Sprout, Leaf, CircleDot } from 'lucide-react';
 import './PlantCategorySelector.css';
@@ -17,6 +16,12 @@ const categories = [
   { id: 'corn', nameKey: 'Corn', translationKey: 'home.categoryCorn', icon: <Wheat size={32} /> },
 ];
 
+// For now farmers choose only from the categories the AI handles best: Vegetables and Fruits hold the
+// crops it knows well (tomato, chilli, potato, mango) and Rice has look-alike checks. Add an id here to
+// bring a category back.
+const offeredCategoryIds = ['rice', 'vegetables', 'fruits'];
+const offeredCategories = categories.filter((category) => offeredCategoryIds.includes(category.id));
+
 // Broad categories get an optional specific-crop choice; the English name is sent to the API.
 const specificCrops = {
   Vegetables: ['Tomato', 'Chilli', 'Cucumber', 'Brinjal', 'Okra', 'Cabbage', 'Mustard greens', 'Water spinach', 'Long bean', 'Potato'],
@@ -26,8 +31,6 @@ const cropKey = (crop) => `home.crop${crop.split(' ').map((w) => w[0].toUpperCas
 
 const PlantCategorySelector = ({ selected, onSelect, crop = '', onCropSelect, disabled }) => {
   const { t } = useLanguage();
-  const [expanded, setExpanded] = useState(() => Boolean(selected && !['Rice', 'Vegetables', 'Fruits', 'Durian'].includes(selected)));
-  const visibleCategories = expanded ? categories : categories.filter(item => ['Rice', 'Vegetables', 'Fruits', 'Durian'].includes(item.nameKey));
   const handleSelect = (category) => {
     if (disabled) return;
     onSelect?.(category.nameKey);
@@ -37,7 +40,7 @@ const PlantCategorySelector = ({ selected, onSelect, crop = '', onCropSelect, di
   return (
     <div className="category-selector">
       <div className="category-grid">
-        {visibleCategories.map((category) => (
+        {offeredCategories.map((category) => (
           <button
             type="button"
             key={category.id}
@@ -58,7 +61,6 @@ const PlantCategorySelector = ({ selected, onSelect, crop = '', onCropSelect, di
           </button>
         ))}
       </div>
-      <button type="button" className="btn btn-secondary" aria-expanded={expanded} onClick={() => setExpanded(value => !value)} disabled={disabled}>{t(expanded ? 'results.fewerCrops' : 'results.moreCrops')}</button>
       {crops && onCropSelect && (
         <label className="crop-select">
           <span className="crop-select-label">{t('home.cropSelectLabel')}</span>
