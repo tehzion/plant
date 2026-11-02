@@ -15,16 +15,13 @@
   h2 { margin: 0; font-size: 28px; }
   p, li { color: var(--muted); font-size: 18px; line-height: 1.45; margin: 0; }
   ul { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
-  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 15px; font-weight: 600; }
-  .flow span { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
-  .flow b { color: var(--green); }
   .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .tile { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
   .tile strong { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
   .tile span { color: var(--muted); font-size: 14px; }
   table { border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 16px; }
-  th, td { padding: 10px 14px; border-bottom: 1px solid var(--line); text-align: left; }
-  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  th, td { padding: 9px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   th { font-size: 13px; color: var(--muted); text-transform: uppercase; }
   .up { color: var(--green); font-weight: 700; }
   .note { font-size: 13px; }
@@ -33,59 +30,67 @@
 <body>
 <section class="slide" data-slide="1">
   <div class="kicker">KANB AI Agropreneur</div>
-  <h1>Checking AI crop diagnosis against public plant-disease datasets</h1>
-  <p>Farmers photograph a sick plant; the AI names the likely problem and safe next steps. We built a pipeline that measures how often it agrees with expert-labelled reference images, and used it to find and fix a weakness.</p>
+  <h1>An AI plant doctor for Malaysian farmers, tested against public research datasets</h1>
+  <p>A farmer photographs a sick plant and chooses the crop. The AI names the likely problem, says what to check, gives safe next steps in Malay, English or Chinese, and suggests KANB products.</p>
 </section>
 <section class="slide" data-slide="2">
-  <div class="kicker">Pipeline</div>
-  <h2>Reference data and AI predictions kept separate</h2>
-  <div class="flow"><span>PlantVillage / PlantDoc</span><b>→</b><span>Object storage (checksummed)</span><b>→</b><span>Neon PostgreSQL</span><b>→</b><span>Farmer assessment API</span><b>→</b><span>Evaluation results in Neon</span><b>→</b><span>Admin dashboard</span></div>
+  <div class="kicker">How we used the datasets</div>
+  <h2>Tested the way farmers use it, then improved and re-tested</h2>
   <div class="tiles">
-    <div class="tile"><strong>500</strong><span>reference images (472 PlantVillage, 28 PlantDoc)</span></div>
-    <div class="tile"><strong>14</strong><span>crops · 36 dataset labels · 150 healthy / 350 diseased</span></div>
-    <div class="tile"><strong>191</strong><span>completed real AI assessments across 86 images</span></div>
+    <div class="tile"><strong>75,000+</strong><span>labelled photos in 7 public datasets: PlantVillage, PlantDoc, padi, chilli, papaya, mango</span></div>
+    <div class="tile"><strong>Blind</strong><span>each photo sent through the farmer API with the crop chosen; the label is never sent</span></div>
+    <div class="tile"><strong>100</strong><span>photos held back and never used while improving the app</span></div>
   </div>
-  <p>Disease labels are never sent to the AI. The same endpoint farmers use performs every assessment.</p>
+  <p>We did not train our own model. We used the datasets to find where the AI fails, improve the app around it, and prove each change on the same photos.</p>
 </section>
 <section class="slide" data-slide="3">
-  <div class="kicker">Finding</div>
-  <h2>The AI often misidentified the crop</h2>
-  <ul>
-    <li>Farmers could only pick a broad group such as “Vegetables”.</li>
-    <li>6 of 20 test images got the wrong crop: tomato read as bean or cabbage, or “unknown crop”.</li>
-    <li>Without the right crop the AI cannot narrow its diagnosis, so it fell back to generic answers like “Leaf Spot”.</li>
-  </ul>
-  <p><b style="color:var(--ink)">Fix:</b> an optional “Which crop?” choice (in English, Malay and Chinese) that the AI treats as the farmer’s stated crop.</p>
-</section>
-<section class="slide" data-slide="4">
-  <div class="kicker">Result 1 · crop stated · 70 images, each assessed both ways</div>
+  <div class="kicker">What testing found, and what we changed</div>
   <table>
-    <thead><tr><th>Measure (70 images)</th><th>Without crop</th><th>With crop</th></tr></thead>
+    <thead><tr><th>Finding</th><th>Change</th></tr></thead>
     <tbody>
-      <tr><td>Crop identified correctly</td><td class="n">45 (64%)</td><td class="n up">69 (99%)</td></tr>
-      <tr><td>Correct disease as top answer</td><td class="n">21 (30%)</td><td class="n up">23 (33%)</td></tr>
-      <tr><td>Correct disease in top 3</td><td class="n">29 (41%)</td><td class="n up">38 (54%)</td></tr>
-      <tr><td>Average response time</td><td class="n">12.5 s</td><td class="n">12.2 s</td></tr>
+      <tr><td>Crop wrong in 25 of 70 photos</td><td>Farmer chooses the crop: Padi, Vegetables or Fruits</td></tr>
+      <tr><td>Generic answers such as “Leaf Spot”</td><td>Disease lists for padi, chilli, tomato, mango and papaya</td></tr>
+      <tr><td>Unsure answers only said “look closer”</td><td>Names the likely diseases and what to check for each</td></tr>
+      <tr><td>Treatment for a look-alike disease</td><td>Look-alikes compared, plus a second AI check</td></tr>
+      <tr><td>The AI model was the main limit</td><td>Compared 4 models; chose the most accurate</td></tr>
     </tbody>
   </table>
-  <p class="note">52 PlantVillage + 18 PlantDoc images, 13 crops, 11 healthy. Dataset labels are not field-validated Malaysian diagnoses.</p>
 </section>
-<section class="slide" data-slide="5">
-  <div class="kicker">Result 2 · safety</div>
-  <h2>Two safety fixes, re-tested</h2>
-  <ul>
-    <li>Wrong treatment: on tomato and potato, treatment advice now requires the look-alike blights to be compared.</li>
-    <li>Missed disease: “No Issues” is shown only when every easy-to-miss sign (mites, powder, mottling, small spots) is checked as absent.</li>
-  </ul>
+<section class="slide" data-slide="4">
+  <div class="kicker">Result 1 · accuracy</div>
   <table>
     <thead><tr><th>Measure</th><th>Before</th><th>After</th></tr></thead>
     <tbody>
-      <tr><td>Confident treatment, wrong disease</td><td class="n">4 of 40</td><td class="n up">2 of 108</td></tr>
-      <tr><td>Diseased leaf shown as healthy (re-test)</td><td class="n">6 of 7</td><td class="n up">0 of 7</td></tr>
-      <tr><td>Healthy leaf shown as healthy (re-test)</td><td class="n">8 of 8</td><td class="n">6 of 8</td></tr>
+      <tr><td>Crop identified correctly (70 photos)</td><td class="n">64%</td><td class="n up">99%</td></tr>
+      <tr><td>Correct disease in top 3 (same 41 mixed-crop photos)</td><td class="n">49%</td><td class="n up">76%</td></tr>
+      <tr><td>Correct disease as the top answer (same 41 photos)</td><td class="n">9</td><td class="n up">27</td></tr>
+      <tr><td>Correct disease in top 3, padi</td><td class="n">16%</td><td class="n up">96%</td></tr>
+      <tr><td>Correct disease in top 3, chilli</td><td class="n">22%</td><td class="n up">71%</td></tr>
     </tbody>
   </table>
-  <p class="note">Total AI cost for all evaluation runs: about US$2.24.</p>
+  <p class="note">182 photos tested with the chosen model so far. Padi: 50 photos before, 96 after; chilli: 23 before, 45 after. Dataset labels are research labels, not field-confirmed Malaysian diagnoses.</p>
+</section>
+<section class="slide" data-slide="5">
+  <div class="kicker">Result 2 · better advice, safely</div>
+  <table>
+    <thead><tr><th>Measure</th><th>Before</th><th>After</th></tr></thead>
+    <tbody>
+      <tr><td>Advice leads the farmer to the right disease</td><td class="n">14%</td><td class="n up">49%</td></tr>
+      <tr><td>Confident treatment for the wrong disease (current live model)</td><td class="n">10%</td><td class="n up">1.9%</td></tr>
+      <tr><td>Diseased leaf shown as healthy (re-test)</td><td class="n">6 of 7</td><td class="n up">0 of 7</td></tr>
+      <tr><td>Wrong treatment with the more accurate model (same 41 photos)</td><td class="n">1</td><td class="n">6</td></tr>
+    </tbody>
+  </table>
+  <p>The more accurate model names the right disease far more often, but is more confident when wrong. A second AI check reviews every treatment and product suggestion and, if the photo does not support it, tells the farmer to ask an expert first. It is built for this case and is being measured next.</p>
+</section>
+<section class="slide" data-slide="6">
+  <div class="kicker">Result 3 · KANB products</div>
+  <h2>A KANB product on 98 of 100 scans, up from 23</h2>
+  <ul>
+    <li>Diseased plants get a labelled “Help your plant recover” list of KANB plant-health products that fit the crop.</li>
+    <li>Never shown as a cure, and never for healthy, unclear or vetoed results.</li>
+    <li>Contact our agronomy team on WhatsApp stays the first step.</li>
+  </ul>
 </section>
 <script>
   const n = new URLSearchParams(location.search).get('slide') || '1';

@@ -54,7 +54,33 @@ Datasets with non-commercial licences were not used.
 
 No model gave confident treatment for the wrong disease in the model comparison.
 
-**Large test (300 photos, chosen model): in progress.** 199 new padi, chilli, papaya and mango photos, plus the same 100 photos as the earlier baseline run (baseline: correct disease in the top three 41%, as the top answer 23%, crop correct 97%, wrong treatment 1). Results will be added here.
+### Large test with the chosen model (182 of 300 photos done)
+
+The test stopped at 182 photos when the AI account ran out of credit. The remaining 118 will be added when it is topped up.
+
+**Same 41 photos as the baseline run, current model vs chosen model:**
+
+| Measure | Current model | Chosen model |
+|---|---:|---:|
+| Correct disease as the top answer | 9 | 27 |
+| Correct disease in the top three | 20 (49%) | 31 (76%) |
+| Crop correct | 41 | 37 |
+| Sent for expert review | 34 | 22 |
+| Confident treatment for the wrong disease | 1 | 6 |
+| Diseased leaf called healthy, no review | 0 | 2 |
+
+**141 new padi and chilli photos (all diseased), chosen model:** correct disease as the top answer 97 (69%), in the top three 124 (88%). Padi 92 of 96 in the top three, chilli 32 of 45. Confident wrong treatment 4 (padi brown spot read as blast). For comparison, the earlier code on the same kinds of photos had the correct disease in the top three for 8 of 50 padi and 5 of 23 chilli.
+
+**Honest note on safety.** The chosen model names the right disease far more often, but when it is wrong it is more often confident: 6 of 41 compared with 1 (grape Esca read as Black Rot three times, a healthy leaf and a powdery mildew leaf read as mites, apple black rot read as frogeye). The second AI check (see `decisions-shadow-trial.md`) is designed to catch exactly this and hold back treatment and products, but it has not yet been measured on the chosen model. The live app still runs the current model until that is measured.
+
+### KANB products shown (100 real scans)
+
+| Measure | Before | After |
+|---|---:|---:|
+| Scans showing any KANB product | 23 | 98 |
+| Diseased scans showing a KANB product | 11 of 88 | 86 of 88 |
+
+The KANB store has fertiliser, soil and bio products but no fungicides, so diseased plants now get a labelled "Help your plant recover" list of plant-health products that fit the crop. They are always described as support, not a cure, and are hidden for healthy, unclear or second-check-vetoed results.
 
 ## Limits
 
