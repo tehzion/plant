@@ -109,3 +109,17 @@ export const scanQualityCopy = {
     },
 };
 export const getScanQualityCopy = (language) => scanQualityCopy[language] || scanQualityCopy.en;
+
+const CHECK_FOR = { en: (name, how) => `Check for ${name}: ${how}`, ms: (name, how) => `Periksa ${name}: ${how}`, zh: (name, how) => `检查${name}：${how}` };
+const firstText = (value) => (Array.isArray(value) ? value.find((v) => typeof v === 'string' && v.trim()) : typeof value === 'string' ? value : '')?.trim() || '';
+
+/** Up to three concrete things to look for, built from the look-alikes the AI listed, so an unsure result still says what to check. */
+export const scoutCheckLines = (scan = {}, language = 'en') => {
+    const line = CHECK_FOR[language] || CHECK_FOR.en;
+    const seen = new Set();
+    return (Array.isArray(scan.differentialDiagnoses) ? scan.differentialDiagnoses : [])
+        .map((d) => ({ name: String(d?.name || '').trim(), how: firstText(d?.distinguishingFeatures) || firstText(d?.supportingEvidence) }))
+        .filter(({ name, how }) => name && how && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .slice(0, 3)
+        .map(({ name, how }) => line(name, how.replace(/\.$/, '')));
+};

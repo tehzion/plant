@@ -1,4 +1,4 @@
-import { assessScanDecision } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
 
 export const SIGN_QUESTIONS = Object.freeze({
     paleStippling: 'Are fine pale stipples, speckles or webbing visible on the leaf, consistent with possible mite damage?',
@@ -75,7 +75,9 @@ export function enforcementVeto(prediction, answers, supportName, alternativeNam
     const triage = answers?.health_triage?.type === 'choice' ? answers.health_triage : null;
     const triageSays = choice => triage?.choice === choice && triage.confidence >= SHADOW_THRESHOLDS.triageConfidence;
     const before = assessScanDecision(prediction);
-    if (before.treatmentEligible) {
+    // Fertiliser and supplement suggestions rest on the diagnosis too, so they get the same check.
+    const productsShown = !before.healthy && getScanSectionPolicy(prediction).showNutritionProducts;
+    if (before.treatmentEligible || productsShown) {
         const support = predicate(supportName);
         const clarity = predicate('clear_enough');
         if (clarity !== null && clarity < SHADOW_THRESHOLDS.clarity) reasons.push('unclear_capture');
@@ -90,7 +92,8 @@ export function enforcementVeto(prediction, answers, supportName, alternativeNam
     if (before.healthy && (at(predicate('visible_abnormality'), SHADOW_THRESHOLDS.abnormal)
         || Object.keys(SIGN_QUESTIONS).some(name => at(predicate(name), SHADOW_THRESHOLDS.abnormal))
         || triageSays('abnormal'))) reasons.push('healthy_disagreement');
-    return { prediction: reasons.length ? { ...prediction, needsReview: true, expertReviewRequired: true } : { ...prediction },
+    if (!reasons.length) return { prediction: { ...prediction }, reasons, supportedAlternatives };
+    return { prediction: { ...prediction, needsReview: true, expertReviewRequired: true, secondCheck: { applied: true } },
         reasons, supportedAlternatives };
 }
 

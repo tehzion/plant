@@ -179,3 +179,37 @@ export const partitionByEligibility = (products = [], diagnosis = {}, role = 'tr
     }
     return { eligible, discovery, excluded };
 };
+
+// Plant-health products offered beside a disease result. They support the plant's recovery and are
+// never presented as a cure, so they need a plant-health purpose rather than a treatment label.
+const RECOVERY_PATTERN = /plant immunity|plant defen[cs]e|pest defen[cs]e|pest resilience|disease prevention|chitosan|trichoderma|beneficial microbes|tahan penyakit|stress tolerance|recovery/gi;
+// Products sold against soil or root disease only fit a root, wilt or rot problem, not a leaf disease.
+const ROOT_RECOVERY_PATTERN = /disease-free soil|root disease|root rot|root protection|soil-borne/i;
+const ROOT_PROBLEM = /root|wilt|rot\b|soil|layu|reput|akar/i;
+
+const RECOVERY_REASON = {
+    en: (condition) => `Supports plant health while you deal with ${condition}. It does not cure it.`,
+    ms: (condition) => `Membantu kesihatan pokok semasa anda menangani ${condition}. Ia tidak menyembuhkannya.`,
+    zh: (condition) => `在处理${condition}期间帮助植株保持健康，但不能治愈该问题。`,
+};
+
+/** Picks up to `limit` in-stock plant-health products that fit the crop, best plant-health match first. */
+export const selectRecoverySupport = (products = [], diagnosis = {}, language = 'en', limit = 3) => {
+    const lang = ['ms', 'zh'].includes(language) ? language : 'en';
+    const condition = String(diagnosis.disease || '').split('(')[0].trim() || 'this problem';
+    const rootProblem = ROOT_PROBLEM.test(`${diagnosis.disease || ''} ${(diagnosis.symptoms || []).join(' ')}`);
+    return products
+        .map((product) => {
+            const text = productText(product);
+            const rootProduct = ROOT_RECOVERY_PATTERN.test(text);
+            const terms = (text.match(RECOVERY_PATTERN) || []).map((term) => term.toLowerCase());
+            return { product, text, hits: rootProduct && !rootProblem ? 0 : new Set(terms).size + (rootProduct ? 1 : 0) };
+        })
+        .filter(({ product, text, hits }) => hits > 0 && product.inStock !== false
+            && checkCrop(text, diagnosis) !== 'incompatible'
+            && !RESTRICTION_PATTERNS.some((pattern) => pattern.test(text))
+            && !purposesOf(text).includes('herbicide'))
+        .sort((left, right) => right.hits - left.hits || Number(left.product.id) - Number(right.product.id))
+        .slice(0, limit)
+        .map(({ product }) => ({ ...product, recoveryOnly: true, recommendationReason: RECOVERY_REASON[lang](condition) }));
+};

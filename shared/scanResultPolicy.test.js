@@ -19,7 +19,24 @@ describe('getScanSectionPolicy', () => {
       diseasePrimary: true,
       showNutritionProducts: false,
       showDiseaseProducts: true,
+      showRecoveryProducts: true,
     });
+  });
+
+  it('offers recovery products for a sick plant but not for a retake, an unclear or a healthy result', () => {
+    const unsureDisease = { disease: 'Brown Spot', diseaseCategory: 'fungal', healthStatus: 'unhealthy', confidence: 60 };
+    expect(getScanSectionPolicy(unsureDisease).showRecoveryProducts).toBe(true);
+    expect(getScanSectionPolicy({ ...unsureDisease, requiresRetake: true }).showRecoveryProducts).toBe(false);
+    expect(getScanSectionPolicy({ disease: 'No clear diagnosis yet', healthStatus: 'unknown' }).showRecoveryProducts).toBe(false);
+    expect(getScanSectionPolicy({ disease: 'No Issues', healthStatus: 'healthy', resultState: 'healthy', confidence: 92 }).showRecoveryProducts).toBe(false);
+    expect(getScanSectionPolicy({ ...unsureDisease, secondCheck: { applied: true } }).showRecoveryProducts).toBe(false);
+  });
+
+  it('shows no products once the second photo check has vetoed the result', () => {
+    expect(getScanSectionPolicy({ ...confidentFungalScan, secondCheck: { applied: true } }))
+      .toMatchObject({ showNutritionProducts: false, showDiseaseProducts: false });
+    expect(getScanSectionPolicy({ disease: 'No Issues', healthStatus: 'healthy', resultState: 'healthy', confidence: 92, secondCheck: { applied: true } }))
+      .toMatchObject({ showNutritionProducts: false });
   });
 
   it('makes confirmed nutrient findings nutrition-first', () => {
@@ -85,6 +102,7 @@ describe('getScanSectionPolicy', () => {
       diseasePrimary: false,
       showNutritionProducts: false,
       showDiseaseProducts: false,
+      showRecoveryProducts: false,
     });
   });
 

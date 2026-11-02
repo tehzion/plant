@@ -164,6 +164,8 @@ const hasNutrientEvidence = (scan = {}) => {
  * This is shared by the browser and server so a product cannot be rendered in
  * a different section from the decision that produced it.
  */
+const healthStatusOf = (scan = {}) => normalized(scan.healthStatus);
+
 export const getScanSectionPolicy = (scan = {}) => {
     const decision = assessScanDecision(scan);
     const nutritionStatus = normalizeNutritionStatus(scan);
@@ -183,13 +185,17 @@ export const getScanSectionPolicy = (scan = {}) => {
     );
     const nutritionEvidence = hasNutrientEvidence(scan);
     const nutritionUnconfirmed = Boolean(scan.nutritionalIssues?.unconfirmedDueToEvidence);
+    // The second photo check did not back this result, so no product is suggested for it.
+    const secondCheckVeto = Boolean(scan.secondCheck?.applied);
 
     return {
         nutritionStatus,
         nutritionPrimary,
         diseasePrimary: !decision.healthy && actionableDisease,
-        showNutritionProducts: decision.healthy || (nutritionEvidence && nutritionStatus !== 'none' && !nutritionUnconfirmed),
-        showDiseaseProducts: decision.treatmentEligible && actionableDisease,
+        showNutritionProducts: !secondCheckVeto && (decision.healthy || (nutritionEvidence && nutritionStatus !== 'none' && !nutritionUnconfirmed)),
+        showDiseaseProducts: !secondCheckVeto && decision.treatmentEligible && actionableDisease,
+        // Plant-health products beside a disease result: a sick plant, not a retake or an unclear photo.
+        showRecoveryProducts: !secondCheckVeto && !decision.healthy && !decision.requiresRetake && healthStatusOf(scan) === 'unhealthy',
     };
 };
 

@@ -942,3 +942,18 @@ describe('farmer-stated crop', () => {
         expect(normalizeFarmerCrop({ crop: 'Tomato' })).toBe('');
     });
 });
+
+describe('crop disease list for the prompt', () => {
+    it('uses the crop the farmer chose, even without a species match', () => {
+        expect(aiService.getMalaysiaCropInfo(null, 'Rice')?.cropType).toBe('rice');
+        expect(aiService.getMalaysiaCropInfo(null, 'Chilli')?.cropType).toBe('chilli');
+        expect(aiService.getMalaysiaCropInfo(null, 'Mango')?.cropType).toBe('mango');
+        expect(aiService.getMalaysiaCropInfo(null, 'Papaya')?.cropType).toBe('papaya');
+        expect(aiService.getMalaysiaCropInfo(null, 'Vegetables')).toBeNull();
+    });
+
+    it('names specific rice diseases so the AI can avoid a generic "Leaf Spot"', () => {
+        const names = aiService.getMalaysiaCropInfo(null, 'Rice').info.commonDiseases.join(' ');
+        for (const disease of ['Rice Blast', 'Brown Spot', 'Bacterial Leaf Blight', 'Sheath Blight', 'Tungro']) expect(names).toContain(disease);
+    });
+});

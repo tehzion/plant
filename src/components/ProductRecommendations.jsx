@@ -300,6 +300,7 @@ const ProductRecommendations = ({
         supplements: products.supplements || [],
         otherPopular: [],
         catalogueDiscovery: [],
+        recoverySupport: [],
       };
     }
     return products;
@@ -444,7 +445,8 @@ const ProductRecommendations = ({
   const hasNoProducts = !processedProducts.diseaseControl?.length && 
                        !processedProducts.fertilizers?.length && 
                        !processedProducts.supplements?.length && 
-                       !processedProducts.otherPopular?.length;
+                       !processedProducts.otherPopular?.length &&
+                       !processedProducts.recoverySupport?.length;
   const intent = processedProducts.recommendationIntent || recommendationIntent;
   const consultationIsPrimary = !isHealthyDiagnosis && (
     (!isNutritionMode && !isNutritionPrimaryDiagnosis && (
@@ -870,6 +872,21 @@ const ProductRecommendations = ({
           </p>
           <div className="products-grid">
             {processedProducts.catalogueDiscovery.map((product, index) => renderProductCard(product, index))}
+          </div>
+        </div>
+      )}
+
+      {/* Plant-health products beside a disease result: support, never a cure */}
+      {processedProducts.recoverySupport?.length > 0 && (
+        <div className="product-section product-section--recovery app-surface">
+          <div className="section-header-centered">
+            <h3 className="section-title">{getLabel(t, 'assessment.recoveryTitle', 'Help your plant recover')}</h3>
+          </div>
+          <p className="section-subtitle">
+            {getLabel(t, 'assessment.recoveryNote', 'These KANB products support plant health while you deal with the problem. They do not cure the disease. Ask our team which spray is right.')}
+          </p>
+          <div className="products-grid">
+            {processedProducts.recoverySupport.map((product, index) => renderProductCard(product, index))}
           </div>
         </div>
       )}
