@@ -33,6 +33,7 @@ import { useAuth } from '../context/AuthContext';
 import HeroSection from '../components/home/HeroSection';
 import EventProductHero from '../components/home/EventProductHero';
 import ActionGrid from '../components/home/ActionGrid';
+import WelcomeBanner from '../components/home/WelcomeBanner';
 import RecentScans from '../components/home/RecentScans';
 import RecentActivity from '../components/home/RecentActivity';
 import DueReminders from '../components/home/DueReminders';
@@ -568,6 +569,7 @@ const Home = () => {
             </>
           ) : (
             <>
+              <WelcomeBanner onStart={handleStartScan} />
               <HeroSection
                 greeting={getGreeting()}
                 locationName={locationName}
