@@ -96,10 +96,31 @@ export default defineConfig(async ({ mode }) => {
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // The page is not precached: a precached copy keeps the security headers it
+        // was saved with, so a server-side fix (such as allowing Supabase) would never
+        // reach returning visitors. Online, pages come from the network; offline, the
+        // last copy of the app shell is used.
+        globIgnores: ['index.html'],
+        navigateFallback: null,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-pages',
+              networkTimeoutSeconds: 5,
+              cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  // Offline on a page never opened before: serve the cached app shell.
+                  handlerDidError: async () => (await caches.match('/')) || Response.error(),
+                },
+              ],
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/,
             handler: 'CacheFirst',

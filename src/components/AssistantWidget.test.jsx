@@ -165,7 +165,7 @@ describe('AssistantWidget', () => {
         expect(await screen.findByText('Check nitrogen.')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Not helpful' }));
         expect(api.sendAssistantFeedback).toHaveBeenCalledWith({
-            rating: 'down', question: 'Why yellow?', answer: 'Check nitrogen.', language: 'ms', page: 'home', scanStatus: null,
+            rating: 'down', language: 'ms', page: 'home', scanStatus: null,
         });
         expect(screen.getByText('Thanks for your feedback')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Helpful answer' })).not.toBeInTheDocument();

@@ -60,7 +60,6 @@ const DailyTips = () => {
                 onTouchEnd={handleTouchEnd}
             >
                 <div
-                    key={currentTipIndex}
                     className={`daily-tip-card fade-in-fast ${currentTip.themeClass}`}
                 >
                     <div className="daily-tip-content">
@@ -79,8 +78,9 @@ const DailyTips = () => {
                                 type="button"
                                 className={`daily-tip-dot ${idx === currentTipIndex ? 'active' : ''}`}
                                 onClick={() => setCurrentTipIndex(idx)}
+                                aria-pressed={idx === currentTipIndex}
                                 aria-label={`${t('home.dailyTips')} ${idx + 1}`}
-                            />
+                            ><span aria-hidden="true" /></button>
                         ))}
                     </div>
                 </div>

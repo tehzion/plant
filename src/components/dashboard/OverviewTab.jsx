@@ -162,16 +162,9 @@ const OverviewTab = ({
             other: ClipboardList,
         };
 
-        const toneMap = {
-            note: { icon: '#64748b', bg: '#f8fafc' },
-            scout: { icon: '#0f766e', bg: '#ecfeff' },
-            spray: { icon: '#d97706', bg: '#fff7ed' },
-            fertilize: { icon: '#16a34a', bg: '#f0fdf4' },
-            prune: { icon: '#7c3aed', bg: '#f5f3ff' },
-            inspect: { icon: '#2563eb', bg: '#eff6ff' },
-            harvest: { icon: '#a16207', bg: '#fefce8' },
-            other: { icon: '#64748b', bg: '#f8fafc' },
-        };
+        const fieldTone = { icon: 'var(--color-primary-dark)', bg: 'var(--color-primary-light)' };
+        const neutralTone = { icon: 'var(--color-earth-dark)', bg: 'var(--color-earth-tint)' };
+        const toneMap = { note: neutralTone, scout: fieldTone, spray: fieldTone, fertilize: fieldTone, prune: neutralTone, inspect: fieldTone, harvest: neutralTone, other: neutralTone };
 
         return ACTIVITY_TYPES_CFG.map((activity) => ({
             id: activity.value,
@@ -287,11 +280,11 @@ const OverviewTab = ({
                     return (
                         <button key={qa.id} className="udp-utility-card" onClick={qa.action}>
                             <div 
-                                className={`udp-utility-icon-box ${isRecommended ? 'pulse-border udp-utility-icon-box--recommended' : ''}`}
+                                className={`udp-utility-icon-box ${isRecommended ? 'udp-utility-icon-box--recommended' : ''}`}
                                 style={{
                                     '--udp-utility-bg': qa.tone.bg,
                                     '--udp-utility-color': qa.tone.icon,
-                                    '--udp-utility-border': isRecommended ? qa.tone.icon : '#e2e8f0',
+                                    '--udp-utility-border': isRecommended ? qa.tone.icon : 'var(--color-border)',
                                 }}
                             >
                                 <Icon size={24} />
@@ -405,14 +398,14 @@ const OverviewTab = ({
             {/* Management Utilities (Bottom Grid) */}
             <div className="ov-tools-grid ov-tools-grid--spaced">
                 <button className="ov-tool-card ov-tool-card--rounded" onClick={() => navigate('/guide')}>
-                    <div className="ov-tool-icon ov-tool-icon--guide"><BookOpen size={18} color="#16a34a" /></div>
+                    <div className="ov-tool-icon ov-tool-icon--guide"><BookOpen size={18} color="var(--color-primary)" /></div>
                     <div className="ov-tool-copy">
                         <span className="ov-tool-title">{label('profile.userGuide', 'User Guide')}</span>
                         <span className="ov-tool-meta">{label('profile.learnMore', 'Help Center')}</span>
                     </div>
                 </button>
                 <button className="ov-tool-card ov-tool-card--rounded" onClick={() => navigate('/encyclopedia')}>
-                    <div className="ov-tool-icon ov-tool-icon--encyclopedia"><Database size={18} color="#1d4ed8" /></div>
+                    <div className="ov-tool-icon ov-tool-icon--encyclopedia"><Database size={18} color="var(--color-primary)" /></div>
                     <div className="ov-tool-copy">
                         <span className="ov-tool-title">{label('profile.offlineDb', 'Disease DB')}</span>
                         <span className="ov-tool-meta">{label('profile.browseOffline', 'Browse Pests')}</span>

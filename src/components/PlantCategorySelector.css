@@ -19,14 +19,9 @@
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  /* Three categories are offered for now, so they sit in one row */
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-md);
-}
-
-@media (min-width: 1024px) {
-  .category-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
 }
 
 .category-btn {
@@ -55,7 +50,7 @@
 
 .category-btn.active {
   border-color: var(--color-primary);
-  background: var(--color-bg-primary);
+  background: var(--color-bg-card);
   box-shadow: none;
 }
 
@@ -115,14 +110,35 @@
   to { transform: scale(1); }
 }
 
+/* On phones the three become full-width rows, so each name stays on one line */
 @media (max-width: 480px) {
   .category-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
   }
 
   .category-btn {
-    min-height: 120px;
-    padding: var(--space-md);
+    flex-direction: row;
+    justify-content: flex-start;
+    min-height: 72px;
+    padding: var(--space-xs) var(--space-md);
+  }
+
+  .category-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .category-name {
+    font-size: 1.0625rem;
+    text-align: left;
+  }
+
+  .category-btn .selected-indicator {
+    top: 0;
+    bottom: 0;
+    right: var(--space-md);
+    margin: auto 0;
   }
 }
 

@@ -17,6 +17,7 @@ it('deletes only expired audit records and their private training images', async
     expect(remove).toHaveBeenCalledWith(['training/old_tree.jpg']);
     expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('delete from public.diagnosis_training_logs'), ['old']);
     expect(result.deletedFeedback).toBe(1);
+    expect(mocks.queryNeon).toHaveBeenCalledWith(expect.stringContaining('delete from public.assistant_feedback'), [expect.any(String)]);
 });
 it('deletes images stored in a per-owner folder alongside older flat paths', async () => {
     const remove = vi.fn().mockResolvedValue({ error: null });

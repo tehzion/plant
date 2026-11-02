@@ -40,6 +40,8 @@ vi.mock('lucide-react', () => {
         'ChevronRight',
         'ChevronUp',
         'CircleDot',
+        'CircleHelp',
+        'Stethoscope',
         'ClipboardList',
         'Clock',
         'Cloud',

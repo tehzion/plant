@@ -29,7 +29,8 @@
 }
 
 .product-state--error .product-state-title {
-  color: var(--color-severe);
+  color: var(--color-text-secondary);
+  font-weight: 500;
 }
 
 .product-state-hint {
@@ -786,12 +787,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--color-bg-card, #ffffff);
   border: 1px solid rgba(226, 232, 240, 0.95);
   box-shadow: none;
   border-radius: 12px;
   padding: 14px 16px;
-  backdrop-filter: blur(14px);
+
 }
 
 .checkout-info {

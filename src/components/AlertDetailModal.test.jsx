@@ -26,7 +26,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
     }),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: () => ({
         user: { id: 'user-1' },
     }),

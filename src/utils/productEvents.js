@@ -1,3 +1,5 @@
+import { getAnalyticsConsent } from './privacyChoices.js';
+import { ANALYTICS_CONSENT_VERSION } from '../../shared/privacy.js';
 import { supabase } from '../lib/supabase';
 import { getGuestId } from './localStorage';
 import { neonDataRequest } from './neonApi.js';
@@ -92,6 +94,8 @@ export const saveProductEvent = async ({
 
     try {
         const userId = await getSupabaseUserId();
+        const owner = userId ? `user:${userId}` : `guest:${getGuestId()}`;
+        if (!getAnalyticsConsent(owner)) return { saved: false, skipped: true, reason: 'optional_analytics_not_consented' };
         const payload = buildProductEventPayload({
             diagnosis,
             product,
@@ -102,7 +106,10 @@ export const saveProductEvent = async ({
             metadata,
         });
 
-        await neonDataRequest('product_events', payload, { authRequired: false });
+        // Re-check after async identity lookup and before disclosure.
+        if (!getAnalyticsConsent(owner)) return { saved: false, skipped: true };
+        payload.metadata.analyticsConsent = { enabled: true, version: ANALYTICS_CONSENT_VERSION };
+        await neonDataRequest('product_events', payload, { authRequired: false, expectedUserId: userId });
 
         return { saved: true };
     } catch (error) {

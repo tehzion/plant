@@ -1,6 +1,9 @@
 const homeTranslations = {
     "en": {
         "home": {
+            "category": "Category",
+            "newScan": "New plant check",
+
             "checkTitle": "Check plant health",
             "checkDesc": "Upload a clear photo of the plant. You will see the most likely problem, how certain the result is, and what to check next.",
             "checkAction": "Upload a photo",
@@ -68,7 +71,7 @@ const homeTranslations = {
             "analyzePlant": "Analyze Plant",
             "analyzeButton": "Analyze Plant",
             "dataConsentLabel": "Help improve plant diagnosis (optional)",
-            "dataConsentHint": "Allow us to keep these photos and the AI result so agricultural experts can check them and improve future assessments. Your scan works the same if you leave this unticked.",
+            "dataConsentHint": "Allow experts and optional secondary AI checks to use these photos and results to improve assessments. This choice applies to future scans for this account or guest in this browser. Scanning works with this off.",
             "dataConsentPrivacyLink": "Privacy policy",
             "analyzing": "Analyzing Your Plant...",
             "analyzingDesc": "This can take up to a minute. You can keep using the app; we will let you know when the result is ready.",
@@ -95,7 +98,7 @@ const homeTranslations = {
             "mygapTitle": "myGAP Guide",
             "mygapDesc": "Good Agricultural Practices",
             "confirmExit": "Cancel current scan?",
-            "confirmExitMessage": "You will lose your current scan progress.",
+            "confirmExitMessage": "Unsaved scan progress will be lost. A photo draft you already saved stays on this phone.",
             "minimizeScan": "Continue Browsing",
             "cancelScan": "Cancel Scan",
             "errorNotPlant": "No plant detected. Please upload a clear photo of a plant.",
@@ -236,6 +239,9 @@ const homeTranslations = {
     },
     "ms": {
         "home": {
+            "category": "Kategori",
+            "newScan": "Semakan tanaman baharu",
+
             "checkTitle": "Semak kesihatan tanaman",
             "checkDesc": "Muat naik foto pokok yang jelas. Anda akan melihat masalah yang paling mungkin, tahap keyakinan keputusan dan perkara yang perlu disemak seterusnya.",
             "checkAction": "Muat naik foto",
@@ -299,7 +305,7 @@ const homeTranslations = {
             "analyzePlant": "Analisis Tumbuhan",
             "analyzeButton": "Analisis Tumbuhan",
             "dataConsentLabel": "Bantu tingkatkan diagnosis tumbuhan (pilihan)",
-            "dataConsentHint": "Benarkan kami menyimpan gambar ini dan keputusan AI supaya pakar pertanian boleh menyemaknya dan menambah baik penilaian akan datang. Semakan anda tetap berfungsi jika kotak ini tidak ditanda.",
+            "dataConsentHint": "Benarkan pakar dan semakan AI kedua pilihan menggunakan foto serta keputusan untuk menambah baik penilaian. Pilihan meliputi imbasan baharu akaun atau tetamu ini dalam pelayar ini. Imbasan tetap berfungsi jika dimatikan.",
             "dataConsentPrivacyLink": "Dasar privasi",
             "analyzing": "Menganalisis Tumbuhan Anda...",
             "analyzingDesc": "Proses ini boleh mengambil masa sehingga seminit. Anda boleh terus menggunakan aplikasi; kami akan maklumkan apabila keputusan sedia.",
@@ -326,7 +332,7 @@ const homeTranslations = {
             "mygapTitle": "Panduan myGAP",
             "mygapDesc": "Amalan Pertanian Baik",
             "confirmExit": "Batalkan semakan semasa?",
-            "confirmExitMessage": "Anda akan kehilangan kemajuan semakan semasa.",
+            "confirmExitMessage": "Kemajuan yang belum disimpan akan hilang. Draf foto yang sudah disimpan kekal dalam telefon ini.",
             "minimizeScan": "Terus Melayari",
             "cancelScan": "Batal Semakan",
             "errorNotPlant": "Tiada tumbuhan dikesan. Sila muat naik foto tumbuhan yang jelas.",
@@ -471,6 +477,9 @@ const homeTranslations = {
     },
     "zh": {
         "home": {
+            "category": "类别",
+            "newScan": "新建植物检查",
+
             "checkTitle": "检查植物健康",
             "checkDesc": "上传一张清晰的植物照片。您会看到最可能的问题、结果的可信程度，以及接下来需要检查的事项。",
             "checkAction": "上传照片",
@@ -539,7 +548,7 @@ const homeTranslations = {
             "analyzePlant": "分析植物",
             "analyzeButton": "分析植物",
             "dataConsentLabel": "帮助改进植物诊断（可选）",
-            "dataConsentHint": "允许我们保存这些照片和 AI 结果，以便农业专家进行核查并改进今后的评估。不勾选也不会影响本次扫描。",
+            "dataConsentHint": "允许专家及可选的第二AI审核使用照片和结果来改进评估。此选择适用于此浏览器中当前账户或访客的后续扫描。关闭也不影响扫描。",
             "dataConsentPrivacyLink": "隐私政策",
             "analyzing": "正在分析您的植物...",
             "analyzingDesc": "这可能需要约一分钟。您可以继续使用应用，结果准备好后我们会通知您。",
@@ -566,7 +575,7 @@ const homeTranslations = {
             "mygapTitle": "myGAP 指南",
             "mygapDesc": "良好农业规范",
             "confirmExit": "取消当前扫描？",
-            "confirmExitMessage": "您将失去当前的扫描进度。",
+            "confirmExitMessage": "未保存的扫描进度将丢失。已保存的照片草稿仍保留在此手机上。",
             "minimizeScan": "继续浏览",
             "cancelScan": "取消扫描",
             "errorNotPlant": "未检测到植物。请上传清晰的植物照片。",

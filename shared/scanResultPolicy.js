@@ -31,14 +31,64 @@ const actionableDiseasePattern = /fungal|fungus|bacter|viral|virus|pest|insect|m
 const EARLY_BLIGHT = { name: 'Early Blight', pattern: /early blight|hawar awal|早疫病|alternaria solani/i };
 const LATE_BLIGHT = { name: 'Late Blight', pattern: /late blight|hawar lewat|晚疫病|phytophthora infestans/i };
 const LEAF_MOLD = { name: 'Leaf Mold', pattern: /leaf mou?ld|kulapuk daun|叶霉病|passalora fulva|fulvia fulva|cladosporium fulvum/i };
+// Padi: blast and brown spot both make brown leaf lesions; leaf blight and leaf streak are both
+// bacterial streaks. Each pair needs different control, so a confident call must weigh the other.
+const RICE_BLAST = { name: 'Rice Blast', pattern: /\bblast\b|karah|稻瘟病|pyricularia|magnaporthe/i };
+const BROWN_SPOT = { name: 'Brown Spot', pattern: /brown spot|bintik perang|胡麻斑病|bipolaris|cochliobolus|helminthosporium/i };
+const LEAF_BLIGHT = { name: 'Bacterial Leaf Blight', pattern: /bacterial (?:leaf )?blight|hawar daun bakteria|白叶枯病|pv\.? oryzae\b/i };
+const LEAF_STREAK = { name: 'Bacterial Leaf Streak', pattern: /bacterial (?:leaf )?streak|jalur daun bakteria|细菌性条斑病|oryzicola/i };
+// Chilli: fungal cercospora spots and bacterial leaf spots look alike but need fungicide vs copper.
+const CERCOSPORA = { name: 'Cercospora Leaf Spot', pattern: /cercospora|frog.?eye|bintik mata katak|尾孢/i };
+const BACTERIAL_SPOT = { name: 'Bacterial Leaf Spot', pattern: /bacterial (?:leaf )?spot|bintik daun bakteria|细菌性(?:叶)?斑点病|xanthomonas (?:campestris|euvesicatoria|vesicatoria)/i };
+// Farmer-facing names for the look-alikes above, so a warning reads in the farmer's language.
+const LOOK_ALIKE_LABELS = {
+    'Early Blight': { ms: 'Hawar Awal', zh: '早疫病' },
+    'Late Blight': { ms: 'Hawar Lewat', zh: '晚疫病' },
+    'Leaf Mold': { ms: 'Kulapuk Daun', zh: '叶霉病' },
+    'Rice Blast': { ms: 'Penyakit Karah', zh: '稻瘟病' },
+    'Brown Spot': { ms: 'Bintik Perang', zh: '胡麻斑病' },
+    'Bacterial Leaf Blight': { ms: 'Hawar Daun Bakteria', zh: '白叶枯病' },
+    'Bacterial Leaf Streak': { ms: 'Jalur Daun Bakteria', zh: '细菌性条斑病' },
+    'Cercospora Leaf Spot': { ms: 'Bintik Daun Cercospora', zh: '尾孢叶斑病' },
+    'Bacterial Leaf Spot': { ms: 'Bintik Daun Bakteria', zh: '细菌性叶斑病' },
+};
+export const lookAlikeLabel = (name, language = 'en') => LOOK_ALIKE_LABELS[name]?.[language] || name;
 const TOMATO = /tomato|tomat\b|番茄|lycopersic/i;
 const POTATO = /potato|kentang|马铃薯|土豆|tuberosum/i;
+const PADI = /\bpadi\b|paddy|\brice\b|\bberas\b|水稻|稻|oryza/i;
+const CHILLI = /chil+i|\bcili\b|\bchile\b|辣椒|capsicum/i;
 const LOOK_ALIKE_RULES = [
     { crop: (t) => TOMATO.test(t) || POTATO.test(t), diagnosis: EARLY_BLIGHT, mustConsider: [LATE_BLIGHT] },
-    { crop: (t) => TOMATO.test(t), diagnosis: EARLY_BLIGHT, mustConsider: [LEAF_MOLD] },
+    // Re-scoring the stored benchmark found "Early Blight" treatment on a tomato bacterial-spot leaf
+    // the assessment never weighed; bacterial spot needs copper, not the blight fungicide. (Septoria
+    // was left out: it shares the blight fungicides, and adding it sent twice as many correct calls
+    // to review as the wrong ones it caught.)
+    { crop: (t) => TOMATO.test(t), diagnosis: EARLY_BLIGHT, mustConsider: [LEAF_MOLD, BACTERIAL_SPOT] },
     { crop: (t) => TOMATO.test(t) || POTATO.test(t), diagnosis: LATE_BLIGHT, mustConsider: [EARLY_BLIGHT] },
     { crop: (t) => TOMATO.test(t), diagnosis: LEAF_MOLD, mustConsider: [EARLY_BLIGHT, LATE_BLIGHT] },
+    { crop: (t) => PADI.test(t), diagnosis: RICE_BLAST, mustConsider: [BROWN_SPOT] },
+    { crop: (t) => PADI.test(t), diagnosis: BROWN_SPOT, mustConsider: [RICE_BLAST] },
+    { crop: (t) => PADI.test(t), diagnosis: LEAF_BLIGHT, mustConsider: [LEAF_STREAK] },
+    { crop: (t) => PADI.test(t), diagnosis: LEAF_STREAK, mustConsider: [LEAF_BLIGHT] },
+    { crop: (t) => CHILLI.test(t), diagnosis: CERCOSPORA, mustConsider: [BACTERIAL_SPOT] },
+    { crop: (t) => CHILLI.test(t), diagnosis: BACTERIAL_SPOT, mustConsider: [CERCOSPORA] },
 ];
+
+// Viruses have no chemical cure. The name is checked as well as the category, because a
+// mislabelled category ("fungal") must not unlock treatment for "Tomato spotted wilt virus".
+const VIRUS_NAME = /virus|viral|virosis|病毒|tungro|mosaic|mozek|geminivir|begomovir/i;
+const SEVERE = /severe|critical|high|teruk|serius|kritikal|tinggi|严重|危急/i;
+
+/**
+ * True when the crop itself is in doubt: the farmer did not state it and the species check
+ * did not confirm it. Dataset evaluation found the crop misread in 25 of 70 such images, and
+ * a disease named for the wrong crop must not unlock treatment. Only new scans carry the
+ * farmerStatedCrop flag, so older saved results are unaffected.
+ */
+export const isCropUncertain = (scan = {}) => {
+    const species = scan.speciesAssessment;
+    return Boolean(species && species.farmerStatedCrop === false && species.confirmed !== true);
+};
 
 /** Returns the names of look-alike conditions the assessment never weighed (empty when none are required). */
 export const getMissingLookAlikes = (scan = {}) => {
@@ -114,6 +164,8 @@ const hasNutrientEvidence = (scan = {}) => {
  * This is shared by the browser and server so a product cannot be rendered in
  * a different section from the decision that produced it.
  */
+const healthStatusOf = (scan = {}) => normalized(scan.healthStatus);
+
 export const getScanSectionPolicy = (scan = {}) => {
     const decision = assessScanDecision(scan);
     const nutritionStatus = normalizeNutritionStatus(scan);
@@ -133,13 +185,17 @@ export const getScanSectionPolicy = (scan = {}) => {
     );
     const nutritionEvidence = hasNutrientEvidence(scan);
     const nutritionUnconfirmed = Boolean(scan.nutritionalIssues?.unconfirmedDueToEvidence);
+    // The second photo check did not back this result, so no product is suggested for it.
+    const secondCheckVeto = Boolean(scan.secondCheck?.applied);
 
     return {
         nutritionStatus,
         nutritionPrimary,
         diseasePrimary: !decision.healthy && actionableDisease,
-        showNutritionProducts: decision.healthy || (nutritionEvidence && nutritionStatus !== 'none' && !nutritionUnconfirmed),
-        showDiseaseProducts: decision.treatmentEligible && actionableDisease,
+        showNutritionProducts: !secondCheckVeto && (decision.healthy || (nutritionEvidence && nutritionStatus !== 'none' && !nutritionUnconfirmed)),
+        showDiseaseProducts: !secondCheckVeto && decision.treatmentEligible && actionableDisease,
+        // Plant-health products beside a disease result: a sick plant, not a retake or an unclear photo.
+        showRecoveryProducts: !secondCheckVeto && !decision.healthy && !decision.requiresRetake && healthStatusOf(scan) === 'unhealthy',
     };
 };
 
@@ -164,8 +220,10 @@ export const assessScanDecision = (scan = {}) => {
     const text = [scan.disease, scan.diseaseCategory, scan.pathogenType, scan.diagnosticEvidence?.likelyCauseCategory].join(' ').toLowerCase();
     const nutrient = /nutrient|nutritional|deficien|kekurangan|nutrien|缺素|缺钾/.test(text);
     const pest = /pest|insect|mealybug|aphid|mite|thrip|whitefly|infestation|kutu|serangga|粉蚧|虫/.test(text);
-    const nonChemicalCause = ['environmental', 'nutrient', 'viral', 'healthy', 'unknown'].includes(normalized(scan.diseaseCategory));
+    const nonChemicalCause = ['environmental', 'nutrient', 'viral', 'healthy', 'unknown'].includes(normalized(scan.diseaseCategory))
+        || VIRUS_NAME.test(`${scan.disease || ''} ${scan.primaryScientificName || ''} ${scan.pathogenType || ''}`);
     const actionable = !nonChemicalCause && (pest || /fungal|fungus|bacter|oomycete|nematode|blight|spot|rot|rust|mildew|kulat|病/.test(text));
+    const cropUncertain = isCropUncertain(scan);
     const missingLookAlikes = getMissingLookAlikes(scan);
     const weak = Boolean(conflictingHealth || healthStatus === 'unknown' || missingLookAlikes.length || isUnsureHealthy(scan) || scan.needsMoreEvidence || scan.needsReview || scan.expertReviewRequired || scan.abstainReason || scan.validationIssues?.length
         || reviewStatuses.has(status) || reviewStates.has(explicit)
@@ -175,7 +233,7 @@ export const assessScanDecision = (scan = {}) => {
     let resultState;
     if (retake || explicit === 'needs_closer_photo') resultState = SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
     else if (healthySignal && !weak) resultState = SCAN_RESULT_STATES.HEALTHY;
-    else if (actionable && !weak && confidence !== null
+    else if (actionable && !weak && !cropUncertain && confidence !== null
         && ((confidence >= 80 && ['confirmed', 'high_confidence', 'confident_treatment'].includes(status || explicit))
             || (confidence >= 85 && status === 'likely'))) {
         resultState = SCAN_RESULT_STATES.CONFIDENT_TREATMENT;
@@ -184,10 +242,15 @@ export const assessScanDecision = (scan = {}) => {
     else resultState = SCAN_RESULT_STATES.EXPERT_REVIEW_NEEDED;
     const healthy = resultState === SCAN_RESULT_STATES.HEALTHY;
     const treatmentEligible = resultState === SCAN_RESULT_STATES.CONFIDENT_TREATMENT;
+    const requiresRetake = resultState === SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO;
+    const needsReview = !healthy && !treatmentEligible;
     return {
-        resultState, healthy, treatmentEligible, confidence, missingLookAlikes,
-        needsReview: !healthy && !treatmentEligible,
-        requiresRetake: resultState === SCAN_RESULT_STATES.NEEDS_CLOSER_PHOTO,
+        resultState, healthy, treatmentEligible, confidence, missingLookAlikes, cropUncertain,
+        needsReview,
+        // A serious-looking problem the app cannot confirm: send the farmer to a person today
+        // rather than leave them with "check again".
+        urgent: needsReview && !requiresRetake && SEVERE.test(String(scan.severity || '')),
+        requiresRetake,
         tone: healthy ? 'healthy' : treatmentEligible ? 'issue' : 'review',
         followUpActivity: healthy ? 'inspect' : treatmentEligible ? 'note' : 'scout',
     };

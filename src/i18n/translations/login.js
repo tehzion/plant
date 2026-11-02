@@ -1,6 +1,9 @@
 const loginTranslations = {
     "en": {
         "login": {
+            "demoAccountHint": "Development demo: sign in with test@test.com and Test321@.",
+            "scanFollowUpWaiting": "Your scan follow-up log is ready. Sign in to review and save it.",
+
             "welcomeBack": "Welcome Back",
             "farmIntroTitle": "My farm",
             "farmIntroSubtitle": "Sign in to keep your farm records safe and with you on any phone.",
@@ -14,6 +17,7 @@ const loginTranslations = {
             "password": "Password",
             "signIn": "Sign In",
             "register": "Create Account",
+            "checkEmail": "Check your email for a confirmation link, then sign in. If no email arrives, check your spam folder or try signing in.",
             "forgotPassword": "Forgot Password?",
             "noAccount": "Don't have an account?",
             "placeholderEmail": "Enter your email",
@@ -44,6 +48,9 @@ const loginTranslations = {
     },
     "ms": {
         "login": {
+            "demoAccountHint": "Demo pembangunan: log masuk menggunakan test@test.com dan Test321@.",
+            "scanFollowUpWaiting": "Log susulan imbasan anda sedia. Log masuk untuk menyemak dan menyimpannya.",
+
             "welcomeBack": "Selamat Kembali",
             "farmIntroTitle": "Ladang saya",
             "farmIntroSubtitle": "Log masuk supaya rekod ladang anda selamat dan boleh dibuka di mana-mana telefon.",
@@ -57,6 +64,7 @@ const loginTranslations = {
             "password": "Kata Laluan",
             "signIn": "Log Masuk",
             "register": "Cipta Akaun",
+            "checkEmail": "Semak e-mel untuk pautan pengesahan, kemudian log masuk. Jika tiada e-mel diterima, semak folder spam atau cuba log masuk.",
             "forgotPassword": "Lupa Kata Laluan?",
             "noAccount": "Tiada akaun?",
             "placeholderEmail": "Masukkan emel anda",
@@ -87,6 +95,9 @@ const loginTranslations = {
     },
     "zh": {
         "login": {
+            "demoAccountHint": "开发演示：使用 test@test.com 和 Test321@ 登录。",
+            "scanFollowUpWaiting": "扫描跟进日志已准备好。请登录以查看并保存。",
+
             "welcomeBack": "欢迎回来",
             "farmIntroTitle": "我的农场",
             "farmIntroSubtitle": "登录后，农场记录会安全保存，并可在任何手机上查看。",
@@ -100,6 +111,7 @@ const loginTranslations = {
             "password": "密码",
             "signIn": "登录",
             "register": "创建账户",
+            "checkEmail": "请查收电子邮件中的确认链接，确认后再登录。如果没有收到邮件，请检查垃圾邮件夹或尝试登录。",
             "forgotPassword": "忘记密码？",
             "noAccount": "没有账户？",
             "placeholderEmail": "输入您的电子邮件",

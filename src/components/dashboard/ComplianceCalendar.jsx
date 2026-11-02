@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n';
+import './ComplianceCalendar.css';
 
 const ComplianceCalendar = ({ events = [] }) => {
     const { t, label: translateLabel } = useLanguage();

@@ -364,3 +364,36 @@
 .adm-success-icon {
   color: var(--color-primary);
 }
+
+/* Keep the activity selector and notes within the same field rhythm. */
+.adm-activity-field {
+  display: grid;
+  gap: 8px;
+  padding: 4px 14px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+.adm-activity-field select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.adm-status-btn { min-height: 44px; font-size: 1rem; font-weight: 600; }
+.adm-status-btn.active-amber { color: var(--color-warning-ink); border-color: var(--color-warning-border); }
+.adm-textarea { font-size: 1rem; line-height: 1.6; padding-block: 14px; }
+.adm-activity-field select:focus-visible, .adm-textarea:focus-visible, .adm-status-btn:focus-visible {
+  outline: 3px solid var(--color-primary-dark);
+  outline-offset: 2px;
+}
+@media (max-width: 360px) { .adm-status-row { flex-wrap: wrap; } .adm-status-btn { flex-basis: 100%; } }

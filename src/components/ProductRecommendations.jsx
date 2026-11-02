@@ -1,11 +1,11 @@
 import { STORE_URL } from '../utils/store.js';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { suppliers } from '../data/productRecommendations.js';
+import { kanbContact } from '../data/productRecommendations.js';
 import { useLanguage } from '../i18n/i18n.jsx';
 import PartnerCarousel from './PartnerCarousel';
 import './ProductRecommendations.css';
-import { Map, TreeDeciduous, Home, MapPin, Pill, Leaf, Building2, Phone, ShoppingCart, Loader, Info, PackageX, Search, MessageCircle, ClipboardList } from 'lucide-react';
+import { Map, TreeDeciduous, Home, Pill, Leaf, Building2, Mail, ShoppingCart, Loader, Info, PackageX, Search, MessageCircle, ClipboardList } from 'lucide-react';
 import { showToast } from '../utils/toast';
 import {
   buildProductDiagnosisPayload,
@@ -300,6 +300,7 @@ const ProductRecommendations = ({
         supplements: products.supplements || [],
         otherPopular: [],
         catalogueDiscovery: [],
+        recoverySupport: [],
       };
     }
     return products;
@@ -444,7 +445,8 @@ const ProductRecommendations = ({
   const hasNoProducts = !processedProducts.diseaseControl?.length && 
                        !processedProducts.fertilizers?.length && 
                        !processedProducts.supplements?.length && 
-                       !processedProducts.otherPopular?.length;
+                       !processedProducts.otherPopular?.length &&
+                       !processedProducts.recoverySupport?.length;
   const intent = processedProducts.recommendationIntent || recommendationIntent;
   const consultationIsPrimary = !isHealthyDiagnosis && (
     (!isNutritionMode && !isNutritionPrimaryDiagnosis && (
@@ -874,6 +876,21 @@ const ProductRecommendations = ({
         </div>
       )}
 
+      {/* Plant-health products beside a disease result: support, never a cure */}
+      {processedProducts.recoverySupport?.length > 0 && (
+        <div className="product-section product-section--recovery app-surface">
+          <div className="section-header-centered">
+            <h3 className="section-title">{getLabel(t, 'assessment.recoveryTitle', 'Help your plant recover')}</h3>
+          </div>
+          <p className="section-subtitle">
+            {getLabel(t, 'assessment.recoveryNote', 'These KANB products support plant health while you deal with the problem. They do not cure the disease. Ask our team which spray is right.')}
+          </p>
+          <div className="products-grid">
+            {processedProducts.recoverySupport.map((product, index) => renderProductCard(product, index))}
+          </div>
+        </div>
+      )}
+
       {/* Recommended Fertilizers */}
       {processedProducts.fertilizers && processedProducts.fertilizers.length > 0 && (
         <div className="product-section app-surface">
@@ -938,65 +955,51 @@ const ProductRecommendations = ({
          <div className="checkout-bar-container">
            <div className="checkout-bar app-surface">
              <div className="checkout-info">
-               <span className="checkout-count">{checkoutEligibleIds.length} {t('results.itemsSelected') || 'Items Selected'}</span>
+               <span className="checkout-count" role="status" aria-live="polite" aria-atomic="true">{getLabel(t, checkoutEligibleIds.length === 1 ? 'results.itemSelected' : 'results.itemsSelected', checkoutEligibleIds.length === 1 ? '{count} item selected' : '{count} items selected').replace('{count}', checkoutEligibleIds.length)}</span>
                {!storeUrl && (
                  <span className="checkout-note">{t('results.checkoutUnavailable') || 'Checkout is unavailable right now. Please open an item directly from the store.'}</span>
                )}
              </div>
              <button onClick={handleCheckout} className="checkout-button" disabled={!canCheckout}>
                <ShoppingCart size={18} />
-               <span>{t('results.buySelected') || 'Buy Selected Products'}</span>
+               <span>{getLabel(t, 'results.buySelected', 'Buy selected products')}</span>
              </button>
            </div>
          </div>
       )}
 
-      {/* Suppliers Information */}
+      {/* KANB contact */}
       <div className="product-section app-surface">
         <div className="section-header-centered">
-          <h3 className="section-title">{t('results.ourTrustedSuppliers')}</h3>
+          <h3 className="section-title">{t('results.kanbContactTitle')}</h3>
         </div>
 
         <div className="suppliers-grid">
-          {/* Guan Chong Agro */}
           <div className="supplier-card">
             <div className="supplier-header">
               <div className="supplier-icon-bg"><Building2 size={24} color="#166534" /></div>
-              <h4 className="supplier-company-name">{suppliers.guanChongAgro.name}</h4>
+              <h4 className="supplier-company-name">{kanbContact.name}</h4>
             </div>
-            <p className="supplier-description">{t(suppliers.guanChongAgro.description)}</p>
+            <p className="supplier-description">{t('results.kanbContactDesc')}</p>
             <div className="supplier-contact">
-              <p><MapPin size={16} /> {suppliers.guanChongAgro.address}</p>
-              <p><Phone size={16} /> {suppliers.guanChongAgro.phone}</p>
+              <p>
+                <MessageCircle size={16} />
+                <a href={`https://wa.me/${kanbContact.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                  WhatsApp {kanbContact.whatsappDisplay}
+                </a>
+              </p>
+              <p>
+                <Mail size={16} />
+                <a href={`mailto:${kanbContact.email}`}>{kanbContact.email}</a>
+              </p>
             </div>
             <a
-              href="https://www.guanchongagro.com/category/"
+              href={STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="buy-button supplier-buy-button"
             >
-              {t('results.viewProduct')}
-            </a>
-          </div>
-
-          {/* Tan Agro */}
-          <div className="supplier-card">
-            <div className="supplier-header">
-              <div className="supplier-icon-bg"><Building2 size={24} color="#1D4ED8" /></div>
-              <h4 className="supplier-company-name">{suppliers.tanAgro.name}</h4>
-            </div>
-            <p className="supplier-description">{t(suppliers.tanAgro.description)}</p>
-            <div className="supplier-contact">
-              <p><MapPin size={16} /> {suppliers.tanAgro.address}</p>
-              <p><Phone size={16} /> {suppliers.tanAgro.phone.split(' / ')[0]}...</p>
-            </div>
-            <a
-              href="https://www.tanagro.com.my/category/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="buy-button supplier-buy-button"
-            >
-              {t('results.viewProduct')}
+              {t('results.kanbBrowseStore')}
             </a>
           </div>
         </div>

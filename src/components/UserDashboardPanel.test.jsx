@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
+import { saveDailyNote } from '../utils/localStorage';
 import UserDashboardPanel from './UserDashboardPanel.jsx';
 
 const routerMocks = vi.hoisted(() => ({
@@ -26,6 +27,8 @@ const translationMap = {
     'nav.shop': 'Shop',
     'home.onlineStatus': 'Online',
     'common.signOut': 'Sign out',
+    'common.close': 'Close',
+    'profile.editProfile': 'Edit Profile',
     'profile.verifiedFarmer': 'Verified Farmer',
     'profile.totalScans': 'Scans',
     'profile.healthy': 'Healthy',
@@ -36,8 +39,10 @@ const translationMap = {
 
 vi.mock('lucide-react', async () => {
     const React = await import('react');
+    const icons = await vi.importActual('lucide-react');
     const Icon = ({ children, ...props }) => React.createElement('svg', props, children);
     return {
+        ...icons,
         LogOut: Icon,
         MapPinned: Icon,
         NotebookPen: Icon,
@@ -59,6 +64,7 @@ vi.mock('lucide-react', async () => {
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
+    Link: ({to, children, ...props}) => <a href={to} {...props}>{children}</a>,
     useSearchParams: () => [
         new URLSearchParams(routerMocks.searchParamsString),
         routerMocks.setSearchParams,
@@ -72,7 +78,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
     }),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: () => ({
         user: { id: 'user-1', email: 'farmer@example.com' },
         signOut: signOutMock,
@@ -181,9 +187,12 @@ vi.mock('./dashboard/PlotsTab', () => ({
 }));
 
 vi.mock('./dashboard/NotesTab', () => ({
-    default: ({ noteForm }) => (
+    default: ({ noteForm, setNoteForm, handleAddNote, savingNote, saveError }) => (
         <div data-testid="notes-tab">
             {noteForm.activity_type}|{noteForm.chemical_name}|{noteForm.note}
+            <button onClick={() => setNoteForm(current => ({...current, activity_type:'scout', disease_name_observed:'Observed spots', note:''}))}>Prepare Scout</button>
+            <button disabled={savingNote} onClick={() => handleAddNote({preventDefault(){}})}>Submit activity</button>
+            {saveError && <p role="alert">{saveError}</p>}
         </div>
     ),
 }));
@@ -259,4 +268,33 @@ describe('UserDashboardPanel', () => {
         expect(routerMocks.setSearchParams).toHaveBeenCalledWith(expect.any(URLSearchParams), { replace: true });
         expect(routerMocks.setSearchParams.mock.calls[0][0].toString()).toBe('');
     });
+    it('names profile controls, contains dialog focus and restores it on Escape', async () => {
+        render(<UserDashboardPanel />);
+        const trigger = await screen.findByRole('button', {name:'Edit Profile'});
+        trigger.focus();
+        fireEvent.click(trigger);
+        const dialog = screen.getByRole('dialog');
+        const close = within(dialog).getByRole('button', {name:'Close'});
+        expect(close).toHaveFocus();
+        fireEvent.keyDown(close, {key:'Tab',shiftKey:true});
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        expect(close).not.toHaveFocus();
+        fireEvent.keyDown(document.activeElement, {key:'Escape'});
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(trigger).toHaveFocus();
+    });
+
+    it('recovers a rejected Scout save and keeps the observation for retry', async () => {
+        saveDailyNote.mockRejectedValueOnce(new Error('Storage unavailable')).mockResolvedValueOnce({id:'saved-scout'});
+        render(<UserDashboardPanel />);
+        fireEvent.click(await screen.findByRole('button',{name:/Daily Log/}));
+        fireEvent.click(screen.getByRole('button',{name:'Prepare Scout'}));
+        fireEvent.click(screen.getByRole('button',{name:'Submit activity'}));
+        expect(await screen.findByRole('alert')).toHaveTextContent('Your entry is still here');
+        expect(screen.getByRole('button',{name:'Submit activity'})).toBeEnabled();
+        expect(saveDailyNote).toHaveBeenCalledWith(expect.objectContaining({disease_name_observed:'Observed spots',note:''}), 'user-1');
+        fireEvent.click(screen.getByRole('button',{name:'Submit activity'}));
+        await vi.waitFor(()=>expect(saveDailyNote).toHaveBeenCalledTimes(2));
+    });
+
 });

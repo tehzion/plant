@@ -89,6 +89,8 @@ export const ScanProvider = ({ children }) => {
                     backgroundNotifId.current = null;
                 }
 
+                if (e.code === 'ANALYSIS_CANCELLED') { backgroundScanRequestedRef.current = false; throw e; }
+
                 const currentPath = locationRef.current.pathname;
                 const currentSearch = locationRef.current.search;
                 const isActivelyScanning = currentPath === '/' && currentSearch.includes('scan=true');

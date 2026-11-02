@@ -1,4 +1,4 @@
-import { assessScanDecision } from '../../shared/scanResultPolicy.js';
+import { assessScanDecision, getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
 
 export const SIGN_QUESTIONS = Object.freeze({
     paleStippling: 'Are fine pale stipples, speckles or webbing visible on the leaf, consistent with possible mite damage?',
@@ -58,6 +58,43 @@ export function shadowVeto(prediction, answers, supportName) {
         || Object.keys(SIGN_QUESTIONS).some(name => predicate(name) === null || predicate(name) >= SHADOW_THRESHOLDS.abnormal)
         || triage?.choice !== 'healthy')) reasons.push('healthy_disagreement');
     return { prediction: reasons.length ? { ...prediction, needsReview: true, expertReviewRequired: true } : { ...prediction }, reasons };
+}
+
+/**
+ * The veto applied to farmers' results in enforce mode. It only ever adds review, and only on
+ * clear evidence: on the Decisions study it removed both label-mismatched treatment calls while
+ * keeping healthy reassurance, which the research veto above cut from 3 to 1 because the
+ * checker rarely says "healthy" outright. So a missing or "unclear" answer never vetoes here;
+ * a confident contrary answer does.
+ */
+export function enforcementVeto(prediction, answers, supportName, alternativeNames = []) {
+    const reasons = [];
+    const supportedAlternatives = [];
+    const predicate = name => answers?.[name]?.type === 'predicate' ? answers[name].probability : null;
+    const at = (value, threshold) => value !== null && value >= threshold;
+    const triage = answers?.health_triage?.type === 'choice' ? answers.health_triage : null;
+    const triageSays = choice => triage?.choice === choice && triage.confidence >= SHADOW_THRESHOLDS.triageConfidence;
+    const before = assessScanDecision(prediction);
+    // Fertiliser and supplement suggestions rest on the diagnosis too, so they get the same check.
+    const productsShown = !before.healthy && getScanSectionPolicy(prediction).showNutritionProducts;
+    if (before.treatmentEligible || productsShown) {
+        const support = predicate(supportName);
+        const clarity = predicate('clear_enough');
+        if (clarity !== null && clarity < SHADOW_THRESHOLDS.clarity) reasons.push('unclear_capture');
+        if (support !== null && support < SHADOW_THRESHOLDS.support) reasons.push('insufficient_diagnosis_support');
+        if (triageSays('healthy')) reasons.push('diagnosis_health_disagreement');
+        for (const [name, label] of alternativeNames) {
+            const value = predicate(name);
+            if (at(value, SHADOW_THRESHOLDS.support) && (support === null || value > support)) supportedAlternatives.push(label);
+        }
+        if (supportedAlternatives.length) reasons.push('alternative_better_supported');
+    }
+    if (before.healthy && (at(predicate('visible_abnormality'), SHADOW_THRESHOLDS.abnormal)
+        || Object.keys(SIGN_QUESTIONS).some(name => at(predicate(name), SHADOW_THRESHOLDS.abnormal))
+        || triageSays('abnormal'))) reasons.push('healthy_disagreement');
+    if (!reasons.length) return { prediction: { ...prediction }, reasons, supportedAlternatives };
+    return { prediction: { ...prediction, needsReview: true, expertReviewRequired: true, secondCheck: { applied: true } },
+        reasons, supportedAlternatives };
 }
 
 /** OpenRouter's alpha Decisions protocol differs from the native OpenAI protocol. */

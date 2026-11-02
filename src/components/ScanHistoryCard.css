@@ -161,3 +161,9 @@
     height: 36px;
   }
 }
+
+.scan-history-card .scan-disease { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.scan-history-card .scan-meta-text { font-size: 1rem; text-transform: none; letter-spacing: normal; }
+.scan-repeat-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 1rem; color: var(--color-primary-dark); text-underline-offset: 3px; }
+.scan-history-card .delete-btn { width: 44px; height: 44px; color: var(--color-text-secondary); }
+.scan-history-card :is(a,button):focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }

@@ -74,7 +74,7 @@ const HealthyCarePlan = ({ carePlan, plantType }) => {
           <div key={section.key} className="care-section">
             <div className="subsection-header">
               {section.icon}
-              <h4 className="subsection-title">{section.title}</h4>
+              <h3 className="subsection-title">{section.title}</h3>
             </div>
             <ul className="care-list">
               {section.data.map((item, index) => (

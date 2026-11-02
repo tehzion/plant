@@ -248,6 +248,8 @@ p {
 }
 
 .page {
+  background: var(--color-bg-secondary, #f7f5f0);
+  color: var(--color-text-primary, #1f2320);
   min-height: 100vh;
   padding-bottom: 80px;
   /* Space for bottom nav */
@@ -837,21 +839,11 @@ p {
   animation: shine 2.5s infinite linear;
 }
 
-/* Horizontal scroll rows: fade whichever edge hides more items (set by
-   useScrollEdges), so a cut-off chip reads as "scroll for more". */
-.scroll-fade[data-fade-end] {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-}
-
-.scroll-fade[data-fade-start] {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px);
-  mask-image: linear-gradient(to right, transparent, #000 40px);
-}
-
-.scroll-fade[data-fade-start][data-fade-end] {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+/* Keep scrollable controls on the normal paint path. Gradient masks can
+   obscure the entire row on mobile compositors. Native scrolling is retained. */
+.scroll-fade {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
 /* === Utility Classes === */
@@ -967,13 +959,13 @@ p {
     /* â†“ from 1.35rem */
     --font-size-xl: 1.05rem;
     /* â†“ from 1.15rem */
-    --font-size-lg: 0.95rem;
+    --font-size-lg: 1.125rem;
     /* â†“ from 1.05rem */
-    --font-size-base: 0.9rem;
+    --font-size-base: 1rem;
     /* â†“ from 0.95rem */
-    --font-size-sm: 0.8rem;
+    --font-size-sm: 0.9375rem;
     /* â†“ from 0.85rem */
-    --font-size-xs: 0.75rem;
+    --font-size-xs: 0.875rem;
     /* â†“ from 0.75rem */
 
     /* Optimized spacing for mobile (15-25% reduction) */
@@ -2176,7 +2168,7 @@ p {
   justify-content: space-between;
   align-items: center;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(10px);
+
   position: absolute;
   bottom: 0;
   left: 0;
@@ -3053,3 +3045,6 @@ p {
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
+
+button, input, select, textarea { font: inherit; }
+button { min-height: 44px; }

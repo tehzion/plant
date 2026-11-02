@@ -74,17 +74,17 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'results.otherPopular': 'Other Popular Products',
             'results.viewProduct': 'View Product',
             'results.addToCart': 'Add to Cart',
-            'results.itemsSelected': 'Items Selected',
+            'results.itemsSelected': '{count} items selected',
             'results.buySelected': 'Buy Selected Products',
-            'results.ourTrustedSuppliers': 'Our Trusted Suppliers',
+            'results.kanbContactTitle': 'Talk to KANB',
+            'results.kanbContactDesc': 'Message the KANB team.',
+            'results.kanbBrowseStore': 'Browse the KANB store',
             'results.fallbackProductsTitle': 'Fallback Store Suggestions',
             'results.fallbackProductsLabel': 'Fallback products',
             'results.fallbackProductsDesc': 'Fallback description',
             'home.treeScale': 'Per Tree',
             'results.perTreeTitle': 'Per Tree',
             'results.perTreeNote': 'Per-tree guidance',
-            'results.guanChongDesc': 'Supplier desc',
-            'results.tanAgroDesc': 'Supplier desc',
         }[key] || key),
     }),
 }));
@@ -98,19 +98,11 @@ vi.mock('../utils/toast', () => ({
 }));
 
 vi.mock('../data/productRecommendations.js', () => ({
-    suppliers: {
-        guanChongAgro: {
-            name: 'Guan Chong Agro',
-            description: 'results.guanChongDesc',
-            address: 'Address 1',
-            phone: '123',
-        },
-        tanAgro: {
-            name: 'Tan Agro',
-            description: 'results.tanAgroDesc',
-            address: 'Address 2',
-            phone: '456 / 789',
-        },
+    kanbContact: {
+        name: 'KANB Agropreneur Nasional',
+        whatsapp: '+60146193328',
+        whatsappDisplay: '+60 14-619 3328',
+        email: 'agropreneurnasional@gmail.com',
     },
 }));
 
@@ -194,7 +186,8 @@ describe('ProductRecommendations', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
 
         fireEvent.click(screen.getByText('Copper Guard'));
-        expect(await screen.findByText(/1 Items Selected/i)).toBeInTheDocument();
+        expect(await screen.findByText(/1 item selected/i)).toBeInTheDocument();
+        expect(screen.queryByText(/results\.items?Selected/)).not.toBeInTheDocument();
 
         rerender(
             <ProductRecommendations
@@ -213,7 +206,7 @@ describe('ProductRecommendations', () => {
         await waitFor(() => {
             expect(fetchMock).toHaveBeenCalledTimes(1);
         });
-        expect(screen.getByText(/1 Items Selected/i)).toBeInTheDocument();
+        expect(screen.getByText(/1 item selected/i)).toBeInTheDocument();
     });
 
     it('uses recent cached recommendations when the live catalog is unavailable', async () => {
@@ -535,6 +528,39 @@ describe('ProductRecommendations', () => {
         expect(screen.getByRole('link', { name: /contact us for consultation/i })).toHaveAttribute('href', expect.stringContaining('wa.me/60146193328'));
     });
 
+    it('shows labelled recovery products beside the consultation for a disease result', async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                diseaseControl: [],
+                fertilizers: [],
+                supplements: [],
+                otherPopular: [],
+                recoverySupport: [{ id: 8142, name: 'MULTIGREEN Oligo Chitosan', description: 'Plant immunity booster',
+                    recommendationReason: 'Supports plant health while you deal with Brown Spot. It does not cure it.' }],
+                recommendationIntent: 'support_only',
+                fallbackMeta: { used: true, isExploration: false, reason: 'Contact our team first.' },
+                consultation: { url: 'https://wa.me/60146193328', priority: 'primary', label: 'Contact us for consultation' },
+                storeUrl: 'https://example.com/store',
+            }),
+        });
+
+        render(
+            <ProductRecommendations
+                plantType="Rice"
+                disease="Brown Spot"
+                displayMode="disease"
+                scanResult={{ id: 'scan-7', status: 'likely', healthStatus: 'unhealthy', diseaseCategory: 'fungal', confidence: 72 }}
+            />,
+        );
+
+        expect(await screen.findByText('Help your plant recover')).toBeInTheDocument();
+        expect(screen.getByText('MULTIGREEN Oligo Chitosan')).toBeInTheDocument();
+        expect(screen.getByText(/It does not cure it/)).toBeInTheDocument();
+        expect(screen.getByText('Consultation recommended')).toBeInTheDocument();
+        expect(screen.queryByText('No disease-control products recommended')).not.toBeInTheDocument();
+    });
+
     it('offers consultation when the live catalog fails', async () => {
         fetchMock.mockRejectedValueOnce(new Error('Catalog offline'));
 
@@ -645,6 +671,28 @@ describe('ProductRecommendations', () => {
         expect(await screen.findByText('No disease-control products recommended')).toBeInTheDocument();
         expect(screen.queryByText('Consultation recommended')).not.toBeInTheDocument();
         expect(screen.queryByText('NPK Maintenance')).not.toBeInTheDocument();
+    });
+
+    it('points farmers to KANB, not third-party suppliers', async () => {
+        render(
+            <ProductRecommendations
+                plantType="Papaya"
+                disease="Healthy Plant"
+                scanResult={{ resultState: 'healthy', healthStatus: 'healthy' }}
+                displayMode="disease"
+                recommendationState={{
+                    loading: false,
+                    error: null,
+                    errorCode: '',
+                    data: { diseaseControl: [], fertilizers: [], supplements: [], otherPopular: [], consultation: null, storeUrl: '' },
+                }}
+            />,
+        );
+
+        expect(await screen.findByText('Talk to KANB')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'WhatsApp +60 14-619 3328' })).toHaveAttribute('href', 'https://wa.me/60146193328');
+        expect(screen.getByRole('link', { name: 'agropreneurnasional@gmail.com' })).toHaveAttribute('href', 'mailto:agropreneurnasional@gmail.com');
+        expect(screen.queryByText(/Guan Chong|Tan Agro/)).not.toBeInTheDocument();
     });
 
     it('shows a direct empty disease-control state for nutrition-primary results', async () => {

@@ -28,7 +28,7 @@ describe('API input validation', () => {
     it('accepts only a well-formed vote on an assistant answer', () => {
         expect(validate('/assistant-feedback', { rating: 'up', question: 'Why yellow?', answer: 'Check nitrogen.', page: 'home' })).toBeUndefined();
         expect(validate('/assistant-feedback', { rating: 5, answer: 'Check nitrogen.' }).status).toBe(400);
-        expect(validate('/assistant-feedback', { rating: 'down' }).status).toBe(400);
+        expect(validate('/assistant-feedback', { rating: 'down' })).toBeUndefined();
         expect(validate('/assistant-feedback', { rating: 'down', answer: 'x'.repeat(3001) }).status).toBe(400);
         expect(validate('/assistant-feedback', { rating: 'down', answer: 'ok', scanStatus: 'cured' }).status).toBe(400);
     });

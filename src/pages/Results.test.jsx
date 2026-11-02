@@ -1,3 +1,4 @@
+vi.mock('../components/ScanServiceNotice.jsx', () => ({ default: () => null }));
 vi.mock('../components/ScanFollowUpTracker.jsx', () => ({ default: () => null }));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,27 +20,12 @@ vi.mock('../utils/localStorage', () => ({
   getScanById: (...args) => getScanByIdMock(...args),
 }));
 
-vi.mock('../i18n/i18n.jsx', () => ({
-  useLanguage: () => ({
-    language: 'en',
-    t: (key) => ({
-      'history.scanNotFound': 'Scan not found',
-      'history.scanNotFoundMessage': "This scan isn't saved on this phone.",
-      'nav.history': 'History',
-      'nav.checkPlant': 'Check plant health',
-      'common.back': 'Back',
-      'results.diseaseInfo': 'Disease Info',
-      'results.treatment': 'Treatment',
-      'results.care': 'Care',
-      'results.nutrition': 'Nutrition',
-      'results.products': 'Products',
-      'results.unknownDisease': 'Unknown disease',
-      'common.unknown': 'Unknown',
-    }[key] || key),
-  }),
-}));
+vi.mock('../i18n/i18n.jsx', async () => {
+  const { default: translations } = await import('../i18n/translations.js');
+  return { useLanguage: () => ({ language: 'en', t: key => key.split('.').reduce((value, part) => value?.[part], translations.en) || key }) };
+});
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
   useAuth: () => ({
     user: { id: 'user-1' },
   }),
@@ -142,8 +128,7 @@ describe('Results', () => {
     render(<Results />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('tree-image')).toHaveTextContent('https://example.com/tree.jpg');
-      expect(screen.getByTestId('leaf-image')).toHaveTextContent('https://example.com/leaf.jpg');
+      expect(screen.getByRole('img', { name: /photo of coconut/i })).toHaveAttribute('src', 'https://example.com/tree.jpg');
     });
   });
 
@@ -153,7 +138,7 @@ describe('Results', () => {
     render(<Results />);
 
     expect(await screen.findByRole('heading', { name: 'Scan not found' })).toBeInTheDocument();
-    expect(screen.getByText("This scan isn't saved on this phone.")).toBeInTheDocument();
+    expect(screen.getByText(/This scan is not saved on this phone/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'History' }));
     expect(navigateMock).toHaveBeenCalledWith('/history');
@@ -179,7 +164,8 @@ describe('Results', () => {
 
     render(<Results />);
 
-    fireEvent.click(await screen.findByRole('button', { name: /log treatment action/i }));
+    fireEvent.click(await screen.findByText('More details', { selector: 'summary' }));
+    fireEvent.click(await screen.findByRole('button', { name: /log care/i }));
 
     const stored = JSON.parse(sessionStorage.getItem(SCAN_FOLLOW_UP_DRAFT_KEY));
     expect(stored.draft).toMatchObject({
@@ -210,6 +196,8 @@ describe('Results', () => {
 
     render(<Results />);
 
+    fireEvent.click(await screen.findByText('More details', { selector: 'summary' }));
+    fireEvent.click(await screen.findByText('Product suggestions', { selector: 'summary h2' }));
     await waitFor(() => {
       const diseaseView = productRecommendationProps.find((props) => props.displayMode === 'disease');
       const nutritionView = productRecommendationProps.find((props) => props.displayMode === 'nutrition');
@@ -222,4 +210,31 @@ describe('Results', () => {
     expect(screen.getByTestId('product-disease')).toHaveAttribute('data-has-shared-state', 'true');
     expect(screen.getByTestId('product-nutrition')).toHaveAttribute('data-has-shared-state', 'true');
   });
+  it.each([
+    ['retake_required', 'Unknown', 0, 'We need a clearer photo', 'Retake photo'],
+    ['uncertain', 'Possible leaf spot', 52, 'An expert should check this', 'Ask an expert'],
+    ['healthy', 'Healthy plant', 93, 'Your plant looks healthy', 'Set a re-check'],
+    ['confident_treatment', 'Rice blast', 88, 'Rice blast', 'Start treatment plan'],
+  ])('gives %s its own headline and next action', async (resultState, disease, confidence, headline, action) => {
+    getScanByIdMock.mockResolvedValue({ id: 'scan-123', resultState, disease, confidence,
+      healthStatus: resultState === 'healthy' ? 'healthy' : 'unhealthy', pathogenType: 'Fungal',
+      ...(resultState === 'retake_required' ? { requiresRetake: true, retakeReason: 'Photo out of focus' } : {}),
+      treatments: ['Labelled product: 2 ml per litre'], immediateActions: ['Check nearby plants'],
+    });
+    render(<Results />);
+    expect(await screen.findByRole('heading', { level: 1, name: headline })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: action })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    if (['retake_required', 'uncertain'].includes(resultState)) {
+      fireEvent.click(screen.getByText('More details', { selector: 'summary' }));
+      expect(screen.queryByTestId('product-disease')).not.toBeInTheDocument();
+      expect(screen.queryByText('Labelled product: 2 ml per litre')).not.toBeInTheDocument();
+    }
+    if (resultState === 'confident_treatment') {
+      expect(screen.getByText('Labelled product: 2 ml per litre')).toBeVisible();
+      expect(screen.getByText(/Follow the product label for the dose/)).toBeVisible();
+    }
+    if (resultState === 'healthy') expect(screen.queryByText(/Severity:/)).not.toBeInTheDocument();
+  });
+
 });

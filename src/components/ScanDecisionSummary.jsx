@@ -1,80 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
-import { getDiagnosisStatusLabel } from '../utils/diagnosisStatusLabels.js';
-import { CONFIDENCE_LEVEL_FALLBACK_LABELS } from '../../shared/diseaseAssessment.js';
+import { Camera, CircleHelp, ShieldCheck, Stethoscope } from 'lucide-react';
 
 export const nextScanStep = (result, copy) => result.requiresRetake ? copy.nextRetake
     : result.healthy ? copy.nextHealthy : result.treatmentEligible ? copy.nextTreat : copy.nextScout;
 
-const ScanDecisionSummary = ({ result, expertReview = null }) => {
-    const { language, t } = useLanguage();
-    const copy = getScanQualityCopy(language);
-    const observations = result.diagnosticEvidence?.evidenceFor?.length
-        ? result.diagnosticEvidence.evidenceFor : result.symptoms || [];
-    const limits = [result.abstainReason, result.retakeReason,
-        ...(result.diagnosticEvidence?.evidenceAgainst || [])].filter(Boolean);
-    const plantLabel = result.plantType || result.category || t('common.unknown');
-    const severityKey = result.severity ? `results.${String(result.severity).toLowerCase()}` : '';
-    const translatedSeverity = severityKey ? t(severityKey) : '';
-    const severityLabel = translatedSeverity && translatedSeverity !== severityKey
-        ? translatedSeverity
-        : (result.severity || t('results.notRecorded'));
-    const hasScore = result.confidence !== null && result.confidence !== undefined;
-    const label = (key, fallback) => {
-        const value = t(key);
-        return value && value !== key ? value : fallback;
-    };
-    // Structured assessment (schema v1) adds descriptive confidence and the
-    // follow-up evidence a farmer can collect; older scans simply omit them.
-    const assessment = result.structuredAssessment?.assessment || null;
-    const confidenceLevel = assessment?.confidence_level || result.confidenceLevel || null;
-    const plantStatus = result.structuredAssessment?.plant?.identification_status;
-    const reviewText = expertReview?.verdict === 'corrected'
-        ? label('assessment.ux.expertCorrected', "The expert's diagnosis: {name}").replace('{name}', expertReview.correctedDiagnosis || expertReview.correctedCrop || '')
-        : expertReview?.verdict === 'confirmed'
-            ? label('assessment.ux.expertConfirmed', 'The expert agreed with this result.')
-            : label('assessment.ux.expertUncertain', 'The expert needs more information to confirm this result.');
-    const summaryLabel = result.healthy ? t('results.healthy') : copy.primary;
-    return <section className={`scan-decision app-surface scan-decision--${result.tone}`} aria-label={summaryLabel}>
-        {/* Order a farmer reads in: which crop, what it probably is, how sure. */}
-        <p className="scan-decision__crop">
-            <span>{t('results.plantType')}</span>
-            <strong>{plantLabel}</strong>
-            {['uncertain', 'unknown'].includes(plantStatus) && <small className="scan-decision__plant-uncertain">{label('assessment.plantUncertain', 'Plant type not certain')}</small>}
-        </p>
-        <div className="scan-decision__header">
-            <p className="scan-decision__eyebrow">
-                {result.isDemo ? t('results.demoModeTitle') : summaryLabel}
-            </p>
-            <h2>{result.disease || t('results.unknownDisease')}</h2>
-            <p className="scan-decision-status">{getDiagnosisStatusLabel(t, result.resultState)}</p>
-        </div>
-        <div className="scan-decision__meta" role="list">
-            {confidenceLevel ? (
-                <div role="listitem"><span>{label('assessment.confidenceLabel', 'How sure')}</span><strong>
-                    <span className={`confidence-chip confidence-chip--${confidenceLevel}`}>{label(`assessment.confidence.${confidenceLevel}`, CONFIDENCE_LEVEL_FALLBACK_LABELS[confidenceLevel] || confidenceLevel)}</span>
-                    {hasScore && <small> {Math.round(Number(result.confidence))}% {t('results.estimate') || 'estimate'}</small>}
-                </strong></div>
-            ) : hasScore && <div role="listitem"><span>{t('results.confidence')}</span><strong>{Math.round(Number(result.confidence))}% <small>{t('results.estimate') || 'estimate'}</small></strong></div>}
-            <div role="listitem"><span>{t('results.severity')}</span><strong>{severityLabel}</strong></div>
-        </div>
-        {expertReview && (
-            <div className={`scan-decision__expert scan-decision__expert--${expertReview.verdict}`} role="note">
-                <strong>{label('assessment.ux.expertReviewed', 'Reviewed by an agricultural expert')}</strong>
-                <span>{reviewText}</span>
+const ScanDecisionSummary = ({ result, expertReview = null, image, adviceReadable = true }) => {
+    const [photoFailed, setPhotoFailed] = useState(false);
+    useEffect(() => setPhotoFailed(false), [image]);
+    const { t, language } = useLanguage();
+    const crop = result.plantType || result.category || t('common.unknown');
+    const cropKeys = { padi: 'home.categoryRice', rice: 'home.categoryRice', cili: 'home.cropChilli', chilli: 'home.cropChilli', chili: 'home.cropChilli', vegetables: 'home.categoryVegetables', 'sayur-sayuran': 'home.categoryVegetables', fruits: 'home.categoryFruits', 'buah-buahan': 'home.categoryFruits', durian: 'home.categoryDurian' };
+    const cropLabel = cropKeys[String(crop).toLowerCase()] ? t(cropKeys[String(crop).toLowerCase()]) : crop;
+    const state = result.requiresRetake ? 'retake' : result.healthy ? 'healthy' : result.needsReview ? 'review' : 'disease';
+    const Icon = { retake: Camera, healthy: ShieldCheck, review: CircleHelp, disease: Stethoscope }[state];
+    const headline = state === 'disease' ? (!adviceReadable ? t('results.savedFindingTitle') : result.disease) || t('results.unknownDisease') : t(`results.headline${state}`);
+    return <section className={`scan-decision app-surface scan-decision--${state}`} aria-label={result.healthy ? t('results.healthy') : headline}>
+        <div className="scan-decision__identity">
+            <div>
+                <Icon size={28} aria-hidden="true" />
+                <h1>{headline}</h1>
+                <p>{cropLabel}</p>
             </div>
-        )}
-        <h3>{copy.observations}</h3>
-        {observations.length ? <ul>{observations.slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul> : <p>{copy.noEvidence}</p>}
-        {assessment?.needs_expert_review && !expertReview && <p className="scan-decision__review-note" role="note">{label('assessment.expertReviewNote', 'Ask an agricultural expert to check this result before buying or spraying any chemical.')}</p>}
-        {limits.length > 0 && (
-            <details className="scan-decision__why">
-                <summary>{label('assessment.ux.whyTitle', 'Why we think this')}</summary>
-                <h3>{copy.limits}</h3>
-                <ul>{[...new Set(limits)].slice(0, 3).map((item, i) => <li key={i}>{item}</li>)}</ul>
-            </details>
-        )}
-        <p className="scan-score-note">{result.isDemo ? t('results.demoModeDesc') : copy.scoreNote}</p>
+            {image && !photoFailed ? <a className="scan-decision__photo-link" href={image} target="_blank" rel="noopener noreferrer" aria-label={t('results.openPhoto')}><img className="scan-decision__photo" src={image} onError={() => setPhotoFailed(true)} alt={t('results.photoOf').replace('{crop}', cropLabel)} /></a> : <span className="scan-decision__photo-missing">{t('results.photoUnavailable')}</span>}
+        </div>
+        {result.requiresRetake && adviceReadable && result.retakeReason && <p>{result.retakeReason}</p>}
+        {result.healthy && <p>{t('results.healthyRelief')}</p>}
+        {!result.healthy && !result.needsReview && <p>{t('results.severity')}: <strong>{t(`results.${String(result.severity).toLowerCase()}`)}</strong></p>}
+        {result.structuredAssessment?.assessment?.needs_expert_review && !expertReview && <p role="note">{t('assessment.expertReviewNote')}</p>}
+        {expertReview && <div className="scan-decision__expert" role="note">
+            <strong>{t('assessment.ux.expertReviewed')}</strong>
+            <span>{expertReview.verdict === 'corrected' ? t('assessment.ux.expertCorrected').replace('{name}', expertReview.correctedDiagnosis || expertReview.correctedCrop || '') : t(expertReview.verdict === 'confirmed' ? 'assessment.ux.expertConfirmed' : 'assessment.ux.expertUncertain')}</span>
+        </div>}
+        {result.urgent && !expertReview && <p className="scan-decision__urgent" role="alert">{getScanQualityCopy(language).urgent}</p>}
+        {result.isDemo && <p>{t('results.demoModeDesc')}</p>}
     </section>;
 };
 export default ScanDecisionSummary;

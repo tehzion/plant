@@ -2,7 +2,8 @@
     width: min(1180px, calc(100% - 32px));
     margin: 0 auto;
     padding: 28px 0 56px;
-    color: #172033;
+    background: var(--color-bg-secondary, #f7f5f0);
+    color: var(--color-text-primary, #1f2320);
 }
 
 .admin-page--center {

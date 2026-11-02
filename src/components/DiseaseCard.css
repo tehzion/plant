@@ -105,7 +105,7 @@
   padding: var(--space-md);
   animation: fadeIn 0.2s ease-out;
   pointer-events: auto;
-  backdrop-filter: blur(2px);
+
 }
 
 .modal-content {

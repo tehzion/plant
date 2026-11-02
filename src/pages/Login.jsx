@@ -1,5 +1,5 @@
 import { Suspense, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { Mail, Lock, ArrowRight, AlertCircle, ClipboardList, Sprout, History } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,7 @@ import './Login.css';
 const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboardPanel'), 'dashboard-panel');
 
 const Login = () => {
-    const { t } = useLanguage();
+    const { language, t } = useLanguage();
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const { user, signIn, signUp, resetPasswordForEmail, demoAuthEnabled } = useAuth();
@@ -36,8 +36,8 @@ const Login = () => {
     // Already logged in: show the full dashboard panel.
     if (user) {
         return (
-            <div className="login-page" style={{ alignItems: 'flex-start', paddingTop: '16px' }}>
-                <div style={{ width: '100%', maxWidth: 'var(--width-superapp, 680px)', margin: '0 auto' }}>
+            <div className="farm-workspace page">
+                <div className="farm-workspace-shell">
                     <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
                         <UserDashboardPanel />
                     </Suspense>
@@ -74,7 +74,7 @@ const Login = () => {
                 navigate('/profile');
             } else {
                 await signUp(email, password);
-                setSuccessMsg(t('login.checkEmail') || 'Account created! Check your email to confirm, then sign in.');
+                setSuccessMsg(label('login.checkEmail', 'Check your email for a confirmation link, then sign in. If no email arrives, check your spam folder or try signing in.'));
                 setIsLogin(true);
                 setPassword('');
             }
@@ -179,7 +179,7 @@ const Login = () => {
                         </div>
                     )}
                     {successMsg && (
-                        <div className="auth-alert auth-alert--success">
+                        <div className="auth-alert auth-alert--success" role="status">
                             <span>{successMsg}</span>
                         </div>
                     )}
@@ -219,6 +219,7 @@ const Login = () => {
                             </div>
                         </div>
 
+                        <p className="login-privacy-note">{language === 'ms' ? 'E-mel dan kata laluan diperlukan untuk akaun. Perkongsian AI pilihan berasingan; rekod tetamu tidak dimuat naik secara automatik.' : 'Email and password are needed for an account. Optional AI sharing is separate; guest records are not uploaded automatically.'} <Link to="/privacy">{language === 'ms' ? 'Notis privasi' : 'Privacy notice'}</Link> · <Link to="/privacy-controls">{language === 'ms' ? 'Kawalan data' : 'Data controls'}</Link></p>
                         <button type="submit" className="login-btn" disabled={loading}>
                             {loading ? (
                                 <span className="btn-spinner" />

@@ -1,6 +1,8 @@
 const historyTranslations = {
     en: {
         history: {
+            "reviewScansHint": "Review your plant checks and see what needs a follow-up.",
+
             title: 'Scan History',
             subtitle: 'View your previous plant health analyses',
             noHistory: 'No Scan History',
@@ -29,6 +31,8 @@ const historyTranslations = {
     },
     ms: {
         history: {
+            "reviewScansHint": "Semak sejarah tanaman anda dan lihat perkara yang perlu disusuli.",
+
             title: 'Sejarah Semakan',
             subtitle: 'Lihat analisis kesihatan tumbuhan anda sebelum ini',
             noHistory: 'Tiada sejarah semakan lagi',
@@ -57,6 +61,8 @@ const historyTranslations = {
     },
     zh: {
         history: {
+            "reviewScansHint": "查看植物检查记录及需要跟进的事项。",
+
             title: '扫描历史',
             subtitle: '查看您之前的植物健康分析',
             noHistory: '暂无扫描历史',

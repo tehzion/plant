@@ -18,14 +18,14 @@ describe('assistant chat storage', () => {
     });
 
     it('ignores damaged data and keeps only the latest messages', () => {
-        localStorage.setItem('kanb_assistant_chat_v1', '{not json');
+        localStorage.setItem('kanb_assistant_chat_v2:guest:local', '{not json');
         expect(loadSavedChat(NOW).messages).toEqual([]);
         saveChat(Array.from({ length: 40 }, (_, i) => ({ role: 'user', content: `q${i}` })), null, NOW);
         const { messages } = loadSavedChat(NOW);
         expect(messages).toHaveLength(30);
         expect(messages[0].content).toBe('q10');
         clearSavedChat();
-        expect(localStorage.getItem('kanb_assistant_chat_v1')).toBeNull();
+        expect(localStorage.getItem('kanb_assistant_chat_v2:guest:local')).toBeNull();
     });
 
     it('still works when storage is blocked', () => {
@@ -33,4 +33,12 @@ describe('assistant chat storage', () => {
         expect(() => saveChat(MESSAGES, null, NOW)).not.toThrow();
         vi.restoreAllMocks();
     });
+});
+
+it('keeps one actor’s chat private from another actor and removes expired copies', () => {
+    saveChat(MESSAGES, null, NOW, 'user:A');
+    expect(loadSavedChat(NOW, 'user:B').messages).toEqual([]);
+    expect(loadSavedChat(NOW, 'user:A').messages).toEqual(MESSAGES);
+    expect(loadSavedChat(NOW + 25 * 60 * 60 * 1000, 'user:A').messages).toEqual([]);
+    expect(localStorage.getItem('kanb_assistant_chat_v2:user:A')).toBeNull();
 });
