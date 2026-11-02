@@ -70,3 +70,13 @@ describe('Login on the My farm tab', () => {
         expect(screen.getByRole('heading', { name: 'Welcome Back' })).toBeInTheDocument();
     });
 });
+
+
+it('shows readable confirmation guidance even if a translation is missing', async () => {
+    routeLocation.pathname = '/profile';
+    render(<Login />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
+    fireEvent.submit(screen.getByRole('button', { name: 'Create Account' }).closest('form'));
+    expect(await screen.findByRole('status')).toHaveTextContent('Check your email for a confirmation link');
+    expect(screen.queryByText('login.checkEmail')).not.toBeInTheDocument();
+});

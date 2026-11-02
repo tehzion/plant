@@ -74,7 +74,7 @@ const Login = () => {
                 navigate('/profile');
             } else {
                 await signUp(email, password);
-                setSuccessMsg(t('login.checkEmail') || 'Account created! Check your email to confirm, then sign in.');
+                setSuccessMsg(label('login.checkEmail', 'Check your email for a confirmation link, then sign in. If no email arrives, check your spam folder or try signing in.'));
                 setIsLogin(true);
                 setPassword('');
             }
@@ -179,7 +179,7 @@ const Login = () => {
                         </div>
                     )}
                     {successMsg && (
-                        <div className="auth-alert auth-alert--success">
+                        <div className="auth-alert auth-alert--success" role="status">
                             <span>{successMsg}</span>
                         </div>
                     )}
