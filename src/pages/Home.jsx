@@ -10,6 +10,10 @@ import AnalysisProgress from '../components/AnalysisProgress.jsx';
 import PlantCheckGuide from '../components/PlantCheckGuide.jsx';
 import { validCaptureDetails } from '../utils/captureDetails.js';
 import CaptureDraftControl from '../components/CaptureDraftControl.jsx';
+import PendingPlantChecks from '../components/PendingPlantChecks.jsx';
+import { discardCaptureDraft } from '../utils/captureDraft.js';
+import { queuePlantCheck, removePendingPlantCheck } from '../utils/pendingPlantChecks.js';
+import { showToast } from '../utils/toast.js';
 import CameraUpload from '../components/CameraUpload';
 import DataConsentToggle from '../components/DataConsentToggle';
 import PlantCategorySelector from '../components/PlantCategorySelector';
@@ -62,6 +66,7 @@ const Home = () => {
   const { weatherTemp, weatherIcon, forecast, error: weatherError, fetchWeather } = useWeather();
   const { state: scanState, actions: scanActions } = useScanContext();
   const { user, guestId } = useAuth();
+  const captureOwner = user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null;
   const isMounted = useRef(true);
   const selectedCategoryRef = useRef('');
 
@@ -184,6 +189,12 @@ const Home = () => {
     }
   }, [viewMode, weatherResolved, weatherTemp, forecast.length, weatherError]);
 
+  const resumeOnEnter = useRef(null);
+  const restoreAndOpen = (draft) => {
+    if (viewMode === 'scan') scanActions.restoreDraft(draft);
+    else resumeOnEnter.current = draft;
+  };
+
   // URL-DRIVEN VIEW MODES (Fixes 'Imbas Lagi' and Race Conditions)
   useEffect(() => {
     const isScanMode = searchParams.get('scan') === 'true';
@@ -193,6 +204,9 @@ const Home = () => {
       if (viewMode !== 'scan') {
         scanActions.resetScan();
         scanActions.setStep(1);
+        // A resumed draft or saved check is restored after the reset, or the
+        // reset would drop its photos.
+        if (resumeOnEnter.current) { scanActions.restoreDraft(resumeOnEnter.current); resumeOnEnter.current = null; }
         setViewMode('scan');
       }
     } else {
@@ -375,6 +389,30 @@ const Home = () => {
     await runAnalysisAndNavigate(selectedCategory);
   };
 
+  // No signal: keep the photos on the phone and let the app run the check
+  // by itself once the analysis service can be reached again.
+  const [queueing, setQueueing] = useState(false);
+  const handleQueueCheck = async () => {
+    const activeCategory = selectedCategory || selectedCategoryRef.current || '';
+    if (!selectedImage) { scanActions.setStep(1); scanActions.setError(t('home.errorNoImage')); return; }
+    if (!activeCategory) { scanActions.setStepClear(2); setDetailsError(t('home.errorNoCategory')); return; }
+    if (!validCaptureDetails(scanState)) { scanActions.setStepClear(2); setDetailsError(t('results.detailsInvalid')); return; }
+    setQueueing(true);
+    try {
+      await queuePlantCheck(captureOwner, { ...scanState, selectedCategory: activeCategory, captureContext }, { location, locationName });
+      await discardCaptureDraft(captureOwner).catch(() => {});
+      scanActions.resetScan();
+      setCaptureContext({ plantPart: 'whole' });
+      setSearchParams({});
+      showToast(t('results.queueCheckSaved'), 'success', 6000);
+    } catch (queueError) {
+      showToast(t(queueError?.code === 'PENDING_CHECKS_FULL' ? 'results.pendingChecksFull' : 'results.queueCheckFailed'), 'error', 6000);
+    } finally {
+      setQueueing(false);
+    }
+  };
+  const canQueueCheck = Boolean(selectedImage) && ['offline', 'unavailable'].includes(scanService.status);
+
   const handleRetryAnalysis = async () => {
     if (await scanService.retry() !== 'online') return;
     if (!selectedImage) {
@@ -406,11 +444,19 @@ const Home = () => {
     });
   };
 
-  const captureDraftControl = <CaptureDraftControl owner={user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null} state={{ ...scanState, captureContext, retakeReason: routerLocation.state?.retakeReason || '' }} onResume={draft => {
-    scanActions.restoreDraft(draft);
+  const captureDraftControl = <CaptureDraftControl owner={captureOwner} state={{ ...scanState, captureContext, retakeReason: routerLocation.state?.retakeReason || '' }} onResume={draft => {
+    restoreAndOpen(draft);
     setCaptureContext(draft.captureContext);
     setLeafExpanded(Boolean(draft.retakeReason || draft.selectedLeafImage));
     navigate('/?scan=true', { state: { retakeReason: draft.retakeReason } });
+    requestAnimationFrame(() => { window.scrollTo({ top: 0, behavior: 'instant' }); stepHeading.current?.focus({ preventScroll: true }); });
+  }} />;
+  const pendingPlantChecks = <PendingPlantChecks owner={captureOwner} onOpen={check => {
+    restoreAndOpen({ ...check, currentStep: 1 });
+    setCaptureContext(check.captureContext);
+    setLeafExpanded(Boolean(check.selectedLeafImage));
+    removePendingPlantCheck(captureOwner, check.id).catch(() => {});
+    navigate('/?scan=true');
     requestAnimationFrame(() => { window.scrollTo({ top: 0, behavior: 'instant' }); stepHeading.current?.focus({ preventScroll: true }); });
   }} />;
   const showHomeSkeleton = viewMode === 'dashboard' && !historyLoaded;
@@ -532,6 +578,7 @@ const Home = () => {
                 weatherError={weatherError}
                 onWeatherRetry={handleWeatherRetry}
               />
+              {pendingPlantChecks}
               {captureDraftControl}
 
               <EventProductHero
@@ -634,7 +681,10 @@ const Home = () => {
                 <ScanServiceNotice capture />
               </div>
               <div className="analysis-failure-actions">
-                <button type="button" className="btn btn-primary" onClick={handleRetryAnalysis}>
+                {isConnectionFailure && selectedImage && <button type="button" className="btn btn-primary" disabled={queueing} onClick={handleQueueCheck}>
+                  {t(queueing ? 'results.draftSaving' : 'results.queueCheck')}
+                </button>}
+                <button type="button" className={`btn ${isConnectionFailure && selectedImage ? 'btn-secondary' : 'btn-primary'}`} onClick={handleRetryAnalysis}>
                   {t('common.retry') || 'Try Again'}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => scanActions.setStepClear(2)}>
@@ -765,6 +815,7 @@ const Home = () => {
                     <button className="btn btn-secondary" onClick={scanActions.prevStep}>{t('common.back')}</button>
                     <button className="btn btn-primary" disabled={scanService.checking || ['offline', 'unavailable'].includes(scanService.status)} onClick={handleNextStep}>{t('home.analyzeButton')}</button>
                   </div>
+                  {canQueueCheck && <button type="button" className="btn btn-primary scan-queue-check" disabled={queueing} onClick={handleQueueCheck}>{t(queueing ? 'results.draftSaving' : 'results.queueCheck')}</button>}
                 </div>
               )}
             </div>
