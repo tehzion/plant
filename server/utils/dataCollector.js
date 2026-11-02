@@ -89,10 +89,19 @@ export const logTrainingData = async (data) => {
                 console.warn(JSON.stringify({ event: 'audit_owner_conflict', scanId }));
                 return false;
             }
-            const [tree, leaf] = await Promise.all([
+            // A failed photo upload must not lose the assessment: nothing retries this
+            // write, so the record is kept without the photo and marked, and exports
+            // or training can skip it.
+            const uploads = await Promise.allSettled([
                 uploadAuditImage(treeImage, scanId, 'tree', ownerHash),
                 uploadAuditImage(leafImage, scanId, 'leaf', ownerHash),
             ]);
+            const [tree, leaf] = uploads.map((upload) => (upload.status === 'fulfilled' ? upload.value : null));
+            const failedUpload = uploads.find((upload) => upload.status === 'rejected');
+            if (failedUpload) {
+                metadata.photoUpload = { status: 'failed', reason: String(failedUpload.reason?.message || failedUpload.reason).slice(0, 200) };
+                console.warn(JSON.stringify({ event: 'audit_photo_upload_failed', scanId, reason: metadata.photoUpload.reason }));
+            }
             // The owner predicate keeps a concurrent writer with a different
             // identity from replacing an existing assessment record.
             const written = await queryNeon(
