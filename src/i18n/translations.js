@@ -1,3 +1,4 @@
+import errorTranslations from './translations/error.js';
 import commonTranslations from './translations/common.js';
 import footerTranslations from './translations/footer.js';
 import navTranslations from './translations/nav.js';
@@ -21,6 +22,7 @@ import assistantTranslations from './translations/assistant.js';
 import { scanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const translationSections = [
+    errorTranslations,
     commonTranslations,
     footerTranslations,
     navTranslations,

@@ -1,6 +1,9 @@
 const commonTranslations = {
     "en": {
         "common": {
+            "analyzing": "Analyzing…",
+            "savedSuccess": "Saved successfully.",
+
             "loading": "Loading...",
             "error": "Error",
             "success": "Success",
@@ -118,6 +121,9 @@ const commonTranslations = {
     },
     "ms": {
         "common": {
+            "analyzing": "Sedang menganalisis…",
+            "savedSuccess": "Berjaya disimpan.",
+
             "loading": "Memuatkan...",
             "error": "Ralat",
             "success": "Berjaya",
@@ -235,6 +241,9 @@ const commonTranslations = {
     },
     "zh": {
         "common": {
+            "analyzing": "正在分析…",
+            "savedSuccess": "保存成功。",
+
             "loading": "加载中...",
             "error": "错误",
             "success": "成功",

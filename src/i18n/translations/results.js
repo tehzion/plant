@@ -1,6 +1,12 @@
 const resultsTranslations = {
     "en": {
         "results": {
+            "consultationAvailableTitle": "Need help choosing?",
+            "consultationRecommendedDesc": "Share this scan with our agronomy team for product guidance before applying treatment.",
+            "contactForConsultation": "Contact us for advice",
+            "diagnosis": "Assessment",
+            "followUpDraftFailed": "Could not prepare the follow-up log. Please try again.",
+
             "acreUnit": "acre",
             "acreUnits": "acres",
             "treeUnit": "tree",
@@ -415,6 +421,12 @@ const resultsTranslations = {
     },
     "ms": {
         "results": {
+            "consultationAvailableTitle": "Perlukan bantuan memilih?",
+            "consultationRecommendedDesc": "Kongsi imbasan ini dengan pasukan agronomi kami untuk panduan produk sebelum menjalankan rawatan.",
+            "contactForConsultation": "Hubungi kami untuk nasihat",
+            "diagnosis": "Penilaian",
+            "followUpDraftFailed": "Log susulan tidak dapat disediakan. Sila cuba lagi.",
+
             "acreUnit": "ekar",
             "acreUnits": "ekar",
             "treeUnit": "pokok",
@@ -829,6 +841,12 @@ const resultsTranslations = {
     },
     "zh": {
         "results": {
+            "consultationAvailableTitle": "需要选购建议？",
+            "consultationRecommendedDesc": "施用处理前，请将此扫描分享给我们的农艺团队，以获取产品建议。",
+            "contactForConsultation": "联系我们获取建议",
+            "diagnosis": "评估结果",
+            "followUpDraftFailed": "无法准备跟进日志，请重试。",
+
             "acreUnit": "英亩",
             "acreUnits": "英亩",
             "treeUnit": "棵",

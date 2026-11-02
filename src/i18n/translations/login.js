@@ -1,6 +1,9 @@
 const loginTranslations = {
     "en": {
         "login": {
+            "demoAccountHint": "Development demo: sign in with test@test.com and Test321@.",
+            "scanFollowUpWaiting": "Your scan follow-up log is ready. Sign in to review and save it.",
+
             "welcomeBack": "Welcome Back",
             "farmIntroTitle": "My farm",
             "farmIntroSubtitle": "Sign in to keep your farm records safe and with you on any phone.",
@@ -45,6 +48,9 @@ const loginTranslations = {
     },
     "ms": {
         "login": {
+            "demoAccountHint": "Demo pembangunan: log masuk menggunakan test@test.com dan Test321@.",
+            "scanFollowUpWaiting": "Log susulan imbasan anda sedia. Log masuk untuk menyemak dan menyimpannya.",
+
             "welcomeBack": "Selamat Kembali",
             "farmIntroTitle": "Ladang saya",
             "farmIntroSubtitle": "Log masuk supaya rekod ladang anda selamat dan boleh dibuka di mana-mana telefon.",
@@ -89,6 +95,9 @@ const loginTranslations = {
     },
     "zh": {
         "login": {
+            "demoAccountHint": "开发演示：使用 test@test.com 和 Test321@ 登录。",
+            "scanFollowUpWaiting": "扫描跟进日志已准备好。请登录以查看并保存。",
+
             "welcomeBack": "欢迎回来",
             "farmIntroTitle": "我的农场",
             "farmIntroSubtitle": "登录后，农场记录会安全保存，并可在任何手机上查看。",

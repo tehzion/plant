@@ -1,6 +1,9 @@
 const homeTranslations = {
     "en": {
         "home": {
+            "category": "Category",
+            "newScan": "New plant check",
+
             "checkTitle": "Check plant health",
             "checkDesc": "Upload a clear photo of the plant. You will see the most likely problem, how certain the result is, and what to check next.",
             "checkAction": "Upload a photo",
@@ -236,6 +239,9 @@ const homeTranslations = {
     },
     "ms": {
         "home": {
+            "category": "Kategori",
+            "newScan": "Semakan tanaman baharu",
+
             "checkTitle": "Semak kesihatan tanaman",
             "checkDesc": "Muat naik foto pokok yang jelas. Anda akan melihat masalah yang paling mungkin, tahap keyakinan keputusan dan perkara yang perlu disemak seterusnya.",
             "checkAction": "Muat naik foto",
@@ -471,6 +477,9 @@ const homeTranslations = {
     },
     "zh": {
         "home": {
+            "category": "类别",
+            "newScan": "新建植物检查",
+
             "checkTitle": "检查植物健康",
             "checkDesc": "上传一张清晰的植物照片。您会看到最可能的问题、结果的可信程度，以及接下来需要检查的事项。",
             "checkAction": "上传照片",
