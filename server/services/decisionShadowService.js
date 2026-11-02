@@ -1,5 +1,6 @@
 import { routerDecisionsRequest, parseRouterDecisions, shadowVeto, SHADOW_THRESHOLDS } from '../utils/decisionProtocol.js';
 import { assessScanDecision } from '../../shared/scanResultPolicy.js';
+import { normalizeDataConsent } from '../../shared/dataConsent.js';
 import { recordAiUsage } from '../utils/aiUsage.js';
 
 const bounded = (value, fallback, max) => {
@@ -14,7 +15,7 @@ export function createDecisionShadowService({ env = process.env, fetchImpl = fet
     return async function checkDecisionShadow({ prediction, treeImage, leafImage, crop, dataConsent, signal } = {}) {
         const skip = reason => ({ status: 'skipped', reason });
         if (env.DECISIONS_SHADOW_ENABLED !== 'true') return skip('disabled');
-        if (dataConsent?.aiImprovement !== true) return skip('improvement_consent_required');
+        if (!normalizeDataConsent(dataConsent).aiImprovement) return skip('improvement_consent_required');
         if (env.AI_PROVIDER !== 'openrouter' || !env.OPENROUTER_API_KEY) return skip('openrouter_unavailable');
         if (!/^(?:openai\/)?gpt-5\.4-mini(?:-|$)/.test(prediction?.analysisMetadata?.model || '')) return skip('unsupported_primary_model');
         if (!prediction?.disease || !prediction?.plantType || signal?.aborted) return skip('incomplete_or_cancelled');

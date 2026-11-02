@@ -1,3 +1,4 @@
+import { getDataConsent } from '../utils/dataConsent.js';
 import { discardCaptureDraft } from '../utils/captureDraft.js';
 import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -84,7 +85,7 @@ const capturePreferences = owner => {
     const defaults = { selectedCategory: '', selectedCrop: '', selectedScale: 'acre', scaleQuantity: 1 };
     if (!owner) return defaults;
     try {
-        const saved = JSON.parse(localStorage.getItem(`plant_capture_preferences:${owner}`) || localStorage.getItem('plant_capture_preferences') || '{}');
+        const saved = JSON.parse(localStorage.getItem(`plant_capture_preferences:${owner}`) || '{}');
         if (saved.owner && saved.owner !== owner) return defaults;
         return { selectedCategory: saved.category || '', selectedCrop: saved.crop || '', selectedScale: ['acre', 'tree', 'personal'].includes(saved.scale) ? saved.scale : 'acre', scaleQuantity: Number(saved.quantity) > 0 && Number.isFinite(Number(saved.quantity)) ? Number(saved.quantity) : 1 };
     } catch { return defaults; }
@@ -102,7 +103,6 @@ export const useScanLogic = () => {
         try {
             const value = JSON.stringify({ owner, category: state.selectedCategory, crop: state.selectedCrop, scale: state.selectedScale, quantity: Number(state.scaleQuantity) || 1 });
             localStorage.setItem(`plant_capture_preferences:${owner}`, value);
-            localStorage.setItem('plant_capture_preferences', value);
         } catch { /* preferences are optional; photos use explicit draft saving */ }
     }, [owner, storedState.owner, state.selectedCategory, state.selectedCrop, state.selectedScale, state.scaleQuantity]);
     const stateRef = useRef(state);
@@ -191,7 +191,7 @@ export const useScanLogic = () => {
                     language,
                     locationName || 'Malaysia',
                     { tree: treeQuality, leaf: leafQuality, ...(currentState.captureContext ? { context: currentState.captureContext } : {}) },
-                    { crop: currentState.selectedCrop || '' }
+                    { crop: currentState.selectedCrop || '', dataConsent: getDataConsent(owner) }
                 );
 
                 dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });

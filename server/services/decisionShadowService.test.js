@@ -1,3 +1,4 @@
+import { DATA_CONSENT_VERSION } from '../../shared/dataConsent.js';
 import { describe, it, expect, vi } from 'vitest';
 import { createDecisionShadowService } from './decisionShadowService.js';
 import { trackAiUsage } from '../utils/aiUsage.js';
@@ -5,7 +6,7 @@ const image = 'data:image/jpeg;base64,/9j/';
 const prediction = { disease: 'Apple scab', plantType: 'Apple', healthStatus: 'unhealthy', diseaseCategory: 'fungal', confidence: 92,
     status: 'high_confidence', analysisMetadata: {model:'openai/gpt-5.4-mini-2026-03-17'} };
 const env = () => ({ DECISIONS_SHADOW_ENABLED:'true', AI_PROVIDER:'openrouter', OPENROUTER_API_KEY:'test-only', DECISIONS_SHADOW_MAX_REQUESTS:'3', DECISIONS_SHADOW_MAX_COST_USD:'.03' });
-const input = () => ({prediction:structuredClone(prediction),treeImage:image,crop:'Apple',dataConsent:{aiImprovement:true}});
+const input = () => ({prediction:structuredClone(prediction),treeImage:image,crop:'Apple',dataConsent:{aiImprovement:true,version:DATA_CONSENT_VERSION}});
 const provider = (body, support=.2) => ({ model:body.model,usage:{input_tokens:100,output_tokens:0,cost:.0001},
     answers:Object.fromEntries(Object.keys(body.questions).map(name=>[name,name==='health_triage'
         ? {type:'choice',choice:'abnormal',confidence:.95} : {type:'noul',noul:name==='support_0'?support:name==='clear_enough'?.95:.1}])) });

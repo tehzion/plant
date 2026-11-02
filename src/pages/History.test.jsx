@@ -29,7 +29,7 @@ vi.mock('../context/ScanContext', () => ({
     }),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: () => ({
         user: { id: 'user-1' },
     }),

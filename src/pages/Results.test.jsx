@@ -25,7 +25,7 @@ vi.mock('../i18n/i18n.jsx', async () => {
   return { useLanguage: () => ({ language: 'en', t: key => key.split('.').reduce((value, part) => value?.[part], translations.en) || key }) };
 });
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
   useAuth: () => ({
     user: { id: 'user-1' },
   }),

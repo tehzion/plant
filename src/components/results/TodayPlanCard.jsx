@@ -1,3 +1,4 @@
+import { useDataOwner } from '../../context/AuthContext';
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, ListChecks } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
@@ -20,6 +21,7 @@ export const recheckDays = (result = {}) => {
 // field questions as tap answers, and an optional treatment checklist.
 const TodayPlanCard = ({ result, sourceResult = result, scanId, planStarted = false, adviceReadable = true, planStorageError = false, onSetRecheck }) => {
     const { language, t } = useLanguage();
+    const dataOwner = useDataOwner();
     const copy = getScanQualityCopy(language);
     const label = (key, fallback) => {
         const value = t(key);
@@ -33,7 +35,7 @@ const TodayPlanCard = ({ result, sourceResult = result, scanId, planStarted = fa
     const actionKey = index => `care:${sourceActions[index] || actions[index]}`;
     const questions = assessment.follow_up_questions || [];
     const infoNeeded = assessment.additional_information_needed || [];
-    const [answers, setAnswers] = useState(() => getFieldAnswers(scanId));
+    const [answers, setAnswers] = useState(() => getFieldAnswers(scanId, dataOwner));
     const checked = actions.filter((_, index) => answers[actionKey(index)] === 'yes').length;
     const [storageError, setStorageError] = useState(false);
     const firstAction = useRef(null);
@@ -41,7 +43,7 @@ const TodayPlanCard = ({ result, sourceResult = result, scanId, planStarted = fa
         if (planStarted) firstAction.current?.focus();
     }, [planStarted]);
     const answer = (question, value) => {
-        const saved = saveFieldAnswerWithStatus(scanId, question, value);
+        const saved = saveFieldAnswerWithStatus(scanId, question, value, dataOwner);
         setAnswers(saved.answers);
         setStorageError(!saved.saved);
     };

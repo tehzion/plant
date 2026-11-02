@@ -170,12 +170,7 @@ const Home = () => {
           setLocationName('Malaysia');
         }
 
-        // Now try to get real location in background
-        const loc = await getLocation();
-        if (loc) {
-          // Update with real location if found
-          await fetchWeather(loc.lat, loc.lng);
-        }
+        // Personal location is requested only from the location button.
       };
       initData();
     }

@@ -1,3 +1,4 @@
+import { useDataOwner } from '../context/AuthContext';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -62,8 +63,9 @@ const Results = () => {
   const [detailsOpen, setDetailsOpen] = useState(Boolean(requestedTab));
   const { t, language } = useLanguage();
   const { user } = useAuth();
+    const dataOwner = useDataOwner();
   const [scan, setScan] = useState(null);
-  const [planStarted, setPlanStarted] = useState(() => getFieldAnswers(id)._planStarted === 'yes');
+  const [planStarted, setPlanStarted] = useState(() => getFieldAnswers(id, dataOwner)._planStarted === 'yes');
   const [productsOpen, setProductsOpen] = useState(requestedTab === 'products');
   const [cachedLanguage, setCachedLanguage] = useState(false);
   const [planStorageError, setPlanStorageError] = useState(false);
@@ -83,7 +85,7 @@ const Results = () => {
 
   useEffect(() => {
     setScanLoading(true);
-    setPlanStarted(getFieldAnswers(id)._planStarted === 'yes');
+    setPlanStarted(getFieldAnswers(id, dataOwner)._planStarted === 'yes');
     setRecheckRequest(null);
     let cancelled = false;
     Promise.resolve(getScanById(id, user?.id ?? null))
@@ -499,7 +501,7 @@ ${t('pdf.generatedBy')}
   const handleAskExpert = () => window.open(createProductConsultationFromDiagnosis(buildProductDiagnosisPayload({ plantType: result.plantType, disease: result.disease, scanResult: result }), undefined, language).url, '_blank', 'noopener,noreferrer');
   const startTreatmentPlan = () => {
     const next = !planStarted;
-    setPlanStorageError(!saveFieldAnswerWithStatus(id, '_planStarted', next ? 'yes' : 'no').saved);
+    setPlanStorageError(!saveFieldAnswerWithStatus(id, '_planStarted', next ? 'yes' : 'no', dataOwner).saved);
     setPlanStarted(next);
   };
 

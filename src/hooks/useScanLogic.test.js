@@ -20,7 +20,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
     }),
 }));
 
-vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }));
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local', useAuth: () => auth }));
 
 vi.mock('../utils/diseaseDetection', () => diseaseDetectionMocks);
 
@@ -121,7 +121,7 @@ describe('useScanLogic', () => {
             expect.objectContaining({
                 tree: expect.objectContaining({ requiresRetake: false }),
             }),
-            { crop: '' },
+            { crop: '', dataConsent: expect.objectContaining({ aiImprovement: false }) },
         );
         expect(storageMocks.saveScan).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -147,7 +147,7 @@ describe('useScanLogic', () => {
         });
 
         expect(diseaseDetectionMocks.analyzePlantDisease).toHaveBeenCalledWith(
-            'data:image/jpeg;base64,ok', 'Vegetables', null, 'en', 'Malaysia', expect.any(Object), { crop: 'Tomato' },
+            'data:image/jpeg;base64,ok', 'Vegetables', null, 'en', 'Malaysia', expect.any(Object), { crop: 'Tomato', dataConsent: expect.objectContaining({ aiImprovement: false }) },
         );
         expect(storageMocks.saveScan).toHaveBeenCalledWith(expect.objectContaining({ category: 'Vegetables', crop: 'Tomato' }), 'user-1');
     });

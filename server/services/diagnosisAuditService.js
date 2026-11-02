@@ -34,5 +34,9 @@ export const pruneDiagnosisAudit = async (days = Number(process.env.DIAGNOSIS_RE
         'delete from public.diagnosis_feedback where created_at < $1 returning id',
         [cutoff],
     );
-    return { deletedScans, deletedFeedback: feedbackRows?.length || 0, cutoff };
+    const { rows: assistantRows } = await queryNeon(
+        'delete from public.assistant_feedback where created_at < $1 returning id',
+        [cutoff],
+    );
+    return { deletedScans, deletedAssistantFeedback: assistantRows?.length || 0, deletedFeedback: feedbackRows?.length || 0, cutoff };
 };

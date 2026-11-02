@@ -7,11 +7,12 @@ const routeLocation = vi.hoisted(() => ({ pathname: '/profile' }));
 const pendingDraft = vi.hoisted(() => ({ value: null }));
 
 vi.mock('react-router-dom', () => ({
+    Link: ({ to, children }) => <a href={to}>{children}</a>,
     useNavigate: () => navigateMock,
     useLocation: () => routeLocation,
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: () => ({ user: null, signIn: vi.fn(), signUp: vi.fn(), resetPasswordForEmail: vi.fn(), demoAuthEnabled: false }),
 }));
 

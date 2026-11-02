@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ScanFollowUpTracker from './ScanFollowUpTracker.jsx';
 const save = vi.hoisted(()=>vi.fn());
-vi.mock('../context/AuthContext.jsx',()=>({useAuth:()=>({user:null})}));
+vi.mock('../context/AuthContext.jsx',()=>({ useDataOwner: () => 'guest:local',useAuth:()=>({user:null})}));
 vi.mock('../utils/localStorage.js',()=>({getPlots:async()=>[]}));
 vi.mock('../utils/scanFollowUpStorage.js',()=>({saveScanFollowUp:(...args)=>save(...args)}));
 vi.mock('./FollowUpComparison.jsx',()=>({default:()=>null}));

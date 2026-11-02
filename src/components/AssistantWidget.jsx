@@ -6,6 +6,7 @@ import { sendAssistantFeedback, sendAssistantMessage, STORE_URL } from '../utils
 import { getAssistantState, subscribeAssistant } from '../utils/assistantContext.js';
 import { clearSavedChat, loadSavedChat, saveChat } from '../utils/assistantChatStorage.js';
 import { buildContactOptions } from '../../shared/assistantContact.js';
+import { useDataOwner } from '../context/AuthContext';
 import './AssistantWidget.css';
 
 // Phones get a bottom sheet; only devices with a precise pointer get the
@@ -81,12 +82,12 @@ const AssistantLinks = ({ message, label, onNavigate }) => (
     </>
 );
 
-const AssistantWidget = () => {
+const AssistantWidgetSession = ({ owner }) => {
     const { language, label: labelFn, t } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : t(key) || fallback);
     const location = useLocation();
     const [open, setOpen] = useState(false);
-    const [saved] = useState(loadSavedChat);
+    const [saved] = useState(() => loadSavedChat(Date.now(), owner));
     const [messages, setMessages] = useState(saved.messages);
     const [draft, setDraft] = useState('');
     const [pending, setPending] = useState(false);
@@ -104,9 +105,9 @@ const AssistantWidget = () => {
     // The conversation survives a page reload, so a farmer who checks the
     // field and comes back still sees what was said.
     useEffect(() => {
-        if (messages.length) saveChat(messages, chatScan);
-        else clearSavedChat();
-    }, [messages, chatScan]);
+        if (messages.length) saveChat(messages, chatScan, Date.now(), owner);
+        else clearSavedChat(owner);
+    }, [messages, chatScan, owner]);
 
     useEffect(() => {
         if (scanContext && chatScan && !sameScan(scanContext, chatScan)) {
@@ -198,12 +199,9 @@ const AssistantWidget = () => {
     const rate = (index, rating) => {
         const answer = messages[index];
         if (!answer || answer.rating) return;
-        const question = messages.slice(0, index).findLast((message) => message.role === 'user');
         setMessages((current) => current.map((message, i) => (i === index ? { ...message, rating } : message)));
         sendAssistantFeedback({
             rating,
-            question: question?.content || '',
-            answer: answer.content,
             language,
             page: location.pathname.split('/')[1] || 'home',
             scanStatus: chatScan?.status || null,
@@ -300,6 +298,7 @@ const AssistantWidget = () => {
                         )}
                     </div>
 
+                    <p className="assistant-disclaimer">{language === 'ms' ? 'Untuk tanaman dan KANB sahaja. Teks dihantar kepada penyedia AI. Jangan kongsi butiran peribadi. Undian tidak menghantar teks sembang.' : language === 'zh' ? '仅限植物和KANB相关问题。文本会发送给AI服务商，请勿分享私人信息。评价不会上传聊天内容。' : 'Plants and KANB only. Text goes to our AI provider. Avoid private details. Ratings do not upload chat text.'} <Link to="/privacy">{language === 'ms' ? 'Privasi' : 'Privacy'}</Link></p>
                     <form className="assistant-form" onSubmit={(event) => { event.preventDefault(); ask(draft); }}>
                         <input
                             ref={inputRef}
@@ -333,4 +332,8 @@ const AssistantWidget = () => {
     );
 };
 
+const AssistantWidget = () => {
+    const owner = useDataOwner();
+    return owner ? <AssistantWidgetSession key={owner} owner={owner} /> : null;
+};
 export default AssistantWidget;

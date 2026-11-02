@@ -40,9 +40,7 @@ export const sendAssistantFeedback = (feedback) => fetchJsonWithTimeout(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            ...feedback,
-            question: feedback.question.slice(0, 1500),
-            answer: feedback.answer.slice(0, 3000),
+            rating: feedback.rating, language: feedback.language, page: feedback.page, scanStatus: feedback.scanStatus,
         }),
     },
     { timeoutMs: 10000 },

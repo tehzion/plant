@@ -32,3 +32,13 @@ describe('farmer preferences', () => {
         Storage.prototype.getItem = original;
     });
 });
+
+it('does not reuse personal farm defaults or reminders between actors', () => {
+    rememberLogDefaults({ operator: 'Dummy A', plot_id: 'Block A' }, 'user:A');
+    saveFieldAnswer('same-scan', 'seen', 'yes', 'user:A');
+    addHarvestReminder({ date: '2020-01-01', name: 'A-only' }, 'user:A');
+    expect(getLogDefaults('user:B')).toEqual({});
+    expect(getFieldAnswers('same-scan', 'user:B')).toEqual({});
+    expect(dueHarvestReminders(new Date(), 'user:B')).toEqual([]);
+    expect(getLogDefaults('user:A').operator).toBe('Dummy A');
+});

@@ -1,3 +1,4 @@
+import { hasAnalyticsConsent } from '../shared/privacy.js';
 import { checkDecisionShadow } from './services/decisionShadowService.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
@@ -210,6 +211,9 @@ app.post('/api/data/:table', async (req, res, next) => {
     try {
         const { table } = req.params;
         if (getTelemetryDatasetNames().includes(table)) {
+            if (table === 'product_events' && !hasAnalyticsConsent((req.body?.payload || req.body)?.metadata?.analyticsConsent)) {
+                return res.status(202).json({ skipped: true, reason: 'optional_analytics_not_consented' });
+            }
             const user = await optionalAuthenticatedUser(req);
             const row = await insertTelemetryRow(table, req.body?.payload || req.body, {
                 userId: user?.id || null,
@@ -458,11 +462,11 @@ app.post('/api/ask', async (req, res, next) => {
         // 2. Check Cache
         const cachedAnswer = aiCache.get(cacheKey);
         if (cachedAnswer) {
-            console.log(`🧠 Cache HIT for question: "${question.substring(0, 30)}..."`);
+            console.log('Question cache hit');
             return res.json({ ...cachedAnswer, cached: true });
         }
 
-        console.log(`🧠 Cache MISS for question: "${question.substring(0, 30)}..." - Calling OpenAI...`);
+        console.log('Question cache miss');
 
         // 3. Call Service
         const answer = await withAbortableTimeout(
@@ -492,7 +496,11 @@ app.post('/api/ask', async (req, res, next) => {
 
 // Floating help assistant: short answers that link to encyclopedia entries,
 // live store products and the support team.
-app.post('/api/assistant/chat', async (req, res, next) => {
+const assistantBurstLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+    message: { error: 'ASSISTANT_RATE_LIMIT', message: 'Please slow down. You can ask up to 5 questions per minute.' },
+});
+app.post('/api/assistant/chat', assistantBurstLimiter, async (req, res, next) => {
     const requestController = new AbortController();
     const requestDeadline = setTimeout(() => requestController.abort(new Error('Assistant deadline exceeded')), Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000);
     const abortOnDisconnect = () => requestController.abort(new Error('Assistant request cancelled by client'));
@@ -656,7 +664,7 @@ app.post('/api/analyze', async (req, res, next) => {
             });
         }
 
-        console.log(`📸 New Analysis Request - Category: ${category}${farmerCrop ? ` (${farmerCrop})` : ''}, Location: ${location || 'Not provided'}`);
+        console.log('Analysis request accepted');
 
         // 1. Generate Image Hash for Caching
         const cacheKey = buildAnalysisCacheKey({ ...req.body, crop: farmerCrop });
@@ -670,7 +678,7 @@ app.post('/api/analyze', async (req, res, next) => {
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
             logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category, dataConsent,
-                result: cachedResult, metadata: { language, location, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
+                result: cachedResult, metadata: { language, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
                 .catch(err => console.error('Data logging failed:', err.message));
             return res.json({ ...cachedResult, id: scanId, feedbackToken, cached: true });
         }
@@ -789,7 +797,6 @@ app.post('/api/analyze', async (req, res, next) => {
             result: finalResult,
             metadata: {
                 language,
-                location,
                 farmerCrop: farmerCrop || null,
                 source: identificationSource,
                 imageQuality,

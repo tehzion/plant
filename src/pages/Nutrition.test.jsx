@@ -19,7 +19,7 @@ vi.mock('../utils/localStorage', () => ({
     getScanById: (...args) => getScanByIdMock(...args),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: () => ({ user: { id: 'user-1' } }),
 }));
 
