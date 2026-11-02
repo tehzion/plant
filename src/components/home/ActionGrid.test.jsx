@@ -7,7 +7,8 @@ const navigateMock = vi.hoisted(() => vi.fn());
 vi.mock('../../i18n/i18n.jsx', () => ({
     useLanguage: () => ({
         t: (key) => ({
-            'nav.scan': 'Scan',
+            'nav.checkPlant': 'Check plant health',
+            'nav.products': 'Products',
             'nav.shop': 'Shop',
             'nav.history': 'History',
             'profile.quickActions': 'Quick Actions',
@@ -22,12 +23,12 @@ vi.mock('react-router-dom', () => ({
 }));
 
 describe('ActionGrid', () => {
-    it('keeps scan and history as first-class quick actions', () => {
+    it('keeps the plant check and history as first-class farm tools', () => {
         const onScan = vi.fn();
 
         render(<ActionGrid onScan={onScan} />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Scan' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Check plant health' }));
         fireEvent.click(screen.getByRole('button', { name: 'History' }));
 
         expect(onScan).toHaveBeenCalledTimes(1);

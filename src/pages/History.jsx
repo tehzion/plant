@@ -190,7 +190,7 @@ const History = () => {
                             <HistoryIcon size={22} className="header-icon" />
                         </span>
                         <div className="history-title-copy">
-                            <h2 className="history-page-title">{t('history.scanHistory')}</h2>
+                            <h1 className="history-page-title">{t('history.scanHistory')}</h1>
                             <p className="history-page-subtitle">
                                 {hasScans
                                     ? (t('history.reviewScansHint') === 'history.reviewScansHint'
@@ -208,9 +208,9 @@ const History = () => {
                     )}
                 </div>
 
-                <div className="history-view-tabs" role="tablist">
-                    <button type="button" role="tab" aria-selected={view === 'scans'} onClick={() => setView('scans')}>{viewLabel('assessment.ux.scansTab', 'Scans')}</button>
-                    <button type="button" role="tab" aria-selected={view === 'timeline'} onClick={() => setView('timeline')}>{viewLabel('assessment.ux.timelineTab', 'Farm timeline')}</button>
+                <div className="history-view-tabs" role="group" aria-label={t('history.scanHistory')}>
+                    <button type="button" aria-pressed={view === 'scans'} onClick={() => setView('scans')}>{viewLabel('assessment.ux.scansTab', 'Scans')}</button>
+                    <button type="button" aria-pressed={view === 'timeline'} onClick={() => setView('timeline')}>{viewLabel('assessment.ux.timelineTab', 'Farm timeline')}</button>
                 </div>
                 {view === 'timeline' ? <FarmTimeline scans={scans} /> : <>
                 {hasScans && <section className="history-filters app-surface">
@@ -220,11 +220,12 @@ const History = () => {
                     <label>{copy.date}<select value={filters.date} onChange={e => changeFilter('date', e.target.value)}><option value="">{copy.all}</option><option value="week">{copy.week}</option><option value="month">{copy.month}</option></select></label>
                     <label>{copy.sort}<select value={filters.sort} onChange={e => changeFilter('sort', e.target.value)}><option value="newest">{copy.newest}</option><option value="oldest">{copy.oldest}</option></select></label>
                     <button className="btn btn-secondary" onClick={() => setFilters({search:'',crop:'',status:'',date:'',sort:'newest'})}>{copy.reset}</button>
+                    {nextCursor && <p className="history-filter-scope">{t('common.historyScope')}</p>}
                     <p role="status" aria-live="polite">{visibleCount} / {scans.length}</p>
                 </section>}
                 {/* Empty State */}
                 {showSkeleton ? (
-                    <HistorySkeleton />
+                    <><p role="status">{t('common.loadingHistory')}</p><HistorySkeleton /></>
                 ) : historyError ? (
                     <div role="alert" className="empty-state app-surface">
                         <p>{t('profile.dataLoadFailed')}</p>
@@ -235,8 +236,8 @@ const History = () => {
                         <div className="empty-icon-wrapper">
                             <ClipboardList size={64} className="empty-icon" />
                         </div>
-                        <h3>{t('history.noHistory')}</h3>
-                        <p>{t('history.noHistoryMessage')}</p>
+                        <h2>{t('history.noHistory')}</h2>
+                        <p>{t('common.firstScanHint')}</p>
                         <button
                             onClick={() => navigate('/?scan=true')}
                             className="btn btn-primary mt-lg scan-btn"
@@ -247,12 +248,12 @@ const History = () => {
                     </div>
                 ) : (
                     <div className={`history-content ${filters.sort === 'oldest' ? 'history-content--oldest' : ''}`}>
-                        {visibleCount === 0 && <p className="app-empty-state">{copy.none}</p>}
+                        {visibleCount === 0 && <div className="app-empty-state"><h2>{copy.none}</h2><p>{t('common.emptySearch')}</p><button className="btn btn-secondary" onClick={() => setFilters({search:'',crop:'',status:'',date:'',sort:'newest'})}>{copy.reset}</button></div>}
                         {/* Today */}
                         {filteredGroups.today && filteredGroups.today.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
-                                    <h3 className="group-title">{t('history.today')}</h3>
+                                    <h2 className="group-title">{t('history.today')}</h2>
                                     <span className="app-pill">{filteredGroups.today.length}</span>
                                 </div>
                                 {filteredGroups.today.map(scan => (
@@ -269,7 +270,7 @@ const History = () => {
                         {filteredGroups.yesterday && filteredGroups.yesterday.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
-                                    <h3 className="group-title">{t('history.yesterday')}</h3>
+                                    <h2 className="group-title">{t('history.yesterday')}</h2>
                                     <span className="app-pill">{filteredGroups.yesterday.length}</span>
                                 </div>
                                 {filteredGroups.yesterday.map(scan => (
@@ -286,7 +287,7 @@ const History = () => {
                         {filteredGroups.thisWeek && filteredGroups.thisWeek.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
-                                    <h3 className="group-title">{t('history.thisWeek')}</h3>
+                                    <h2 className="group-title">{t('history.thisWeek')}</h2>
                                     <span className="app-pill">{filteredGroups.thisWeek.length}</span>
                                 </div>
                                 {filteredGroups.thisWeek.map(scan => (
@@ -303,7 +304,7 @@ const History = () => {
                         {filteredGroups.lastWeek && filteredGroups.lastWeek.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
-                                    <h3 className="group-title">{t('history.lastWeek')}</h3>
+                                    <h2 className="group-title">{t('history.lastWeek')}</h2>
                                     <span className="app-pill">{filteredGroups.lastWeek.length}</span>
                                 </div>
                                 {filteredGroups.lastWeek.map(scan => (
@@ -320,7 +321,7 @@ const History = () => {
                         {filteredGroups.older && filteredGroups.older.length > 0 && (
                             <section className="history-group app-surface app-surface--soft">
                                 <div className="group-title-row">
-                                    <h3 className="group-title">{t('history.older')}</h3>
+                                    <h2 className="group-title">{t('history.older')}</h2>
                                     <span className="app-pill">{filteredGroups.older.length}</span>
                                 </div>
                                 {filteredGroups.older.map(scan => (

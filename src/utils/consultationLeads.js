@@ -42,7 +42,7 @@ export const buildConsultationLeadPayload = ({
         disease: normalizeText(diagnosis.disease, 'Unknown issue') || 'Unknown issue',
         crop: normalizeText(diagnosis.plantType || diagnosis.cropType, 'Unknown crop') || 'Unknown crop',
         confidence,
-        phone: normalizeText(consultation.phone, '+60136667810') || '+60136667810',
+        phone: normalizeText(consultation.phone, '+60146193328') || '+60146193328',
         contact_intent: CONSULTATION_LEAD_INTENT,
         recommendation_intent: normalizeText(recommendationIntent) || null,
         severity: normalizeText(diagnosis.severity || diagnosis.status) || null,

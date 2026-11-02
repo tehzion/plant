@@ -1,0 +1,3393 @@
+{
+  "source": "isolated schema-only Neon branch br-polished-feather-b5nbdg9e",
+  "exportedAt": "2026-10-30T20:13:24.843Z",
+  "records": [
+    {
+      "evaluation_id": "PILOT-01",
+      "dataset_source": "PlantVillage",
+      "image_reference": "raw/color/Corn_(maize)___healthy/c5f181df-88f9-4b33-8e95-d17a3de8a80f___R.S_HL 8178 copy 2.jpg",
+      "reference_crop": "Corn (maize)",
+      "reference_condition": "healthy",
+      "predicted_crop": "Corn (Zea mays)",
+      "predicted_condition": "Image Too Unclear For Diagnosis",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "83dc4586-d16e-40d4-be21-cf930ac5072e",
+        "status": "retake_required",
+        "disease": "Image Too Unclear For Diagnosis",
+        "severity": "mild",
+        "symptoms": [
+          "Only general green leaf color is visible",
+          "No clear lesions, spotting, or insect residue can be confirmed"
+        ],
+        "plantType": "Corn (Zea mays)",
+        "confidence": 20,
+        "prevention": [],
+        "treatments": [],
+        "description": "The photo is too close and blurry to see clear disease, pest, or nutrient patterns on the leaf.",
+        "resultState": "needs_closer_photo",
+        "healthStatus": "healthy",
+        "pathogenType": "Unknown",
+        "retakeReason": "The photo is too close and blurry to see clear disease, pest, or nutrient patterns on the leaf.",
+        "abstainReason": "Visible evidence is too weak to support a named diagnosis.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Unknown",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Unknown until diagnosis is clearer"
+        },
+        "identification": {
+          "genus": "Zea",
+          "family": "Poaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 92,
+          "commonNames": [
+            "Corn",
+            "Maize"
+          ],
+          "scientificName": "Zea mays"
+        },
+        "requiresRetake": true,
+        "speciesContext": {
+          "weak": false,
+          "margin": 92,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 92,
+          "organHints": [],
+          "instruction": "Use this as crop/species context only. It can unlock crop-specific disease context, but it is not disease evidence.",
+          "primaryName": "Corn",
+          "userCategory": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 92,
+              "commonNames": [
+                "Corn",
+                "Maize"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays",
+          "categoryConflict": false
+        },
+        "additionalNotes": "The photo is too close and blurry to see clear disease, pest, or nutrient patterns on the leaf.",
+        "confidenceLevel": "insufficient_evidence",
+        "diseaseCategory": "unknown",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily",
+            "Ensure adequate sunlight exposure"
+          ],
+          "weeklyCare": [
+            "Inspect for pests or diseases",
+            "Remove dead or yellowing leaves"
+          ],
+          "monthlyCare": [
+            "Apply balanced fertilizer",
+            "Check soil drainage"
+          ],
+          "bestPractices": [
+            "Keep garden clean from weeds",
+            "Rotate crops if possible to prevent soil depletion"
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:03:15.277Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Retake a sharp, well-lit photo of the affected area, including a close-up and a whole-plant view."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [
+            "too_blurry",
+            "too_close"
+          ],
+          "retakeReason": "The photo is too close and blurry to see clear disease, pest, or nutrient patterns on the leaf.",
+          "requiresRetake": true,
+          "detailSufficient": false,
+          "leafDetailSufficient": false,
+          "imageQualityConfidence": 48
+        },
+        "followUpQuestions": [
+          "Are there any spots, streaks, holes, or sticky residue on the leaf?",
+          "Is the problem on older leaves or newer leaves?",
+          "Can you send a clearer photo in brighter natural light?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "pest-control",
+          "insecticide",
+          "horticultural-oil"
+        ],
+        "speciesAssessment": {
+          "margin": 92,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 92,
+          "primaryName": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 92,
+              "commonNames": [
+                "Corn",
+                "Maize"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Leaf color is visible"
+          ],
+          "lesionShape": "unclear",
+          "colorPattern": "green",
+          "rejectedReason": "The image does not show clear necrotic spots or lesion margins",
+          "evidenceAgainst": [
+            "No discrete disease lesions can be seen",
+            "No pest signs such as cottony residue or insects are visible"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "unclear",
+          "rejectedDiagnosis": "Leaf spot",
+          "distributionPattern": "unclear",
+          "likelyCauseCategory": "unknown"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 20,
+          "speciesConfidence": 92,
+          "diagnosisConfidence": 20,
+          "imageQualityConfidence": 48
+        },
+        "diagnosisConfidence": 20,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Corn",
+            "scientific_name": "Zea mays",
+            "identification_status": "confirmed"
+          },
+          "assessment": {
+            "status": "retake_required",
+            "confidence_level": "insufficient_evidence",
+            "symptoms_overlap": false,
+            "primary_condition": null,
+            "follow_up_questions": [
+              "Are there any spots, streaks, holes, or sticky residue on the leaf?",
+              "Is the problem on older leaves or newer leaves?",
+              "Can you send a clearer photo in brighter natural light?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [],
+            "additional_information_needed": [
+              "A sharper close-up of the affected leaf surface",
+              "A wider photo showing the whole plant",
+              "A photo of the leaf underside if pests are suspected",
+              "A clearer photo in daylight, held steady and close to the symptom"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Retake a sharp, well-lit photo of the affected area, including a close-up and a whole-plant view."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office if symptoms spread.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A sharper close-up of the affected leaf surface",
+          "A wider photo showing the whole plant",
+          "A photo of the leaf underside if pests are suspected"
+        ]
+      },
+      "processing_time_ms": 8524,
+      "evaluated_at": "2026-10-30T20:03:06.768Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-03",
+      "dataset_source": "PlantVillage",
+      "image_reference": "raw/color/Grape___healthy/0ce12a10-c6ff-494e-a927-5ddc809c707a___Mt.N.V_HL 8945.JPG",
+      "reference_crop": "Grape",
+      "reference_condition": "healthy",
+      "predicted_crop": "Grape (Vitis vinifera)",
+      "predicted_condition": "No Issues",
+      "agreement_status": "match",
+      "ai_response": {
+        "id": "b144ae97-91a3-472a-95ff-f51473c546ee",
+        "status": "high_confidence",
+        "disease": "No Issues",
+        "severity": "mild",
+        "symptoms": [
+          "Even green leaf color",
+          "No visible lesions, water-soaked spots, or pest residue"
+        ],
+        "plantType": "Grape (Vitis vinifera)",
+        "confidence": 85,
+        "prevention": [
+          "Check nearby plants every 2-3 days for the same pest pattern.",
+          "Improve canopy airflow and remove fallen or infested debris from the block."
+        ],
+        "treatments": [],
+        "description": "The leaf looks healthy overall with no clear disease or pest signs.",
+        "resultState": "healthy",
+        "healthStatus": "healthy",
+        "pathogenType": "None",
+        "retakeReason": "",
+        "abstainReason": "",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "High",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Low to none"
+        },
+        "identification": {
+          "genus": "Vitis",
+          "family": "Vitaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 78,
+          "commonNames": [
+            "Grape",
+            "Common grape vine"
+          ],
+          "scientificName": "Vitis vinifera"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 78,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 78,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "Grape",
+          "userCategory": "Fruits",
+          "topCandidates": [
+            {
+              "name": "Vitis vinifera",
+              "confidence": 78,
+              "commonNames": [
+                "Grape",
+                "Common grape vine"
+              ]
+            }
+          ],
+          "scientificName": "Vitis vinifera",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The leaf looks healthy overall with no clear disease or pest signs.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "healthy",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily.",
+            "Ensure adequate sunlight exposure."
+          ],
+          "weeklyCare": [
+            "Inspect for pests or diseases.",
+            "Remove dead or yellowing leaves."
+          ],
+          "monthlyCare": [
+            "Apply balanced fertilizer only if growth is active and the crop needs feeding.",
+            "Check soil drainage after heavy rain."
+          ],
+          "bestPractices": [
+            "Keep the garden clean and reduce weed competition.",
+            "Rotate crops if possible to help maintain soil health."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:03:27.050Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "No urgent intervention is needed because the plant appears healthy and no clear disease or pest symptoms are visible.",
+          "Continue normal monitoring and record any new leaf spots, discoloration, chewing damage, or wilting if they appear."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 88
+        },
+        "followUpQuestions": [],
+        "needsMoreEvidence": false,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "fertilizer",
+          "foliar-feed"
+        ],
+        "speciesAssessment": {
+          "margin": 78,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 78,
+          "primaryName": "Grape",
+          "topCandidates": [
+            {
+              "name": "Vitis vinifera",
+              "confidence": 78,
+              "commonNames": [
+                "Grape",
+                "Common grape vine"
+              ]
+            }
+          ],
+          "scientificName": "Vitis vinifera"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "No distinct necrotic lesions are visible",
+            "No pest residue or chewing damage is visible"
+          ],
+          "lesionShape": "none",
+          "colorPattern": "green",
+          "rejectedReason": "There are no visible spots, halos, or necrotic patches",
+          "evidenceAgainst": [
+            "No angular water-soaked tissue",
+            "No diffuse chlorosis or marginal scorch pattern"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "none",
+          "rejectedDiagnosis": "Leaf spot",
+          "distributionPattern": "uniform",
+          "likelyCauseCategory": "healthy"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 85,
+          "speciesConfidence": 78,
+          "diagnosisConfidence": 86,
+          "imageQualityConfidence": 88
+        },
+        "diagnosisConfidence": 86,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Grape",
+            "scientific_name": "Vitis vinifera",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "healthy",
+            "confidence_level": "medium",
+            "symptoms_overlap": false,
+            "primary_condition": null,
+            "follow_up_questions": [],
+            "needs_expert_review": false,
+            "alternative_conditions": [],
+            "additional_information_needed": []
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "No urgent intervention is needed because the plant appears healthy and no clear disease or pest symptoms are visible.",
+              "Continue normal monitoring and record any new leaf spots, discoloration, chewing damage, or wilting if they appear."
+            ],
+            "preventive_actions": [
+              "Check nearby plants every 2-3 days for the same pest pattern.",
+              "Improve canopy airflow and remove fallen or infested debris from the block."
+            ],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [
+          {
+            "type": "Chemical",
+            "amount": "Follow the product label rate or local extension guidance.",
+            "frequency": "Every 2-4 weeks depending on crop stage and field condition, if feeding is needed.",
+            "fertilizerName": "NPK 15-15-15",
+            "applicationMethod": "Apply evenly around the root zone or drip line and water in after application, following the registered label and local DOA guidance."
+          },
+          {
+            "type": "Organic",
+            "amount": "Follow the product label rate or local extension guidance.",
+            "frequency": "Every 2-4 weeks depending on crop stage and soil needs, if feeding is needed.",
+            "fertilizerName": "Baja Organik Ayam",
+            "applicationMethod": "Apply evenly around the root zone or drip line and water in after application, following the registered label and local DOA guidance."
+          }
+        ],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office or DOA extension officer if symptoms spread or new abnormalities appear.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": []
+      },
+      "processing_time_ms": 11524,
+      "evaluated_at": "2026-10-30T20:03:15.544Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-06",
+      "dataset_source": "PlantVillage",
+      "image_reference": "raw/color/Tomato___Bacterial_spot/076ef17d-dfd3-4dbc-a351-a14eff1aecdb___UF.GRC_BS_Lab Leaf 8980.JPG",
+      "reference_crop": "Tomato",
+      "reference_condition": "Bacterial_spot",
+      "predicted_crop": "Potato (Solanum tuberosum)",
+      "predicted_condition": "Leaf Scorch",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "a1e3572f-5ee9-4850-ac08-4c86d532a842",
+        "status": "uncertain",
+        "disease": "Leaf Scorch",
+        "severity": "mild",
+        "symptoms": [
+          "Brown, dry-looking margins along the leaf edge",
+          "No clear circular, angular, or water-soaked leaf spots"
+        ],
+        "plantType": "Potato (Solanum tuberosum)",
+        "confidence": 44,
+        "prevention": [],
+        "treatments": [],
+        "description": "The visible damage is mainly edge browning and tissue loss, which fits scorch or stress more than a specific leaf disease.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "healthy",
+        "pathogenType": "Environmental",
+        "retakeReason": "",
+        "abstainReason": "The image shows edge damage, but not enough lesion detail to confidently separate disease from stress or minor pest injury.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Unknown",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Unknown until diagnosis is clearer"
+        },
+        "identification": {
+          "genus": "Solanum",
+          "family": "Solanaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 66,
+          "commonNames": [
+            "Potato",
+            "Irish potato"
+          ],
+          "scientificName": "Solanum tuberosum"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 66,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 66,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "Potato",
+          "userCategory": "Vegetables",
+          "topCandidates": [
+            {
+              "name": "Solanum tuberosum",
+              "confidence": 66,
+              "commonNames": [
+                "Potato",
+                "Irish potato"
+              ]
+            }
+          ],
+          "scientificName": "Solanum tuberosum",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The visible damage is mainly edge browning and tissue loss, which fits scorch or stress more than a specific leaf disease.",
+        "confidenceLevel": "low",
+        "diseaseCategory": "environmental",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily",
+            "Ensure adequate sunlight exposure"
+          ],
+          "weeklyCare": [
+            "Inspect for pests or diseases",
+            "Remove dead or yellowing leaves"
+          ],
+          "monthlyCare": [
+            "Apply balanced fertilizer",
+            "Check soil drainage"
+          ],
+          "bestPractices": [
+            "Keep garden clean from weeds",
+            "Rotate crops if possible to prevent soil depletion"
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:03:37.215Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 72
+        },
+        "followUpQuestions": [
+          "Are older leaves affected first?",
+          "Do you see concentric rings, spots, or insects on nearby leaves?",
+          "Has this started after heat, drought, or spraying?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "pest-control",
+          "insecticide",
+          "horticultural-oil"
+        ],
+        "speciesAssessment": {
+          "margin": 66,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 66,
+          "primaryName": "Potato",
+          "topCandidates": [
+            {
+              "name": "Solanum tuberosum",
+              "confidence": 66,
+              "commonNames": [
+                "Potato",
+                "Irish potato"
+              ]
+            }
+          ],
+          "scientificName": "Solanum tuberosum"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Mainly marginal browning and tissue loss are visible",
+            "No strong disease lesion pattern is visible"
+          ],
+          "lesionShape": "none",
+          "colorPattern": "brown",
+          "rejectedReason": "The image does not show angular or water-soaked lesions required for a bacterial diagnosis",
+          "evidenceAgainst": [
+            "No clear fungal target spots are present",
+            "No angular water-soaked bacterial lesions are present"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "none",
+          "rejectedDiagnosis": "Bacterial Leaf Spot",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "environmental"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 44,
+          "speciesConfidence": 66,
+          "diagnosisConfidence": 44,
+          "imageQualityConfidence": 72
+        },
+        "diagnosisConfidence": 44,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Potato",
+            "scientific_name": "Solanum tuberosum",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "possible_environmental_stress",
+            "confidence_level": "low",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Leaf Scorch",
+              "category": "environmental_stress",
+              "reasoning": "The visible damage is mainly edge browning and tissue loss, which fits scorch or stress more than a specific leaf disease.",
+              "scientific_name": null,
+              "confidence_level": "low",
+              "visible_symptoms": [
+                "Brown, dry-looking margins along the leaf edge",
+                "No clear circular, angular, or water-soaked leaf spots"
+              ]
+            },
+            "follow_up_questions": [
+              "Are older leaves affected first?",
+              "Do you see concentric rings, spots, or insects on nearby leaves?",
+              "Has this started after heat, drought, or spraying?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Potassium Deficiency",
+                "category": "nutrient_deficiency",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "A clear older-leaf pattern is not obvious",
+                  "The leaf is not showing broad diffuse yellowing"
+                ],
+                "supporting_evidence": [
+                  "Brown margin scorch is visible",
+                  "Damage is concentrated at the leaf edge"
+                ],
+                "distinguishing_features": [
+                  "Check whether older leaves are affected first and whether nearby leaves show similar edge scorch without distinct spots."
+                ]
+              },
+              {
+                "name": "Early Blight",
+                "category": "fungal_disease",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "No concentric ring lesions are visible",
+                  "No clear yellow halo around lesions is seen"
+                ],
+                "supporting_evidence": [
+                  "Leaf tissue is necrotic along damaged areas",
+                  "Potato is a susceptible crop"
+                ],
+                "distinguishing_features": [
+                  "Look for round spots with concentric rings and yellowing on nearby leaves."
+                ]
+              },
+              {
+                "name": "Chewing Insect Damage",
+                "category": "pest_damage",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "No insects, eggs, or fresh frass are visible",
+                  "Damage looks partly dry and aged"
+                ],
+                "supporting_evidence": [
+                  "Irregular edge loss is visible",
+                  "Some portions look eaten rather than spotted"
+                ],
+                "distinguishing_features": [
+                  "Inspect leaf undersides and nearby leaves for caterpillars, beetles, holes, or fresh feeding marks."
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A close-up of both the top and underside of a fresh affected leaf",
+              "A photo of several leaves on the same plant to see whether older leaves are affected first",
+              "A wider shot of the whole plant to check whether the problem is widespread or localized",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Potassium Deficiency",
+            "reason": "Marginal browning can match nutrient stress, especially on older leaves.",
+            "category": "nutrient_deficiency",
+            "likelihood": 28,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "A clear older-leaf pattern is not obvious",
+              "The leaf is not showing broad diffuse yellowing"
+            ],
+            "supportingEvidence": [
+              "Brown margin scorch is visible",
+              "Damage is concentrated at the leaf edge"
+            ],
+            "distinguishingFeatures": [
+              "Check whether older leaves are affected first and whether nearby leaves show similar edge scorch without distinct spots."
+            ]
+          },
+          {
+            "name": "Early Blight",
+            "reason": "Potato leaf injury can be fungal, but classic target-like lesions are not visible here.",
+            "category": "fungal_disease",
+            "likelihood": 24,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "No concentric ring lesions are visible",
+              "No clear yellow halo around lesions is seen"
+            ],
+            "supportingEvidence": [
+              "Leaf tissue is necrotic along damaged areas",
+              "Potato is a susceptible crop"
+            ],
+            "distinguishingFeatures": [
+              "Look for round spots with concentric rings and yellowing on nearby leaves."
+            ]
+          },
+          {
+            "name": "Chewing Insect Damage",
+            "reason": "Irregular missing tissue along the leaf edge could be feeding damage.",
+            "category": "pest_damage",
+            "likelihood": 22,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "No insects, eggs, or fresh frass are visible",
+              "Damage looks partly dry and aged"
+            ],
+            "supportingEvidence": [
+              "Irregular edge loss is visible",
+              "Some portions look eaten rather than spotted"
+            ],
+            "distinguishingFeatures": [
+              "Inspect leaf undersides and nearby leaves for caterpillars, beetles, holes, or fresh feeding marks."
+            ]
+          }
+        ],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office if symptoms spread.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A close-up of both the top and underside of a fresh affected leaf",
+          "A photo of several leaves on the same plant to see whether older leaves are affected first",
+          "A wider shot of the whole plant to check whether the problem is widespread or localized"
+        ]
+      },
+      "processing_time_ms": 9914,
+      "evaluated_at": "2026-10-30T20:03:27.312Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-07",
+      "dataset_source": "PlantVillage",
+      "image_reference": "raw/color/Potato___Late_blight/a7097c51-bb53-4149-8140-4b9c3d94dbd4___RS_LB 4108.JPG",
+      "reference_crop": "Potato",
+      "reference_condition": "Late_blight",
+      "predicted_crop": "Potato (Solanum tuberosum)",
+      "predicted_condition": "Early Blight",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "da067798-d0b4-4af6-a173-a168cb2e7fef",
+        "status": "likely",
+        "disease": "Early Blight",
+        "severity": "moderate",
+        "symptoms": [
+          "Brown to dark necrotic patches on the leaf",
+          "Lesions with a target-like blotchy appearance"
+        ],
+        "plantType": "Potato (Solanum tuberosum)",
+        "confidence": 74,
+        "prevention": [],
+        "treatments": [],
+        "description": "The dark necrotic leaf patches are consistent with early blight on potato. The visible pattern supports a fungal leaf spot more than uniform nutrient stress.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "healthy",
+        "pathogenType": "Fungal",
+        "retakeReason": "",
+        "abstainReason": "",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 40 - 120",
+          "estimatedYieldLoss": "Possible moderate loss if lower leaves continue to blight and spread upward, but exact loss is unknown until spread is confirmed."
+        },
+        "identification": {
+          "genus": "Solanum",
+          "family": "Solanaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 78,
+          "commonNames": [
+            "Potato",
+            "Irish potato"
+          ],
+          "scientificName": "Solanum tuberosum"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 78,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 78,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "Potato",
+          "userCategory": "Vegetables",
+          "topCandidates": [
+            {
+              "name": "Solanum tuberosum",
+              "confidence": 78,
+              "commonNames": [
+                "Potato",
+                "Irish potato"
+              ]
+            }
+          ],
+          "scientificName": "Solanum tuberosum",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The dark necrotic leaf patches are consistent with early blight on potato. The visible pattern supports a fungal leaf spot more than uniform nutrient stress.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "fungal",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily and water only when needed.",
+            "Inspect leaves daily for new lesions, especially lower and older leaves."
+          ],
+          "weeklyCare": [
+            "Inspect the whole planting for spread patterns and remove badly affected leaves.",
+            "Check for standing water, poor airflow, or dense canopy that keeps leaves wet."
+          ],
+          "monthlyCare": [
+            "Review drainage and bed conditions, especially after heavy rain.",
+            "Apply a balanced fertilizer only if plant growth is weak after confirming no nutrient issue."
+          ],
+          "bestPractices": [
+            "Keep the plot clean from weeds and plant debris.",
+            "Rotate with a non-host crop where practical to reduce disease pressure."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:03:48.480Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 84
+        },
+        "followUpQuestions": [
+          "Are the oldest leaves affected first?",
+          "Do the spots have concentric rings or a yellow halo?",
+          "Are other leaves showing similar lesions?"
+        ],
+        "needsMoreEvidence": false,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "registered fungicide for leaf blight",
+          "crop disease scouting",
+          "foliar disease sanitation",
+          "crop residue management",
+          "drip irrigation"
+        ],
+        "speciesAssessment": {
+          "margin": 78,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 78,
+          "primaryName": "Potato",
+          "topCandidates": [
+            {
+              "name": "Solanum tuberosum",
+              "confidence": 78,
+              "commonNames": [
+                "Potato",
+                "Irish potato"
+              ]
+            }
+          ],
+          "scientificName": "Solanum tuberosum"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Discrete dark necrotic patches are visible",
+            "Patchy lesion pattern fits a fungal leaf spot"
+          ],
+          "lesionShape": "unclear",
+          "colorPattern": "brown",
+          "rejectedReason": "The pattern is not a uniform marginal scorch and instead shows discrete necrotic patches",
+          "evidenceAgainst": [
+            "The image does not clearly show concentric rings",
+            "Leaf age pattern is not clear from this photo"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "dark margin/unclear halo",
+          "rejectedDiagnosis": "Potassium Deficiency",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "fungal"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 74,
+          "speciesConfidence": 78,
+          "diagnosisConfidence": 74,
+          "imageQualityConfidence": 84
+        },
+        "diagnosisConfidence": 74,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Potato",
+            "scientific_name": "Solanum tuberosum",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "medium",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Early Blight",
+              "category": "fungal_disease",
+              "reasoning": "The dark necrotic leaf patches are consistent with early blight on potato. The visible pattern supports a fungal leaf spot more than uniform nutrient stress.",
+              "scientific_name": "Alternaria solani",
+              "confidence_level": "medium",
+              "visible_symptoms": [
+                "Brown to dark necrotic patches on the leaf",
+                "Lesions with a target-like blotchy appearance"
+              ]
+            },
+            "follow_up_questions": [
+              "Are the oldest leaves affected first?",
+              "Do the spots have concentric rings or a yellow halo?",
+              "Are other leaves showing similar lesions?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Septoria Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": "Septoria lycopersici",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "No clear small round spots with many tiny dark fruiting bodies are visible"
+                ],
+                "supporting_evidence": [
+                  "Necrotic leaf spotting is present"
+                ],
+                "distinguishing_features": [
+                  "Check for many small round spots with pale centers and tiny black dots inside"
+                ]
+              },
+              {
+                "name": "Potassium Deficiency",
+                "category": "nutrient_deficiency",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Distinct necrotic patches are present instead of a uniform edge scorch pattern"
+                ],
+                "supporting_evidence": [
+                  "Some leaf edge damage and browning are visible"
+                ],
+                "distinguishing_features": [
+                  "Check whether older leaves show uniform marginal yellowing and scorch across many leaves"
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A closer photo of the same leaf showing the underside and lesion edges",
+              "A wider photo of several leaves on the plant to see spread pattern",
+              "A photo in brighter natural light without shadow",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Septoria Leaf Spot",
+            "reason": "Leaf spots can look similar, but the lesions here are larger and more blotchy.",
+            "category": "fungal_disease",
+            "likelihood": 24,
+            "scientificName": "Septoria lycopersici",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "No clear small round spots with many tiny dark fruiting bodies are visible"
+            ],
+            "supportingEvidence": [
+              "Necrotic leaf spotting is present"
+            ],
+            "distinguishingFeatures": [
+              "Check for many small round spots with pale centers and tiny black dots inside"
+            ]
+          },
+          {
+            "name": "Potassium Deficiency",
+            "reason": "Leaf edge scorch can overlap with nutrient stress, but the discrete dark lesions favor disease.",
+            "category": "nutrient_deficiency",
+            "likelihood": 18,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Distinct necrotic patches are present instead of a uniform edge scorch pattern"
+            ],
+            "supportingEvidence": [
+              "Some leaf edge damage and browning are visible"
+            ],
+            "distinguishingFeatures": [
+              "Check whether older leaves show uniform marginal yellowing and scorch across many leaves"
+            ]
+          }
+        ],
+        "primaryScientificName": "Alternaria solani",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest District Agriculture Office (Pejabat Pertanian Daerah) for field inspection and confirmation.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A closer photo of the same leaf showing the underside and lesion edges",
+          "A wider photo of several leaves on the plant to see spread pattern",
+          "A photo in brighter natural light without shadow"
+        ]
+      },
+      "processing_time_ms": 11017,
+      "evaluated_at": "2026-10-30T20:03:37.475Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-09",
+      "dataset_source": "PlantVillage",
+      "image_reference": "raw/color/Corn_(maize)___Northern_Leaf_Blight/6b2ebc67-09f1-4d57-bdb4-65f5f5a6c7a2___RS_NLB 3876.JPG",
+      "reference_crop": "Corn (maize)",
+      "reference_condition": "Northern_Leaf_Blight",
+      "predicted_crop": "Corn (Zea mays)",
+      "predicted_condition": "Leaf Spot",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "b425c404-cc35-4054-92ca-24b65637c326",
+        "status": "likely",
+        "disease": "Leaf Spot",
+        "severity": "moderate",
+        "symptoms": [
+          "Multiple small brown necrotic spots on the leaf",
+          "Several spots have pale to yellowish halos"
+        ],
+        "plantType": "Corn (Zea mays)",
+        "confidence": 72,
+        "prevention": [],
+        "treatments": [],
+        "description": "The scattered brown lesions with surrounding pale halos are consistent with a fungal leaf spot on corn.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "healthy",
+        "pathogenType": "Fungal",
+        "retakeReason": "",
+        "abstainReason": "The image shows a likely leaf spot pattern, but the exact cause cannot be confirmed from this photo alone.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Likely low at this stage, but can become moderate if the disease spreads to many leaves before control."
+        },
+        "identification": {
+          "genus": "Zea",
+          "family": "Poaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 93,
+          "commonNames": [
+            "Corn",
+            "Maize"
+          ],
+          "scientificName": "Zea mays"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": false,
+          "margin": 93,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 93,
+          "organHints": [],
+          "instruction": "Use this as crop/species context only. It can unlock crop-specific disease context, but it is not disease evidence.",
+          "primaryName": "Corn",
+          "userCategory": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 93,
+              "commonNames": [
+                "Corn",
+                "Maize"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays",
+          "categoryConflict": false
+        },
+        "additionalNotes": "The scattered brown lesions with surrounding pale halos are consistent with a fungal leaf spot on corn.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "fungal",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily and avoid water stress, because stressed corn is more vulnerable to foliar disease.",
+            "Observe leaves for new spots, especially after rain or prolonged humidity."
+          ],
+          "weeklyCare": [
+            "Inspect several plants across the field for spread pattern, leaf position affected, and any signs of insects or secondary infection.",
+            "Remove yellowing or badly damaged leaves where practical and dispose of them away from the field."
+          ],
+          "monthlyCare": [
+            "Apply a balanced fertilizer only if crop growth indicates a need, and avoid excess nitrogen that can encourage soft growth.",
+            "Check drainage and field wetness after heavy rain to reduce conditions that favor fungal leaf spots."
+          ],
+          "bestPractices": [
+            "Keep the area free from weeds and crop residues that can hold moisture and disease pressure.",
+            "Rotate crops where possible and avoid continuous planting of the same crop in the same field if leaf spot problems recur."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:04:03.817Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 83
+        },
+        "followUpQuestions": [
+          "Are the spots increasing quickly on older leaves?",
+          "Do you see similar spots on lower leaves or nearby plants?",
+          "Is there any powdery growth, water-soaked tissue, or insect damage?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "corn leaf spot fungicide",
+          "fungal leaf disease control",
+          "DOA corn disease advisory",
+          "crop sanitation"
+        ],
+        "speciesAssessment": {
+          "margin": 93,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 93,
+          "primaryName": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 93,
+              "commonNames": [
+                "Corn",
+                "Maize"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Scattered necrotic spots are visible",
+            "Some lesions have pale halos"
+          ],
+          "lesionShape": "round",
+          "colorPattern": "brown",
+          "rejectedReason": "The visible lesions are not clearly water-soaked or vein-limited angular spots",
+          "evidenceAgainst": [
+            "Lesion size and pattern are not distinctive enough for a specific disease",
+            "No clear bacterial water-soaked or angular pattern is visible"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "yellow halo",
+          "rejectedDiagnosis": "Bacterial leaf spot",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "fungal"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 72,
+          "speciesConfidence": 93,
+          "diagnosisConfidence": 72,
+          "imageQualityConfidence": 83
+        },
+        "diagnosisConfidence": 72,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Corn",
+            "scientific_name": "Zea mays",
+            "identification_status": "confirmed"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "medium",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Leaf Spot",
+              "category": "fungal_disease",
+              "reasoning": "The scattered brown lesions with surrounding pale halos are consistent with a fungal leaf spot on corn.",
+              "scientific_name": null,
+              "confidence_level": "medium",
+              "visible_symptoms": [
+                "Multiple small brown necrotic spots on the leaf",
+                "Several spots have pale to yellowish halos"
+              ]
+            },
+            "follow_up_questions": [
+              "Are the spots increasing quickly on older leaves?",
+              "Do you see similar spots on lower leaves or nearby plants?",
+              "Is there any powdery growth, water-soaked tissue, or insect damage?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Cercospora Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions are small and not clearly elongated or cigar-shaped",
+                  "Crop-specific features are not distinct enough for confirmation"
+                ],
+                "supporting_evidence": [
+                  "Discrete necrotic spots are visible",
+                  "Some spots have light halos"
+                ],
+                "distinguishing_features": [
+                  "Check whether lesions expand into longer rectangular or cigar-shaped spots",
+                  "Look for more spots on older leaves and compare with nearby leaves"
+                ]
+              },
+              {
+                "name": "Gray Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "No clear long rectangular lesions are visible",
+                  "No strong vein-limited pattern is obvious"
+                ],
+                "supporting_evidence": [
+                  "Brown spotting is present on a corn leaf"
+                ],
+                "distinguishing_features": [
+                  "Check for longer rectangular lesions limited by veins",
+                  "Inspect lower and middle leaves for more typical gray leaf spot pattern"
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A closer photo of the same leaf in bright light",
+              "A photo showing the whole plant and whether older or newer leaves are affected more",
+              "A close-up of the leaf underside and nearby leaves",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Cercospora Leaf Spot",
+            "reason": "Small scattered brown lesions with yellowish halos can fit a fungal leaf spot disease.",
+            "category": "fungal_disease",
+            "likelihood": 34,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions are small and not clearly elongated or cigar-shaped",
+              "Crop-specific features are not distinct enough for confirmation"
+            ],
+            "supportingEvidence": [
+              "Discrete necrotic spots are visible",
+              "Some spots have light halos"
+            ],
+            "distinguishingFeatures": [
+              "Check whether lesions expand into longer rectangular or cigar-shaped spots",
+              "Look for more spots on older leaves and compare with nearby leaves"
+            ]
+          },
+          {
+            "name": "Gray Leaf Spot",
+            "reason": "Corn leaf spotting can also be caused by gray leaf spot, but the lesion shape is not classic here.",
+            "category": "fungal_disease",
+            "likelihood": 26,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "No clear long rectangular lesions are visible",
+              "No strong vein-limited pattern is obvious"
+            ],
+            "supportingEvidence": [
+              "Brown spotting is present on a corn leaf"
+            ],
+            "distinguishingFeatures": [
+              "Check for longer rectangular lesions limited by veins",
+              "Inspect lower and middle leaves for more typical gray leaf spot pattern"
+            ]
+          }
+        ],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit from the nearest district agriculture office",
+            "Laboratory confirmation if the spotting spreads or becomes more severe"
+          ],
+          "contactInfo": "Contact the nearest Pejabat Pertanian Daerah (District Agriculture Office) for field inspection and sample submission guidance.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A closer photo of the same leaf in bright light",
+          "A photo showing the whole plant and whether older or newer leaves are affected more",
+          "A close-up of the leaf underside and nearby leaves"
+        ]
+      },
+      "processing_time_ms": 15090,
+      "evaluated_at": "2026-10-30T20:03:48.738Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-16",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/Apple rust leaf/9343310-small.jpg",
+      "reference_crop": "Apple",
+      "reference_condition": "Apple rust leaf",
+      "predicted_crop": "Apple (Malus domestica)",
+      "predicted_condition": "Apple Scab",
+      "agreement_status": "different_or_unclear",
+      "ai_response": {
+        "id": "ab319bea-3d6c-4647-9245-9b03d525907a",
+        "status": "high_confidence",
+        "disease": "Apple Scab",
+        "severity": "moderate",
+        "symptoms": [
+          "Olive to dark brown round lesions on the leaf",
+          "Yellowing around several spots"
+        ],
+        "plantType": "Apple (Malus domestica)",
+        "confidence": 88,
+        "prevention": [
+          "Keep the canopy open with light pruning so leaves dry faster after rain or watering",
+          "Avoid wetting the foliage during irrigation and monitor new leaves after rainfall"
+        ],
+        "treatments": [
+          "Since the diagnosis is fairly confident, use a registered fungicide for leaf-spot diseases only if permitted by the label and local DOA guidance",
+          "Prioritize sanitation first: remove infected leaf litter and avoid overhead watering to reduce reinfection"
+        ],
+        "description": "The round necrotic spots with yellow halos are consistent with apple scab on the leaf.",
+        "resultState": "confident_treatment",
+        "healthStatus": "healthy",
+        "pathogenType": "Fungal",
+        "retakeReason": "",
+        "abstainReason": "",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 40 - 120",
+          "estimatedYieldLoss": "Low to moderate if managed early; higher if defoliation continues"
+        },
+        "identification": {
+          "genus": "Malus",
+          "family": "Rosaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 86,
+          "commonNames": [
+            "Apple",
+            "Cultivated apple"
+          ],
+          "scientificName": "Malus domestica"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 86,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 86,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "Apple",
+          "userCategory": "Fruits",
+          "topCandidates": [
+            {
+              "name": "Malus domestica",
+              "confidence": 86,
+              "commonNames": [
+                "Apple",
+                "Cultivated apple"
+              ]
+            }
+          ],
+          "scientificName": "Malus domestica",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The round necrotic spots with yellow halos are consistent with apple scab on the leaf.",
+        "confidenceLevel": "high",
+        "diseaseCategory": "fungal",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture and avoid overwatering",
+            "Observe new leaves for fresh spotting"
+          ],
+          "weeklyCare": [
+            "Inspect lower and inner leaves for spread of lesions",
+            "Remove fallen or infected leaves from the soil surface"
+          ],
+          "monthlyCare": [
+            "Apply balanced fertilizer only if growth is weak",
+            "Check drainage and correct waterlogging if present"
+          ],
+          "bestPractices": [
+            "Keep the planting area clean from weeds and plant debris",
+            "Promote airflow by spacing plants appropriately and pruning lightly"
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:04:16.666Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Inspect nearby leaves for the same round dark spots with yellow halos",
+          "Remove and destroy the most affected leaves to reduce spread"
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 88
+        },
+        "followUpQuestions": [],
+        "needsMoreEvidence": false,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "fungal leaf spot control",
+          "registered fungicide label",
+          "orchard sanitation",
+          "leaf litter removal",
+          "airflow pruning"
+        ],
+        "speciesAssessment": {
+          "margin": 86,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 86,
+          "primaryName": "Apple",
+          "topCandidates": [
+            {
+              "name": "Malus domestica",
+              "confidence": 86,
+              "commonNames": [
+                "Apple",
+                "Cultivated apple"
+              ]
+            }
+          ],
+          "scientificName": "Malus domestica"
+        },
+        "treatmentEligible": true,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Multiple round necrotic lesions are visible",
+            "Several spots have yellow halos"
+          ],
+          "lesionShape": "round",
+          "colorPattern": "brown",
+          "rejectedReason": "The lesions are round and necrotic rather than angular and water-soaked",
+          "evidenceAgainst": [
+            "No water-soaked angular pattern suggesting bacterial leaf spot",
+            "No diffuse nutrient-type yellowing across the whole leaf"
+          ],
+          "leafAgeAffected": "mixed",
+          "lesionBorderHalo": "yellow halo",
+          "rejectedDiagnosis": "Bacterial leaf spot",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "fungal"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 88,
+          "speciesConfidence": 86,
+          "diagnosisConfidence": 89,
+          "imageQualityConfidence": 88
+        },
+        "diagnosisConfidence": 89,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Apple",
+            "scientific_name": "Malus domestica",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "high",
+            "symptoms_overlap": false,
+            "primary_condition": {
+              "name": "Apple Scab",
+              "category": "fungal_disease",
+              "reasoning": "The round necrotic spots with yellow halos are consistent with apple scab on the leaf.",
+              "scientific_name": "Venturia inaequalis",
+              "confidence_level": "high",
+              "visible_symptoms": [
+                "Olive to dark brown round lesions on the leaf",
+                "Yellowing around several spots"
+              ]
+            },
+            "follow_up_questions": [],
+            "needs_expert_review": false,
+            "alternative_conditions": [
+              {
+                "name": "Cedar Apple Rust",
+                "category": "fungal_disease",
+                "scientific_name": "Gymnosporangium juniperi-virginianae",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions are darker and more necrotic than rust pustules",
+                  "No obvious tubular or horn-like rust structures"
+                ],
+                "supporting_evidence": [
+                  "Yellow-orange tones around lesions",
+                  "Leaf spotting on apple"
+                ],
+                "distinguishing_features": [
+                  "Check for bright orange pustules on the upper leaf surface",
+                  "Look nearby for juniper host symptoms if rust is suspected"
+                ]
+              },
+              {
+                "name": "Frogeye Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": "Botryosphaeria obtusa",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions do not show the more typical frogeye target pattern",
+                  "No clear concentric zoning is visible"
+                ],
+                "supporting_evidence": [
+                  "Circular necrotic leaf spots",
+                  "Dark centers with colored margins"
+                ],
+                "distinguishing_features": [
+                  "Look for target-like rings and fruit spots",
+                  "Check older leaves and nearby fruit for similar black rot symptoms"
+                ]
+              }
+            ],
+            "additional_information_needed": []
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Inspect nearby leaves for the same round dark spots with yellow halos",
+              "Remove and destroy the most affected leaves to reduce spread"
+            ],
+            "preventive_actions": [
+              "Keep the canopy open with light pruning so leaves dry faster after rain or watering",
+              "Avoid wetting the foliage during irrigation and monitor new leaves after rainfall"
+            ],
+            "product_matching_eligible": true,
+            "chemical_treatment_withheld": false
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Cedar Apple Rust",
+            "reason": "Some lesions have yellow-orange coloring, but the spots lack the typical bright orange rust pustules.",
+            "category": "fungal_disease",
+            "likelihood": 18,
+            "scientificName": "Gymnosporangium juniperi-virginianae",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions are darker and more necrotic than rust pustules",
+              "No obvious tubular or horn-like rust structures"
+            ],
+            "supportingEvidence": [
+              "Yellow-orange tones around lesions",
+              "Leaf spotting on apple"
+            ],
+            "distinguishingFeatures": [
+              "Check for bright orange pustules on the upper leaf surface",
+              "Look nearby for juniper host symptoms if rust is suspected"
+            ]
+          },
+          {
+            "name": "Frogeye Leaf Spot",
+            "reason": "Dark circular leaf spots can overlap visually, but the lesion pattern here fits scab better.",
+            "category": "fungal_disease",
+            "likelihood": 15,
+            "scientificName": "Botryosphaeria obtusa",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions do not show the more typical frogeye target pattern",
+              "No clear concentric zoning is visible"
+            ],
+            "supportingEvidence": [
+              "Circular necrotic leaf spots",
+              "Dark centers with colored margins"
+            ],
+            "distinguishingFeatures": [
+              "Look for target-like rings and fruit spots",
+              "Check older leaves and nearby fruit for similar black rot symptoms"
+            ]
+          }
+        ],
+        "primaryScientificName": "Venturia inaequalis",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Laboratory confirmation if symptoms continue to spread"
+          ],
+          "contactInfo": "Contact the nearest District Agriculture Office for inspection and confirmation.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": []
+      },
+      "processing_time_ms": 12583,
+      "evaluated_at": "2026-10-30T20:04:04.088Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-17",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/Bell_pepper leaf spot/pepper-spot.jpg",
+      "reference_crop": "Bell pepper",
+      "reference_condition": "Bell_pepper leaf spot",
+      "predicted_crop": "Capsicum annuum (pepper/chili)",
+      "predicted_condition": "Bacterial Leaf Spot",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "ca8ea853-49b5-4c15-acec-b1b8d2e75d20",
+        "status": "likely",
+        "disease": "Bacterial Leaf Spot",
+        "severity": "moderate",
+        "symptoms": [
+          "Small dark leaf spots with pale centers",
+          "Several spots look water-soaked or slightly angular"
+        ],
+        "plantType": "Capsicum annuum (pepper/chili)",
+        "confidence": 74,
+        "prevention": [],
+        "treatments": [],
+        "description": "The leaf spots are consistent with bacterial leaf spot on pepper. The image is clear enough to see lesions, but a close-up of the spots would improve confirmation.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "healthy",
+        "pathogenType": "Bacterial",
+        "retakeReason": "",
+        "abstainReason": "The visible spots fit bacterial leaf spot, but the lesion detail is not strong enough for high-confidence treatment advice.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Low to moderate if managed early; higher if spreading continues in wet weather"
+        },
+        "identification": {
+          "genus": "Capsicum",
+          "family": "Solanaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 82,
+          "commonNames": [
+            "bell pepper",
+            "sweet pepper",
+            "chili pepper"
+          ],
+          "scientificName": "Capsicum annuum"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 82,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 82,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "bell pepper",
+          "userCategory": "Vegetables",
+          "topCandidates": [
+            {
+              "name": "Capsicum annuum",
+              "confidence": 82,
+              "commonNames": [
+                "bell pepper",
+                "sweet pepper",
+                "chili pepper"
+              ]
+            }
+          ],
+          "scientificName": "Capsicum annuum",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The leaf spots are consistent with bacterial leaf spot on pepper. The image is clear enough to see lesions, but a close-up of the spots would improve confirmation.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "bacterial",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily and water at the base only when needed.",
+            "Observe new leaves for fresh spots, yellow halos, or rapid spread."
+          ],
+          "weeklyCare": [
+            "Inspect the lower and upper leaf surfaces for new lesions or sticky/wet areas.",
+            "Remove badly affected leaves and clear fallen debris from the planting area."
+          ],
+          "monthlyCare": [
+            "Review drainage and correct any areas that stay waterlogged after rain.",
+            "Apply a balanced fertilizer only if plant growth is weak, and avoid excess nitrogen."
+          ],
+          "bestPractices": [
+            "Keep the plot weed-free and remove plant debris that can hold moisture.",
+            "Use crop rotation where practical and avoid reusing contaminated stakes or pruning tools without cleaning."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:04:31.067Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 83
+        },
+        "followUpQuestions": [
+          "Are the spots wet-looking or dry and papery?",
+          "Do you see spots on young leaves as well as older leaves?",
+          "Is there any water-soaked edge or yellow halo around the spots?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "bacterial leaf spot management",
+          "crop sanitation",
+          "registered bactericide",
+          "plant disease inspection",
+          "pepper leaf spot"
+        ],
+        "speciesAssessment": {
+          "margin": 82,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 82,
+          "primaryName": "bell pepper",
+          "topCandidates": [
+            {
+              "name": "Capsicum annuum",
+              "confidence": 82,
+              "commonNames": [
+                "bell pepper",
+                "sweet pepper",
+                "chili pepper"
+              ]
+            }
+          ],
+          "scientificName": "Capsicum annuum"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Multiple discrete dark spots are visible",
+            "Some lesions appear water-soaked"
+          ],
+          "lesionShape": "round/angular/unclear",
+          "colorPattern": "brown/black with pale centers",
+          "rejectedReason": "Visible necrotic spots are present on the leaf surface",
+          "evidenceAgainst": [
+            "The image does not clearly show classic angular vein-limited lesions",
+            "Lesion detail is limited for definitive species-level confirmation"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "water-soaked/unclear",
+          "rejectedDiagnosis": "Healthy leaf",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "bacterial"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 74,
+          "speciesConfidence": 82,
+          "diagnosisConfidence": 74,
+          "imageQualityConfidence": 83
+        },
+        "diagnosisConfidence": 74,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Capsicum annuum",
+            "scientific_name": "Capsicum annuum",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "medium",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Bacterial Leaf Spot",
+              "category": "bacterial_disease",
+              "reasoning": "The leaf spots are consistent with bacterial leaf spot on pepper. The image is clear enough to see lesions, but a close-up of the spots would improve confirmation.",
+              "scientific_name": null,
+              "confidence_level": "medium",
+              "visible_symptoms": [
+                "Small dark leaf spots with pale centers",
+                "Several spots look water-soaked or slightly angular"
+              ]
+            },
+            "follow_up_questions": [
+              "Are the spots wet-looking or dry and papery?",
+              "Do you see spots on young leaves as well as older leaves?",
+              "Is there any water-soaked edge or yellow halo around the spots?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Fungal Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Several spots appear water-soaked rather than dry and round",
+                  "No obvious concentric ring pattern is visible"
+                ],
+                "supporting_evidence": [
+                  "Multiple small necrotic spots are visible",
+                  "Some lesions have dark margins"
+                ],
+                "distinguishing_features": [
+                  "Check whether spots expand into dry round lesions with a clear halo",
+                  "Look for lesion centers that become papery rather than wet-looking"
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A closer sharp photo of the affected leaf spot area",
+              "A photo of the leaf underside",
+              "A photo of several leaves showing whether spots are spreading",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Fungal Leaf Spot",
+            "reason": "Discrete necrotic spots are present, but some lesions could also fit fungal spotting.",
+            "category": "fungal_disease",
+            "likelihood": 28,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Several spots appear water-soaked rather than dry and round",
+              "No obvious concentric ring pattern is visible"
+            ],
+            "supportingEvidence": [
+              "Multiple small necrotic spots are visible",
+              "Some lesions have dark margins"
+            ],
+            "distinguishingFeatures": [
+              "Check whether spots expand into dry round lesions with a clear halo",
+              "Look for lesion centers that become papery rather than wet-looking"
+            ]
+          }
+        ],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office for inspection and confirmation if the spotting spreads or affects new leaves.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A closer sharp photo of the affected leaf spot area",
+          "A photo of the leaf underside",
+          "A photo of several leaves showing whether spots are spreading"
+        ]
+      },
+      "processing_time_ms": 14055,
+      "evaluated_at": "2026-10-30T20:04:17.018Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-18",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/grape leaf black rot/Black%20rot%20on%20foliage.jpg",
+      "reference_crop": "grape",
+      "reference_condition": "grape leaf black rot",
+      "predicted_crop": "Grape (Vitis vinifera)",
+      "predicted_condition": "Leaf Spot",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "079da4d9-56a0-44cf-98c1-aff3d4ccce94",
+        "status": "likely",
+        "disease": "Leaf Spot",
+        "severity": "mild",
+        "symptoms": [
+          "Small round tan to orange necrotic spots",
+          "Dark reddish-brown borders on several lesions"
+        ],
+        "plantType": "Grape (Vitis vinifera)",
+        "confidence": 68,
+        "prevention": [],
+        "treatments": [],
+        "description": "The leaf shows scattered circular spots with defined margins, which is consistent with a fungal leaf spot. The evidence is suggestive but not enough to name the exact pathogen from this image alone.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "healthy",
+        "pathogenType": "Fungal",
+        "retakeReason": "",
+        "abstainReason": "The image supports a generic fungal leaf spot, but the exact cause is not clear enough for a confident named disease diagnosis.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Likely low at this stage if the problem stays limited, but loss can increase if spotting spreads."
+        },
+        "identification": {
+          "genus": "Vitis",
+          "family": "Vitaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 82,
+          "commonNames": [
+            "Grape",
+            "Common grape vine"
+          ],
+          "scientificName": "Vitis vinifera"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 82,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 82,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "Grape",
+          "userCategory": "Fruits",
+          "topCandidates": [
+            {
+              "name": "Vitis vinifera",
+              "confidence": 82,
+              "commonNames": [
+                "Grape",
+                "Common grape vine"
+              ]
+            }
+          ],
+          "scientificName": "Vitis vinifera",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The leaf shows scattered circular spots with defined margins, which is consistent with a fungal leaf spot. The evidence is suggestive but not enough to name the exact pathogen from this image alone.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "fungal",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily and avoid water stress.",
+            "Observe whether new spots appear on fresh leaves or spread to nearby vines."
+          ],
+          "weeklyCare": [
+            "Inspect both sides of leaves for new lesions, yellowing, or shot-hole symptoms.",
+            "Remove and destroy fallen or heavily infected leaves to reduce disease carryover."
+          ],
+          "monthlyCare": [
+            "Apply balanced fertilizer only if plant growth shows a general need, not as a substitute for disease control.",
+            "Check drainage and fix any persistently wet areas around the root zone."
+          ],
+          "bestPractices": [
+            "Keep the planting area clean from weeds and plant debris.",
+            "Avoid moving from diseased vines to healthy vines without cleaning tools and hands."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:04:46.518Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 88
+        },
+        "followUpQuestions": [
+          "Are the spots increasing quickly or staying limited to a few leaves?",
+          "Do you see similar spots on young leaves, stems, or fruit?",
+          "Is there any blackening, cracking, or shot-hole effect in the center of the spots?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "fungal leaf spot management",
+          "registered fungicide for leaf spot",
+          "sanitation for fungal disease",
+          "crop disease scouting"
+        ],
+        "speciesAssessment": {
+          "margin": 82,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 82,
+          "primaryName": "Grape",
+          "topCandidates": [
+            {
+              "name": "Vitis vinifera",
+              "confidence": 82,
+              "commonNames": [
+                "Grape",
+                "Common grape vine"
+              ]
+            }
+          ],
+          "scientificName": "Vitis vinifera"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Scattered circular necrotic spots are visible",
+            "Several lesions have a defined darker edge"
+          ],
+          "lesionShape": "round",
+          "colorPattern": "brown/orange",
+          "rejectedReason": "The lesions are round rather than angular and there is no visible water-soaked tissue",
+          "evidenceAgainst": [
+            "No clear angular or water-soaked pattern is visible",
+            "The exact pathogen cannot be identified from this view"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "dark margin",
+          "rejectedDiagnosis": "Bacterial Leaf Spot",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "fungal"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 68,
+          "speciesConfidence": 82,
+          "diagnosisConfidence": 68,
+          "imageQualityConfidence": 88
+        },
+        "diagnosisConfidence": 68,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Grape",
+            "scientific_name": "Vitis vinifera",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "medium",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Leaf Spot",
+              "category": "fungal_disease",
+              "reasoning": "The leaf shows scattered circular spots with defined margins, which is consistent with a fungal leaf spot. The evidence is suggestive but not enough to name the exact pathogen from this image alone.",
+              "scientific_name": null,
+              "confidence_level": "medium",
+              "visible_symptoms": [
+                "Small round tan to orange necrotic spots",
+                "Dark reddish-brown borders on several lesions"
+              ]
+            },
+            "follow_up_questions": [
+              "Are the spots increasing quickly or staying limited to a few leaves?",
+              "Do you see similar spots on young leaves, stems, or fruit?",
+              "Is there any blackening, cracking, or shot-hole effect in the center of the spots?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Anthracnose",
+                "category": "fungal_disease",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions are small and not clearly elongated or sunken",
+                  "No obvious shot-hole tearing is visible"
+                ],
+                "supporting_evidence": [
+                  "Discrete brown lesions are visible",
+                  "Several spots have a darker border"
+                ],
+                "distinguishing_features": [
+                  "Check for sunken centers, cracking, or shot-hole lesions on newer growth"
+                ]
+              },
+              {
+                "name": "Cercospora Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "No clear gray center or strong yellow halo is visible"
+                ],
+                "supporting_evidence": [
+                  "Round lesions with pale centers are present",
+                  "Scattered spotting pattern is visible"
+                ],
+                "distinguishing_features": [
+                  "Look for more numerous spots and yellowing around older leaves"
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A close-up of the upper and lower leaf surfaces",
+              "A photo of several affected leaves in the same vine",
+              "A picture showing whether spots are on newer or older leaves",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Anthracnose",
+            "reason": "Small necrotic lesions can fit early anthracnose on grape leaves.",
+            "category": "fungal_disease",
+            "likelihood": 28,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions are small and not clearly elongated or sunken",
+              "No obvious shot-hole tearing is visible"
+            ],
+            "supportingEvidence": [
+              "Discrete brown lesions are visible",
+              "Several spots have a darker border"
+            ],
+            "distinguishingFeatures": [
+              "Check for sunken centers, cracking, or shot-hole lesions on newer growth"
+            ]
+          },
+          {
+            "name": "Cercospora Leaf Spot",
+            "reason": "Round leaf spots with tan centers are compatible with Cercospora-type spotting.",
+            "category": "fungal_disease",
+            "likelihood": 22,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "No clear gray center or strong yellow halo is visible"
+            ],
+            "supportingEvidence": [
+              "Round lesions with pale centers are present",
+              "Scattered spotting pattern is visible"
+            ],
+            "distinguishingFeatures": [
+              "Look for more numerous spots and yellowing around older leaves"
+            ]
+          }
+        ],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office in Malaysia for field inspection and confirmation if the spots spread or affect more leaves.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A close-up of the upper and lower leaf surfaces",
+          "A photo of several affected leaves in the same vine",
+          "A picture showing whether spots are on newer or older leaves"
+        ]
+      },
+      "processing_time_ms": 15316,
+      "evaluated_at": "2026-10-30T20:04:31.319Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "PILOT-19",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/Tomato leaf mosaic virus/page_2.jpg",
+      "reference_crop": "Tomato",
+      "reference_condition": "Tomato leaf mosaic virus",
+      "predicted_crop": null,
+      "predicted_condition": null,
+      "agreement_status": "unassessed",
+      "ai_response": null,
+      "processing_time_ms": 4398,
+      "evaluated_at": "2026-10-30T20:04:46.897Z",
+      "status": "failed",
+      "error": "NOT_A_PLANT"
+    },
+    {
+      "evaluation_id": "PILOT-20",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/Corn rust leaf/5496239405_d95bdb97d1_z.jpg",
+      "reference_crop": "Corn",
+      "reference_condition": "Corn rust leaf",
+      "predicted_crop": "Corn (Zea mays)",
+      "predicted_condition": "Common Rust",
+      "agreement_status": "match",
+      "ai_response": {
+        "id": "cee88939-eab9-4537-9460-bdddbb0f15b0",
+        "status": "high_confidence",
+        "disease": "Common Rust",
+        "severity": "moderate",
+        "symptoms": [
+          "Numerous small rust-colored pustules on the leaf surface",
+          "Scattered brown-orange lesions across the blade"
+        ],
+        "plantType": "Corn (Zea mays)",
+        "confidence": 82,
+        "prevention": [
+          "Avoid overhead watering late in the day to reduce leaf wetness duration",
+          "Keep the field or garden free of volunteer corn and diseased debris"
+        ],
+        "treatments": [
+          "Use a registered fungicide only if the disease is spreading, and follow the product label and local DOA guidance",
+          "Prioritize good coverage of affected foliage with a crop-safe fungicide if confirmed by local field inspection"
+        ],
+        "description": "The scattered rust-colored pustules are consistent with common rust on corn.",
+        "resultState": "confident_treatment",
+        "healthStatus": "healthy",
+        "pathogenType": "Fungal",
+        "retakeReason": "",
+        "abstainReason": "",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 40 - 120",
+          "estimatedYieldLoss": "Low to moderate if managed early; can rise if the disease spreads to upper leaves"
+        },
+        "identification": {
+          "genus": "Zea",
+          "family": "Poaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 98,
+          "commonNames": [
+            "corn",
+            "maize"
+          ],
+          "scientificName": "Zea mays"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": false,
+          "margin": 98,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 98,
+          "organHints": [],
+          "instruction": "Use this as crop/species context only. It can unlock crop-specific disease context, but it is not disease evidence.",
+          "primaryName": "corn",
+          "userCategory": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 98,
+              "commonNames": [
+                "corn",
+                "maize"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays",
+          "categoryConflict": false
+        },
+        "additionalNotes": "The scattered rust-colored pustules are consistent with common rust on corn.",
+        "confidenceLevel": "high",
+        "diseaseCategory": "fungal",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check leaf surfaces for new pustules or spreading spots",
+            "Monitor soil moisture and avoid stress from drought or waterlogging"
+          ],
+          "weeklyCare": [
+            "Inspect older and middle canopy leaves for the same rust pattern",
+            "Remove heavily infected leaves if the crop stage allows"
+          ],
+          "monthlyCare": [
+            "Apply a balanced fertilizer only if soil and crop condition justify it",
+            "Review drainage and field airflow, especially in humid periods"
+          ],
+          "bestPractices": [
+            "Keep the area weed-free and reduce plant crowding where possible",
+            "Rotate with non-host crops when practical to reduce disease carryover"
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:05:05.423Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Check nearby corn leaves for the same rust-colored pustules, especially middle and lower leaves",
+          "Remove and discard the most badly affected leaves or crop debris if practical, to reduce spore buildup"
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 82
+        },
+        "followUpQuestions": [],
+        "needsMoreEvidence": false,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "corn rust fungicide",
+          "registered fungicide for corn",
+          "fungal leaf disease control",
+          "crop disease inspection"
+        ],
+        "speciesAssessment": {
+          "margin": 98,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 98,
+          "primaryName": "corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 98,
+              "commonNames": [
+                "corn",
+                "maize"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays"
+        },
+        "treatmentEligible": true,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Many small rust-colored pustules are visible",
+            "Lesions are scattered across the leaf blade"
+          ],
+          "lesionShape": "round",
+          "colorPattern": "brown/orange",
+          "rejectedReason": "The lesions are not water-soaked or angular, which weakens a bacterial diagnosis",
+          "evidenceAgainst": [
+            "No obvious water-soaked angular bacterial pattern",
+            "No diffuse nutrient-style yellowing pattern dominates"
+          ],
+          "leafAgeAffected": "mixed",
+          "lesionBorderHalo": "unclear",
+          "rejectedDiagnosis": "Bacterial leaf spot",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "fungal"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 82,
+          "speciesConfidence": 98,
+          "diagnosisConfidence": 92,
+          "imageQualityConfidence": 82
+        },
+        "diagnosisConfidence": 92,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Corn",
+            "scientific_name": "Zea mays",
+            "identification_status": "confirmed"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "high",
+            "symptoms_overlap": false,
+            "primary_condition": {
+              "name": "Common Rust",
+              "category": "fungal_disease",
+              "reasoning": "The scattered rust-colored pustules are consistent with common rust on corn.",
+              "scientific_name": "Puccinia sorghi",
+              "confidence_level": "high",
+              "visible_symptoms": [
+                "Numerous small rust-colored pustules on the leaf surface",
+                "Scattered brown-orange lesions across the blade"
+              ]
+            },
+            "follow_up_questions": [],
+            "needs_expert_review": false,
+            "alternative_conditions": [
+              {
+                "name": "Southern Corn Leaf Blight",
+                "category": "fungal_disease",
+                "scientific_name": "Bipolaris maydis",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions are small raised rust-like spots rather than elongated blight lesions",
+                  "No large cigar-shaped necrotic patches are visible"
+                ],
+                "supporting_evidence": [
+                  "Brown necrotic markings are present on the leaf",
+                  "Disease is spread across the blade"
+                ],
+                "distinguishing_features": [
+                  "Check whether spots rub off as powdery pustules",
+                  "Look for larger elongated tan lesions if blight is present"
+                ]
+              },
+              {
+                "name": "Gray Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": "Cercospora zeae-maydis",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions are not clearly rectangular or vein-limited",
+                  "Color and shape fit rust better than gray leaf spot"
+                ],
+                "supporting_evidence": [
+                  "Leaf spotting is present",
+                  "Corn leaf tissue is affected in scattered areas"
+                ],
+                "distinguishing_features": [
+                  "Gray leaf spot usually forms long rectangular lesions between veins",
+                  "Rust forms small raised pustules that may release powder"
+                ]
+              }
+            ],
+            "additional_information_needed": []
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Check nearby corn leaves for the same rust-colored pustules, especially middle and lower leaves",
+              "Remove and discard the most badly affected leaves or crop debris if practical, to reduce spore buildup"
+            ],
+            "preventive_actions": [
+              "Avoid overhead watering late in the day to reduce leaf wetness duration",
+              "Keep the field or garden free of volunteer corn and diseased debris"
+            ],
+            "product_matching_eligible": true,
+            "chemical_treatment_withheld": false
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Southern Corn Leaf Blight",
+            "reason": "Leaf spotting can overlap, but the lesion look is more pustule-like than blight-like.",
+            "category": "fungal_disease",
+            "likelihood": 18,
+            "scientificName": "Bipolaris maydis",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions are small raised rust-like spots rather than elongated blight lesions",
+              "No large cigar-shaped necrotic patches are visible"
+            ],
+            "supportingEvidence": [
+              "Brown necrotic markings are present on the leaf",
+              "Disease is spread across the blade"
+            ],
+            "distinguishingFeatures": [
+              "Check whether spots rub off as powdery pustules",
+              "Look for larger elongated tan lesions if blight is present"
+            ]
+          },
+          {
+            "name": "Gray Leaf Spot",
+            "reason": "Corn leaf disease is plausible, but the visible spots are not the typical long rectangular gray lesions.",
+            "category": "fungal_disease",
+            "likelihood": 12,
+            "scientificName": "Cercospora zeae-maydis",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions are not clearly rectangular or vein-limited",
+              "Color and shape fit rust better than gray leaf spot"
+            ],
+            "supportingEvidence": [
+              "Leaf spotting is present",
+              "Corn leaf tissue is affected in scattered areas"
+            ],
+            "distinguishingFeatures": [
+              "Gray leaf spot usually forms long rectangular lesions between veins",
+              "Rust forms small raised pustules that may release powder"
+            ]
+          }
+        ],
+        "primaryScientificName": "Puccinia sorghi",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen or spread quickly"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office in Malaysia for field inspection and confirmation.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": []
+      },
+      "processing_time_ms": 13894,
+      "evaluated_at": "2026-10-30T20:04:51.549Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "POC-19R",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/Tomato leaf mosaic virus/tmv-tomato-34.jpg",
+      "reference_crop": "Tomato",
+      "reference_condition": "Tomato leaf mosaic virus",
+      "predicted_crop": "Tomato (Solanum lycopersicum)",
+      "predicted_condition": "Mosaic Virus",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "f2e7f331-0444-4a88-b512-dbf2bab75da8",
+        "status": "likely",
+        "disease": "Mosaic Virus",
+        "severity": "moderate",
+        "symptoms": [
+          "Mottled light and dark green patches",
+          "Young leaf shows uneven chlorosis without distinct spots"
+        ],
+        "plantType": "Tomato (Solanum lycopersicum)",
+        "confidence": 73,
+        "prevention": [],
+        "treatments": [],
+        "description": "The irregular mottling on the leaf is consistent with a viral mosaic pattern rather than a discrete fungal or bacterial lesion.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "healthy",
+        "pathogenType": "Viral",
+        "retakeReason": "",
+        "abstainReason": "The visible mottling suggests mosaic virus, but the image does not show enough whole-plant context or close-up detail to confirm.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 0 - 50",
+          "estimatedYieldLoss": "Potentially moderate if the virus spreads, but current loss cannot be estimated confidently."
+        },
+        "identification": {
+          "genus": "Capsicum",
+          "family": "Solanaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 92,
+          "commonNames": [
+            "bell pepper",
+            "sweet pepper",
+            "pepper"
+          ],
+          "scientificName": "Capsicum annuum"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": true,
+          "margin": 92,
+          "source": "GPT-Vision",
+          "confirmed": false,
+          "confidence": 92,
+          "organHints": [],
+          "instruction": "Treat this only as a hypothesis. Do not claim species confirmation or force species-specific treatment.",
+          "primaryName": "bell pepper",
+          "userCategory": "Vegetables",
+          "topCandidates": [
+            {
+              "name": "Capsicum annuum",
+              "confidence": 92,
+              "commonNames": [
+                "bell pepper",
+                "sweet pepper",
+                "pepper"
+              ]
+            }
+          ],
+          "scientificName": "Capsicum annuum",
+          "categoryConflict": true
+        },
+        "additionalNotes": "The irregular mottling on the leaf is consistent with a viral mosaic pattern rather than a discrete fungal or bacterial lesion.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "viral",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily and avoid water stress.",
+            "Observe new growth for fresh mottling, curling, or stunting."
+          ],
+          "weeklyCare": [
+            "Inspect leaf undersides for aphids, whiteflies, and mites.",
+            "Remove yellowing or heavily damaged leaves and keep the planting area clean."
+          ],
+          "monthlyCare": [
+            "Apply a balanced fertilizer only if the crop is otherwise growing normally and nutrient stress is suspected.",
+            "Check drainage and avoid prolonged waterlogging after rain."
+          ],
+          "bestPractices": [
+            "Use clean tools and avoid handling healthy plants after touching suspect plants without washing hands.",
+            "Remove weeds and old crop debris that can shelter insect vectors and virus sources."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:06:42.941Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 84
+        },
+        "followUpQuestions": [
+          "Are the oldest leaves affected first, or are the youngest leaves showing this mottling?",
+          "Do you see any aphids, whiteflies, or mites on the leaf undersides?",
+          "Has the plant shown leaf curling, stunting, or reduced flowering?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "possible",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "The mottled pattern fits a viral mosaic best, but some diffuse chlorosis overlaps with mild magnesium stress, so nutrient contribution cannot be fully ruled out.",
+          "hasDeficiency": false,
+          "possibleNutrients": [
+            "Magnesium"
+          ],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "registered insect control for aphids",
+          "registered insect control for whiteflies",
+          "clean pruning tools",
+          "balanced NPK fertilizer",
+          "leaf inspection hand lens"
+        ],
+        "speciesAssessment": {
+          "margin": 92,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 92,
+          "primaryName": "bell pepper",
+          "topCandidates": [
+            {
+              "name": "Capsicum annuum",
+              "confidence": 92,
+              "commonNames": [
+                "bell pepper",
+                "sweet pepper",
+                "pepper"
+              ]
+            }
+          ],
+          "scientificName": "Capsicum annuum"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Irregular green-yellow mottling is visible",
+            "No discrete circular or angular lesions are seen"
+          ],
+          "lesionShape": "none",
+          "colorPattern": "mosaic",
+          "rejectedReason": "There are no clear necrotic spots, halos, or blight lesions",
+          "evidenceAgainst": [
+            "No clear whole-plant symptom pattern is visible",
+            "The photo does not show vector insects or underside detail"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "unclear",
+          "rejectedDiagnosis": "Fungal leaf spot",
+          "distributionPattern": "diffuse",
+          "likelyCauseCategory": "viral"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 73,
+          "speciesConfidence": 92,
+          "diagnosisConfidence": 73,
+          "imageQualityConfidence": 84
+        },
+        "diagnosisConfidence": 73,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Tomato",
+            "scientific_name": "Capsicum annuum",
+            "identification_status": "uncertain"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "medium",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Mosaic Virus",
+              "category": "viral_disease",
+              "reasoning": "The irregular mottling on the leaf is consistent with a viral mosaic pattern rather than a discrete fungal or bacterial lesion.",
+              "scientific_name": null,
+              "confidence_level": "medium",
+              "visible_symptoms": [
+                "Mottled light and dark green patches",
+                "Young leaf shows uneven chlorosis without distinct spots"
+              ]
+            },
+            "follow_up_questions": [
+              "Are the oldest leaves affected first, or are the youngest leaves showing this mottling?",
+              "Do you see any aphids, whiteflies, or mites on the leaf undersides?",
+              "Has the plant shown leaf curling, stunting, or reduced flowering?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Magnesium Deficiency",
+                "category": "nutrient_deficiency",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Mottled patch pattern is irregular rather than uniform",
+                  "No clear older-leaf-first pattern is visible"
+                ],
+                "supporting_evidence": [
+                  "Pale areas appear between veins",
+                  "Some leaves show diffuse chlorosis"
+                ],
+                "distinguishing_features": [
+                  "Check whether older leaves yellow first and whether the pattern is uniform between veins"
+                ]
+              },
+              {
+                "name": "Spider Mite Damage",
+                "category": "pest_damage",
+                "scientific_name": null,
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "No webbing or obvious bronzing is visible",
+                  "Pattern looks more like mosaic mottling than stippling"
+                ],
+                "supporting_evidence": [
+                  "Fine pale speckling is visible on the leaf surface"
+                ],
+                "distinguishing_features": [
+                  "Check the leaf undersides for mites or fine webbing and compare with nearby leaves for stippling"
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A close-up photo of the same leaf, especially the underside",
+              "A photo of several nearby leaves showing whether the pattern is spreading",
+              "An image of the whole plant to check whether younger or older leaves are most affected",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Magnesium Deficiency",
+            "reason": "Interveinal yellowing can overlap with nutrient stress, but the patchy mosaic pattern is less typical.",
+            "category": "nutrient_deficiency",
+            "likelihood": 28,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Mottled patch pattern is irregular rather than uniform",
+              "No clear older-leaf-first pattern is visible"
+            ],
+            "supportingEvidence": [
+              "Pale areas appear between veins",
+              "Some leaves show diffuse chlorosis"
+            ],
+            "distinguishingFeatures": [
+              "Check whether older leaves yellow first and whether the pattern is uniform between veins"
+            ]
+          },
+          {
+            "name": "Spider Mite Damage",
+            "reason": "Fine stippling and pale speckling can resemble mite feeding, especially in warm dry conditions.",
+            "category": "pest_damage",
+            "likelihood": 22,
+            "scientificName": "",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "No webbing or obvious bronzing is visible",
+              "Pattern looks more like mosaic mottling than stippling"
+            ],
+            "supportingEvidence": [
+              "Fine pale speckling is visible on the leaf surface"
+            ],
+            "distinguishingFeatures": [
+              "Check the leaf undersides for mites or fine webbing and compare with nearby leaves for stippling"
+            ]
+          }
+        ],
+        "primaryScientificName": "",
+        "fertilizerRecommendations": [
+          {
+            "type": "Chemical",
+            "amount": "Follow the registered label or local agronomy advice based on soil test results.",
+            "frequency": "Use only as part of normal crop nutrition, not as a disease cure.",
+            "fertilizerName": "Balanced NPK fertilizer",
+            "applicationMethod": "Apply according to crop stage and soil condition, avoiding over-application while the cause is still being confirmed."
+          }
+        ],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms spread or affect more plants"
+          ],
+          "contactInfo": "Contact the nearest district agriculture office or DOA extension officer for an on-site inspection and confirmation.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A close-up photo of the same leaf, especially the underside",
+          "A photo of several nearby leaves showing whether the pattern is spreading",
+          "An image of the whole plant to check whether younger or older leaves are most affected"
+        ]
+      },
+      "processing_time_ms": 33212,
+      "evaluated_at": "2026-10-30T20:06:09.761Z",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "evaluation_id": "POC-20F",
+      "dataset_source": "PlantDoc",
+      "image_reference": "test/Corn rust leaf/5496239405_d95bdb97d1_z.jpg",
+      "reference_crop": "Corn",
+      "reference_condition": "Corn rust leaf",
+      "predicted_crop": "Corn (Zea mays)",
+      "predicted_condition": "Cercospora Leaf Spot",
+      "agreement_status": "uncertain_or_review",
+      "ai_response": {
+        "id": "1b4b7e0f-6a08-489e-b8b4-ba86414aef30",
+        "status": "likely",
+        "disease": "Cercospora Leaf Spot",
+        "severity": "moderate",
+        "symptoms": [
+          "Scattered elongated brown lesions on the leaf",
+          "Some lesions have yellow to tan surrounding tissue"
+        ],
+        "plantType": "Corn (Zea mays)",
+        "confidence": 74,
+        "prevention": [],
+        "treatments": [],
+        "description": "The scattered necrotic lesions are consistent with a fungal leaf spot on corn.",
+        "resultState": "expert_review_needed",
+        "healthStatus": "unhealthy",
+        "pathogenType": "Fungal",
+        "retakeReason": "",
+        "abstainReason": "Visible lesions suggest a fungal leaf spot, but the photo alone does not clearly separate Cercospora from other corn leaf spots.",
+        "schemaVersion": 2,
+        "economicImpact": {
+          "roi": "Medium",
+          "treatmentCost": "RM 40 - 120",
+          "estimatedYieldLoss": "Low to moderate if limited to lower leaves; higher if disease moves into the upper canopy before control."
+        },
+        "identification": {
+          "genus": "Zea",
+          "family": "Poaceae",
+          "source": "GPT-Vision",
+          "isPlant": true,
+          "allMatches": [],
+          "confidence": 96,
+          "commonNames": [
+            "Corn",
+            "Maize",
+            "Sweet corn"
+          ],
+          "scientificName": "Zea mays"
+        },
+        "requiresRetake": false,
+        "speciesContext": {
+          "weak": false,
+          "margin": 96,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 96,
+          "organHints": [],
+          "instruction": "Use this as crop/species context only. It can unlock crop-specific disease context, but it is not disease evidence.",
+          "primaryName": "Corn",
+          "userCategory": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 96,
+              "commonNames": [
+                "Corn",
+                "Maize",
+                "Sweet corn"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays",
+          "categoryConflict": false
+        },
+        "additionalNotes": "The scattered necrotic lesions are consistent with a fungal leaf spot on corn.",
+        "confidenceLevel": "medium",
+        "diseaseCategory": "fungal",
+        "healthyCarePlan": {
+          "dailyCare": [
+            "Check soil moisture daily so plants are not stressed by drought or waterlogging.",
+            "Observe leaf spread and new lesion formation, especially after rainy or humid periods."
+          ],
+          "weeklyCare": [
+            "Inspect the lower and middle canopy for new spots, especially on older leaves.",
+            "Remove dead or badly yellowing leaves and keep the area around plants free of excess debris."
+          ],
+          "monthlyCare": [
+            "Apply a balanced fertilizer only if crop vigor is poor or soil test suggests need, and avoid overdoing nitrogen.",
+            "Check drainage after heavy rain and correct standing water where possible."
+          ],
+          "bestPractices": [
+            "Keep the planting area clean and reduce weed pressure to improve airflow and scouting access.",
+            "Rotate with a non-host crop when possible to reduce disease carryover and residue buildup."
+          ]
+        },
+        "analysisLanguage": "en",
+        "analysisMetadata": {
+          "model": "openai/gpt-5.4-mini",
+          "provider": "openrouter",
+          "generatedAt": "2026-10-30T20:09:41.403Z",
+          "policyVersion": 4,
+          "diagnosisAttempts": 1
+        },
+        "immediateActions": [
+          "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+        ],
+        "validationIssues": [],
+        "captureAssessment": {
+          "qualityFlags": [],
+          "retakeReason": "",
+          "requiresRetake": false,
+          "detailSufficient": true,
+          "leafDetailSufficient": true,
+          "imageQualityConfidence": 86
+        },
+        "followUpQuestions": [
+          "Are the oldest lower leaves affected first?",
+          "Do the spots expand into long rectangular or cigar-shaped lesions?",
+          "Is there any visible powdery growth, ooze, or insect feeding nearby?"
+        ],
+        "needsMoreEvidence": true,
+        "nutritionalIssues": {
+          "status": "none",
+          "severity": "Mild",
+          "symptoms": [],
+          "reasoning": "",
+          "hasDeficiency": false,
+          "possibleNutrients": [],
+          "deficientNutrients": []
+        },
+        "productSearchTags": [
+          "corn leaf spot fungicide",
+          "fungal leaf disease control",
+          "crop residue management",
+          "registered corn fungicide",
+          "plant disease scouting"
+        ],
+        "speciesAssessment": {
+          "margin": 96,
+          "source": "GPT-Vision",
+          "confirmed": true,
+          "confidence": 96,
+          "primaryName": "Corn",
+          "topCandidates": [
+            {
+              "name": "Zea mays",
+              "confidence": 96,
+              "commonNames": [
+                "Corn",
+                "Maize",
+                "Sweet corn"
+              ]
+            }
+          ],
+          "scientificName": "Zea mays"
+        },
+        "treatmentEligible": false,
+        "diagnosticEvidence": {
+          "evidenceFor": [
+            "Discrete necrotic lesions are visible",
+            "The pattern is consistent with a fungal leaf spot"
+          ],
+          "lesionShape": "elongated",
+          "colorPattern": "brown with tan/yellow surrounding tissue",
+          "rejectedReason": "The lesions are not clearly angular or water-soaked, so bacterial evidence is weak",
+          "evidenceAgainst": [
+            "The photo does not clearly show a single classic lesion pattern for one exact disease",
+            "No bacterial water-soaked angular lesions are visible"
+          ],
+          "leafAgeAffected": "unclear",
+          "lesionBorderHalo": "yellow halo",
+          "rejectedDiagnosis": "Bacterial leaf spot",
+          "distributionPattern": "scattered",
+          "likelyCauseCategory": "fungal"
+        },
+        "confidenceBreakdown": {
+          "overallConfidence": 74,
+          "speciesConfidence": 96,
+          "diagnosisConfidence": 74,
+          "imageQualityConfidence": 86
+        },
+        "diagnosisConfidence": 74,
+        "identificationSource": "GPT-Vision",
+        "structuredAssessment": {
+          "plant": {
+            "source": "GPT-Vision",
+            "common_name": "Corn",
+            "scientific_name": "Zea mays",
+            "identification_status": "confirmed"
+          },
+          "assessment": {
+            "status": "possible_disease",
+            "confidence_level": "medium",
+            "symptoms_overlap": true,
+            "primary_condition": {
+              "name": "Cercospora Leaf Spot",
+              "category": "fungal_disease",
+              "reasoning": "The scattered necrotic lesions are consistent with a fungal leaf spot on corn.",
+              "scientific_name": "Cercospora zeae-maydis",
+              "confidence_level": "medium",
+              "visible_symptoms": [
+                "Scattered elongated brown lesions on the leaf",
+                "Some lesions have yellow to tan surrounding tissue"
+              ]
+            },
+            "follow_up_questions": [
+              "Are the oldest lower leaves affected first?",
+              "Do the spots expand into long rectangular or cigar-shaped lesions?",
+              "Is there any visible powdery growth, ooze, or insect feeding nearby?"
+            ],
+            "needs_expert_review": true,
+            "alternative_conditions": [
+              {
+                "name": "Northern Corn Leaf Blight",
+                "category": "fungal_disease",
+                "scientific_name": "Exserohilum turcicum",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesions are not clearly large cigar-shaped blight lesions",
+                  "No strong single expanding blight band is visible"
+                ],
+                "supporting_evidence": [
+                  "Brown elongated lesions are present",
+                  "Leaf tissue is necrotic in scattered patches"
+                ],
+                "distinguishing_features": [
+                  "Check whether lesions expand into long cigar-shaped blights with gray centers",
+                  "Look for rapid enlargement on older leaves"
+                ]
+              },
+              {
+                "name": "Gray Leaf Spot",
+                "category": "fungal_disease",
+                "scientific_name": "Cercospora zeae-maydis",
+                "confidence_level": "insufficient_evidence",
+                "weakening_evidence": [
+                  "Lesion shape is not sharply rectangular",
+                  "Image does not show clear vein-bound elongated tan rectangles"
+                ],
+                "supporting_evidence": [
+                  "Narrow elongated brown lesions are visible",
+                  "Lesions are scattered across the blade"
+                ],
+                "distinguishing_features": [
+                  "Check if lesions become long rectangular tan streaks between veins",
+                  "Inspect whether spots align with veins and have gray centers"
+                ]
+              }
+            ],
+            "additional_information_needed": [
+              "A closer photo of the affected leaf area in sharp focus",
+              "A photo of the upper and lower leaf surfaces",
+              "A wider plant photo showing which leaves are affected most",
+              "A sharp close-up of one affected leaf (top and underside)"
+            ]
+          },
+          "schemaVersion": 1,
+          "recommendations": {
+            "immediate_actions": [
+              "Field scouting: verify the visible signs and possible alternatives before selecting treatment."
+            ],
+            "preventive_actions": [],
+            "product_matching_eligible": false,
+            "chemical_treatment_withheld": true
+          }
+        },
+        "differentialDiagnoses": [
+          {
+            "name": "Northern Corn Leaf Blight",
+            "reason": "Elongated brown lesions can overlap with blight symptoms, but the spots here are more scattered and less cigar-shaped.",
+            "category": "fungal_disease",
+            "likelihood": 26,
+            "scientificName": "Exserohilum turcicum",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesions are not clearly large cigar-shaped blight lesions",
+              "No strong single expanding blight band is visible"
+            ],
+            "supportingEvidence": [
+              "Brown elongated lesions are present",
+              "Leaf tissue is necrotic in scattered patches"
+            ],
+            "distinguishingFeatures": [
+              "Check whether lesions expand into long cigar-shaped blights with gray centers",
+              "Look for rapid enlargement on older leaves"
+            ]
+          },
+          {
+            "name": "Gray Leaf Spot",
+            "reason": "The elongated brown lesions on corn fit a Cercospora-type leaf spot pattern.",
+            "category": "fungal_disease",
+            "likelihood": 24,
+            "scientificName": "Cercospora zeae-maydis",
+            "confidenceLevel": "insufficient_evidence",
+            "weakeningEvidence": [
+              "Lesion shape is not sharply rectangular",
+              "Image does not show clear vein-bound elongated tan rectangles"
+            ],
+            "supportingEvidence": [
+              "Narrow elongated brown lesions are visible",
+              "Lesions are scattered across the blade"
+            ],
+            "distinguishingFeatures": [
+              "Check if lesions become long rectangular tan streaks between veins",
+              "Inspect whether spots align with veins and have gray centers"
+            ]
+          }
+        ],
+        "primaryScientificName": "Cercospora zeae-maydis",
+        "fertilizerRecommendations": [],
+        "malaysianGovernmentSupport": {
+          "services": [
+            "Field advisory visit",
+            "Lab confirmation if symptoms worsen"
+          ],
+          "contactInfo": "Contact the nearest District Agriculture Office (Pejabat Pertanian Daerah) for field inspection and confirmation.",
+          "recommendedAgency": "DOA"
+        },
+        "additionalInformationNeeded": [
+          "A closer photo of the affected leaf area in sharp focus",
+          "A photo of the upper and lower leaf surfaces",
+          "A wider plant photo showing which leaves are affected most"
+        ]
+      },
+      "processing_time_ms": 17582,
+      "evaluated_at": "2026-10-30T20:09:23.850Z",
+      "status": "completed",
+      "error": null
+    }
+  ]
+}

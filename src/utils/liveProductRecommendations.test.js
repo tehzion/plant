@@ -7,6 +7,13 @@ import {
 } from './liveProductRecommendations.js';
 
 describe('live product recommendation payloads', () => {
+  it('tells the product search when the second photo check vetoed the result', () => {
+    const vetoed = buildProductDiagnosisPayload({ plantType: 'Rice', disease: 'Potassium Deficiency',
+      scanResult: { secondCheck: { applied: true, reasons: ['insufficient_diagnosis_support'] } } });
+    expect(vetoed.secondCheck).toEqual({ applied: true });
+    expect(buildProductDiagnosisPayload({ plantType: 'Rice', disease: 'Brown Spot', scanResult: {} }).secondCheck).toBeNull();
+  });
+
   it('carries diagnosis status, evidence, treatment context, and nutrition status', () => {
     const payload = buildProductDiagnosisPayload({
       plantType: 'Papaya',
@@ -123,8 +130,8 @@ describe('live product recommendation payloads', () => {
       recommendationIntent: 'treatment_ready',
       keywords: { treatment: ['fungicide', 'copper'], fertilizer: [], supplement: [] },
       consultation: {
-        phone: '+60136667810',
-        url: 'https://wa.me/60136667810',
+        phone: '+60146193328',
+        url: 'https://wa.me/60146193328',
         message: 'Scan ID: scan-1',
         label: 'Contact us for consultation',
         priority: 'secondary',
@@ -162,10 +169,18 @@ describe('live product recommendation payloads', () => {
 
     const decodedUrl = decodeURIComponent(consultation.url);
     expect(consultation.priority).toBe('primary');
-    expect(consultation.phone).toBe('+60136667810');
+    expect(consultation.phone).toBe('+60146193328');
     expect(decodedUrl).toContain('scan-789');
     expect(decodedUrl).toContain('Papaya');
     expect(decodedUrl).toContain('Mealybug');
     expect(decodedUrl).toContain('Johor');
+  });
+});
+
+describe('recovery products in the product search response', () => {
+  it('keeps them as their own list, marked as support rather than treatment', () => {
+    const normalized = normalizeProductRecommendationsResponse({ recoverySupport: [{ id: 3, name: 'COMBOBAC' }] });
+    expect(normalized.recoverySupport).toEqual([expect.objectContaining({ id: 3, recoveryOnly: true })]);
+    expect(normalizeProductRecommendationsResponse({}).recoverySupport).toEqual([]);
   });
 });

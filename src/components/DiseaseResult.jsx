@@ -27,9 +27,9 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .result-images-container {
-          margin-bottom: var(--space-md);
+          margin-bottom: 16px;
           display: grid;
-          gap: var(--space-md);
+          gap: 12px;
         }
 
         .result-images-container.single-image {
@@ -42,9 +42,10 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         .image-wrapper {
           position: relative;
-          border-radius: var(--radius-lg);
+          border-radius: var(--radius-xl);
           overflow: hidden;
-          box-shadow: var(--shadow-md);
+          border: 1px solid var(--color-border);
+          background: var(--color-bg-subtle);
         }
 
         .result-image {
@@ -56,282 +57,193 @@ const DiseaseResult = ({ result, image, leafImage }) => {
 
         .image-label {
           position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-          color: white;
-          padding: 12px;
-          font-size: 0.875rem;
-          font-weight: 600;
-          text-align: center;
+          left: 8px;
+          bottom: 8px;
+          padding: 2px 8px;
+          border-radius: var(--radius-sm);
+          background: rgba(31, 35, 32, 0.72);
+          color: #ffffff;
+          font-size: var(--font-size-xs);
+          font-weight: 500;
         }
 
         @media (max-width: 600px) {
           .result-images-container.dual-images {
             grid-template-columns: 1fr;
           }
-          
+
           .result-image {
-            height: 250px;
+            height: 240px;
           }
         }
 
-        /* Container matching other sections */
         .disease-info-container {
           background: #ffffff;
-          padding: 22px;
-          border-radius: 24px;
+          padding: 20px;
+          border-radius: var(--radius-xl);
           margin-bottom: 24px;
-          border: 1px solid rgba(148, 163, 184, 0.16);
-          box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+          border: 1px solid var(--color-border);
         }
 
         .section-header-centered {
           display: flex;
           align-items: center;
-          justify-content: flex-start; /* Standardize to left */
+          justify-content: flex-start;
           margin-bottom: 16px;
         }
 
         .section-title {
-          font-size: 1.25rem;
-          color: #1F2937;
+          font-size: var(--font-size-lg);
+          color: var(--color-text-primary);
           margin: 0;
-          text-align: left; /* Standardize to left */
-          font-weight: 700;
+          text-align: left;
+          font-weight: 600;
         }
 
-        /* Disease Title Card (Maklumat Penyakit) */
         .disease-title-card {
-          background: #ffffff;
-          padding: 22px;
-          border-radius: 20px;
-          border: 1px solid rgba(148, 163, 184, 0.14);
-          margin-bottom: 18px;
+          padding: 0 0 16px;
+          margin-bottom: 16px;
+          border-bottom: 1px solid var(--color-border-light);
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
           gap: 16px;
-          box-shadow: 0 14px 28px rgba(15, 23, 42, 0.04);
         }
 
         .disease-name {
-          font-size: 1.32rem;
-          color: #111827;
+          font-size: var(--font-size-xl);
+          color: var(--color-text-primary);
           margin: 0 0 8px 0;
-          font-weight: 800;
-          line-height: 1.4;
-          font-family: var(--font-heading);
+          font-weight: 700;
+          line-height: 1.35;
         }
 
+        /* State pill: neutral outline; only "needs review" states get the warning tint. */
         .diagnosis-state-pill {
           display: inline-flex;
           align-items: center;
           width: fit-content;
-          padding: 5px 10px;
+          padding: 3px 10px;
           margin-bottom: 8px;
-          border-radius: 999px;
-          background: #ecfdf5;
-          color: #047857;
-          border: 1px solid #bbf7d0;
-          font-size: 0.72rem;
-          font-weight: 800;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          font-family: var(--font-heading);
+          border-radius: var(--radius-full);
+          background: #ffffff;
+          color: var(--color-text-secondary);
+          border: 1px solid var(--color-border-strong);
+          font-size: var(--font-size-xs);
+          font-weight: 600;
         }
 
         .diagnosis-state-pill--uncertain,
         .diagnosis-state-pill--retake_required,
         .diagnosis-state-pill--needs_closer_photo,
         .diagnosis-state-pill--expert_review_needed {
-          background: #fff7ed;
-          color: #c2410c;
-          border-color: #fed7aa;
-        }
-
-        .diagnosis-state-pill--confirmed,
-        .diagnosis-state-pill--confident_treatment {
-          background: #eff6ff;
-          color: #1d4ed8;
-          border-color: #bfdbfe;
-        }
-
-        .diagnosis-state-pill--possible_pest {
-          background: #fef2f2;
-          color: #b91c1c;
-          border-color: #fecaca;
-        }
-
-        .diagnosis-state-pill--possible_nutrient_issue {
-          background: #f0fdf4;
-          color: #15803d;
-          border-color: #bbf7d0;
+          background: var(--color-warning-bg);
+          color: var(--color-warning-ink);
+          border-color: var(--color-warning-border);
         }
 
         .scientific-name {
           margin: 0;
-          color: #64748b;
-          font-size: 0.94rem;
+          color: var(--color-text-secondary);
+          font-size: var(--font-size-sm);
           font-style: italic;
         }
 
         .idea-utama-card {
           display: flex;
-          flex-direction: column; 
-          gap: 10px;
-          padding: 18px;
-          border-radius: 20px;
-          background: #f8fafc;
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          margin-bottom: 24px;
-          box-shadow: none;
+          flex-direction: column;
+          gap: 4px;
+          padding: 14px 16px;
+          border-radius: var(--radius-lg);
+          background: var(--color-bg-subtle);
+          border: 1px solid var(--color-border-light);
+          margin-bottom: 16px;
         }
-        
-        /* Inner wrapper for icon + label row */
+
         .idea-header-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .idea-icon-wrapper {
-          width: 30px;
-          height: 30px;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #ffffff;
-          color: #0f172a;
+          color: var(--color-text-secondary);
           flex-shrink: 0;
-          border-radius: 999px;
-          box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
         }
 
         .idea-header {
-          font-size: 0.75rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #475569;
-          font-family: var(--font-heading);
-        }
-
-        .idea-content-wrapper {
-          flex: 1;
+          font-size: var(--font-size-xs);
+          font-weight: 600;
+          color: var(--color-text-secondary);
+          margin: 0;
         }
 
         .idea-content {
-          font-size: 0.98rem;
-          color: #334155;
-          line-height: 1.65;
+          font-size: var(--font-size-base);
+          color: var(--color-text-primary);
+          line-height: 1.6;
           margin: 0;
-          font-weight: 500;
         }
 
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        /* Status Banner */
+        /* Status row: white, coloured icon tile, words carry the meaning. */
         .status-banner {
           display: flex;
           align-items: center;
-          gap: 14px;
-          padding: 18px;
-          border-radius: 20px;
-          border: 1px solid;
-          margin-bottom: 16px;
-          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
-        }
-
-        .status-banner.status-healthy {
-          background: #f0fdf4;
-          border-color: #86efac;
-        }
-
-        .status-banner.status-unhealthy {
-          background: #fef2f2;
-          border-color: #fca5a5;
-        }
-
-        .status-banner.status-review {
-          background: #fffbeb;
-          border-color: #fcd34d;
-          color: #92400e;
+          gap: 12px;
+          padding: 12px 16px;
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-border);
+          background: #ffffff;
+          margin-bottom: 12px;
         }
 
         .status-icon-wrapper {
-          width: 46px;
-          height: 46px;
-          border-radius: 16px;
+          width: 40px;
+          height: 40px;
+          border-radius: var(--radius-md);
           display: flex;
           align-items: center;
           justify-content: center;
-          background: white;
           flex-shrink: 0;
-          box-shadow: 0 10px 16px rgba(15, 23, 42, 0.06);
+          background: var(--color-bg-subtle);
+          color: var(--color-text-secondary);
         }
 
-        .status-healthy .status-icon-wrapper {
-          color: #10B981;
-        }
-
-        .status-unhealthy .status-icon-wrapper {
-          color: #dc2626;
-        }
+        .status-healthy .status-icon-wrapper { background: var(--color-primary-light); color: var(--color-primary); }
+        .status-unhealthy .status-icon-wrapper { background: var(--color-danger-bg); color: var(--color-severe); }
+        .status-review .status-icon-wrapper { background: var(--color-warning-bg); color: var(--color-warning-ink); }
 
         .status-content {
           flex: 1;
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 2px 16px;
+        }
+
+        .status-severity-container {
+          display: grid;
           gap: 2px;
         }
 
         .status-label {
-          font-size: 0.72rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          font-family: var(--font-heading);
-        }
-
-        .status-healthy .status-label {
-          color: #065F46;
-        }
-
-        .status-unhealthy .status-label {
-          color: #991b1b;
+          font-size: var(--font-size-xs);
+          font-weight: 500;
+          color: var(--color-text-secondary);
         }
 
         .status-value {
-          font-size: 1.28rem;
-          font-weight: 800;
-          font-family: var(--font-heading);
-        }
-        .status-healthy .status-value {
-          color: #047857;
+          font-size: var(--font-size-base);
+          font-weight: 600;
+          color: var(--color-text-primary);
         }
 
-        .status-unhealthy .status-value {
-          color: #dc2626;
-        }
-
-        /* Details Section */
-        .details-section {
-          background: white;
+        .details-section,
+        .symptoms-section {
+          background: #ffffff;
           padding: 16px;
-          border-radius: 12px;
-          border: 1px solid #E5E7EB;
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-border);
           margin-bottom: 12px;
         }
 
@@ -346,39 +258,22 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: #F9FAFB;
-          border-radius: 8px;
-          border: 1px solid #E5E7EB;
+          background: var(--color-bg-subtle);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--color-border-light);
         }
 
         .detail-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          border-radius: var(--radius-md);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-        }
-
-        .plant-icon {
-          background: #E0F2FE;
-          color: #0284C7;
-        }
-
-        .age-icon {
-          background: #EDE9FE;
-          color: #7C3AED;
-        }
-
-        .pathogen-icon {
-          background: #FEF3C7;
-          color: #D97706;
-        }
-
-        .fungus-icon {
-          background: #FCE7F3;
-          color: #DB2777;
+          background: #ffffff;
+          color: var(--color-text-secondary);
+          border: 1px solid var(--color-border);
         }
 
         .detail-text {
@@ -390,57 +285,49 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         }
 
         .detail-label {
-          font-size: 0.7rem;
-          color: #6B7280;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          font-size: var(--font-size-xs);
+          color: var(--color-text-secondary);
+          font-weight: 500;
         }
 
         .detail-value {
-          font-size: 0.9rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
-          color: #1F2937;
-          line-height: 1.2;
+          color: var(--color-text-primary);
+          line-height: 1.3;
           word-break: break-word;
-        }
-
-        /* Symptoms Section */
-        .symptoms-section {
-          background: white;
-          padding: 16px;
-          border-radius: 12px;
-          border: 1px solid #E5E7EB;
         }
 
         .retake-banner,
         .confidence-panel,
         .evidence-section,
         .differentials-section {
-          margin-top: 20px;
-          padding: 16px;
-          border-radius: 16px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
+          margin-top: 16px;
+          padding: 14px 16px;
+          border-radius: var(--radius-lg);
+          background: var(--color-bg-subtle);
+          border: 1px solid var(--color-border);
         }
 
         .retake-banner {
           display: flex;
           gap: 12px;
           align-items: flex-start;
-          background: #fff7ed;
-          border-color: #fdba74;
-          color: #9a3412;
+          margin-top: 0;
+          margin-bottom: 12px;
+          background: var(--color-warning-bg);
+          border-color: var(--color-warning-border);
+          color: var(--color-warning-ink);
         }
 
         .retake-banner p {
-          margin: 6px 0 0;
-          color: #9a3412;
+          margin: 4px 0 0;
+          color: var(--color-warning-ink);
         }
 
         .confidence-header {
-          font-weight: 700;
-          color: #0f172a;
+          font-weight: 600;
+          color: var(--color-text-primary);
           margin-bottom: 12px;
         }
 
@@ -457,36 +344,36 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           flex-direction: column;
           gap: 4px;
           padding: 12px;
-          border-radius: 12px;
+          border-radius: var(--radius-md);
           background: #ffffff;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--color-border);
         }
 
         .confidence-item span,
         .evidence-item span {
-          font-size: 0.85rem;
-          color: #64748b;
+          font-size: var(--font-size-sm);
+          color: var(--color-text-secondary);
         }
 
         .subsection-title {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 1rem;
+          font-size: var(--font-size-base);
           font-weight: 600;
-          color: #1F2937;
+          color: var(--color-text-primary);
           margin: 0 0 12px 0;
         }
 
         .subsection-icon {
-          color: var(--color-primary);
+          color: var(--color-text-secondary);
         }
 
         .symptoms-list {
           margin: 0;
           padding-left: 20px;
-          color: #4B5563;
-          font-size: 0.9rem;
+          color: var(--color-text-secondary);
+          font-size: var(--font-size-sm);
           line-height: 1.6;
         }
 
@@ -498,21 +385,20 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           margin-bottom: 0;
         }
 
-        /* Demo Mode Warning */
+        /* Demo label: clearly marked, but not a flashing alert. */
         .demo-mode-warning {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          padding: 16px;
-          background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-          border: 2px solid #F59E0B;
-          border-radius: 12px;
-          margin-bottom: 24px;
-          animation: pulse-warning 2s ease-in-out infinite;
+          padding: 12px 16px;
+          background: #ffffff;
+          border: 1px dashed var(--color-border-strong);
+          border-radius: var(--radius-lg);
+          margin-bottom: 16px;
         }
 
         .demo-mode-warning svg {
-          color: #D97706;
+          color: var(--color-text-secondary);
           flex-shrink: 0;
           margin-top: 2px;
         }
@@ -520,30 +406,19 @@ const DiseaseResult = ({ result, image, leafImage }) => {
         .demo-mode-content {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 2px;
         }
 
         .demo-mode-content strong {
-          color: #92400E;
-          font-size: 0.875rem;
+          color: var(--color-text-primary);
+          font-size: var(--font-size-sm);
           font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
         }
 
         .demo-mode-content span {
-          color: #78350F;
-          font-size: 0.8125rem;
+          color: var(--color-text-secondary);
+          font-size: var(--font-size-sm);
           line-height: 1.4;
-        }
-
-        @keyframes pulse-warning {
-          0%, 100% {
-            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
-          }
-          50% {
-            box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
-          }
         }
 
         .nutrition-referral-note {
@@ -552,20 +427,11 @@ const DiseaseResult = ({ result, image, leafImage }) => {
           flex-wrap: wrap;
           gap: 6px;
           margin-top: 8px;
-          font-size: 0.75rem;
-          color: var(--color-primary-dark);
-          background-color: #ECFDF5;
-          padding: 6px 12px;
-          border-radius: 20px;
+          font-size: var(--font-size-xs);
+          color: var(--color-text-secondary);
           width: fit-content;
           max-width: 100%;
-          border: 1px solid #6EE7B7;
-          font-weight: 600;
-          animation: fade-in 0.5s ease-out;
-        }
-
-        .nutrition-referral-note:hover {
-          background-color: #D1FAE5;
+          font-weight: 500;
         }
 
         @media (max-width: 768px) {
@@ -573,30 +439,19 @@ const DiseaseResult = ({ result, image, leafImage }) => {
             padding: 16px;
           }
 
-          .section-title {
-            font-size: 1.125rem;
-          }
-
           .disease-name {
-            font-size: 1.1rem;
+            font-size: var(--font-size-lg);
           }
 
-          .details-grid {
+          .details-grid,
+          .confidence-grid,
+          .evidence-grid {
             grid-template-columns: 1fr;
-          }
-
-          .detail-item {
-            padding: 10px;
           }
 
           .status-banner,
           .retake-banner {
             align-items: flex-start;
-          }
-
-          .confidence-grid,
-          .evidence-grid {
-            grid-template-columns: 1fr;
           }
         }
       `}</style>

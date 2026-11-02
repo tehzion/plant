@@ -23,6 +23,7 @@ const MyGap = lazyWithRetry(() => import('./pages/MyGap'), 'mygap');
 const Nutrition = lazyWithRetry(() => import('./pages/Nutrition'), 'nutrition');
 const UserGuide = lazyWithRetry(() => import('./pages/UserGuide'), 'guide');
 const AdminReviewDashboard = lazyWithRetry(() => import('./pages/AdminReviewDashboard'), 'admin-review');
+const PrivacyControls = lazyWithRetry(() => import('./pages/PrivacyControls'), 'privacy-controls');
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'), 'notfound');
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
                                             <Route path="/guide" element={<UserGuide />} />
                                             <Route path="/terms" element={<TermsOfUse />} />
                                             <Route path="/privacy" element={<PrivacyPolicy />} />
+                                            <Route path="/privacy-controls" element={<PrivacyControls />} />
                                             <Route path="*" element={<NotFound />} />
                                         </Routes>
                                     </Suspense>

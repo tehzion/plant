@@ -7,9 +7,10 @@ import { queryNeon, withNeonTransaction } from '../utils/neonDatabase.js';
 export const CORRECTABLE_FIELDS = Object.freeze([
     'type', 'notes', 'activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator',
     'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id',
+    'amount', 'unit', 'supplier', 'price', 'buyer', 'lot_code', 'topic', 'attendees',
 ]);
-const LOG_TYPES = ['pesticide', 'fertilizer', 'harvest', 'irrigation'];
-const MAX_LENGTH = { notes: 4000, activity_date: 10, plot_id: 200, quantity: 100, operator: 120, registration_no: 60, area_treated: 60 };
+export const LOG_TYPES = Object.freeze(['pesticide', 'fertilizer', 'harvest', 'irrigation', 'purchase', 'post_harvest', 'training']);
+const MAX_LENGTH = { notes: 4000, activity_date: 10, plot_id: 200, quantity: 100, operator: 120, registration_no: 60, area_treated: 60, unit: 20, price: 60, lot_code: 60, attendees: 1000 };
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
@@ -26,6 +27,12 @@ const normalizeValue = (field, value) => {
         const days = Number(value);
         if (!Number.isInteger(days) || days < 0 || days > 3650) throw fail('PHI must be a whole number of days from 0 to 3650.');
         return days;
+    }
+    if (field === 'amount') {
+        if (value === null || value === '') return null;
+        const amount = Number(value);
+        if (!Number.isFinite(amount) || amount < 0) throw fail('Amount must be a number of 0 or more.');
+        return amount;
     }
     if (field === 'type') {
         if (!LOG_TYPES.includes(value)) throw fail('Unknown record type.');

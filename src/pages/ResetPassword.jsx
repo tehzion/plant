@@ -48,7 +48,6 @@ const ResetPassword = () => {
             <div className="login-container">
                 <div className="login-card fade-in">
                     <div className="login-header">
-                        <span className="login-kicker">KANB</span>
                         <h2 className="login-title">{t('login.resetTitle')}</h2>
                         <p className="login-subtitle">{t('login.resetSubtitle')}</p>
                     </div>

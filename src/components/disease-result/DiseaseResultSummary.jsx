@@ -49,7 +49,7 @@ const DiseaseResultSummary = ({ result, normalized, t }) => {
 
                     {showIdentification && (
                         <div className="species-id-info">
-                            <Leaf size={14} color="#059669" />
+                            <Leaf size={14} aria-hidden="true" />
                             <span>
                                 <strong>{result.identification.scientificName}</strong>
                                 {result.identification.commonNames && result.identification.commonNames.length > 0 && (

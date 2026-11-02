@@ -84,3 +84,49 @@ describe('checklist evidence', () => {
         expect(checklistCompletion(resolved)).toEqual({ completed: 2, applicable: 7, notApplicable: 1, percent: 29 });
     });
 });
+
+describe('phase 2 rules', () => {
+    it('keeps an input stock from purchases minus applications, per unit', async () => {
+        const { computeInputStock } = await import('./mygapCompliance.js');
+        const stock = computeInputStock([
+            { type: 'purchase', product_used: 'Mancozeb 80WP', amount: '10', unit: 'kg', activity_date: '2026-10-01' },
+            { type: 'pesticide', product_used: 'mancozeb 80wp', amount: 2.5, unit: 'KG' },
+            { type: 'purchase', product_used: 'Mancozeb 80WP', amount: '1', unit: 'L' },
+            { type: 'fertilizer', product_used: 'NPK', amount: '5', unit: 'kg' },
+            { type: 'pesticide', product_used: 'No amount' },
+        ]);
+        expect(stock).toEqual([
+            expect.objectContaining({ product: 'Mancozeb 80WP', unit: 'kg', purchased: 10, used: 2.5, balance: 7.5 }),
+            expect.objectContaining({ product: 'Mancozeb 80WP', unit: 'l', purchased: 1, used: 0, balance: 1 }),
+            expect.objectContaining({ product: 'NPK', unit: 'kg', purchased: 0, used: 5, balance: -5 }),
+        ]);
+    });
+
+    it('creates unique lot codes per plot and day', async () => {
+        const { nextLotCode } = await import('./mygapCompliance.js');
+        expect(nextLotCode([], { plot: 'Blok A (Durian)', date: '2026-10-31' })).toBe('BLOKAD-261031-01');
+        expect(nextLotCode([{ lot_code: 'BLOKAD-261031-01' }], { plot: 'Blok A (Durian)', date: '2026-10-31' })).toBe('BLOKAD-261031-02');
+        expect(nextLotCode([], { plot: '', date: '2026-01-05' })).toBe('FARM-260105-01');
+    });
+
+    it('reports certificate renewal status', async () => {
+        const { certificateStatus } = await import('./mygapCompliance.js');
+        const now = new Date('2026-10-31T10:00:00');
+        expect(certificateStatus('2027-12-31', now).state).toBe('valid');
+        expect(certificateStatus('2027-02-01', now)).toEqual({ state: 'renewSoon', daysLeft: 93 });
+        expect(certificateStatus('2026-10-01', now).state).toBe('expired');
+        expect(certificateStatus('', now).state).toBe('unknown');
+    });
+
+    it('treats a training record in the last year as evidence for worker training', () => {
+        const now = new Date('2026-10-31T10:00:00');
+        expect(evaluateChecklistEvidence({ logs: [{ type: 'training', activity_date: '2026-03-01' }], now }).check7).toMatchObject({ auto: true, count: 1 });
+        expect(evaluateChecklistEvidence({ logs: [{ type: 'training', activity_date: '2025-03-01' }], now }).check7.auto).toBe(false);
+    });
+
+    it('does not require a plot or crop on farm-wide purchase and training records', () => {
+        const now = new Date('2026-10-31T10:00:00');
+        const logs = [{ type: 'purchase', activity_date: '2026-10-01' }, { type: 'training', activity_date: '2026-10-02' }];
+        expect(evaluateChecklistEvidence({ logs, now }).check8.auto).toBe(true);
+    });
+});

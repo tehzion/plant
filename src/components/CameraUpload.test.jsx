@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import CameraUpload from './CameraUpload.jsx';
 
 const notifyErrorMock = vi.fn();
+const notifyInfoMock = vi.fn();
 const getImageQualityGuidanceMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../i18n/i18n.jsx', () => ({
@@ -16,6 +17,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
             'common.cameraUnsupported': 'Camera access is not available on this device. You can upload a photo from your gallery instead.',
             'common.cameraPermissionDenied': 'Camera access was blocked. You can upload a photo from your gallery instead.',
             'common.cameraUnavailable': 'We could not find an available camera. Please upload a photo from your gallery instead.',
+            'common.galleryNoPhoto': 'No photo was selected. If your photos do not appear, allow photo access for your browser in your phone settings, then try again.',
             'common.cameraOpenFailed': 'We could not open the camera right now. Please try again or upload a photo from your gallery.',
         }[key] || key),
     }),
@@ -24,6 +26,7 @@ vi.mock('../i18n/i18n.jsx', () => ({
 vi.mock('../context/NotificationProvider.jsx', () => ({
     useNotifications: () => ({
         notifyError: notifyErrorMock,
+        notifyInfo: notifyInfoMock,
     }),
 }));
 
@@ -41,6 +44,22 @@ describe('CameraUpload', () => {
         notifyErrorMock.mockReset();
         getImageQualityGuidanceMock.mockReset();
         getImageQualityGuidanceMock.mockResolvedValue({ accepted: true });
+    });
+
+    it('uses one shared tips disclosure and removes optional wording for requested close-ups', () => {
+        const { rerender } = render(<CameraUpload onImageCapture={vi.fn()} />);
+        expect(screen.getByText('Before you capture', { selector: 'summary' })).toBeInTheDocument();
+        rerender(<CameraUpload onImageCapture={vi.fn()} captureRole="closeup" required />);
+        expect(screen.getByRole('group', { name: 'results.retakeCloseup' })).toBeInTheDocument();
+        expect(screen.queryByText(/Step 2 of 2/)).not.toBeInTheDocument();
+    });
+
+    it('removes the selected file from capture state when its preview is deleted', async () => {
+        const onImageCapture = vi.fn();
+        render(<CameraUpload currentImage="data:image/jpeg;base64,eA==" onImageCapture={onImageCapture} />);
+        const remove = await screen.findByRole('button', { name: 'Clear Image' });
+        fireEvent.click(remove);
+        expect(onImageCapture).toHaveBeenCalledWith(null);
     });
 
     it('shows a toast error for non-image files', () => {
@@ -86,6 +105,20 @@ describe('CameraUpload', () => {
         expect(clickSpy).toHaveBeenCalled();
     });
 
+    it('explains photo access once when the gallery picker comes back empty', () => {
+        const { container } = render(<CameraUpload onImageCapture={vi.fn()} />);
+        const input = container.querySelector('input[type="file"]:not([capture])');
+
+        fireEvent(input, new Event('cancel'));
+        fireEvent(input, new Event('cancel'));
+
+        expect(notifyInfoMock).toHaveBeenCalledTimes(1);
+        expect(notifyInfoMock).toHaveBeenCalledWith(
+            expect.stringContaining('allow photo access'),
+            expect.objectContaining({ duration: expect.any(Number) }),
+        );
+    });
+
     it('blocks low-quality photos before scan setup', async () => {
         getImageQualityGuidanceMock.mockResolvedValueOnce({
             accepted: false,
@@ -120,5 +153,6 @@ describe('CameraUpload', () => {
         fireEvent.change(input, { target: { files: [new File(['img'], 'dark.jpg', { type: 'image/jpeg' })] } });
 
         await waitFor(() => expect(onQualityIssue).toHaveBeenCalledWith('IMAGE_TOO_DARK', 'whole'));
+        expect(notifyErrorMock).not.toHaveBeenCalled();
     });
 });

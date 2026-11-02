@@ -89,10 +89,19 @@ export const logTrainingData = async (data) => {
                 console.warn(JSON.stringify({ event: 'audit_owner_conflict', scanId }));
                 return false;
             }
-            const [tree, leaf] = await Promise.all([
+            // A failed photo upload must not lose the assessment: nothing retries this
+            // write, so the record is kept without the photo and marked, and exports
+            // or training can skip it.
+            const uploads = await Promise.allSettled([
                 uploadAuditImage(treeImage, scanId, 'tree', ownerHash),
                 uploadAuditImage(leafImage, scanId, 'leaf', ownerHash),
             ]);
+            const [tree, leaf] = uploads.map((upload) => (upload.status === 'fulfilled' ? upload.value : null));
+            const failedUpload = uploads.find((upload) => upload.status === 'rejected');
+            if (failedUpload) {
+                metadata.photoUpload = { status: 'failed', reason: String(failedUpload.reason?.message || failedUpload.reason).slice(0, 200) };
+                console.warn(JSON.stringify({ event: 'audit_photo_upload_failed', scanId, reason: metadata.photoUpload.reason }));
+            }
             // The owner predicate keeps a concurrent writer with a different
             // identity from replacing an existing assessment record.
             const written = await queryNeon(
@@ -252,4 +261,38 @@ export const withdrawTrainingImages = async (scanId) => {
     const matches = files.filter((name) => name.endsWith(`_${scanId}_tree.jpg`) || name.endsWith(`_${scanId}_leaf.jpg`));
     await Promise.all(matches.map((name) => fs.promises.unlink(path.join(IMAGES_DIR, name))));
     return { removed: matches.length };
+};
+
+/**
+ * Log a farmer's thumbs up or down on a floating-assistant answer, so wrong or
+ * unhelpful answers can be found and the assistant's instructions improved.
+ * @param {{rating: 'up'|'down', question: string, answer: string, language: string, page?: string, scanStatus?: string|null}} feedback
+ */
+export const logAssistantFeedback = async (feedback) => {
+    const record = {
+        rating: feedback.rating,
+        language: feedback.language || 'en',
+        // Ratings do not require a retained copy of the person's conversation.
+        question: '',
+        answer: '',
+        page: feedback.page || null,
+        scanStatus: feedback.scanStatus || null,
+    };
+    try {
+        const now = new Date();
+        if (shouldUseCloudAudit()) {
+            await queryNeon(
+                'insert into public.assistant_feedback(rating, language, question, answer, page, scan_status, created_at) values ($1, $2, $3, $4, $5, $6, $7)',
+                [record.rating, record.language, record.question, record.answer, record.page, record.scanStatus, now.toISOString()],
+            );
+            return true;
+        }
+        await ensureLocalDataset();
+        const file = path.join(DATASET_DIR, `assistant_feedback_${now.toISOString().split('T')[0]}.jsonl`);
+        await fs.promises.appendFile(file, JSON.stringify({ ...record, timestamp: now.toISOString() }) + '\n');
+        return true;
+    } catch (error) {
+        console.error('❌ Assistant feedback logging failed:', error?.message || error);
+        return false;
+    }
 };

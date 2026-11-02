@@ -94,5 +94,9 @@ Based on the DOA myGAP food-crop scheme (MS 1784, myGAP 4 record forms, 6-1 chec
 | ~~P1~~ Fixed | Scans not used as pest monitoring (myGAP 4-4). | Recent scans listed in the logbook with "Record treatment"; scans appear as a monitoring table in the PDF. |
 | ~~P1~~ Fixed | Plots typed freely. | Plot field suggests saved plots and fills the crop. |
 | ~~P1~~ Fixed | Records could not be corrected. | Edit and delete with a required reason; signed-in corrections keep previous values in `activity_revisions`; guest records keep their history on the entry. Records still waiting to sync cannot be edited until they sync. |
-| P1 | Phase 2: purchase and stock records, harvest/sales with lot codes, workers and training, post-harvest treatment, farm profile and renewal reminder. | Open. |
+| ~~P1~~ Fixed | Phase 2: farm profile and renewal reminder. | Farm tab with farmer/farm name, address, land status, myGAP reference and certificate expiry; banner from 180 days before expiry. Shown on the PDF. |
+| ~~P1~~ Fixed | Phase 2: purchases and input stock. | 'Purchase' records (supplier, amount, unit, price); spray and fertilizer records take an amount used; stock = purchases − use, per product and unit; negative balances flagged. |
+| ~~P1~~ Fixed | Phase 2: harvest/sales and traceability (myGAP 4-7). | Harvests record amount, buyer and price, and get an automatic lot code (plot-date-sequence); a 100×60 mm label with a plain-text QR code can be printed. |
+| ~~P1~~ Fixed | Phase 2: workers, training, post-harvest (myGAP 4-8, 4-9). | Worker list on the farm profile (ID optional); 'Training' and 'Post-harvest' record types; a training record in the last 12 months completes the training checklist item. Migration `0004` (additive). |
+| P2 | Stock does not convert between units (kg vs g) and relies on farmers entering amounts. | Open — add unit conversion if farmers mix units. |
 | P2 | Phase 3: map to the 17 official elements with evidence, annual internal audit, audit pack in official layouts, registered-pesticide lookup. | Open — needs DOA forms and data. |

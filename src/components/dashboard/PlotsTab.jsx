@@ -84,7 +84,7 @@ const PlotsTab = ({
 
             <FarmOverview scans={scanHistory} plots={plots} />
             <div className="udp-plot-list">
-                {plots.length === 0 && !addingPlot && <div className="udp-empty"><MapPin size={32} /><p>{label('profile.noPlots', 'No plots mapped.')}</p></div>}
+                {plots.length === 0 && !addingPlot && <div className="udp-empty"><MapPin size={32} /><p>{label('profile.noPlots', 'No plots mapped.')}</p><p>{t('common.emptyPlotHint')}</p><button className="btn btn-primary" onClick={() => setAddingPlot(true)}>{t('common.addPlotAction')}</button></div>}
                 {plots.map((plot) => (
                     <div key={plot.id} className="udp-plot-card">
                         <div className="udp-plot-icon"><Leaf size={20} /></div>
@@ -93,7 +93,7 @@ const PlotsTab = ({
                             <span className="udp-plot-meta">{plot.cropType || label('profile.mixCrop', 'Mixed Crop')}</span>
                             {plot.soil_ph && <span className="udp-plot-soil-ph">{soilPhLabel}: {plot.soil_ph}</span>}
                         </div>
-                        <button className="udp-delete-btn" onClick={() => handleDeletePlot(plot.id)}><Trash2 size={16} /></button>
+                        <button className="udp-delete-btn" aria-label={`${t('common.delete')} ${plot.name}`} onClick={() => handleDeletePlot(plot.id)}><Trash2 size={16} /></button>
                     </div>
                 ))}
             </div>

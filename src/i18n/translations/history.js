@@ -1,10 +1,15 @@
 const historyTranslations = {
     en: {
         history: {
+            "reviewScansHint": "Review your plant checks and see what needs a follow-up.",
+
             title: 'Scan History',
             subtitle: 'View your previous plant health analyses',
             noHistory: 'No Scan History',
             noHistoryMessage: 'Your scanned plants will appear here',
+            scanNotFound: 'Scan not found',
+            scanNotFoundMessage: 'This scan is not saved on this phone. It may have been deleted or saved on another device.',
+            needScanFirst: 'Check a plant first, then its nutrition advice will appear here.',
             viewDetails: 'View Details',
             deleteAll: 'Delete All',
             confirmDelete: 'Are you sure you want to delete all scan history?',
@@ -26,21 +31,26 @@ const historyTranslations = {
     },
     ms: {
         history: {
-            title: 'Sejarah Imbasan',
+            "reviewScansHint": "Semak sejarah tanaman anda dan lihat perkara yang perlu disusuli.",
+
+            title: 'Sejarah Semakan',
             subtitle: 'Lihat analisis kesihatan tumbuhan anda sebelum ini',
-            noHistory: 'Tiada sejarah imbasan lagi',
+            noHistory: 'Tiada sejarah semakan lagi',
             noHistoryMessage: 'Mulakan dengan menganalisis tumbuhan pertama anda!',
+            scanNotFound: 'Semakan tidak dijumpai',
+            scanNotFoundMessage: 'Semakan ini tidak disimpan dalam telefon ini. Ia mungkin telah dipadam atau disimpan pada peranti lain.',
+            needScanFirst: 'Semak tanaman dahulu, kemudian nasihat pemakanannya akan dipaparkan di sini.',
             viewDetails: 'Lihat Butiran',
             deleteAll: 'Padam Semua',
-            confirmDelete: 'Adakah anda pasti mahu memadam semua sejarah imbasan?',
-            scanHistory: 'Sejarah Imbasan',
+            confirmDelete: 'Adakah anda pasti mahu memadam semua sejarah semakan?',
+            scanHistory: 'Sejarah Semakan',
             clearAll: 'Padam Semua',
-            clearConfirm: 'Adakah anda pasti mahu memadam semua sejarah imbasan?',
-            confirmDeleteSingle: 'Padam imbasan ini?',
-            deleteScan: 'Padam imbasan',
-            scanDeleted: 'Imbasan telah dipadam.',
-            scanHistoryCleared: 'Sejarah imbasan telah dibersihkan.',
-            scanFirstPlant: 'Imbas Tumbuhan Pertama',
+            clearConfirm: 'Adakah anda pasti mahu memadam semua sejarah semakan?',
+            confirmDeleteSingle: 'Padam semakan ini?',
+            deleteScan: 'Padam semakan',
+            scanDeleted: 'Semakan telah dipadam.',
+            scanHistoryCleared: 'Sejarah semakan telah dibersihkan.',
+            scanFirstPlant: 'Semak Tumbuhan Pertama',
             today: 'Hari Ini',
             yesterday: 'Semalam',
             thisWeek: 'Minggu Ini',
@@ -51,10 +61,15 @@ const historyTranslations = {
     },
     zh: {
         history: {
+            "reviewScansHint": "查看植物检查记录及需要跟进的事项。",
+
             title: '扫描历史',
             subtitle: '查看您之前的植物健康分析',
             noHistory: '暂无扫描历史',
             noHistoryMessage: '您扫描的植物将显示在这里',
+            scanNotFound: '找不到这次检查',
+            scanNotFoundMessage: '这次检查没有保存在这部手机上。它可能已被删除，或保存在其他设备上。',
+            needScanFirst: '请先检查一株作物，营养建议会显示在这里。',
             viewDetails: '查看详情',
             deleteAll: '全部删除',
             confirmDelete: '确定要删除所有扫描历史吗？',

@@ -119,7 +119,7 @@ create table if not exists public.consultation_leads (
     disease text not null default '',
     crop text not null default '',
     confidence numeric,
-    phone text not null default '+60136667810',
+    phone text not null default '+60146193328',
     contact_intent text not null default 'whatsapp_consultation',
     recommendation_intent text,
     severity text,
@@ -531,7 +531,7 @@ create policy "consultation_leads_insert_contact_intent" on public.consultation_
     with check (
         (user_id is null or (select auth.uid()) = user_id)
         and contact_intent = 'whatsapp_consultation'
-        and phone = '+60136667810'
+        and phone = '+60146193328'
         and source in ('product_recommendations', 'results_consultation', 'catalog_error')
         and char_length(coalesce(scan_id, '')) <= 240
         and char_length(disease) <= 240

@@ -1,3 +1,5 @@
+import { getDataConsent } from '../utils/dataConsent.js';
+import { discardCaptureDraft } from '../utils/captureDraft.js';
 import { useReducer, useMemo, useRef, useEffect } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { imageToBase64, analyzePlantDisease, analyzeLocalImageQuality } from '../utils/diseaseDetection';
@@ -14,12 +16,18 @@ import { showToast } from '../utils/toast.js';
 // Scan state reducer
 const scanReducer = (state, action) => {
     switch (action.type) {
+        case 'SET_OWNER':
+            return { ...initialScanState, ...action.payload };
+        case 'RESTORE_DRAFT':
+            return { ...initialScanState, owner: state.owner, ...action.payload, loading: false, error: '', errorCode: '', currentStep: action.payload.selectedImage ? Math.min(action.payload.currentStep || 1, 2) : 1 };
         case 'SET_IMAGE':
             return { ...state, selectedImage: action.payload, error: '', errorCode: '' };
         case 'SET_LEAF_IMAGE':
             return { ...state, selectedLeafImage: action.payload, error: '', errorCode: '' };
         case 'SET_CATEGORY':
-            return { ...state, selectedCategory: action.payload, error: '', errorCode: '' };
+            return { ...state, selectedCategory: action.payload, selectedCrop: action.payload === state.selectedCategory ? state.selectedCrop : '', error: '', errorCode: '' };
+        case 'SET_CROP':
+            return { ...state, selectedCrop: action.payload || '' };
         case 'SET_SCALE':
             return { ...state, selectedScale: action.payload };
         case 'SET_QUANTITY':
@@ -52,17 +60,19 @@ const scanReducer = (state, action) => {
                 currentStep: 3,
             };
         case 'RESET_SCAN':
-            return { ...initialScanState };
+            return { ...initialScanState, owner: state.owner, selectedCategory: state.selectedCategory, selectedCrop: state.selectedCrop, selectedScale: state.selectedScale };
         default:
             return state;
     }
 };
 
 const initialScanState = {
+    owner: null,
     selectedImage: null,
     selectedLeafImage: null,
     selectedCategory: '',
-    selectedScale: 'personal',
+    selectedCrop: '',
+    selectedScale: 'acre',
     scaleQuantity: 1,
     currentStep: 1,
     loading: false,
@@ -72,10 +82,30 @@ const initialScanState = {
     scanStartTime: 0
 };
 
+const capturePreferences = owner => {
+    const defaults = { selectedCategory: '', selectedCrop: '', selectedScale: 'acre', scaleQuantity: 1 };
+    if (!owner) return defaults;
+    try {
+        const saved = JSON.parse(localStorage.getItem(`plant_capture_preferences:${owner}`) || '{}');
+        if (saved.owner && saved.owner !== owner) return defaults;
+        return { selectedCategory: saved.category || '', selectedCrop: saved.crop || '', selectedScale: ['acre', 'tree', 'personal'].includes(saved.scale) ? saved.scale : 'acre', scaleQuantity: Number(saved.quantity) > 0 && Number.isFinite(Number(saved.quantity)) ? Number(saved.quantity) : 1 };
+    } catch { return defaults; }
+};
+
 export const useScanLogic = () => {
     const { language, t } = useLanguage();
-    const { user } = useAuth();
-    const [state, dispatch] = useReducer(scanReducer, initialScanState);
+    const { user, guestId } = useAuth();
+    const owner = user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null;
+    const [storedState, dispatch] = useReducer(scanReducer, initialScanState, initial => ({ ...initial, owner, ...capturePreferences(owner) }));
+    const state = useMemo(() => storedState.owner === owner ? storedState : { ...initialScanState, owner }, [storedState, owner]);
+    useEffect(() => { dispatch({ type: 'SET_OWNER', payload: { owner, ...capturePreferences(owner) } }); }, [owner]);
+    useEffect(() => {
+        if (!owner || storedState.owner !== owner) return;
+        try {
+            const value = JSON.stringify({ owner, category: state.selectedCategory, crop: state.selectedCrop, scale: state.selectedScale, quantity: Number(state.scaleQuantity) || 1 });
+            localStorage.setItem(`plant_capture_preferences:${owner}`, value);
+        } catch { /* preferences are optional; photos use explicit draft saving */ }
+    }, [owner, storedState.owner, state.selectedCategory, state.selectedCrop, state.selectedScale, state.scaleQuantity]);
     const stateRef = useRef(state);
     useEffect(() => {
         stateRef.current = state;
@@ -87,6 +117,7 @@ export const useScanLogic = () => {
         const handleImageCapture = (file) => dispatchAction('SET_IMAGE', file);
         const handleLeafImageCapture = (file) => dispatchAction('SET_LEAF_IMAGE', file);
         const setCategory = (cat) => dispatchAction('SET_CATEGORY', cat);
+        const setCrop = (crop) => dispatchAction('SET_CROP', crop);
         const setScale = (scale) => dispatchAction('SET_SCALE', scale);
         const setQuantity = (qty) => dispatchAction('SET_QUANTITY', qty);
         const nextStep = () => dispatchAction('NEXT_STEP');
@@ -95,15 +126,23 @@ export const useScanLogic = () => {
         // Use setStepClear when you explicitly want to dismiss any error too.
         const setStep = (step) => dispatchAction('SET_STEP', step);
         const setStepClear = (step) => dispatchAction('SET_STEP_CLEAR', step);
+        const restoreDraft = draft => dispatchAction('RESTORE_DRAFT', { selectedImage: draft.selectedImage, selectedLeafImage: draft.selectedLeafImage, selectedCategory: draft.selectedCategory, selectedCrop: draft.selectedCrop, selectedScale: draft.selectedScale, scaleQuantity: draft.scaleQuantity, currentStep: draft.currentStep });
         const resetScan = () => dispatchAction('RESET_SCAN');
         const setError = (payload) => dispatchAction('SET_ERROR', payload);
 
-        const performAnalyze = async (location, locationName, overrides = {}) => {
+        // background runs a saved offline check from its own photos without
+        // touching the capture screen the farmer may be using.
+        const performAnalyze = async (location, locationName, overrides = {}, { background = false } = {}) => {
             const currentState = {
                 ...stateRef.current,
                 ...overrides,
             };
-            dispatch({ type: 'START_ANALYSIS' });
+            const assertOwner = () => {
+                if (stateRef.current.owner !== owner) { const error = new Error('Capture account changed'); error.code = 'ANALYSIS_CANCELLED'; throw error; }
+            };
+            assertOwner();
+            const report = background ? () => {} : dispatch;
+            report({ type: 'START_ANALYSIS' });
 
             const analysisTask = async () => {
                 // AI disease assessment runs on the server; there is no local
@@ -113,7 +152,7 @@ export const useScanLogic = () => {
                     offlineError.code = 'ANALYSIS_OFFLINE';
                     throw offlineError;
                 }
-                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 0 });
+                report({ type: 'UPDATE_ANALYZING_STEP', payload: 0 });
                 const [treeQuality, leafQuality] = await Promise.all([
                     analyzeLocalImageQuality(currentState.selectedImage),
                     currentState.selectedLeafImage
@@ -147,32 +186,36 @@ export const useScanLogic = () => {
                         : Promise.resolve(null),
                 ]);
 
-                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 1 });
+                report({ type: 'UPDATE_ANALYZING_STEP', payload: 1 });
+                assertOwner();
                 const result = await analyzePlantDisease(
                     treeImageBase64,
                     currentState.selectedCategory || 'Vegetables',
                     leafImageBase64,
                     language,
                     locationName || 'Malaysia',
-                    { tree: treeQuality, leaf: leafQuality, ...(currentState.captureContext ? { context: currentState.captureContext } : {}) }
+                    { tree: treeQuality, leaf: leafQuality, ...(currentState.captureContext ? { context: currentState.captureContext } : {}) },
+                    { crop: currentState.selectedCrop || '', dataConsent: getDataConsent(owner) }
                 );
 
-                dispatch({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
+                report({ type: 'UPDATE_ANALYZING_STEP', payload: 2 });
                 const resultState = getScanResultState(result);
                 const standardizedHealthStatus = resultState === SCAN_RESULT_STATES.HEALTHY ? 'healthy'
                     : resultState === SCAN_RESULT_STATES.CONFIDENT_TREATMENT ? getStandardizedStatus(result) : 'unknown';
 
+                assertOwner();
                 const savedScan = await saveScan({
                     image: treeImageThumbnail,
                     leafImage: leafImageThumbnail,
                     ...result,
                     analysisLanguage: language,
-                    plantPart: currentState.captureContext?.plantPart || 'leaf',
+                    plantPart: currentState.captureContext?.plantPart || 'whole',
                     captureContext: currentState.captureContext || null,
                     healthStatus: standardizedHealthStatus,
                     disease: result.disease,
-                    plantType: result.plantType || currentState.selectedCategory,
+                    plantType: result.plantType || currentState.selectedCrop || currentState.selectedCategory,
                     category: currentState.selectedCategory || 'Vegetables',
+                    crop: currentState.selectedCrop || null,
                     farmScale: currentState.selectedScale,
                     scaleQuantity: currentState.scaleQuantity,
                     location: location,
@@ -189,13 +232,16 @@ export const useScanLogic = () => {
                 }
 
                 // ── Sync: Auto-log a "Scouting" activity for the dashboard ──────
-                dispatch({ type: 'COMPLETE_ANALYSIS' });
+                if (!background) await discardCaptureDraft(user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null).catch(() => {});
+                assertOwner();
+                report({ type: 'COMPLETE_ANALYSIS' });
                 return savedScan.id;
             };
 
             try {
                 return await analysisTask();
             } catch (err) {
+                if (err.code === 'ANALYSIS_CANCELLED' || stateRef.current.owner !== owner) { err.code = 'ANALYSIS_CANCELLED'; throw err; }
                 console.error('Analysis error:', err);
                 const qualityErrors = {
                     IMAGE_TOO_DARK: t('home.errorImageTooDark') || 'The photo is too dark. Please retake it in brighter light.',
@@ -222,7 +268,7 @@ export const useScanLogic = () => {
                                     // 4xx bodies carry the server's localized AI_* text; anything else
                                     // (a JavaScript or library error) is not meant for farmers.
                                     : (qualityErrors[errorCode] || (err.status >= 400 ? err.message : '') || t('home.errorAnalysis'));
-                dispatch({
+                report({
                     type: 'SET_ERROR',
                     payload: {
                         message: errorMessage,
@@ -251,6 +297,7 @@ export const useScanLogic = () => {
             handleImageCapture,
             handleLeafImageCapture,
             setCategory,
+            setCrop,
             setScale,
             setQuantity,
             nextStep,
@@ -258,10 +305,11 @@ export const useScanLogic = () => {
             setStep,
             setStepClear,
             resetScan,
+            restoreDraft,
             setError,
             performAnalyze
         };
-    }, [language, t, stateRef, user]);
+    }, [language, t, stateRef, user, guestId, owner]);
 
     return {
         state,

@@ -12,7 +12,7 @@ import { localDateKey } from '../utils/farmerPrefs.js';
 
 // openRequest ({ date, at }) lets the result page open this form with a
 // suggested re-check date without the farmer hunting for it.
-const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
+const ScanFollowUpTracker = ({ scan, onSaved, healthy = false, openRequest = null }) => {
     const { language, t } = useLanguage();
     const { user } = useAuth();
     const copy = getScanQualityCopy(language);
@@ -26,12 +26,14 @@ const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
     const [selectedEventId, setSelectedEventId] = useState(() => sortFollowUpEvents(events)[0]?.id || '');
     const update = (field, value) => setForm(current => ({ ...current, [field]: value }));
     const detailsRef = useRef(null);
+    const fileInput = useRef(null);
+    const [saveFailed, setSaveFailed] = useState(false);
     useEffect(() => {
         if (!openRequest || !detailsRef.current) return;
         detailsRef.current.open = true;
         // Keep a future date the farmer already chose; replace an empty or past one.
         if (openRequest.date) setForm(current => (current.nextCheckDate && current.nextCheckDate >= localDateKey() ? current : { ...current, nextCheckDate: openRequest.date }));
-        detailsRef.current.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        detailsRef.current.scrollIntoView?.({ block: 'center', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
         detailsRef.current.querySelector('input[type="date"]')?.focus();
     }, [openRequest]);
     useEffect(() => {
@@ -54,12 +56,19 @@ const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
     const save = async event => {
         event.preventDefault();
         if (saving) return;
+        if (form.nextCheckDate && form.nextCheckDate < localDateKey()) {
+            setSaveFailed(true); setMessage(t('results.recheckDateNeeded'));
+            detailsRef.current?.querySelector('input[type="date"]')?.focus();
+            return;
+        }
+        setSaveFailed(false);
         setSaving(true); setMessage('');
         try {
             const photoBase64 = photo ? await imageToBase64(photo, 600) : '';
             const metadata = await saveScanFollowUp(scan.id, { ...form, photoBase64 }, user?.id || null);
-            onSaved(metadata); setPhoto(null); setMessage(copy.saved);
-        } catch { setMessage(copy.failed); }
+            onSaved(metadata); setPhoto(null); if (fileInput.current) fileInput.current.value = '';
+            setMessage(form.nextCheckDate ? t('results.followUpSaved').replace('{date}', new Date(`${form.nextCheckDate}T12:00:00`).toLocaleDateString(language === 'ms' ? 'ms-MY' : language === 'zh' ? 'zh-CN' : 'en-GB')) : copy.saved);
+        } catch { setSaveFailed(true); setMessage(t('results.followUpFailed')); }
         finally { setSaving(false); }
     };
     return <section className="scan-followup-tracker app-surface" aria-label={copy.followUp}>
@@ -68,18 +77,18 @@ const ScanFollowUpTracker = ({ scan, onSaved, openRequest = null }) => {
             <label>{copy.plot}<select value={form.plotId} onChange={e => update('plotId', e.target.value)}>
                 <option value="">{copy.noPlot}</option>{plots.map(plot => <option value={plot.id} key={plot.id}>{plot.name}</option>)}
             </select></label>
-            <label>{copy.date}<input type="date" value={form.nextCheckDate} onChange={e => update('nextCheckDate', e.target.value)} /></label>
+            <label>{copy.date}<input type="date" min={localDateKey()} value={form.nextCheckDate} onChange={e => update('nextCheckDate', e.target.value)} /></label>
             <label>{copy.outcome}<select value={form.outcome} onChange={e => update('outcome', e.target.value)}>
-                {['pending', 'improving', 'unchanged', 'worsening', 'resolved'].map(state => <option value={state} key={state}>{copy[state]}</option>)}
+                {(healthy ? ['pending', 'unchanged', 'worsening'] : ['pending', 'improving', 'unchanged', 'worsening', 'resolved']).map(state => <option value={state} key={state}>{healthy && state === 'unchanged' ? t('results.stillHealthy') : copy[state]}</option>)}
             </select></label>
-            <label>{copy.severity}<select value={form.severity} onChange={e => update('severity', e.target.value)}>
+            {!healthy && <label>{copy.severity}<select value={form.severity} onChange={e => update('severity', e.target.value)}>
                 <option value="">—</option>{['mild', 'moderate', 'severe', 'critical'].map(state => <option value={state} key={state}>{t(`results.${state}`)}</option>)}
-            </select></label>
+            </select></label>}
             <label>{copy.symptoms}<textarea maxLength={2000} value={form.note} onChange={e => update('note', e.target.value)} /></label>
-            <label>{t('results.plantPhoto')}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setPhoto(e.target.files?.[0] || null)} /></label>
+            <label>{t('results.plantPhoto')}<input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={e => setPhoto(e.target.files?.[0] || null)} /></label>
             <button type="submit" className="btn btn-primary">{saving ? t('common.loading') : copy.save}</button>
         </fieldset></form>
-        {message && <p role="status">{message}</p>}
+        {message && <p role={saveFailed ? 'alert' : 'status'}>{message}</p>}
         {events.length > 0 && <ol>{events.map(event => <li key={event.id}>
             <time dateTime={event.recordedAt}>{new Date(event.recordedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'ms' ? 'ms-MY' : 'en-GB')}</time>
             {' — '}{copy[event.outcome]}{event.severity ? ` · ${t(`results.${event.severity}`)}` : ''}

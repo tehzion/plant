@@ -14,6 +14,8 @@ const bounded = (value, max = 2000) => {
     if (typeof value !== 'string' || value.length > max) throw error('Invalid text field');
     return value.trim();
 };
+const CROP_NAMES = { 'corn (maize)':'Corn', 'pepper, bell':'Bell pepper', 'cherry (including sour)':'Cherry' };
+const cropName = (crop) => { const c = String(crop).trim(); return CROP_NAMES[c.toLowerCase()] || c.charAt(0).toUpperCase() + c.slice(1); };
 const caseKey = (value) => {
     if (!/^[a-f0-9]{64}$/.test(String(value || ''))) throw error('Invalid case ID');
     return value;
@@ -55,24 +57,32 @@ export function registerEvaluationRoutes(app, { query = queryEvaluation, authori
     route('get','/api/admin/evaluation/dataset', async(req,res) => {
         const limit = Math.floor(Math.min(Math.max(Number(req.query.limit) || 20, 1), 100));
         const offset = Math.floor(Math.min(Math.max(Number(req.query.offset) || 0, 0), 100000));
-        const source = req.query.source || null;
+        const source = req.query.source || null, assessedOnly = req.query.assessed === '1';
         if (source && !['PlantVillage','PlantDoc'].includes(source)) throw error('Invalid dataset');
         const summary = await query(`select count(*)::int as total,
+            count(*) filter (where source='PlantVillage')::int as plantvillage,
+            count(*) filter (where source='PlantDoc')::int as plantdoc,
+            count(*) filter (where lower(original_label)='healthy')::int as healthy,
             coalesce(array_agg(distinct source) filter (where source is not null),'{}') as sources,
             coalesce(array_agg(distinct crop) filter (where crop is not null),'{}') as crops,
             coalesce(array_agg(distinct original_label) filter (where original_label is not null),'{}') as conditions
             from public.agricultural_reference_images`);
         const metrics = await query(`with latest as (
             select distinct on (image_checksum) agreement from public.agricultural_dataset_assessments
-            order by image_checksum, evaluated_at desc nulls last
+            where completed order by image_checksum, evaluated_at desc nulls last
         ) select (select count(*)::int from public.agricultural_dataset_assessments where completed) as completed,
+            count(*)::int as assessed_images,
             count(*) filter (where agreement='match')::int as matches,
+            count(*) filter (where agreement='uncertain_or_review')::int as review,
             count(*) filter (where agreement in ('match','different_or_unclear'))::int as comparable from latest`);
         const rows = await query(`select i.checksum,i.source,i.crop,i.original_label,a.predicted_crop,a.predicted_condition,a.agreement,a.completed,a.run_id,a.evaluated_at
             from public.agricultural_reference_images i left join lateral
             (select * from public.agricultural_dataset_assessments where image_checksum=i.checksum order by evaluated_at desc nulls last limit 1) a on true
-            where ($1::text is null or i.source=$1) order by i.source,i.crop,i.checksum limit $2 offset $3`, [source,limit,offset]);
-        res.json({summary:summary.rows[0], metrics:metrics.rows[0], images:rows.rows, limit, offset});
+            where ($1::text is null or i.source=$1) and (not $4 or a.completed) order by (a.evaluated_at is null), a.evaluated_at desc, i.source, i.crop, i.checksum limit $2 offset $3`, [source,limit,offset,assessedOnly]);
+        const row = summary.rows[0];
+        // Source datasets spell crops differently ("Corn" / "Corn (maize)", "grape" / "Grape"); merge for display only.
+        const crops = [...new Set(row.crops.map(c => cropName(c)))].sort();
+        res.json({summary:{...row, crops}, metrics:metrics.rows[0], images:rows.rows, limit, offset});
     });
     route('get','/api/admin/evaluation/dataset/:checksum/image', async(req,res) => {
         const checksum=caseKey(req.params.checksum);

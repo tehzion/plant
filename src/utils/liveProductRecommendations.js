@@ -3,7 +3,7 @@ import { fetchJsonWithTimeout } from './networkRequest.js';
 
 const PRODUCT_RECOMMENDATIONS_CACHE_PREFIX = 'kanb.productRecommendations.v2';
 const PRODUCT_RECOMMENDATIONS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-export const PRODUCT_CONSULTATION_WHATSAPP = '+60136667810';
+export const PRODUCT_CONSULTATION_WHATSAPP = '+60146193328';
 
 export const PRODUCT_RECOMMENDATION_INTENTS = Object.freeze({
     TREATMENT_READY: 'treatment_ready',
@@ -56,6 +56,7 @@ export const createEmptyProductRecommendations = () => ({
     supplements: [],
     otherPopular: [],
     catalogueDiscovery: [],
+    recoverySupport: [],
     reasoning: '',
     fallbackMeta: null,
     recommendationIntent: '',
@@ -139,6 +140,7 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     diagnosticEvidence: normalizeDiagnosticEvidence(scanResult?.diagnosticEvidence),
     nutritionalStatus: normalizeText(scanResult?.nutritionalIssues?.status),
     sectionPolicy: scanResult?.sectionPolicy || null,
+    secondCheck: scanResult?.secondCheck?.applied ? { applied: true } : null,
     nutritionalIssues: scanResult?.nutritionalIssues && typeof scanResult.nutritionalIssues === 'object'
       ? {
         status: normalizeText(scanResult.nutritionalIssues.status),
@@ -279,7 +281,7 @@ export const createProductConsultationFromDiagnosis = (diagnosis = {}, recommend
             ? '\u8054\u7cfb\u6211\u4eec\u54a8\u8be2'
             : 'Contact us for consultation';
     const reason = normalizeLanguage(language) === 'ms'
-        ? 'Hantar butiran imbasan kepada pasukan agronomi kami untuk semakan lanjut.'
+        ? 'Hantar butiran semakan kepada pasukan agronomi kami untuk dinilai lanjut.'
         : normalizeLanguage(language) === 'zh'
             ? '\u5c06\u626b\u63cf\u8be6\u60c5\u53d1\u9001\u7ed9\u6211\u4eec\u7684\u519c\u827a\u56e2\u961f\u8fdb\u4e00\u6b65\u6838\u5bf9\u3002'
             : 'Send the scan details to our agronomy team for review.';
@@ -300,6 +302,7 @@ export const normalizeProductRecommendationsResponse = (data = {}) => ({
     supplements: normalizeProductList(data?.supplements),
     otherPopular: normalizeProductList(data?.otherPopular),
     catalogueDiscovery: normalizeProductList(data?.catalogueDiscovery).map((product) => ({ ...product, discoveryOnly: true })),
+    recoverySupport: normalizeProductList(data?.recoverySupport).map((product) => ({ ...product, recoveryOnly: true })),
     reasoning: normalizeText(data?.reasoning),
     fallbackMeta: data?.fallbackMeta && typeof data.fallbackMeta === 'object' ? data.fallbackMeta : null,
     recommendationIntent: normalizeText(data?.recommendationIntent),

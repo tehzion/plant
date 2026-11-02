@@ -48,14 +48,12 @@
 
 .scale-button:hover:not(:disabled) {
   border-color: var(--color-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(74, 124, 44, 0.1);
 }
 
 .scale-button.selected {
   border-color: var(--color-primary);
-  background: var(--color-bg-primary);
-  box-shadow: 0 4px 12px rgba(74, 124, 44, 0.15);
+  background: var(--color-bg-card);
+  box-shadow: none;
 }
 
 .scale-button:disabled {
@@ -72,7 +70,7 @@
   justify-content: center;
   height: 50px;
   width: 50px;
-  background: #f3f4f6;
+  background: var(--color-bg-muted);
   border-radius: 50%;
 }
 
@@ -127,8 +125,14 @@
   margin-top: var(--space-xs);
 }
 
-.fade-in {
-  animation: farmScaleFadeIn 0.3s ease;
+.quantity-input-reveal {
+  animation: farmScaleFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quantity-input-reveal {
+    animation: none;
+  }
 }
 
 @keyframes farmScaleFadeIn {

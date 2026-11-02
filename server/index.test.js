@@ -1,11 +1,12 @@
 // @vitest-environment node
-import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
+import { beforeAll, beforeEach, afterAll, afterEach, describe, it, expect, vi } from 'vitest';
+import { consumeFreeScanQuota } from './services/scanQuotaService.js';
 const mocks = vi.hoisted(() => ({
     getOrdersByIds: vi.fn(), getOrderStatus: vi.fn(), getOrdersByAppId: vi.fn(), createOrder: vi.fn(),
-    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), withdrawImages: vi.fn(),
+    analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), logAssistantFeedback: vi.fn(), withdrawImages: vi.fn(),
     buildKeywordProductRecommendation: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
-    getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
+    getAllTags: vi.fn(), getAllCategories: vi.fn(), getAllProducts: vi.fn(async () => []), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
     isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(), saveSnapshot: vi.fn(async () => true),
 }));
 vi.mock('./services/aiService.js', () => ({
@@ -13,6 +14,7 @@ vi.mock('./services/aiService.js', () => ({
     askAI: vi.fn(), buildKeywordProductRecommendation: mocks.buildKeywordProductRecommendation, generateAgronomistInsights: vi.fn(), generateTreatmentSOP: vi.fn(),
     parseNaturalLanguageLog: vi.fn(), generatePredictiveRisk: vi.fn(), localizeStoredAnalysisResult: vi.fn(),
     canRecommendTreatmentProducts: mocks.canRecommendTreatmentProducts, enrichRecommendedProducts: mocks.enrichRecommendedProducts, getProductRecommendationIntent: mocks.getProductRecommendationIntent,
+    normalizeFarmerCrop: (value) => (typeof value === 'string' ? value.trim() : ''),
     buildProductConsultation: mocks.buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS: {
         SUPPORT_ONLY: 'support_only',
         CONSULTATION_NEEDED: 'consultation_needed',
@@ -21,14 +23,17 @@ vi.mock('./services/aiService.js', () => ({
     },
 }));
 vi.mock('./services/wooCommerceService.js', () => ({
-    getAllTags: mocks.getAllTags, getAllCategories: mocks.getAllCategories, getProductsByTagIds: mocks.getProductsByTagIds, getStoreUrl: mocks.getStoreUrl,
+    getAllTags: mocks.getAllTags, getAllCategories: mocks.getAllCategories, getAllProducts: mocks.getAllProducts, getProductsByTagIds: mocks.getProductsByTagIds, getStoreUrl: mocks.getStoreUrl,
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
     getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
 }));
-vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, withdrawTrainingImages: mocks.withdrawImages }));
+vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, logAssistantFeedback: mocks.logAssistantFeedback, withdrawTrainingImages: mocks.withdrawImages }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
 vi.mock('./services/recommendationSnapshotService.js', async (importOriginal) => ({ ...(await importOriginal()), saveRecommendationSnapshot: mocks.saveSnapshot }));
 vi.mock('./services/diseaseProductRuleService.js', () => ({ getDiseaseProductRules: mocks.getDiseaseProductRules }));
+const shadowMock = vi.hoisted(() => vi.fn());
+vi.mock('./services/decisionShadowService.js', async (importOriginal) => ({ ...(await importOriginal()), checkDecisionShadow: shadowMock }));
+vi.mock('./services/scanQuotaService.js', async (importOriginal) => ({ ...(await importOriginal()), consumeFreeScanQuota: vi.fn(async () => ({allowed:true,limit:10})) }));
 let app;
 let processListeners;
 beforeAll(async () => {
@@ -45,6 +50,7 @@ afterAll(() => {
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.logTraining.mockResolvedValue(true);
+    shadowMock.mockResolvedValue({ status: 'skipped', reason: 'disabled' });
     mocks.logFeedback.mockResolvedValue(true);
     mocks.identifyGpt.mockResolvedValue(null);
     mocks.identify.mockResolvedValue({ scientificName: 'Durio zibethinus' });
@@ -82,6 +88,19 @@ describe('order route ownership', () => {
         mocks.createOrder.mockResolvedValue(order(1, 'owner'));
         await invoke('/api/orders', { body: { items: [{ productId: 1, quantity: 1 }], guestId: 'other' }, orderSession: { guestId: 'owner' } });
         expect(mocks.createOrder).toHaveBeenCalledWith(expect.objectContaining({ guestId: 'owner' }));
+    });
+});
+describe('assistant answer feedback', () => {
+    it('records a vote without spending the AI quota and reports a storage failure', async () => {
+        expect(app._router.stack.find((layer) => layer.route?.path === '/api/assistant-feedback')).toBeDefined();
+        mocks.logAssistantFeedback.mockResolvedValue(true);
+        const body = { rating: 'down', question: 'Why yellow?', answer: 'Check nitrogen.', language: 'ms', page: 'home', scanStatus: null };
+        const ok = await invoke('/api/assistant-feedback', { body });
+        expect(mocks.logAssistantFeedback).toHaveBeenCalledWith(body);
+        expect(ok.json).toHaveBeenCalledWith({ message: 'Feedback received' });
+        mocks.logAssistantFeedback.mockResolvedValue(false);
+        const failed = await invoke('/api/assistant-feedback', { body });
+        expect(failed.status).toHaveBeenCalledWith(500);
     });
 });
 describe('diagnosis cache and feedback identity', () => {
@@ -193,6 +212,15 @@ describe('AI provider failure handling', () => {
         expect(mocks.logTraining).toHaveBeenCalledOnce();
         expect(mocks.analyze.mock.calls[0][0]).toMatchObject({ source: 'GPT-Vision' });
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ identificationSource: 'GPT-Vision' }));
+    });
+
+    it('uses a farmer-stated crop instead of the broad category as the crop hint', async () => {
+        mocks.identify.mockResolvedValueOnce(null);
+        mocks.identifyGpt.mockResolvedValueOnce({ isPlant: true, scientificName: 'Solanum lycopersicum', confidence: 60 });
+        await invoke('/api/analyze', { body: { treeImage: 'farmer-crop', category: 'Vegetables', crop: 'Tomato', language: 'en' } });
+        expect(mocks.identifyGpt.mock.calls[0][1]).toBe('Tomato');
+        expect(mocks.analyze.mock.calls[0][3]).toBe('Tomato');
+        expect(mocks.logTraining.mock.calls[0][0]).toMatchObject({ category: 'Vegetables', metadata: expect.objectContaining({ farmerCrop: 'Tomato' }) });
     });
 
     it('aborts a timed-out PlantNet request and performs one fallback assessment', async () => {
@@ -335,6 +363,23 @@ describe('product search section grouping', () => {
         expect(JSON.stringify(body)).not.toContain('Glyphosate');
     });
 
+    it('adds plant-health products to an unsure disease result, but not to a retake or a vetoed result', async () => {
+        mocks.getAllProducts.mockResolvedValueOnce([
+            { id: 201, name: 'Oligo Chitosan', tags: ['Chitosan', 'Plant Immunity Booster'] },
+            { id: 202, name: 'Compost', tags: ['Soil Conditioner'] },
+        ]);
+        mocks.canRecommendTreatmentProducts.mockReturnValue(false);
+        const unsure = { disease: 'Brown Spot', plantType: 'Rice', diseaseCategory: 'fungal', healthStatus: 'unhealthy', confidence: 60, resultState: 'expert_review_needed' };
+        const body = (await invoke('/api/products/search', { body: { diagnosis: unsure, language: 'en' } })).json.mock.calls[0][0];
+        expect(body.diseaseControl).toEqual([]);
+        expect(body.recoverySupport).toEqual([expect.objectContaining({ id: 201, recoveryOnly: true, recommendationReason: expect.stringMatching(/does not cure/) })]);
+
+        for (const diagnosis of [{ ...unsure, requiresRetake: true }, { ...unsure, secondCheck: { applied: true } }]) {
+            const blocked = (await invoke('/api/products/search', { body: { diagnosis, language: 'en' } })).json.mock.calls[0][0];
+            expect(blocked.recoverySupport).toEqual([]);
+        }
+    });
+
     it('records the shown products on the scan only for a valid scan capability', async () => {
         const { createScanCapability } = await import('./utils/scanCapability.js');
         const diagnosis = { disease: 'Healthy Plant', resultState: 'healthy', healthStatus: 'healthy' };
@@ -350,5 +395,59 @@ describe('product search section grouping', () => {
         await invoke('/api/products/search', { body: { diagnosis, language: 'en', scanId: 'scan-other', feedbackToken } });
         await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
         expect(mocks.saveSnapshot).not.toHaveBeenCalled();
+    });
+});
+
+describe('Decisions shadow route integration', () => {
+    afterEach(() => vi.stubEnv('DECISIONS_CHECK_MODE', 'off'));
+    it('runs the shadow check after responding and keeps its findings in audit metadata only', async () => {
+        vi.stubEnv('DECISIONS_CHECK_MODE', 'shadow');
+        const diagnostic = { disease:'Apple scab', plantType:'Apple', healthStatus:'unhealthy', status:'high_confidence', confidence:92, additionalNotes:'Original advice', analysisMetadata:{model:'openai/gpt-5.4-mini'} };
+        mocks.analyze.mockResolvedValueOnce(diagnostic);
+        const finding = {status:'checked',mode:'shadow',wouldAddReview:true,shadowState:'expert_review_needed'};
+        shadowMock.mockResolvedValueOnce(finding);
+        const body = {treeImage:'shadow-route-unique-photo',category:'Fruits',crop:'Apple',scanId:'shadow-trial-1',dataConsent:{aiImprovement:true}};
+        const response = await invoke('/api/analyze',{body});
+        expect(response.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Apple scab',status:'high_confidence',confidence:92}));
+        expect(response.json.mock.calls[0][0]).not.toHaveProperty('decisionShadow');
+        await vi.waitFor(() => expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:expect.objectContaining(finding)})})));
+        expect(shadowMock).toHaveBeenCalledWith(expect.objectContaining({dataConsent:{aiImprovement:true},crop:'Apple',signal:undefined}));
+        const cached = await invoke('/api/analyze',{body:{...body,scanId:'shadow-trial-2'}});
+        expect(cached.json.mock.calls[0][0]).not.toHaveProperty('decisionShadow');
+        expect(shadowMock).toHaveBeenCalledTimes(1);
+    });
+    it('returns the primary assessment when the shadow checker throws',async()=>{
+        vi.stubEnv('DECISIONS_CHECK_MODE', 'shadow');
+        shadowMock.mockRejectedValueOnce(Error('unavailable'));
+        const res=await invoke('/api/analyze',{body:{treeImage:'shadow-failure-unique',category:'Fruits',scanId:'shadow-failure-1'}});
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({disease:'Leaf spot'}));
+        await vi.waitFor(() => expect(mocks.logTraining).toHaveBeenCalledWith(expect.objectContaining({metadata:expect.objectContaining({decisionShadow:{status:'unavailable',reason:'checker_failed'}})})));
+    });
+    it('does not call the checker when it is off',async()=>{
+        shadowMock.mockClear();
+        await invoke('/api/analyze',{body:{treeImage:'shadow-off-unique',category:'Fruits',scanId:'shadow-off-1'}});
+        expect(shadowMock).not.toHaveBeenCalled();
+    });
+    it('applies an enforce-mode veto to the farmer result before responding',async()=>{
+        vi.stubEnv('DECISIONS_CHECK_MODE', 'enforce');
+        mocks.analyze.mockResolvedValueOnce({ disease:'Apple scab', plantType:'Apple', healthStatus:'unhealthy', status:'high_confidence', diseaseCategory:'fungal',
+            confidence:92, treatments:['Spray fungicide'], analysisMetadata:{model:'openai/gpt-5.4-mini'} });
+        shadowMock.mockResolvedValueOnce({status:'checked',mode:'enforce',applied:true,baselineState:'confident_treatment',
+            reasons:['alternative_better_supported'],supportedAlternatives:['Apple rust']});
+        const res=await invoke('/api/analyze',{body:{treeImage:'enforce-unique',category:'Fruits',crop:'Apple',scanId:'enforce-1',language:'en'}});
+        const sent=res.json.mock.calls[0][0];
+        expect(sent).toMatchObject({treatments:[],treatmentEligible:false,resultState:'expert_review_needed',secondCheck:{applied:true}});
+        expect(sent.abstainReason).toMatch(/Apple rust/);
+    });
+});
+
+
+describe('daily free scan allowance', () => {
+    it('returns the scan-limit response before calling the AI provider', async () => {
+        consumeFreeScanQuota.mockResolvedValueOnce({allowed:false,limit:10});
+        const res = await invoke('/api/analyze', {body:{treeImage:'test-photo',language:'en'}, aiIdentity:'user:free-limit'});
+        expect(res.status).toHaveBeenCalledWith(429);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({code:'FREE_SCAN_DAILY_LIMIT',limit:10,resetTimeZone:'Asia/Kuala_Lumpur'}));
+        expect(mocks.analyze).not.toHaveBeenCalled();
     });
 });

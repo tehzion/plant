@@ -2,10 +2,18 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation as useRouterLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import {
-  ScanLine, AlertCircle, Leaf, ChevronDown, X
+  ScanLine, AlertCircle, ChevronDown, X, WifiOff
 } from 'lucide-react';
 import { fetchScanHistoryPage, seedDemoData } from '../utils/localStorage';
 import { DEMO_SCANS } from '../utils/demoData';
+import AnalysisProgress from '../components/AnalysisProgress.jsx';
+import PlantCheckGuide from '../components/PlantCheckGuide.jsx';
+import { validCaptureDetails } from '../utils/captureDetails.js';
+import CaptureDraftControl from '../components/CaptureDraftControl.jsx';
+import PendingPlantChecks from '../components/PendingPlantChecks.jsx';
+import { discardCaptureDraft } from '../utils/captureDraft.js';
+import { queuePlantCheck, removePendingPlantCheck } from '../utils/pendingPlantChecks.js';
+import { showToast } from '../utils/toast.js';
 import CameraUpload from '../components/CameraUpload';
 import DataConsentToggle from '../components/DataConsentToggle';
 import PlantCategorySelector from '../components/PlantCategorySelector';
@@ -26,21 +34,30 @@ import HeroSection from '../components/home/HeroSection';
 import EventProductHero from '../components/home/EventProductHero';
 import ActionGrid from '../components/home/ActionGrid';
 import RecentScans from '../components/home/RecentScans';
+import RecentActivity from '../components/home/RecentActivity';
 import DueReminders from '../components/home/DueReminders';
 import DailyTips from '../components/home/DailyTips';
 import FarmingNotices from '../components/home/FarmingNotices';
 import './Home.css';
+import ScanServiceNotice from '../components/ScanServiceNotice.jsx';
+import { useScanService } from '../hooks/useScanService.js';
 import ScanCaptureContext from '../components/ScanCaptureContext.jsx';
 import ScanPhotoGuidance from '../components/ScanPhotoGuidance.jsx';
-import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
-import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { isFollowUpDue } from '../utils/uiCopy.js';
 
 const Home = () => {
-  const [captureContext, setCaptureContext] = useState({ plantPart: 'leaf' });
+  const [captureContext, setCaptureContext] = useState({ plantPart: 'whole' });
   const { t, language } = useLanguage();
+  const label = (key, fallback) => {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  };
   const navigate = useNavigate();
   const routerLocation = useRouterLocation();
+  const scanService = useScanService();
+  const [leafExpanded, setLeafExpanded] = useState(true);
+  const stepHeading = useRef(null);
+  const [detailsError, setDetailsError] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Custom Hooks
@@ -48,7 +65,8 @@ const Home = () => {
   const { location, locationName, isLocating, getLocation, setLocationName } = useLocation();
   const { weatherTemp, weatherIcon, forecast, error: weatherError, fetchWeather } = useWeather();
   const { state: scanState, actions: scanActions } = useScanContext();
-  const { user } = useAuth();
+  const { user, guestId } = useAuth();
+  const captureOwner = user?.id ? `user:${user.id}` : guestId ? `guest:${guestId}` : null;
   const isMounted = useRef(true);
   const selectedCategoryRef = useRef('');
 
@@ -106,6 +124,20 @@ const Home = () => {
   const [analysisElapsedMs, setAnalysisElapsedMs] = useState(0);
   const [analysisPreviewUrl, setAnalysisPreviewUrl] = useState('');
   const [photoQualityIssue, setPhotoQualityIssue] = useState(null);
+  const previousOwner = useRef(scanState.owner);
+  useEffect(() => {
+    if (previousOwner.current && previousOwner.current !== scanState.owner) {
+      setCaptureContext({ plantPart: 'whole' }); setPhotoQualityIssue(null); setLeafExpanded(true);
+      if (routerLocation.state?.retakeReason) navigate(`${routerLocation.pathname}${routerLocation.search}`, { replace: true, state: null });
+    }
+    previousOwner.current = scanState.owner;
+  }, [scanState.owner, navigate, routerLocation]);
+
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (!photoQualityIssue && viewMode === 'scan') stepHeading.current?.focus({ preventScroll: true });
+  }, [currentStep, error, photoQualityIssue, viewMode]);
 
   const steps = [
     { label: t('home.step1') },
@@ -143,12 +175,7 @@ const Home = () => {
           setLocationName('Malaysia');
         }
 
-        // Now try to get real location in background
-        const loc = await getLocation();
-        if (loc) {
-          // Update with real location if found
-          await fetchWeather(loc.lat, loc.lng);
-        }
+        // Personal location is requested only from the location button.
       };
       initData();
     }
@@ -162,6 +189,12 @@ const Home = () => {
     }
   }, [viewMode, weatherResolved, weatherTemp, forecast.length, weatherError]);
 
+  const resumeOnEnter = useRef(null);
+  const restoreAndOpen = (draft) => {
+    if (viewMode === 'scan') scanActions.restoreDraft(draft);
+    else resumeOnEnter.current = draft;
+  };
+
   // URL-DRIVEN VIEW MODES (Fixes 'Imbas Lagi' and Race Conditions)
   useEffect(() => {
     const isScanMode = searchParams.get('scan') === 'true';
@@ -171,6 +204,9 @@ const Home = () => {
       if (viewMode !== 'scan') {
         scanActions.resetScan();
         scanActions.setStep(1);
+        // A resumed draft or saved check is restored after the reset, or the
+        // reset would drop its photos.
+        if (resumeOnEnter.current) { scanActions.restoreDraft(resumeOnEnter.current); resumeOnEnter.current = null; }
         setViewMode('scan');
       }
     } else {
@@ -235,10 +271,10 @@ const Home = () => {
   const analysisStatusHint = useMemo(() => {
     if (!(loading && currentStep === 3)) return '';
     if (analysisElapsedMs > 120000) {
-      return t('home.analysisDeepReviewHint') || 'Still reviewing the image carefully. This can take a little longer for better diagnosis quality.';
+      return t('common.slowScanHint');
     }
     if (analysisElapsedMs > 60000) {
-      return t('home.analysisSlowHint') || 'This is taking longer than usual, but the analysis is still running. Please keep this screen open.';
+      return t('common.slowScanHint');
     }
     if (analysisElapsedMs > 20000) {
       return t('home.analysisNetworkHint') || 'Uploading large photos may take longer on mobile data. Please keep this screen open.';
@@ -259,6 +295,8 @@ const Home = () => {
     }
     return '';
   }, [errorCode, t]);
+
+  const isConnectionFailure = errorCode === 'ANALYSIS_OFFLINE' || errorCode === 'ANALYSIS_NETWORK';
 
   // Analysis failure: SET_ERROR always sets currentStep to 3, so just check error + not loading.
   const hasAnalysisFailure = !loading && Boolean(error);
@@ -320,15 +358,18 @@ const Home = () => {
   };
 
   const handleNextStep = async () => {
+    if (currentStep === 2 && await scanService.retry() !== 'online') return;
     if (currentStep === 1 && !selectedImage) {
       scanActions.setError(t('home.errorNoImage'));
       return;
     }
     const activeCategory = selectedCategory || selectedCategoryRef.current || '';
     if (currentStep === 2 && !activeCategory) {
-      scanActions.setError(t('home.errorNoCategory'));
+      setDetailsError(t('home.errorNoCategory'));
       return;
     }
+    if (currentStep === 2 && !validCaptureDetails(scanState)) { setDetailsError(t('results.detailsInvalid')); document.getElementById('scan-scale-quantity')?.focus(); return; }
+    setDetailsError('');
     if (currentStep === 2 && activeCategory !== selectedCategory) {
       scanActions.setCategory(activeCategory);
     }
@@ -340,7 +381,40 @@ const Home = () => {
     }
   };
 
+  const canRepeat = validCaptureDetails(scanState);
+  const handleRepeatScan = async () => {
+    if (!selectedImage || (routerLocation.state?.retakeReason && !selectedLeafImage) || !canRepeat) return;
+    if (await scanService.retry() !== 'online') return;
+    scanActions.setStepClear(3);
+    await runAnalysisAndNavigate(selectedCategory);
+  };
+
+  // No signal: keep the photos on the phone and let the app run the check
+  // by itself once the analysis service can be reached again.
+  const [queueing, setQueueing] = useState(false);
+  const handleQueueCheck = async () => {
+    const activeCategory = selectedCategory || selectedCategoryRef.current || '';
+    if (!selectedImage) { scanActions.setStep(1); scanActions.setError(t('home.errorNoImage')); return; }
+    if (!activeCategory) { scanActions.setStepClear(2); setDetailsError(t('home.errorNoCategory')); return; }
+    if (!validCaptureDetails(scanState)) { scanActions.setStepClear(2); setDetailsError(t('results.detailsInvalid')); return; }
+    setQueueing(true);
+    try {
+      await queuePlantCheck(captureOwner, { ...scanState, selectedCategory: activeCategory, captureContext }, { location, locationName });
+      await discardCaptureDraft(captureOwner).catch(() => {});
+      scanActions.resetScan();
+      setCaptureContext({ plantPart: 'whole' });
+      setSearchParams({});
+      showToast(t('results.queueCheckSaved'), 'success', 6000);
+    } catch (queueError) {
+      showToast(t(queueError?.code === 'PENDING_CHECKS_FULL' ? 'results.pendingChecksFull' : 'results.queueCheckFailed'), 'error', 6000);
+    } finally {
+      setQueueing(false);
+    }
+  };
+  const canQueueCheck = Boolean(selectedImage) && ['offline', 'unavailable'].includes(scanService.status);
+
   const handleRetryAnalysis = async () => {
+    if (await scanService.retry() !== 'online') return;
     if (!selectedImage) {
       scanActions.setStep(1);
       scanActions.setError(t('home.errorNoImage'));
@@ -355,6 +429,12 @@ const Home = () => {
     getLocation().then(loc => loc && fetchWeather(loc.lat, loc.lng));
   };
 
+  // Retry where we last looked; before a location is known that is the
+  // Kuala Lumpur default the dashboard opens with.
+  const handleWeatherRetry = () => {
+    fetchWeather(location?.lat ?? 3.1412, location?.lng ?? 101.6865);
+  };
+
   const handleFeatureStub = (featureName) => {
     setModalConfig({
       isOpen: true,
@@ -364,6 +444,21 @@ const Home = () => {
     });
   };
 
+  const captureDraftControl = <CaptureDraftControl owner={captureOwner} state={{ ...scanState, captureContext, retakeReason: routerLocation.state?.retakeReason || '' }} onResume={draft => {
+    restoreAndOpen(draft);
+    setCaptureContext(draft.captureContext);
+    setLeafExpanded(Boolean(draft.retakeReason || draft.selectedLeafImage));
+    navigate('/?scan=true', { state: { retakeReason: draft.retakeReason } });
+    requestAnimationFrame(() => { window.scrollTo({ top: 0, behavior: 'instant' }); stepHeading.current?.focus({ preventScroll: true }); });
+  }} />;
+  const pendingPlantChecks = <PendingPlantChecks owner={captureOwner} onOpen={check => {
+    restoreAndOpen({ ...check, currentStep: 1 });
+    setCaptureContext(check.captureContext);
+    setLeafExpanded(Boolean(check.selectedLeafImage));
+    removePendingPlantCheck(captureOwner, check.id).catch(() => {});
+    navigate('/?scan=true');
+    requestAnimationFrame(() => { window.scrollTo({ top: 0, behavior: 'instant' }); stepHeading.current?.focus({ preventScroll: true }); });
+  }} />;
   const showHomeSkeleton = viewMode === 'dashboard' && !historyLoaded;
 
   const renderHomeSkeleton = () => (
@@ -481,10 +576,10 @@ const Home = () => {
                 weatherTemp={weatherTemp}
                 weatherIcon={weatherIcon}
                 weatherError={weatherError}
+                onWeatherRetry={handleWeatherRetry}
               />
-
-              {/* Follow-up checks and harvest dates that are due, shown before the promo banner. */}
-              <DueReminders scans={dueScans} onOpenScan={(id) => navigate(`/results/${id}`)} />
+              {pendingPlantChecks}
+              {captureDraftControl}
 
               <EventProductHero
                 onScan={handleStartScan}
@@ -492,13 +587,20 @@ const Home = () => {
                 onDemoScenario={(scenarioId) => navigate(`/results/${scenarioId}`)}
               />
 
+              {/* Follow-up checks and harvest dates that are due. */}
+              <DueReminders scans={dueScans} onOpenScan={(id) => navigate(`/results/${id}`)} />
+
               <div className="home-dashboard-stack">
-                <ActionGrid onScan={handleStartScan} />
                 <RecentScans
                   scans={recentScans}
                   onSeeAll={() => navigate('/history')}
                   onScanClick={(id) => navigate(`/results/${id}`)}
+                  onScan={handleStartScan}
                 />
+
+                <RecentActivity />
+
+                <ActionGrid onScan={handleStartScan} />
 
                 {/* Farming Notices — logged-in users only */}
                 {user && forecast.length > 0 && (
@@ -542,31 +644,12 @@ const Home = () => {
                   className="analysis-preview-image"
                 />
               )}
-              <div className="loading-spinner-circle"></div>
+              <AnalysisProgress step={analyzingStep} />
 
-              <h2 className="loading-title" role="status" aria-live="polite" aria-atomic="true">
-                {[
-                  t('home.loadingReviewingImage'),
-                  t('home.loadingVisibleSymptoms'),
-                  t('home.loadingCarePlan'),
-                ][Math.min(Math.max(analyzingStep, 0), 2)]}
-              </h2>
-              <p className="loading-description">{t('home.analyzingDesc')}</p>
-
-              <div className="quote-box">
-                <span className="quote-icon-left">"</span>
-                <p className="quote-text">{currentPeribahasa}</p>
-                <span className="quote-icon-right">"</span>
-              </div>
-
-              <div className="dots-indicator">
-                <div className={`dot ${analyzingStep >= 0 ? 'active' : ''}`}></div>
-                <div className={`dot ${analyzingStep >= 1 ? 'active' : ''}`}></div>
-                <div className={`dot ${analyzingStep >= 2 ? 'active' : ''}`}></div>
-              </div>
+              {currentPeribahasa && <p className="analysis-proverb">{currentPeribahasa}</p>}
 
               {analysisStatusHint && (
-                <div className="analysis-hint-banner">
+                <div className="analysis-hint-banner" role="status">
                   <AlertCircle size={16} />
                   <span>{analysisStatusHint}</span>
                 </div>
@@ -584,17 +667,24 @@ const Home = () => {
           </div>
         ) : hasAnalysisFailure ? (
           <div className="analysis-failure-shell slide-up">
-            <div className="analysis-failure-card">
-              <div className="analysis-failure-icon">
-                <AlertCircle size={30} />
+            <div className={`analysis-failure-card ${isConnectionFailure ? 'analysis-failure-card--offline' : ''}`} role="alert">
+              <div className="analysis-failure-icon" aria-hidden="true">
+                {isConnectionFailure ? <WifiOff size={24} /> : <AlertCircle size={24} />}
               </div>
               <div className="analysis-failure-copy">
-                <span className="analysis-failure-eyebrow">{t('common.error') || 'Scan needs attention'}</span>
-                <h2>{error}</h2>
-                {errorSupportHint && <p>{errorSupportHint}</p>}
+                <h1 ref={stepHeading} tabIndex={-1}>{isConnectionFailure
+                  ? label('home.noInternetTitle', 'No internet connection')
+                  : label('home.analysisFailedTitle', 'The check could not finish')}</h1>
+                <p className="analysis-failure-message">{error}</p>
+                <p>{t('results.photoKept')}</p>
+                {captureDraftControl}
+                <ScanServiceNotice capture />
               </div>
               <div className="analysis-failure-actions">
-                <button type="button" className="btn btn-primary" onClick={handleRetryAnalysis}>
+                {isConnectionFailure && selectedImage && <button type="button" className="btn btn-primary" disabled={queueing} onClick={handleQueueCheck}>
+                  {t(queueing ? 'results.draftSaving' : 'results.queueCheck')}
+                </button>}
+                <button type="button" className={`btn ${isConnectionFailure && selectedImage ? 'btn-secondary' : 'btn-primary'}`} onClick={handleRetryAnalysis}>
                   {t('common.retry') || 'Try Again'}
                 </button>
                 <button type="button" className="btn btn-secondary" onClick={() => scanActions.setStepClear(2)}>
@@ -636,57 +726,56 @@ const Home = () => {
                       <ScanLine size={24} />
                     </div>
                     <div className="leaf-card-text">
-                      <h2 className="mb-xs">{t('home.step1Title')}</h2>
-                      <p>{t('home.step1Desc')}</p>
+                      <h1 ref={stepHeading} tabIndex={-1} className="scan-step-title mb-xs">{t('home.step1Title')}</h1>
+                      {!routerLocation.state?.retakeReason && <p>{t('home.step1Desc')}</p>}
                     </div>
                   </div>
 
-                  {/* Main Image Upload */}
-                  <div className="mb-lg">
+                  {!selectedImage && !selectedLeafImage && captureDraftControl}
+                  {routerLocation.state?.retakeReason && <aside className="scan-retake-context" role="note"><p>{routerLocation.state.retakeReason}</p><p>{t('results.retakeSequence')}</p></aside>}
+                  {photoQualityIssue && <ScanPhotoGuidance plantPart={captureContext.plantPart} captureRole={photoQualityIssue.role} qualityIssue={photoQualityIssue.code} onDismissIssue={() => setPhotoQualityIssue(null)} />}
+                  <div className="capture-photo-grid">
+                  <div>
                     <CameraUpload
                       onImageCapture={file => { setPhotoQualityIssue(null); scanActions.handleImageCapture(file); }}
+                      key={`${scanState.owner}-whole`}
+                      showGuidance={false}
                       captureRole="whole"
                       onQualityIssue={(code, role) => setPhotoQualityIssue({ code, role })}
                       currentImage={selectedImage}
                     />
                   </div>
 
-                  <details className="ui-disclosure">
-                    <summary>{getEnhancementCopy(language).optionalContext}</summary>
-                    <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
-                  </details>
-                  <details className="ui-disclosure" open={photoQualityIssue ? true : undefined}>
-                    <summary>{getScanQualityCopy(language).photoGuidance.title}</summary>
-                  <ScanPhotoGuidance
-                    plantPart={captureContext.plantPart}
-                    captureRole={photoQualityIssue?.role || 'whole'}
-                    qualityIssue={photoQualityIssue?.code || ''}
-                    onDismissIssue={() => setPhotoQualityIssue(null)}
-                  />
-                  </details>
                   {/* Leaf Image Upload (Optional) */}
-                  <details className="leaf-upload-card ui-disclosure mb-lg fade-in-delayed" open={selectedLeafImage ? true : undefined}>
-                    <summary>{t('home.addLeafPhoto')}</summary>
-                    <div className="leaf-card-header">
-                      <div className="leaf-icon-circle">
-                        <Leaf size={20} />
-                      </div>
-                      <div className="leaf-card-text">
-                        <h3>{t('home.addLeafPhoto') || "Add Leaf Close-up (Optional)"}</h3>
-                        <p>{t('home.leafDescription') || "For better accuracy, add a close-up photo of affected leaves"}</p>
-                      </div>
-                    </div>
+                  <details className="leaf-upload-card ui-disclosure mb-lg fade-in-delayed" open={Boolean(selectedLeafImage) || leafExpanded} onToggle={event => setLeafExpanded(event.currentTarget.open)}>
+                    <summary>{t(routerLocation.state?.retakeReason ? 'results.retakeCloseup' : 'results.optionalCloseup')}</summary>
                     <CameraUpload
                       onImageCapture={file => { setPhotoQualityIssue(null); scanActions.handleLeafImageCapture(file); }}
+                      key={`${scanState.owner}-closeup`}
+                      showGuidance={false}
                       captureRole="closeup"
+                      required={Boolean(routerLocation.state?.retakeReason)}
                       onQualityIssue={(code, role) => setPhotoQualityIssue({ code, role })}
                       currentImage={selectedLeafImage}
                     />
                   </details>
 
+                  </div>
+                  <PlantCheckGuide />
+                  <details className="ui-disclosure">
+                    <summary>{t('results.optionalSymptoms')}</summary>
+                    <ScanCaptureContext value={captureContext} onChange={setCaptureContext} disabled={loading} />
+                  </details>
+                  {(selectedImage || selectedLeafImage) && captureDraftControl}
+                  <ScanServiceNotice capture />
+                  {canRepeat && <section className="repeat-scan-details" aria-label={t('results.lastDetails')}>
+                    <h2>{t('results.lastDetails')}</h2><p>{scanState.selectedCrop || t(`home.category${selectedCategory.replace(/[^a-zA-Z0-9]/g, '')}`)} · {selectedScale === 'personal' ? t('home.personalScale') : <>{new Intl.NumberFormat(language).format(Number(scaleQuantity))} {t(`results.${selectedScale}${Number(scaleQuantity) === 1 ? 'Unit' : 'Units'}`)}</>}</p>
+                    <DataConsentToggle disabled={loading} />
+                  </section>}
                   <div className="step-actions mt-xl">
                     <button className="btn btn-secondary" onClick={handleResetAndClose}>{t('common.cancel')}</button>
-                    <button className="btn btn-primary" onClick={handleNextStep} disabled={!selectedImage}>{t('common.next')}</button>
+                    {canRepeat && <button className="btn btn-secondary" onClick={() => scanActions.setStepClear(2)}>{t('results.changeDetails')}</button>}
+                    <button className="btn btn-primary" onClick={canRepeat ? handleRepeatScan : handleNextStep} disabled={!selectedImage || Boolean(routerLocation.state?.retakeReason && !selectedLeafImage) || (canRepeat && (scanService.checking || ['offline', 'unavailable'].includes(scanService.status)))}>{t(canRepeat ? 'results.repeatAnalyse' : 'common.next')}</button>
                   </div>
 
 
@@ -696,14 +785,17 @@ const Home = () => {
               {currentStep === 2 && (
                 <div className="step-wrapper">
                   <div className="step-header mb-lg mt-xl">
-                    <h2>{t('home.step2Title')}</h2>
+                    <h1 ref={stepHeading} tabIndex={-1} className="scan-step-title">{t('home.step2Title')}</h1>
                     <p>{t('home.step2Desc')}</p>
                   </div>
                   <PlantCategorySelector
                     selected={selectedCategory}
                     onSelect={handleCategorySelect}
+                    crop={scanState.selectedCrop}
+                    onCropSelect={scanActions.setCrop}
                   />
 
+                  {detailsError && <p role="alert">{detailsError}</p>}
                   <div className="scale-selection-section mt-md">
 
                     <FarmScaleSelector
@@ -717,10 +809,13 @@ const Home = () => {
 
                   <DataConsentToggle disabled={loading} />
 
+                  {(selectedImage || selectedLeafImage) && captureDraftControl}
+                  <ScanServiceNotice capture />
                   <div className="step-actions">
                     <button className="btn btn-secondary" onClick={scanActions.prevStep}>{t('common.back')}</button>
-                    <button className="btn btn-primary" onClick={handleNextStep}>{t('home.analyzeButton')}</button>
+                    <button className="btn btn-primary" disabled={scanService.checking || ['offline', 'unavailable'].includes(scanService.status)} onClick={handleNextStep}>{t('home.analyzeButton')}</button>
                   </div>
+                  {canQueueCheck && <button type="button" className="btn btn-primary scan-queue-check" disabled={queueing} onClick={handleQueueCheck}>{t(queueing ? 'results.draftSaving' : 'results.queueCheck')}</button>}
                 </div>
               )}
             </div>

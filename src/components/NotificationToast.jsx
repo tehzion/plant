@@ -5,24 +5,24 @@ import './NotificationToast.css';
 
 const THEME = {
   success: {
-    bg: '#F0FDF4',
-    border: '#22C55E',
-    icon: <CheckCircle size={22} color="#16A34A" />,
+    bg: 'var(--color-primary-light)',
+    border: 'var(--color-primary-border)',
+    icon: <CheckCircle size={22} color="var(--color-primary)" />,
   },
   error: {
-    bg: '#FEF2F2',
-    border: '#EF4444',
-    icon: <AlertTriangle size={22} color="#EF4444" />,
+    bg: 'var(--color-danger-bg)',
+    border: 'var(--color-danger-border)',
+    icon: <AlertTriangle size={22} color="var(--color-severe)" />,
   },
   warning: {
-    bg: '#FFFBEB',
-    border: '#F59E0B',
-    icon: <AlertTriangle size={22} color="#D97706" />,
+    bg: 'var(--color-warning-bg)',
+    border: 'var(--color-warning-border)',
+    icon: <AlertTriangle size={22} color="var(--color-moderate)" />,
   },
   info: {
-    bg: '#EFF6FF',
-    border: '#3B82F6',
-    icon: <Info size={22} color="#2563EB" />,
+    bg: 'var(--color-info-bg)',
+    border: 'var(--color-info-border)',
+    icon: <Info size={22} color="var(--color-info-ink)" />,
   },
 };
 

@@ -1,7 +1,7 @@
 import { Suspense, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { Mail, Lock, ArrowRight, AlertCircle, ClipboardList } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, ClipboardList, Sprout, History } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
@@ -12,8 +12,9 @@ import './Login.css';
 const UserDashboardPanel = lazyWithRetry(() => import('../components/UserDashboardPanel'), 'dashboard-panel');
 
 const Login = () => {
-    const { t } = useLanguage();
+    const { language, t } = useLanguage();
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const { user, signIn, signUp, resetPasswordForEmail, demoAuthEnabled } = useAuth();
     const label = (key, fallback) => {
         const translated = t(key);
@@ -28,12 +29,16 @@ const Login = () => {
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const hasPendingFollowUp = !user && Boolean(peekFollowUpDraft());
+    // "My farm" is a bottom tab, so a signed-out farmer lands here without
+    // asking to sign in. Say what an account is for before showing the form.
+    const isFarmTab = pathname === '/profile';
+    const [showAuthForm, setShowAuthForm] = useState(() => !isFarmTab || hasPendingFollowUp);
 
     // Already logged in: show the full dashboard panel.
     if (user) {
         return (
-            <div className="login-page" style={{ alignItems: 'flex-start', paddingTop: '16px' }}>
-                <div style={{ width: '100%', maxWidth: 'var(--width-superapp, 680px)', margin: '0 auto' }}>
+            <div className="farm-workspace page">
+                <div className="farm-workspace-shell">
                     <Suspense fallback={<div className="page-loading"><LoadingSpinner /></div>}>
                         <UserDashboardPanel />
                     </Suspense>
@@ -70,7 +75,7 @@ const Login = () => {
                 navigate('/profile');
             } else {
                 await signUp(email, password);
-                setSuccessMsg(t('login.checkEmail') || 'Account created! Check your email to confirm, then sign in.');
+                setSuccessMsg(label('login.checkEmail', 'Check your email for a confirmation link, then sign in. If no email arrives, check your spam folder or try signing in.'));
                 setIsLogin(true);
                 setPassword('');
             }
@@ -92,12 +97,66 @@ const Login = () => {
         }
     };
 
+    const openAuthForm = (signIn) => {
+        setIsLogin(signIn);
+        setIsRecovery(false);
+        setShowAuthForm(true);
+    };
+
+    const guestExit = isFarmTab && (
+        <div className="farm-intro-guest">
+            <button type="button" className="farm-intro-guest-btn" onClick={() => navigate('/')}>
+                {t('login.farmIntroGuest')}
+            </button>
+            <p>{t('login.farmIntroGuestNote')}</p>
+        </div>
+    );
+
+    if (!showAuthForm) {
+        const benefits = [
+            { icon: Sprout, text: t('login.farmIntroPlots') },
+            { icon: ClipboardList, text: t('login.farmIntroLogs') },
+            { icon: History, text: t('login.farmIntroHistory') },
+        ];
+
+        return (
+            <div className="login-page">
+                <div className="login-container">
+                    <section className="login-card farm-intro" aria-labelledby="farm-intro-title">
+                        <div className="login-header">
+                            <h1 id="farm-intro-title" className="login-title">{t('login.farmIntroTitle')}</h1>
+                            <p className="login-subtitle">{t('login.farmIntroSubtitle')}</p>
+                        </div>
+
+                        <ul className="farm-intro-list">
+                            {benefits.map(({ icon: Icon, text }) => (
+                                <li key={text}>
+                                    <Icon size={20} aria-hidden="true" />
+                                    <span>{text}</span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <button type="button" className="login-btn" onClick={() => openAuthForm(true)}>
+                            <span>{t('login.signIn') || 'Sign In'}</span>
+                            <ArrowRight size={20} aria-hidden="true" />
+                        </button>
+                        <button type="button" className="farm-intro-register" onClick={() => openAuthForm(false)}>
+                            {t('login.register') || 'Create Account'}
+                        </button>
+
+                        {guestExit}
+                    </section>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="login-page">
             <div className="login-container">
                 <div className="login-card fade-in">
                     <div className="login-header">
-                        <span className="login-kicker">KANB</span>
                         <h2 className="login-title">
                             {isRecovery ? t('login.recoveryTitle') : isLogin ? (t('login.welcomeBack') || 'Welcome Back') : (t('login.register') || 'Create Account')}
                         </h2>
@@ -123,7 +182,7 @@ const Login = () => {
                         </div>
                     )}
                     {successMsg && (
-                        <div className="auth-alert auth-alert--success">
+                        <div className="auth-alert auth-alert--success" role="status">
                             <span>{successMsg}</span>
                         </div>
                     )}
@@ -163,6 +222,7 @@ const Login = () => {
                             </div>
                         </div>
 
+                        <p className="login-privacy-note">{language === 'ms' ? 'E-mel dan kata laluan diperlukan untuk akaun. Perkongsian AI pilihan berasingan; rekod tetamu tidak dimuat naik secara automatik.' : 'Email and password are needed for an account. Optional AI sharing is separate; guest records are not uploaded automatically.'} <Link to="/privacy">{language === 'ms' ? 'Notis privasi' : 'Privacy notice'}</Link> · <Link to="/privacy-controls">{language === 'ms' ? 'Kawalan data' : 'Data controls'}</Link></p>
                         <button type="submit" className="login-btn" disabled={loading}>
                             {loading ? (
                                 <span className="btn-spinner" />
@@ -189,6 +249,8 @@ const Login = () => {
                             )}
                         </span>
                     </div>}
+
+                    {guestExit}
 
                     <div className="login-footer">
                         <p>

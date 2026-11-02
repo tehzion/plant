@@ -1,5 +1,7 @@
 /* Shared interaction and field UI primitives. */
-:root { --mobile-nav-clearance: 132px; --color-action: #15803d; --color-review-bg: #fffbeb; --color-review-ink: #92400e; }
+/* On phones the chat button floats 76-128px above the bottom edge; the extra
+   clearance lets the end of every page scroll clear of it. */
+:root { --mobile-nav-clearance: 84px; --assistant-fab-clearance: 44px; --color-action: #2e6b3f; --color-review-bg: #fffbeb; --color-review-ink: #92400e; }
 html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-area-inset-bottom, 0px)); }
 .btn-primary { background: var(--color-action); }
 .app-header__refresh-btn, .custom-modal-close { min-width: 44px; min-height: 44px; }
@@ -27,7 +29,7 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
 .quick-actions .action-btn { font-size: .875rem; }
 @media (max-width: 768px) {
  .app { padding-bottom: 0; }
- .app .main-content { padding-bottom: calc(var(--mobile-nav-clearance) + env(safe-area-inset-bottom, 0px)); }
+ .app .main-content { padding-bottom: calc(var(--mobile-nav-clearance) + var(--assistant-fab-clearance) + env(safe-area-inset-bottom, 0px)); }
  .page { padding-bottom: 24px !important; }
  .nav-item-label { overflow-wrap: anywhere; line-height: 1.25 !important; }
  .app-header__status-cluster { flex-wrap: wrap; }
@@ -45,9 +47,10 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
  .app-header__content { flex-wrap: wrap; }
  .app-header__nav { order: 3; flex: 1 0 100%; justify-content: center; }
 }
-.results-followup-group .follow-up-card { flex-direction: column; align-items: flex-start; }
+.results-followup-group .follow-up-card { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.results-followup-group .follow-up-icon { width: 36px; height: 36px; }
 .results-followup-group .follow-up-copy { min-width: 0; width: 100%; }
-.results-followup-group .follow-up-btn { width: 100%; }
+.results-followup-group .follow-up-btn { grid-column: 1 / -1; width: 100%; justify-content: center; white-space: normal; }
 .results-followup-group .results-section-kicker { overflow-wrap: normal; }
 .status-badge-mini.status-review { background: var(--color-review-bg); color: var(--color-review-ink); }
 .scan-badge-row { flex-wrap: wrap; }
@@ -65,14 +68,14 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
 /* Semantic primitives shared by dashboard, history, and saved results. */
 :root {
  --ui-card-bg: #fff;
- --ui-card-border: #e2e8f0;
+ --ui-card-border: var(--color-border);
  --ui-card-radius: 16px;
- --ui-status-healthy-bg: #ecfdf5;
- --ui-status-healthy-ink: #166534;
- --ui-status-unhealthy-bg: #fef2f2;
- --ui-status-unhealthy-ink: #991b1b;
- --ui-status-review-bg: #fffbeb;
- --ui-status-review-ink: #92400e;
+ --ui-status-healthy-bg: var(--color-primary-light);
+ --ui-status-healthy-ink: var(--color-primary-dark);
+ --ui-status-unhealthy-bg: var(--color-danger-bg);
+ --ui-status-unhealthy-ink: var(--color-danger-ink);
+ --ui-status-review-bg: var(--color-warning-bg);
+ --ui-status-review-ink: var(--color-warning-ink);
 }
 .ui-card { padding: 20px; border: 1px solid var(--ui-card-border); border-radius: var(--ui-card-radius); background: var(--ui-card-bg); min-width: 0; }
 .ui-muted { color: var(--color-text-secondary); line-height: 1.6; }
@@ -109,3 +112,17 @@ html { scroll-padding-block: 110px calc(var(--mobile-nav-clearance) + env(safe-a
  outline: 3px solid var(--color-action);
  outline-offset: 3px;
 }
+.ui-card--compact { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; margin-bottom: 16px; font-size: var(--font-size-sm); }
+.ui-card--compact p { margin: 0; }
+.ui-card--compact .ui-action-row { margin-top: 0; }
+.results-next-action { margin: 0 0 24px; display: flex; flex-wrap: wrap; gap: 10px; }
+.results-next-action .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+.farm-attention { padding-block: 20px; border-block: 1px solid var(--color-border); margin-top: 20px; }
+.farm-attention ul { list-style: none; padding: 0; }
+.farm-attention li + li { border-top: 1px solid var(--color-border); }
+.farm-attention a { display: grid; gap: 6px; min-height: 48px; padding-block: 14px; text-underline-offset: 3px; }
+.farm-attention a span, .farm-attention time { color: var(--color-text-secondary); font-size: 1rem; }
+.farm-overview-empty .btn { margin-top: 16px; }
+.udp-empty p { max-width: 48ch; margin-inline: auto; line-height: 1.6; }
+.udp-empty .btn { margin-top: 16px; min-height: 44px; }

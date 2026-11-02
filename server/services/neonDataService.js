@@ -5,7 +5,7 @@ import { foldOptionalColumns, isUndefinedColumnError, OPTIONAL_COLUMNS } from '.
 const DATASETS = Object.freeze({
     profiles: {
         table: 'profiles', owner: 'user_id', key: 'user_id',
-        fields: ['name', 'contact', 'crops', 'member_since', 'updated_at'],
+        fields: ['name', 'contact', 'crops', 'member_since', 'farm_name', 'farm_address', 'land_tenure', 'mygap_ref', 'cert_expiry', 'workers', 'updated_at'],
         order: 'updated_at',
     },
     scan_history: {
@@ -15,7 +15,7 @@ const DATASETS = Object.freeze({
     },
     mygap_logs: {
         table: 'mygap_logs', owner: 'user_id', key: 'id',
-        fields: ['id', 'type', 'notes', 'activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'created_at'], order: 'created_at',
+        fields: ['id', 'type', 'notes', 'activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'amount', 'unit', 'supplier', 'price', 'buyer', 'lot_code', 'topic', 'attendees', 'created_at'], order: 'created_at',
     },
     mygap_checklist: {
         table: 'mygap_checklist', owner: 'user_id', key: 'user_id',

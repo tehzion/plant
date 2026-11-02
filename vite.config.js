@@ -96,10 +96,31 @@ export default defineConfig(async ({ mode }) => {
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // The page is not precached: a precached copy keeps the security headers it
+        // was saved with, so a server-side fix (such as allowing Supabase) would never
+        // reach returning visitors. Online, pages come from the network; offline, the
+        // last copy of the app shell is used.
+        globIgnores: ['index.html'],
+        navigateFallback: null,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
         runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-pages',
+              networkTimeoutSeconds: 5,
+              cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  // Offline on a page never opened before: serve the cached app shell.
+                  handlerDidError: async () => (await caches.match('/')) || Response.error(),
+                },
+              ],
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/,
             handler: 'CacheFirst',
@@ -158,27 +179,8 @@ export default defineConfig(async ({ mode }) => {
               ) {
                 return 'vendor-charts';
               }
-              if (
-                id.includes('jspdf') ||
-                id.includes('/fflate/') ||
-                id.includes('\\fflate\\')
-              ) {
-                return 'vendor-pdf';
-              }
-              if (
-                id.includes('html2canvas') ||
-                id.includes('canvg') ||
-                id.includes('rgbcolor') ||
-                id.includes('stackblur-canvas') ||
-                id.includes('svg-pathdata') ||
-                id.includes('/raf/') ||
-                id.includes('\\raf\\') ||
-                id.includes('performance-now') ||
-                id.includes('/core-js/') ||
-                id.includes('\\core-js\\')
-              ) {
-                return 'vendor-canvas';
-              }
+              // jsPDF and html2canvas stay out of manualChunks: grouping them pulled shared
+              // helpers into their chunk, so every first visit preloaded ~380 KB of PDF code.
               if (id.includes('qrcode')) return 'vendor-qrcode';
               if (id.includes('@supabase') || id.includes('openai')) return 'vendor-services';
             }
