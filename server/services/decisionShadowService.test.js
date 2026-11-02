@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { applyDecisionCheck, createDecisionShadowService, resolveDecisionCheckMode } from './decisionShadowService.js';
 import { trackAiUsage } from '../utils/aiUsage.js';
+import { getScanSectionPolicy } from '../../shared/scanResultPolicy.js';
 const image = 'data:image/jpeg;base64,/9j/';
 const prediction = { disease: 'Apple scab', plantType: 'Apple', healthStatus: 'unhealthy', diseaseCategory: 'fungal', confidence: 92,
     status: 'high_confidence', analysisMetadata: {model:'openai/gpt-5.4-mini-2026-03-17'} };
@@ -28,6 +29,11 @@ describe('Decisions shadow trial',()=>{
             expect((await createDecisionShadowService({env:settings,fetchImpl})(args)).status).toBe('skipped');
         }
         expect(fetchImpl).not.toHaveBeenCalled();
+    });
+    it('checks answers from Gemini 3.8 Flash as well',async()=>{
+        const fetchImpl=success();
+        const args={...input(),prediction:{...prediction,analysisMetadata:{model:'google/gemini-3.8-flash'}}};
+        expect((await createDecisionShadowService({env:env(),fetchImpl})(args)).status).toBe('checked');
     });
     it('caps calls and reserves budget before concurrent requests',async()=>{
         const fetchImpl=success(),check=createDecisionShadowService({env:{...env(),DECISIONS_SHADOW_MAX_REQUESTS:'2',DECISIONS_SHADOW_MAX_COST_USD:'.01'},fetchImpl});
@@ -97,6 +103,21 @@ describe('Decisions enforce mode',()=>{
             secondCheck:{applied:true,supportedAlternatives:['Apple rust']}});
         expect(applied.abstainReason).toMatch(/Apple rust/);
         expect(applied.structuredAssessment.recommendations).toMatchObject({product_matching_eligible:false,chemical_treatment_withheld:true});
+    });
+    it('takes fertiliser suggestions away when the photo does not back the deficiency',async()=>{
+        const deficiency={disease:'Potassium Deficiency',plantType:'Rice',healthStatus:'unhealthy',diseaseCategory:'nutrient',
+            resultState:'possible_nutrient_issue',confidence:80,nutritionalIssues:{status:'confirmed',deficientNutrients:['Potassium']},
+            differentialDiagnoses:[{name:'Bacterial Leaf Blight'}],analysisMetadata:{model:'google/gemini-3.8-flash'}};
+        const doubts=createDecisionShadowService({env:enforceEnv(),fetchImpl:answering(name=>name==='health_triage'
+            ?{type:'choice',choice:'abnormal',confidence:.95}:predicate(name==='support_0'?.2:name==='support_1'?.9:name==='clear_enough'?.95:.1))});
+        const result=await doubts({...input(),prediction:structuredClone(deficiency)});
+        expect(result).toMatchObject({applied:true,wouldRemoveProducts:true,supportedAlternatives:['Bacterial Leaf Blight']});
+        const applied=applyDecisionCheck(structuredClone(deficiency),result,'en');
+        expect(getScanSectionPolicy(applied)).toMatchObject({showNutritionProducts:false,showDiseaseProducts:false});
+        expect(applied.abstainReason).toMatch(/Bacterial Leaf Blight.*any product/);
+        const agrees=createDecisionShadowService({env:enforceEnv(),fetchImpl:answering(name=>name==='health_triage'
+            ?{type:'choice',choice:'abnormal',confidence:.95}:predicate(name==='support_0'?.9:name==='clear_enough'?.95:.1))});
+        expect(await agrees({...input(),prediction:structuredClone(deficiency)})).toMatchObject({applied:false,reasons:[]});
     });
     it('keeps a healthy result when the checker is merely unsure, and reviews it on clear signs',async()=>{
         const healthy={disease:'Healthy',plantType:'Apple',healthStatus:'healthy',status:'healthy',diagnosisConfidence:92,confidence:92,

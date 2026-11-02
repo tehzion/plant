@@ -1,7 +1,7 @@
 import { assessScanDecision, confidencePercent, getScanSectionPolicy, isNoIssueDiagnosis } from '../../shared/scanResultPolicy.js';
 import { normalizeNutritionalIssues, resolveScanNutrition } from './nutritionUtils.js';
 import { getStandardizedSeverity } from './statusUtils.js';
-import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
+import { getScanQualityCopy, scoutCheckLines } from '../../shared/scanQualityCopy.js';
 
 const list = (value) => Array.isArray(value) ? value.filter(item => typeof item === 'string')
     : typeof value === 'string' ? value.split(/\r?\n|•|;/).map(item => item.trim()).filter(Boolean) : [];
@@ -26,7 +26,7 @@ export const buildScanResultModel = (input = {}, language = input.analysisLangua
             || (decision.healthy ? copy.nextHealthy : decision.treatmentEligible ? copy.nextTreat : copy.nextScout),
         symptoms: list(scan.symptoms),
         immediateActions: decision.needsReview
-            ? [...(decision.urgent ? [copy.urgent] : []), decision.requiresRetake ? copy.nextRetake : copy.nextScout]
+            ? [...(decision.urgent ? [copy.urgent] : []), ...(decision.requiresRetake ? [copy.nextRetake] : [copy.nextScout, ...scoutCheckLines(scan, language)])]
             : list(scan.immediateActions),
         prevention: decision.needsReview ? [] : list(scan.prevention),
         diagnosticEvidence: { ...scan.diagnosticEvidence,

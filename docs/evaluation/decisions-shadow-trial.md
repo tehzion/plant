@@ -14,7 +14,7 @@ DECISIONS_SHADOW_MAX_COST_USD=0.05
 DECISIONS_SHADOW_TIMEOUT_MS=3000
 ```
 
-For a trial, set the enabled flag to `true` only on the intended server. The service also requires the existing OpenRouter provider/key, a primary `gpt-5.4-mini` diagnosis, and the farmer's existing explicit `dataConsent.aiImprovement` opt-in. No new consent screen was added. Cached assessments do not trigger another checker call.
+For a trial, set the enabled flag to `true` only on the intended server. The service also requires the existing OpenRouter provider/key, a primary `gpt-5.4-mini` or `google/gemini-3.8-flash` diagnosis, and the farmer's existing explicit `dataConsent.aiImprovement` opt-in. No new consent screen was added. Cached assessments do not trigger another checker call.
 
 The checker runs once, with no retries, and at most two distinct photos. It asks the real `openai/gpt-6-luna-decisions` model via OpenRouter's `/api/alpha/decisions` endpoint. Requests inspect capture clarity, observable symptoms, visible health and support for the proposed diagnosis. Typed answers are validated and sanitized; invalid answers and refusals cannot create a healthy or treatment-ready decision.
 
@@ -26,10 +26,12 @@ Request and cost reservations happen before the network call. Limits are **per s
 
 `DECISIONS_CHECK_MODE=enforce` makes the second check part of the decision. It runs before the result is sent and before caching, within the same bounded timeout.
 
-- It only acts on a result the existing policy would show as treatment-ready or healthy.
+- It only acts on a result the existing policy would show as treatment-ready or healthy, or one that would suggest fertiliser or supplement products.
 - It switches the result to expert review only on confident contrary evidence (threshold 0.7):
   - **Treatment-ready result:** the photo is unclear, support for the diagnosis is weak, the check says the plant looks healthy, or one of the listed look-alike diseases is better supported than the diagnosis. Alternatives come from the result's own differential diagnoses (up to three).
   - **Healthy result:** the check sees an abnormality or a specific symptom.
+  - **Fertiliser or supplement suggestion** (for example a nutrient deficiency): the same checks as a treatment-ready result.
+- A vetoed result is marked `secondCheck.applied`. The shared section policy then shows no store products of any kind (treatment, fertiliser or supplement) on the result page, in the PDF or from `/api/products/search`, and the farmer is told to ask an expert before buying or using any product.
 - When it acts, treatments and prevention products are removed, the next step becomes a scouting check, and the farmer is told why in plain words (en/ms/zh). The result records `secondCheck` and its saved decision snapshot is marked for review.
 - It never clears a review flag, raises confidence or unlocks treatment. If the check is skipped, times out or fails, the original result stands.
 - Enforce mode does not require `aiImprovement` consent, because the check is part of producing the farmer's own result, not research. The photo is still sent to OpenRouter for that check. Confirm this is acceptable under the privacy notice before enabling it.

@@ -79,3 +79,27 @@ describe('saved decision snapshot', () => {
         expect(model.immediateActions[0]).toMatch(/Pejabat Pertanian Daerah/);
     });
 });
+
+describe('what to check when the result is unsure', () => {
+    const unsure = { disease: 'No Issues', plantType: 'Rice', healthStatus: 'healthy', confidence: 70, confidenceLevel: 'medium',
+        differentialDiagnoses: [
+            { name: 'Brown Spot', distinguishingFeatures: ['Small oval brown spots with grey centres.'] },
+            { name: 'Rice Blast', distinguishingFeatures: 'Diamond-shaped grey lesions with brown edges' },
+            { name: 'brown spot', distinguishingFeatures: ['duplicate'] },
+            { name: 'Leaf Scald', distinguishingFeatures: [] },
+        ] };
+
+    it('turns the listed look-alikes into concrete checks', () => {
+        expect(buildScanResultModel(unsure, 'en').immediateActions).toEqual([
+            expect.stringMatching(/^Field scouting/),
+            'Check for Brown Spot: Small oval brown spots with grey centres',
+            'Check for Rice Blast: Diamond-shaped grey lesions with brown edges',
+        ]);
+        expect(buildScanResultModel(unsure, 'ms').immediateActions[1]).toBe('Periksa Brown Spot: Small oval brown spots with grey centres');
+    });
+
+    it('asks only for a new photo when a retake is needed', () => {
+        const model = buildScanResultModel({ ...unsure, requiresRetake: true, status: 'retake_required' }, 'en');
+        expect(model.immediateActions.some((line) => line.startsWith('Check for'))).toBe(false);
+    });
+});

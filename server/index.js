@@ -28,8 +28,8 @@ import { syncOperation } from './services/syncService.js';
 import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
-import { partitionByEligibility } from './services/productEligibility.js';
-import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
+import { partitionByEligibility, selectRecoverySupport } from './services/productEligibility.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
@@ -946,6 +946,12 @@ app.post('/api/products/search', async (req, res, next) => {
             ? nutritionList(enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules), 'supplement')
             : [];
         
+        // Disease scans get KANB plant-health products beside, never instead of, the expert advice.
+        const shownIds = new Set([...finalTreatment, ...catalogueDiscovery, ...finalFertilizers, ...finalSupplements].map((product) => String(product.id)));
+        const recoverySupport = sectionPolicy.showRecoveryProducts
+            ? selectRecoverySupport((await getAllProducts({ signal: requestController.signal })).filter((product) => !shownIds.has(String(product.id))), diagnosis, targetLanguage)
+            : [];
+
         // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
         const otherPopular = [];
         const recommendationIntent = getProductRecommendationIntent(diagnosis, {
@@ -956,7 +962,7 @@ app.post('/api/products/search', async (req, res, next) => {
         const consultation = buildProductConsultation(diagnosis, recommendationIntent, targetLanguage);
         let fallbackMeta = null;
 
-        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular | intent=${recommendationIntent}`);
+        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${recoverySupport.length} recovery | intent=${recommendationIntent}`);
         
         if (recommendationIntent === PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY) {
             fallbackMeta = {
@@ -986,6 +992,7 @@ app.post('/api/products/search', async (req, res, next) => {
             supplements: finalSupplements,
             otherPopular: otherPopular,
             catalogueDiscovery,
+            recoverySupport,
             eligibilitySummary: {
                 eligibleTreatments: finalTreatment.length,
                 discoveryOnly: treatmentSplit.discovery.length,

@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
     analyze: vi.fn(), identify: vi.fn(), identifyGpt: vi.fn(), logTraining: vi.fn(), logFeedback: vi.fn(), logAssistantFeedback: vi.fn(), withdrawImages: vi.fn(),
     buildKeywordProductRecommendation: vi.fn(), canRecommendTreatmentProducts: vi.fn(), enrichRecommendedProducts: vi.fn(),
     getProductRecommendationIntent: vi.fn(), buildProductConsultation: vi.fn(),
-    getAllTags: vi.fn(), getAllCategories: vi.fn(), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
+    getAllTags: vi.fn(), getAllCategories: vi.fn(), getAllProducts: vi.fn(async () => []), getProductsByTagIds: vi.fn(), getStoreUrl: vi.fn(),
     isWooCommerceEnabled: vi.fn(), getDiseaseProductRules: vi.fn(), saveSnapshot: vi.fn(async () => true),
 }));
 vi.mock('./services/aiService.js', () => ({
@@ -22,7 +22,7 @@ vi.mock('./services/aiService.js', () => ({
     },
 }));
 vi.mock('./services/wooCommerceService.js', () => ({
-    getAllTags: mocks.getAllTags, getAllCategories: mocks.getAllCategories, getProductsByTagIds: mocks.getProductsByTagIds, getStoreUrl: mocks.getStoreUrl,
+    getAllTags: mocks.getAllTags, getAllCategories: mocks.getAllCategories, getAllProducts: mocks.getAllProducts, getProductsByTagIds: mocks.getProductsByTagIds, getStoreUrl: mocks.getStoreUrl,
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
     getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
 }));
@@ -359,6 +359,23 @@ describe('product search section grouping', () => {
         expect(body.catalogueDiscovery[0]).toMatchObject({ discoveryOnly: true, eligibility: { status: 'needs_verification' } });
         expect(body.eligibilitySummary).toEqual({ eligibleTreatments: 1, discoveryOnly: 1, excludedAsUnsuitable: 1 });
         expect(JSON.stringify(body)).not.toContain('Glyphosate');
+    });
+
+    it('adds plant-health products to an unsure disease result, but not to a retake or a vetoed result', async () => {
+        mocks.getAllProducts.mockResolvedValueOnce([
+            { id: 201, name: 'Oligo Chitosan', tags: ['Chitosan', 'Plant Immunity Booster'] },
+            { id: 202, name: 'Compost', tags: ['Soil Conditioner'] },
+        ]);
+        mocks.canRecommendTreatmentProducts.mockReturnValue(false);
+        const unsure = { disease: 'Brown Spot', plantType: 'Rice', diseaseCategory: 'fungal', healthStatus: 'unhealthy', confidence: 60, resultState: 'expert_review_needed' };
+        const body = (await invoke('/api/products/search', { body: { diagnosis: unsure, language: 'en' } })).json.mock.calls[0][0];
+        expect(body.diseaseControl).toEqual([]);
+        expect(body.recoverySupport).toEqual([expect.objectContaining({ id: 201, recoveryOnly: true, recommendationReason: expect.stringMatching(/does not cure/) })]);
+
+        for (const diagnosis of [{ ...unsure, requiresRetake: true }, { ...unsure, secondCheck: { applied: true } }]) {
+            const blocked = (await invoke('/api/products/search', { body: { diagnosis, language: 'en' } })).json.mock.calls[0][0];
+            expect(blocked.recoverySupport).toEqual([]);
+        }
     });
 
     it('records the shown products on the scan only for a valid scan capability', async () => {

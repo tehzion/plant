@@ -56,6 +56,7 @@ export const createEmptyProductRecommendations = () => ({
     supplements: [],
     otherPopular: [],
     catalogueDiscovery: [],
+    recoverySupport: [],
     reasoning: '',
     fallbackMeta: null,
     recommendationIntent: '',
@@ -139,6 +140,7 @@ export const buildProductDiagnosisPayload = ({ plantType = '', disease = '', sca
     diagnosticEvidence: normalizeDiagnosticEvidence(scanResult?.diagnosticEvidence),
     nutritionalStatus: normalizeText(scanResult?.nutritionalIssues?.status),
     sectionPolicy: scanResult?.sectionPolicy || null,
+    secondCheck: scanResult?.secondCheck?.applied ? { applied: true } : null,
     nutritionalIssues: scanResult?.nutritionalIssues && typeof scanResult.nutritionalIssues === 'object'
       ? {
         status: normalizeText(scanResult.nutritionalIssues.status),
@@ -300,6 +302,7 @@ export const normalizeProductRecommendationsResponse = (data = {}) => ({
     supplements: normalizeProductList(data?.supplements),
     otherPopular: normalizeProductList(data?.otherPopular),
     catalogueDiscovery: normalizeProductList(data?.catalogueDiscovery).map((product) => ({ ...product, discoveryOnly: true })),
+    recoverySupport: normalizeProductList(data?.recoverySupport).map((product) => ({ ...product, recoveryOnly: true })),
     reasoning: normalizeText(data?.reasoning),
     fallbackMeta: data?.fallbackMeta && typeof data.fallbackMeta === 'object' ? data.fallbackMeta : null,
     recommendationIntent: normalizeText(data?.recommendationIntent),
