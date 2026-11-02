@@ -769,11 +769,33 @@
     text-align: left;
 }
 
+.mygap-page-container .pillars-grid {
+    gap: var(--space-md);
+}
+
+.mygap-page-container .pillar-card {
+    padding: var(--space-md);
+}
+
+.mygap-page-container .pillar-card .pillar-description {
+    margin-bottom: 0;
+}
+
+/* A fixed 40px box keeps no room for the base padding, which squeezed the icon to 0px wide. */
 .mygap-page-container .pillar-icon-wrapper {
     width: 40px;
     height: 40px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
     margin: 0 0 8px;
     border-radius: var(--radius-md);
+}
+
+.mygap-page-container .pillar-icon-wrapper svg {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
 }
 
 .mygap-page-container .pillar-title {
