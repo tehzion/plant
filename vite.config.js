@@ -71,12 +71,12 @@ export default defineConfig(async ({ mode }) => {
       react(),
       VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['leaf-icon.svg', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Agropreneur - AI Agriculture Advisor',
         short_name: 'Agropreneur',
         description: 'AI-powered plant disease detection for Southeast Asian crops',
-        theme_color: '#2D5016',
+        theme_color: '#2e6b3f',
         background_color: '#F5F7F5',
         display: 'standalone',
         start_url: '/',
