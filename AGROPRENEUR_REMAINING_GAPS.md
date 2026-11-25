@@ -34,7 +34,7 @@
 | Offline **edits/deletes** of signed-in records are not queued (only creates and the checklist). | Extend queue to updates/deletes with revision checks (scans already support revisions). |
 | No conflict-resolution UI. | Conflicts are kept and counted; add a simple "keep mine / keep server" screen. |
 | Guest offline queue is only consumed by account migration. | Document this; guests remain local-only until they sign in. |
-| Cached cloud records live in IndexedDB on shared devices. | Cache is cleared on sign-out; consider an inactivity expiry. |
+| ~~Cached cloud records live in IndexedDB on shared devices.~~ Fixed | Cleared on sign-out, and now also when the app opens if that account has not been used on the phone for 30 days (`src/utils/cloudCacheExpiry.js`). Records waiting to sync are kept. |
 | Background Sync API not used. | Sync runs on reconnect / app focus; add Workbox Background Sync if needed. |
 
 ## P2 — product and compliance
@@ -76,7 +76,7 @@
 | ~~P1~~ Fixed | No end-to-end check that each disease maps to the right product class. | `server/services/productRecommendationMatrix.test.js` covers every curated rule plus healthy, retake and nutrient cases. |
 | ~~P1~~ Fixed | ~170 lines of unused AI product matcher (`recommendProductTags`). | Removed; product matching is rule-based only. |
 | ~~P1~~ Fixed | No error tracking and no AI cost per scan. | Opt-in Sentry (server + browser, scrubbed) via `SENTRY_DSN` / `VITE_SENTRY_DSN`; token usage and OpenRouter cost are stored per scan and reported by `npm run audit:metrics`. |
-| P1 | `aiService.js` is ~3,900 lines. | Split into diagnosis, ask, farm-insights and products modules. |
+| ~~P1~~ Fixed | `aiService.js` was ~4,000 lines. | Split into `server/services/ai/` (shared, client, diagnosis, products, farmInsights); `aiService.js` re-exports them so imports are unchanged. |
 | ~~P1~~ Fixed | No linter in CI. | `npm run lint` runs in `ci.yml` (PR #11, merged 25 Nov 2026). 77 warnings (mostly unused variables) remain; there are no errors. |
 | P2 | `.env.production` is tracked although `.gitignore` excludes it (public keys only). | Untrack once the `VITE_*` values are set in the host's build environment. |
 
@@ -109,6 +109,8 @@ Based on the DOA myGAP food-crop scheme (MS 1784, myGAP 4 record forms, 6-1 chec
 |---|---|
 | Plant-check critique (Results page) | Done in PR #26. Rechecked on master at 375px in BM: each of the four result types has its own headline and main button, the steps show without opening anything, the page is 1.5–2.2 screens and nothing scrolls sideways. |
 | Account consent, in-app "remove my photos", offline edits/deletes with "keep mine / keep server", verified telemetry identity, translated reviewer screens, review agreement report | Merged in PR #15 (25 Nov 2026). **Migration `0005_account_photo_consent.sql` (adds `profiles.data_consent`) is not yet applied to production;** until it is, signed-in farmers cannot save consent and stay opted out. |
-| Split `aiService.js` (~4,000 lines); inactivity expiry for cached cloud records | Open — PR #15 is merged, so these can start. |
+| Split `aiService.js`; 30-day expiry for cached cloud records | Done in PR #38. |
 | One production host for the API | Still an owner decision. The Vercel Analytics PRs (#1, #2) were closed on the assumption that Render is the host. |
+| Sharing a result | Shared text now ends with a link to the app home page (tagged `utm_source=share`), never to the farmer's own result. |
+| Product gap (no fungicides in the KANB store) | Results with no suitable product already send the farmer to the KANB agronomy team on WhatsApp. The registration lookup from PR #15 needs real registration data from the partner. |
 | Reviewer configuration, PDPA legal review, field accuracy, farmer usability sessions | Unchanged — need people, not code. |

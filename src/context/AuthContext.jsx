@@ -40,6 +40,13 @@ export const AuthProvider = ({ children }) => {
     useLayoutEffect(() => { setAssistantScanContext(null); setAssistantPageTopic(null); }, [dataOwner]);
 
     useEffect(() => { setConsentAccount(user?.id).catch(() => {}); }, [user?.id]);
+    const authLoading = user === undefined;
+    const signedInId = user?.id || null;
+    // Once sign-in state is known, drop cached cloud copies of accounts idle on this phone for 30 days.
+    useEffect(() => {
+        if (authLoading) return;
+        import('../utils/localStorage').then(({ expireIdleCloudReadCaches }) => expireIdleCloudReadCaches(signedInId)).catch(() => {});
+    }, [authLoading, signedInId]);
 
     useEffect(() => {
         purgeUnownedPrivacyStores();

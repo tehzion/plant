@@ -2,7 +2,8 @@ import CryptoJS from 'crypto-js';
 import { supabase } from '../lib/supabase';
 import { resolvePrivateImageUrl, uploadPrivateImage } from './privateImageStorage.js';
 import { parsePHIDays } from './phi.js';
-import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listRecords, listOperations, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
+import { expireIdleCloudCaches } from './cloudCacheExpiry.js';
+import { dataUrlToBlob, enqueueOperation, getMetadata, getRecord, isIndexedDbAvailable, listMetadata, listRecords, listOperations, putPhoto, putRecord, deleteRecord, setMetadata } from './indexedDbStorage.js';
 import { fetchNeonRows, neonApiRequest, neonDataRequest, neonDataRowRequest } from './neonApi.js';
 import { queueSyncRecord } from './syncQueue.js';
 
@@ -136,6 +137,13 @@ export const clearCloudReadCache = async (userId) => {
     await Promise.all(Object.keys(CLOUD_COLLECTION_TABLES).map((collection) => (
         setMetadata(`cloud-cache:${cloudOwner(userId)}:${collection}`, null).catch(() => {})
     )));
+};
+
+// Removes cached cloud copies for accounts not used on this phone for 30 days
+// (see cloudCacheExpiry.js). Safe to call on every app start.
+export const expireIdleCloudReadCaches = async (activeUserId = null) => {
+    if (!isIndexedDbAvailable()) return [];
+    return expireIdleCloudCaches({ activeUserId, listMetadata, setMetadata, clearCloudReadCache });
 };
 
 export const STORAGE_COLLECTION_KEYS = {

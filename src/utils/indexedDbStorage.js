@@ -172,6 +172,11 @@ export const getMetadata = async (key) => {
     return result?.value ?? null;
 };
 
+// Every metadata row whose key starts with the prefix (for housekeeping such as cache expiry).
+export const listMetadata = async (prefix = '') => (
+    await transaction(STORES.metadata, 'readonly', (store) => requestResult(store.getAll()))
+).filter((row) => String(row.key).startsWith(prefix));
+
 export const setMetadata = async (key, value) => transaction(STORES.metadata, 'readwrite', (store) => store.put({ key, value, updatedAt: new Date().toISOString() }));
 
 const decodeLegacy = (raw, secret) => {
