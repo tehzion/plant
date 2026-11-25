@@ -69,6 +69,8 @@ const FarmingNotices = ({ forecast = [] }) => {
                 </div>
             </div>
 
+            {forecast.length > 1 && <details className="fn-days-disclosure">
+            <summary>{label('home.forecastNextDays', 'Next few days')}</summary>
             <div className="fn-days-list app-surface app-surface--soft">
                 {forecast.slice(1).map((day, i) => {
                     const statusKey = day?.notice?.status || 'good';
@@ -93,6 +95,7 @@ const FarmingNotices = ({ forecast = [] }) => {
                     );
                 })}
             </div>
+            </details>}
         </div>
     );
 };

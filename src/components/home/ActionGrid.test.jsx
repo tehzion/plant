@@ -23,15 +23,15 @@ vi.mock('react-router-dom', () => ({
 }));
 
 describe('ActionGrid', () => {
-    it('keeps the plant check and history as first-class farm tools', () => {
-        const onScan = vi.fn();
+    it('offers only tools the navigation does not already have', () => {
+        render(<ActionGrid />);
 
-        render(<ActionGrid onScan={onScan} />);
+        expect(screen.queryByRole('button', { name: 'Check plant health' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'History' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'myGAP' })).toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Check plant health' }));
-        fireEvent.click(screen.getByRole('button', { name: 'History' }));
-
-        expect(onScan).toHaveBeenCalledTimes(1);
-        expect(navigateMock).toHaveBeenCalledWith('/history');
+        fireEvent.click(screen.getByRole('button', { name: 'User Guide' }));
+        expect(navigateMock).toHaveBeenCalledWith('/guide');
+        expect(screen.getByRole('button', { name: 'Products' })).toBeTruthy();
     });
 });

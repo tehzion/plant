@@ -1,43 +1,16 @@
 import { STORE_URL } from '../../utils/store.js';
 import React from 'react';
-import { BookOpen, ChevronRight, ClipboardCheck, ExternalLink, History, ScanLine, ShoppingBag, Sprout } from 'lucide-react';
+import { BookOpen, ChevronRight, ExternalLink, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { useNavigate } from 'react-router-dom';
 
-// Plain list of the farmer's other workflows. "Check plant health" keeps its
-// own panel above; it is repeated here only as the first row for consistency.
-const ActionGrid = ({ onScan }) => {
+// Only what the tab bar and header do not already offer. Plant check, history,
+// farm records and myGAP each have one place (the navigation), not two.
+const ActionGrid = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
 
     const actions = [
-        {
-            id: 'scan',
-            label: t('nav.checkPlant') || 'Check plant health',
-            icon: ScanLine,
-            onClick: onScan,
-        },
-        {
-            id: 'history',
-            label: t('nav.history') || 'History',
-            description: t('home.historyDesc'),
-            icon: History,
-            onClick: () => navigate('/history')
-        },
-        {
-            id: 'farm',
-            label: t('home.farmRecords') || 'Farm records',
-            description: t('home.farmRecordsDesc'),
-            icon: Sprout,
-            onClick: () => navigate('/profile')
-        },
-        {
-            id: 'mygap',
-            label: t('home.mygapTitle') || 'myGAP',
-            description: t('home.mygapToolDesc'),
-            icon: ClipboardCheck,
-            onClick: () => navigate('/mygap')
-        },
         {
             id: 'shop',
             label: t('nav.products') || 'Products',

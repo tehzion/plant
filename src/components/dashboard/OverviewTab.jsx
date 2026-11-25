@@ -16,17 +16,10 @@ import {
     ChevronRight,
     BookOpen,
     Database,
-    Leaf,
     ClipboardList,
-    Search,
-    FlaskConical,
-    Droplets,
-    Scissors,
-    PackageCheck,
 } from 'lucide-react';
 import { deriveFarmingNotice } from '../../hooks/useWeather';
 import SectionHeader from './SectionHeader';
-import { ACTIVITY_TYPES_CFG } from '../../data/config';
 
 const OverviewTab = ({
     alerts,
@@ -72,7 +65,6 @@ const OverviewTab = ({
         () => notes.filter((note) => note.activity_type === 'harvest'),
         [notes],
     );
-    const recentHistory = useMemo(() => scanHistory.slice(0, 3), [scanHistory]);
     const resolvedWeatherError = weatherError ? label(weatherError, weatherError) : '';
     const summaryCards = useMemo(() => ([
         {
@@ -150,35 +142,11 @@ const OverviewTab = ({
         return new Set(mapped);
     }, [recommendedActionIds]);
 
-    const activityQuickActions = useMemo(() => {
-        const iconMap = {
-            note: ClipboardList,
-            scout: Search,
-            spray: FlaskConical,
-            fertilize: Droplets,
-            prune: Scissors,
-            inspect: Search,
-            harvest: PackageCheck,
-            other: ClipboardList,
-        };
-
-        const fieldTone = { icon: 'var(--color-primary-dark)', bg: 'var(--color-primary-light)' };
-        const neutralTone = { icon: 'var(--color-earth-dark)', bg: 'var(--color-earth-tint)' };
-        const toneMap = { note: neutralTone, scout: fieldTone, spray: fieldTone, fertilize: fieldTone, prune: neutralTone, inspect: fieldTone, harvest: neutralTone, other: neutralTone };
-
-        return ACTIVITY_TYPES_CFG.map((activity) => ({
-            id: activity.value,
-            labelKey: `profile.${activity.key}`,
-            fallback: activity.label,
-            icon: iconMap[activity.value] ?? ClipboardList,
-            tone: toneMap[activity.value] ?? toneMap.note,
-            action: () => {
-                setTab('notes');
-                setAddingNote(true);
-                setNoteForm({ ...emptyForm, activity_type: activity.value });
-            },
-        }));
-    }, [emptyForm, setAddingNote, setNoteForm, setTab]);
+    const openActivityLog = () => {
+        setNoteForm({ ...emptyForm });
+        setAddingNote(true);
+        setTab('notes');
+    };
 
     const priorityCard = useMemo(() => {
         if (activeAlerts.length > 0) {
@@ -264,41 +232,33 @@ const OverviewTab = ({
 
     return (
         <div className="ov-shell">
-            {/* Shelf 1: Quick Actions (Activity Shortcuts) */}
-            <div className="udp-category-header">
-                <span className="udp-category-title">{label('profile.quickActions', 'Quick Actions')}</span>
+            {/* One next step, then one way to log. The activity type is chosen
+                inside the log form, so eight shortcut buttons are not needed here. */}
+            {(() => {
+                const PriorityIcon = priorityCard.icon;
+                return (
+                    <div className={`ov-priority-card ov-priority-card--${priorityCard.tone}`}>
+                        <div className="ov-priority-icon"><PriorityIcon size={22} aria-hidden="true" /></div>
+                        <div className="ov-priority-copy">
+                            <span className="ov-priority-kicker">{priorityCard.kicker}</span>
+                            <h2 className="ov-priority-title">{priorityCard.title}</h2>
+                            {priorityCard.description && <p className="ov-priority-desc">{priorityCard.description}</p>}
+                        </div>
+                        <button type="button" className="ov-priority-action" onClick={priorityCard.action}>
+                            {priorityCard.actionLabel}
+                        </button>
+                    </div>
+                );
+            })()}
+            <button type="button" className="btn btn-primary ov-log-activity" onClick={openActivityLog}>
+                <ClipboardList size={18} aria-hidden="true" />
+                {label('home.addActivity', 'Log activity')}
                 {recommendedActivityTypes.size > 0 && (
                     <span className="udp-insight-tag udp-insight-tag--warning udp-insight-tag--compact">
                         {recommendedActivityTypes.size} {label('profile.actionsRequired', 'actions required')}
                     </span>
                 )}
-            </div>
-            <div className="udp-shelf-container">
-                {activityQuickActions.map((qa) => {
-                    const Icon = qa.icon;
-                    const isRecommended = recommendedActivityTypes.has(qa.id);
-                    return (
-                        <button key={qa.id} className="udp-utility-card" onClick={qa.action}>
-                            <div 
-                                className={`udp-utility-icon-box ${isRecommended ? 'udp-utility-icon-box--recommended' : ''}`}
-                                style={{
-                                    '--udp-utility-bg': qa.tone.bg,
-                                    '--udp-utility-color': qa.tone.icon,
-                                    '--udp-utility-border': isRecommended ? qa.tone.icon : 'var(--color-border)',
-                                }}
-                            >
-                                <Icon size={24} />
-                                {isRecommended && (
-                                    <span className="udp-utility-indicator" />
-                                )}
-                            </div>
-                            <span className={`udp-utility-label ${isRecommended ? 'active' : ''}`}>
-                                {label(qa.labelKey, qa.fallback)}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+            </button>
 
             {/* Shelf 2: Farm Insights (Banner Cards) */}
             <div className="udp-category-header">
@@ -356,43 +316,6 @@ const OverviewTab = ({
                     <span className="udp-stat-pill-label">{label('profile.totalLog', 'Logs')}</span>
                     <span className="udp-stat-pill-value udp-stat-pill-value--info">{notes.length}</span>
                 </div>
-            </div>
-
-            {/* Shelf 4: Recent Activity (Image Cards) */}
-            <div className="udp-category-header">
-                <span className="udp-category-title">{label('profile.recentActivity', 'Recent Activity')}</span>
-                <button className="udp-category-action" onClick={() => navigate('/history')}>
-                    {label('common.seeAll', 'See all')}
-                </button>
-            </div>
-            <div className="udp-shelf-container udp-shelf-container--loose">
-                {recentHistory.length === 0 ? (
-                    <div className="udp-insight-card udp-insight-card--empty">
-                        <Sprout size={24} color="#94a3b8" />
-                        <span className="udp-empty-copy">{label('profile.noActivityYet', 'No recent field activity')}</span>
-                    </div>
-                ) : (
-                    recentHistory.map((scan) => (
-                        <button key={scan.id} className="udp-activity-card" onClick={() => scan?.id && navigate(`/results/${scan.id}`)}>
-                            <div className="udp-activity-img-wrapper">
-                                {scan.photo_url || scan.photo_base64 ? (
-                                    <img src={scan.photo_url || scan.photo_base64} alt="" className="udp-activity-img" />
-                                ) : (
-                                    <div className="udp-activity-img-fallback">
-                                        <Leaf size={32} color="#cbd5e1" />
-                                    </div>
-                                )}
-                            </div>
-                            <div className="udp-activity-info">
-                                <div className="udp-activity-heading">
-                                    {scan.healthStatus === 'healthy' ? <CheckCircle2 size={13} color="#10b981" /> : <AlertTriangle size={13} color="#ef4444" />}
-                                    <span className="ov-list-title udp-activity-title">{scan.disease || scan.name || 'Healthy'}</span>
-                                </div>
-                                <span className="ov-list-meta udp-activity-meta">{relDate(scan.timestamp ?? scan.created_at, t)}</span>
-                            </div>
-                        </button>
-                    ))
-                )}
             </div>
 
             {/* Management Utilities (Bottom Grid) */}

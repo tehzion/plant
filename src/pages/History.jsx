@@ -203,12 +203,6 @@ const History = () => {
                             </p>
                         </div>
                     </div>
-                    {hasScans && (
-                        <button onClick={handleClearAll} className="clear-btn app-pill">
-                            <Trash2 size={16} />
-                            {t('history.clearAll')}
-                        </button>
-                    )}
                 </div>
 
                 <div className="history-view-tabs" role="group" aria-label={t('history.scanHistory')}>
@@ -218,11 +212,16 @@ const History = () => {
                 {view === 'timeline' ? <FarmTimeline scans={scans} /> : <>
                 {hasScans && <section className="history-filters app-surface">
                     <label>{copy.search}<input type="search" value={filters.search} onChange={e => changeFilter('search', e.target.value)} /></label>
+                    <details className="history-more-filters" open={Boolean(filters.crop || filters.status || filters.date || filters.sort !== 'newest')}>
+                    <summary>{copy.moreFilters}</summary>
+                    <div className="history-more-filters__body">
                     <label>{copy.crop}<select value={filters.crop} onChange={e => changeFilter('crop', e.target.value)}><option value="">{copy.all}</option>{crops.map(crop => <option key={crop}>{crop}</option>)}</select></label>
                     <label>{copy.status}<select value={filters.status} onChange={e => changeFilter('status', e.target.value)}><option value="">{copy.all}</option>{['healthy','unhealthy'].map(status => <option key={status} value={status}>{t(`results.${status}`)}</option>)}<option value="review">{copy.inspect}</option><option value="due">{copy.due}</option></select></label>
                     <label>{copy.date}<select value={filters.date} onChange={e => changeFilter('date', e.target.value)}><option value="">{copy.all}</option><option value="week">{copy.week}</option><option value="month">{copy.month}</option></select></label>
                     <label>{copy.sort}<select value={filters.sort} onChange={e => changeFilter('sort', e.target.value)}><option value="newest">{copy.newest}</option><option value="oldest">{copy.oldest}</option></select></label>
                     <button className="btn btn-secondary" onClick={() => setFilters({search:'',crop:'',status:'',date:'',sort:'newest'})}>{copy.reset}</button>
+                    </div>
+                    </details>
                     {nextCursor && <p className="history-filter-scope">{t('common.historyScope')}</p>}
                     <p role="status" aria-live="polite">{visibleCount} / {scans.length}</p>
                 </section>}
@@ -341,6 +340,10 @@ const History = () => {
                                 {loadingMore ? (t('common.loading') || 'Loading…') : (t('history.loadMore') || 'Load more')}
                             </button>
                         )}
+                        <button type="button" onClick={handleClearAll} className="clear-btn history-clear-all">
+                            <Trash2 size={16} aria-hidden="true" />
+                            {t('history.clearAll')}
+                        </button>
                     </div>
                 )}
                 </>}

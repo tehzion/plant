@@ -197,10 +197,6 @@ vi.mock('./dashboard/NotesTab', () => ({
     ),
 }));
 
-vi.mock('./dashboard/ProductsTab', () => ({
-    default: () => <div data-testid="products-tab">Products tab</div>,
-}));
-
 vi.mock('./AlertDetailModal', () => ({
     default: () => <div data-testid="alert-modal">Alert modal</div>,
 }));
@@ -239,12 +235,10 @@ describe('UserDashboardPanel', () => {
         expect(await screen.findByTestId('notes-tab')).toHaveTextContent('spray|Copper|Risk warning');
     });
 
-    it('renders the products tab after switching from the dashboard shell', async () => {
+    it('keeps the shop out of My farm, which has one tab per farm job', () => {
         render(<UserDashboardPanel />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Products' }));
-
-        expect(await screen.findByTestId('products-tab')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Products' })).toBeNull();
     });
 
     it('consumes a scan follow-up draft and opens the daily log form from the URL', async () => {

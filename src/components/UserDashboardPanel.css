@@ -3646,8 +3646,8 @@
 }
 .farm-workspace .udp-note-text { font-size: 1rem; line-height: 1.6; }
 @media (max-width: 640px) {
-    .farm-workspace-nav.udp-shelf-container { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .farm-workspace-nav > .udp-utility-card { min-width: 0; padding: 10px 6px; gap: 6px; justify-content: center; }
+    .farm-workspace-nav.udp-shelf-container { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .farm-workspace-nav > .udp-utility-card { min-width: 0; padding: 8px 4px; gap: 4px; justify-content: center; flex-wrap: wrap; }
     .farm-workspace-nav .udp-utility-label { font-size: .875rem; white-space: normal; overflow-wrap: normal; }
     .farm-workspace-nav .udp-utility-icon-box svg { display: none; }
 }
@@ -3673,3 +3673,22 @@
 .activity-form .udp-photo-upload-label:focus-within, .activity-optional summary:focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }
 .activity-form .udp-photo-remove-btn { min-width: 44px; min-height: 44px; }
 @media (max-width: 640px) { .activity-form :is(.udp-form-row, .udp-form-grid) { grid-template-columns: minmax(0, 1fr); } }
+
+/* My farm: one button to log any activity; the type is picked in the form. */
+.ov-log-activity {
+    width: 100%;
+    min-height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.ov-priority-card {
+    flex-wrap: wrap;
+}
+
+.ov-priority-copy {
+    flex-basis: 180px;
+}
