@@ -1,0 +1,6 @@
+const copy = {
+    en: { changed: 'This record changed on another device.', mine: 'Use my change', server: 'Keep server version', help: 'Review both versions before choosing. Your choice is checked against the latest server record.', local: 'Your change', remote: 'Server version', deleted: 'Delete record', failed: 'Could not resolve this record. Reconnect and retry. If the server record is missing, keep the server version.', working: 'Saving…', done: 'Choice saved. Reopen the record to see the latest version.' },
+    ms: { changed: 'Rekod ini telah diubah pada peranti lain.', mine: 'Gunakan perubahan saya', server: 'Kekalkan versi pelayan', help: 'Semak kedua-dua versi sebelum memilih. Pilihan anda akan disemak dengan rekod pelayan terkini.', local: 'Perubahan anda', remote: 'Versi pelayan', deleted: 'Padam rekod', failed: 'Rekod ini tidak dapat diselesaikan. Sambung semula dan cuba lagi. Jika rekod pelayan tiada, kekalkan versi pelayan.', working: 'Menyimpan…', done: 'Pilihan disimpan. Buka semula rekod untuk melihat versi terkini.' },
+    zh: { changed: '此记录已在另一台设备上更改。', mine: '使用我的更改', server: '保留服务器版本', help: '请先比较两个版本。您的选择会与服务器最新记录核对。', local: '您的更改', remote: '服务器版本', deleted: '删除记录', failed: '无法解决此记录。请联网后重试。若服务器记录已不存在，请保留服务器版本。', working: '正在保存…', done: '已保存选择。请重新打开记录查看最新版本。' },
+};
+export const getOfflineCopy = language => copy[language] || copy.ms;

@@ -19,6 +19,16 @@ vi.mock('./indexedDbStorage.js', async () => {
         listPendingOperations: async (owner) => [...idb.ops.values()].filter((op) => op.owner === owner && op.state === 'pending').sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
         updateOperation: async (op) => { idb.ops.set(op.id, op); },
         removeOperation: async (id) => { idb.ops.delete(id); },
+        saveQueuedRecord: async ({ record, operation }) => {
+            const existing = actual.findQueuedDuplicate([...idb.ops.values()].filter(op => op.owner === operation.owner), operation);
+            const op = { id: `op-${idb.ops.size + 1}`, state: 'pending', attempts: 0, nextRetryAt: 0, createdAt: new Date().toISOString(), ...existing, ...operation };
+            if (operation.type === 'delete') for (const previous of idb.ops.values()) {
+                if (previous.owner === operation.owner && previous.collection === operation.collection && previous.recordId === operation.recordId && previous.type === 'update') idb.ops.delete(previous.id);
+            }
+            idb.ops.set(op.id, op);
+            idb.records.set(key(record.owner, record.id), { ...record, value: { ...record.value, syncStatus: 'pending', __deleted: operation.type === 'delete' } });
+            return op;
+        },
         retryFailedOperations: async (owner) => {
             const failed = [...idb.ops.values()].filter((op) => op.owner === owner && op.state === 'failed');
             failed.forEach((op) => idb.ops.set(op.id, { ...op, state: 'pending', nextRetryAt: 0, lastError: null }));
@@ -33,7 +43,7 @@ vi.mock('./indexedDbStorage.js', async () => {
         putPhoto: vi.fn(), dataUrlToBlob: () => null,
     };
 });
-const api = vi.hoisted(() => ({ neonDataRequest: vi.fn(), fetchNeonRows: vi.fn(), neonDataRowRequest: vi.fn() }));
+const api = vi.hoisted(() => ({ neonApiRequest: vi.fn(), neonDataRequest: vi.fn(), fetchNeonRows: vi.fn(), neonDataRowRequest: vi.fn() }));
 vi.mock('./neonApi.js', () => api);
 vi.mock('../lib/supabase', () => ({ supabase: { storage: {}, auth: { getSession: async () => ({ data: { session: { access_token: 'test' } } }) } } }));
 vi.mock('./privateImageStorage.js', () => ({ resolvePrivateImageUrl: async (_path, url) => url || '', uploadPrivateImage: vi.fn() }));
@@ -50,6 +60,22 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('offline record saving for signed-in farmers', () => {
+    it('keeps an offline correction above the cached server copy and hides a queued deletion', async () => {
+        const { getLogbook, updateLogEntry, deleteLogEntry } = await import('./localStorage.js');
+        api.fetchNeonRows.mockResolvedValue([{ id: 'log-1', type: 'fertilizer', notes: 'old', created_at: '2026-10-01T00:00:00Z' }]);
+        await getLogbook(USER);
+        setOnline(false);
+        api.neonApiRequest.mockRejectedValue(networkDown());
+        api.fetchNeonRows.mockRejectedValue(networkDown());
+        const changed = await updateLogEntry('log-1', { notes: 'corrected offline' }, 'Correct the note', USER);
+        expect(changed.syncStatus).toBe('pending');
+        expect((await getLogbook(USER))[0].notes).toBe('corrected offline');
+        expect([...idb.ops.values()][0]).toMatchObject({ expectedRecord: { notes: 'old' }, reason: 'Correct the note' });
+        await deleteLogEntry('log-1', 'Duplicate record', USER);
+        expect(await getLogbook(USER)).toEqual([]);
+        expect([...idb.ops.values()]).toHaveLength(1);
+        expect([...idb.ops.values()][0].type).toBe('delete');
+    });
     it('keeps a myGAP entry on the device and queues it when the network is down', async () => {
         setOnline(false);
         api.neonDataRequest.mockRejectedValue(networkDown());
@@ -151,6 +177,24 @@ describe('sync queue reliability', () => {
         const send = vi.fn(async () => ({ ok: true }));
         await Promise.all([flushSyncQueue({ owner: OWNER, send }), flushSyncQueue({ owner: OWNER, send })]);
         expect(send).toHaveBeenCalledOnce();
+    });
+
+    it('does not let another account inherit an in-flight sync promise', async () => {
+        setOnline(true);
+        await queue('note-1');
+        const { queueSyncOperation, flushSyncQueue } = await import('./syncQueue.js');
+        const otherOwner = 'user:other-account';
+        await queueSyncOperation({ owner: otherOwner, collection: 'notes', recordId: 'note-2', type: 'create', payload: {} });
+        let release;
+        let markStarted;
+        const started = new Promise(resolve => { markStarted = resolve; });
+        const first = flushSyncQueue({ owner: OWNER, send: () => new Promise(resolve => { release = resolve; markStarted(); }) });
+        await started;
+        const sendOther = vi.fn(async () => ({ ok: true }));
+        expect(await flushSyncQueue({ owner: otherOwner, send: sendOther })).toMatchObject({ synced: 1 });
+        expect(sendOther).toHaveBeenCalledOnce();
+        release({ ok: true });
+        await first;
     });
 
     it('keeps conflicts and terminal failures visible instead of discarding them', async () => {

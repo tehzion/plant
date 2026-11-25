@@ -1,3 +1,4 @@
+import photoPrivacyTranslations from './translations/photoPrivacy.js';
 import errorTranslations from './translations/error.js';
 import commonTranslations from './translations/common.js';
 import footerTranslations from './translations/footer.js';
@@ -23,6 +24,7 @@ import errorsTranslations from './translations/errors.js';
 import { scanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const translationSections = [
+    photoPrivacyTranslations,
     errorTranslations,
     commonTranslations,
     footerTranslations,

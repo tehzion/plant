@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { getDataConsent, setDataConsent } from '../utils/dataConsent';
+import { CONSENT_CHANGED, getDataConsent, saveDataConsent } from '../utils/dataConsent';
 import { useDataOwner } from '../context/AuthContext';
 import './DataConsentToggle.css';
 
@@ -10,14 +10,30 @@ const DataConsentToggle = ({ disabled = false }) => {
     const { t } = useLanguage();
     const owner = useDataOwner();
     const [checked, setChecked] = useState(() => getDataConsent(owner).aiImprovement);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(false);
+    useEffect(() => {
+        const update = () => setChecked(getDataConsent(owner).aiImprovement);
+        update();
+        window.addEventListener(CONSENT_CHANGED, update);
+        return () => window.removeEventListener(CONSENT_CHANGED, update);
+    }, [owner]);
+    const change = async (event) => {
+        const next = event.target.checked;
+        setChecked(next);
+        setSaving(true); setError(false);
+        try { setChecked((await saveDataConsent(next, owner)).aiImprovement); }
+        catch { setChecked(getDataConsent(owner).aiImprovement); setError(true); }
+        finally { setSaving(false); }
+    };
 
     return (
-        <label className="data-consent-toggle">
+        <div aria-busy={saving}><label className="data-consent-toggle">
             <input
                 type="checkbox"
                 checked={checked}
-                disabled={disabled || !owner}
-                onChange={(event) => setChecked(setDataConsent(event.target.checked, owner).aiImprovement)}
+                disabled={disabled || saving || !owner}
+                onChange={change}
             />
             <span>
                 <strong>{t('home.dataConsentLabel')}</strong>
@@ -26,7 +42,7 @@ const DataConsentToggle = ({ disabled = false }) => {
                     <Link to="/privacy">{t('home.dataConsentPrivacyLink')}</Link>
                 </small>
             </span>
-        </label>
+        </label>{error && <p role="alert">{t('photoPrivacy.saveFailed')}</p>}</div>
     );
 };
 

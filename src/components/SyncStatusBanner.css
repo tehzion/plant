@@ -27,3 +27,7 @@
 }
 .sync-status { flex-wrap: wrap; }
 .sync-status__list { flex-basis: 100%; margin: 4px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: .85rem; }
+.sync-status__list li { min-width: 0; overflow-wrap: anywhere; }
+.sync-status__list dl div { display: grid; grid-template-columns: minmax(70px, 1fr) minmax(0, 3fr); gap: 8px; }
+.sync-status__list dd { margin: 0; }
+.sync-status__list button { margin: 8px 8px 0 0; }
