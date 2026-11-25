@@ -94,6 +94,27 @@ const AssistantWidgetSession = ({ owner }) => {
     const listRef = useRef(null);
     const inputRef = useRef(null);
     const fabRef = useRef(null);
+    // The button waits until the farmer scrolls down, so it never covers the
+    // top of a page. Pages too short to scroll show it straight away.
+    const [scrolledDown, setScrolledDown] = useState(false);
+    useEffect(() => {
+        const check = () => {
+            const doc = document.documentElement;
+            const canScroll = doc.scrollHeight - window.innerHeight > 160;
+            setScrolledDown(!canScroll || window.scrollY > 160);
+        };
+        check();
+        window.addEventListener('scroll', check, { passive: true });
+        window.addEventListener('resize', check);
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(check) : null;
+        observer?.observe(document.body);
+        return () => {
+            window.removeEventListener('scroll', check);
+            window.removeEventListener('resize', check);
+            observer?.disconnect();
+        };
+    }, []);
+    const fabTucked = !open && !scrolledDown;
     const wasOpen = useRef(false);
     const { scanContext, pageTopic, openRequest } = useSyncExternalStore(subscribeAssistant, getAssistantState, getAssistantState);
     const contact = buildContactOptions(language);
@@ -320,7 +341,9 @@ const AssistantWidgetSession = ({ owner }) => {
             <button
                 ref={fabRef}
                 type="button"
-                className={`assistant-fab ${open ? 'is-open' : ''}`}
+                className={`assistant-fab ${open ? 'is-open' : ''} ${fabTucked ? 'is-tucked' : ''}`}
+                tabIndex={fabTucked ? -1 : undefined}
+                aria-hidden={fabTucked || undefined}
                 onClick={() => setOpen((value) => !value)}
                 aria-expanded={open}
                 aria-label={open ? label('assistant.close', 'Close assistant') : label('assistant.open', 'Ask KANB assistant')}

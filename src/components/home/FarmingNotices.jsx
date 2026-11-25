@@ -62,10 +62,10 @@ const FarmingNotices = ({ forecast = [] }) => {
                 </div>
                 <p className="fn-today-msg">{resolveNotice(today)}</p>
                 <div className="fn-today-meta">
-                    <span>Temp {Math.round(today.tempMax)}°C</span>
-                    <span>Rain {today.precip.toFixed(1)} mm</span>
-                    <span>RH {today.humidity}%</span>
-                    <span>UV {today.uvIndex.toFixed(0)}</span>
+                    <span>{label('home.weatherTemp', 'Temp')} {Math.round(today.tempMax)}°C</span>
+                    <span>{label('home.weatherRain', 'Rain')} {today.precip.toFixed(1)} mm</span>
+                    <span>{label('home.weatherHumidity', 'Humidity')} {today.humidity}%</span>
+                    <span>{label('home.weatherUv', 'UV')} {today.uvIndex.toFixed(0)}</span>
                 </div>
             </div>
 

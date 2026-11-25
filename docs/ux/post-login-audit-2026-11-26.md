@@ -30,15 +30,20 @@ Fastest plant check, counted in taps (camera on the phone):
 | Priority | Screen | Issue | Suggested fix |
 |---|---|---|---|
 | Medium | Home | "Check plant" still appears 3 times: the welcome card (first visit only), the main panel, and the tab bar. | Keep the main panel and the tab bar. Make the welcome card's button the same action, not an extra one. |
-| Medium | Header | "Refresh app" is always visible next to the language picker. | Show it only when a new version is waiting. |
-| Medium | myGAP | 6 tabs, and the "Farm" tab overlaps "My farm". | Merge "Farm" into My farm. Keep Log, Checklist, Calendar and PHI. |
-| Low | Farming notice | Weather labels "Temp / Rain / RH / UV" are English in every language. | Add translations. |
 | Low | History | The "4 / 4" count shows even with no filter on. | Show it only while a filter is active. |
-| Low | Assistant button | The floating chat button covers card content near the bottom-right corner. | Raise it above the content padding, or tuck it into the header on small screens. |
+
+## Follow-up fixes (second pass)
+
+| Screen | Before | After |
+|---|---|---|
+| Header | "Refresh app" always visible | Shows only when a new version has taken over the open page |
+| myGAP | 6 tabs; "Farm" overlapped My farm | 5 tabs. The myGAP farm details (land, workers, certificate, input stock) are a folded section under My farm → Plots |
+| Farming notice | "Temp / Rain / RH / UV" in English everywhere | Translated (e.g. Suhu / Hujan / Kelembapan / UV) |
+| Assistant button | Covered card content at the bottom-right | Hidden at the top of a page; appears once the farmer scrolls down. Pages too short to scroll show it straight away |
 
 ## Checks run
 
-- All 159 test files, 833 tests: passed.
+- All 160 test files, 835 tests: passed.
 - ESLint on changed files: 0 errors. The 7 warnings were there before this change.
 - Phone width 375 px: no sideways scrolling on Home, the plant check, History or My farm.
 - My farm: "Log activity" opens the Daily log tab with the form ready.
