@@ -1,0 +1,29 @@
+/* myGAP farm details inside My farm. Scoped so the myGAP page styles are not needed. */
+.mygap-farm-details { margin-top: 16px; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-card); box-shadow: none; }
+.mygap-farm-details > summary { display: flex; align-items: center; min-height: 52px; padding: 12px 16px; font-weight: 700; font-size: 1rem; color: var(--color-text-primary); cursor: pointer; }
+.mygap-farm-details[open] > summary { border-bottom: 1px solid var(--color-border); }
+.mygap-farm-details > .farm-profile { padding: 16px; }
+.mygap-farm-details .content-card { padding: 0; margin: 0; background: none; box-shadow: none; }
+.mygap-farm-details .section-title { font-size: 1.1rem; font-weight: 600; color: var(--color-primary-dark); margin-bottom: 4px; }
+.mygap-farm-details .form-group { margin-bottom: var(--space-md); }
+.mygap-farm-details .form-group label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; color: var(--color-text-primary); }
+.mygap-farm-details .form-group :is(input, select, textarea) { width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); font: inherit; font-size: .95rem; }
+.mygap-farm-details .form-actions { display: flex; gap: var(--space-sm); justify-content: flex-end; }
+.mygap-farm-details .field-hint { display: block; margin-top: 4px; font-size: .8rem; color: var(--color-text-secondary); }
+.mygap-farm-details .log-missing { margin: 8px 0 0; color: #b45309; font-size: .8rem; }
+.mygap-farm-details .log-action-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 4px 10px; border: none; border-radius: 8px; background: none; color: var(--color-primary-dark); font-weight: 600; cursor: pointer; }
+.mygap-farm-details .log-action-btn--danger { color: #b91c1c; }
+
+.farm-profile { display: grid; gap: 16px; }
+.farm-profile .section-title { display: flex; align-items: center; gap: 8px; }
+.farm-profile__subtitle { display: flex; align-items: center; gap: 8px; margin: 20px 0 4px; font-size: 1rem; color: var(--color-brand-ink); }
+.farm-workers { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.farm-workers__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0 10px; align-items: end; padding: 10px; border-radius: 10px; background: var(--color-bg-secondary); }
+.farm-workers__row .log-action-btn { justify-self: start; margin-bottom: 12px; }
+.farm-profile__add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 10px 0 16px; }
+.farm-stock__scroll { overflow-x: auto; }
+.farm-stock { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.farm-stock th, .farm-stock td { padding: 8px 10px; border-bottom: 1px solid var(--color-border); text-align: right; white-space: nowrap; }
+.farm-stock th[scope="row"], .farm-stock thead th:first-child { text-align: left; white-space: normal; }
+.farm-stock thead th { color: var(--color-text-secondary); font-size: .8rem; font-weight: 700; }
+.farm-stock tr.is-negative td:last-child { color: #b45309; font-weight: 700; }

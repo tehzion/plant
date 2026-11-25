@@ -45,6 +45,7 @@ import './UserDashboardPanel.css';
 // ── Standalone dashboard tab components ──────────────────────────────────────
 import OverviewTab  from './dashboard/OverviewTab';
 const ReportsTab = lazyWithRetry(() => import('./dashboard/ReportsTab'), 'dashboard-reports');
+const MyGapFarmDetails = lazyWithRetry(() => import('./mygap/MyGapFarmDetails'), 'dashboard-farm-details');
 const PlotsTab = lazyWithRetry(() => import('./dashboard/PlotsTab'), 'dashboard-plots');
 const NotesTab = lazyWithRetry(() => import('./dashboard/NotesTab'), 'dashboard-notes');
 const AlertDetailModal = lazyWithRetry(() => import('./AlertDetailModal'), 'dashboard-alert-detail');
@@ -568,6 +569,8 @@ const UserDashboardPanel = () => {
                             plots={plots}
                             handleDeletePlot={handleDeletePlot}
                         />
+                        {/* myGAP farm details live with the farm, not as a myGAP tab. */}
+                        <MyGapFarmDetails t={t} userId={user?.id ?? null} notify={notify} />
                     </Suspense>
                 )}
 

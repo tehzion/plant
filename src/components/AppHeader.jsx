@@ -4,6 +4,7 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import LanguageSelector from './LanguageSelector';
 import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react';
 import { useScanService } from '../hooks/useScanService.js';
+import { useAppUpdateReady } from '../hooks/useAppUpdateReady.js';
 import './AppHeader.css';
 import { getUiCopy } from '../utils/uiCopy.js';
 import { NAV_ITEMS, getBackTarget, isNavItemActive } from './navItems.js';
@@ -14,6 +15,8 @@ const AppHeader = ({ isHome }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { status: systemStatus } = useScanService();
+    // Refresh is only useful when a new version is waiting, so it only shows then.
+    const updateReady = useAppUpdateReady();
 
     const statusLabel = systemStatus === 'online'
         ? label('nav.statusOnline', 'Connected')
@@ -59,15 +62,15 @@ const AppHeader = ({ isHome }) => {
                                 <span className="app-header__status-text-short">{statusShortLabel}</span>
                             )}
                         </span>}
-                        <button
+                        {updateReady && <button
                             onClick={() => window.location.reload()}
                             className="app-header__refresh-btn"
-                            title={label('nav.refresh', 'Reload app')}
-                            aria-label={label('nav.refresh', 'Reload app')}
+                            title={label('nav.updateReady', 'New version ready: reload')}
+                            aria-label={label('nav.updateReady', 'New version ready: reload')}
                             type="button"
                         >
                             <RefreshCw size={18} aria-hidden="true" />
-                        </button>
+                        </button>}
                         <div className="app-header__language-wrap">
                             <LanguageSelector />
                         </div>
