@@ -412,6 +412,9 @@ ${t('pdf.generatedBy')}
     URL.revokeObjectURL(url);
   };
 
+  // The app's home page with a source tag, never the result link (results are private to the farmer).
+  const shareAppUrl = () => `${window.location.origin}/?utm_source=share&utm_medium=result`;
+
   const handleShare = async () => {
     const nutrientNames = getNutrientNames(normalizedNutrition);
     const nutritionRecommendations = result.sectionPolicy?.showNutritionProducts && !normalizedNutrition.unconfirmedDueToEvidence
@@ -452,6 +455,8 @@ ${t('pdf.generatedBy')}
       `${scanCopy.next}: ${nextScanStep(result, scanCopy)}`,
       scanCopy.scoreNote,
       result.additionalNotes || '',
+      // A link back to the app, so a neighbour who receives this can check their own crop.
+      `\n${t('results.shareInvite')} ${shareAppUrl()}`,
     ].filter(Boolean).join('\n');
 
     // Try Native Share API first (Mobile)

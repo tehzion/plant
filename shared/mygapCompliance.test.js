@@ -97,9 +97,31 @@ describe('phase 2 rules', () => {
         ]);
         expect(stock).toEqual([
             expect.objectContaining({ product: 'Mancozeb 80WP', unit: 'kg', purchased: 10, used: 2.5, balance: 7.5 }),
-            expect.objectContaining({ product: 'Mancozeb 80WP', unit: 'l', purchased: 1, used: 0, balance: 1 }),
+            expect.objectContaining({ product: 'Mancozeb 80WP', unit: 'L', purchased: 1, used: 0, balance: 1 }),
             expect.objectContaining({ product: 'NPK', unit: 'kg', purchased: 0, used: 5, balance: -5 }),
         ]);
+    });
+
+    it('adds grams to kilograms and millilitres to litres for the same product', async () => {
+        const { computeInputStock } = await import('./mygapCompliance.js');
+        const stock = computeInputStock([
+            { type: 'purchase', product_used: 'Mancozeb 80WP', amount: '1', unit: 'kg' },
+            { type: 'pesticide', product_used: 'Mancozeb 80WP', amount: '200', unit: 'g' },
+            { type: 'purchase', product_used: 'Racun A', amount: '1', unit: 'litre' },
+            { type: 'pesticide', product_used: 'Racun A', amount: '250', unit: 'mL' },
+            { type: 'purchase', product_used: 'Benih', amount: '500', unit: 'g' },
+            { type: 'pesticide', product_used: 'Benih', amount: '120', unit: 'grams' },
+            { type: 'purchase', product_used: 'Baja', amount: '2', unit: 'beg' },
+            { type: 'fertilizer', product_used: 'Baja', amount: '30', unit: 'kg' },
+        ]);
+        expect(stock).toEqual([
+            expect.objectContaining({ product: 'Baja', unit: 'beg', purchased: 2, used: 0, balance: 2 }),
+            expect.objectContaining({ product: 'Baja', unit: 'kg', purchased: 0, used: 30, balance: -30 }),
+            expect.objectContaining({ product: 'Benih', unit: 'g', purchased: 500, used: 120, balance: 380 }),
+            expect.objectContaining({ product: 'Mancozeb 80WP', unit: 'kg', purchased: 1, used: 0.2, balance: 0.8 }),
+            expect.objectContaining({ product: 'Racun A', unit: 'L', purchased: 1, used: 0.25, balance: 0.75 }),
+        ]);
+        expect(stock[0]).not.toHaveProperty('units');
     });
 
     it('creates unique lot codes per plot and day', async () => {

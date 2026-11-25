@@ -182,10 +182,24 @@ const toAmount = (value) => {
     return Number.isFinite(amount) && amount >= 0 ? amount : null;
 };
 
+// Units that can be added together: weight in kg, volume in litres.
+const UNIT_FAMILIES = {
+    kg: { family: 'mass', base: 'kg', factor: 1 },
+    g: { family: 'mass', base: 'kg', factor: 0.001 },
+    l: { family: 'volume', base: 'l', factor: 1 },
+    ml: { family: 'volume', base: 'l', factor: 0.001 },
+};
+// Written the standard way, so a litre is not misread as the number 1.
+const UNIT_LABELS = { l: 'L', ml: 'mL' };
+const round3 = (value) => Math.round(value * 1000) / 1000;
+
 /**
  * Input stock from records: purchases add, pesticide and fertilizer
- * applications subtract. Only records with a product, amount and unit count;
- * units are kept separate (no conversion between kg and L).
+ * applications subtract. Only records with a product, amount and unit count.
+ * Grams are added to kilograms and millilitres to litres, so a 1 kg purchase
+ * and a 200 g spray of the same product give one 0.8 kg balance. A product
+ * recorded only in g (or only in mL) stays in that unit. Other units (packs,
+ * bottles, kg vs L) are kept separate because they cannot be converted.
  */
 export const computeInputStock = (logs = []) => {
     const items = new Map();
@@ -195,20 +209,31 @@ export const computeInputStock = (logs = []) => {
         const unit = normalizeUnit(log.unit);
         const product = text(log.product_used);
         if (!sign || amount === null || !unit || !product) continue;
-        const key = `${normalizeKey(product)}|${unit}`;
-        const item = items.get(key) || { product, unit, purchased: 0, used: 0, lastPurchase: null };
+        const convertible = UNIT_FAMILIES[unit];
+        const key = `${normalizeKey(product)}|${convertible ? convertible.family : unit}`;
+        const item = items.get(key) || { product, unit: convertible ? convertible.base : unit, units: new Set(), purchased: 0, used: 0, lastPurchase: null };
+        const baseAmount = convertible ? amount * convertible.factor : amount;
+        item.units.add(unit);
         if (sign > 0) {
-            item.purchased += amount;
+            item.purchased += baseAmount;
             const date = logActivityDate(log);
             if (date && (!item.lastPurchase || date > item.lastPurchase)) item.lastPurchase = date;
         } else {
-            item.used += amount;
+            item.used += baseAmount;
         }
         items.set(key, item);
     }
     return [...items.values()]
-        .map((item) => ({ ...item, balance: Math.round((item.purchased - item.used) * 1000) / 1000 }))
-        .sort((a, b) => a.product.localeCompare(b.product));
+        .map(({ units, ...item }) => {
+            // Show a product recorded only in g or mL in that small unit.
+            const only = units.size === 1 ? [...units][0] : null;
+            const factor = only && UNIT_FAMILIES[only] ? UNIT_FAMILIES[only].factor : 1;
+            const unit = factor === 1 ? item.unit : only;
+            const purchased = round3(item.purchased / factor);
+            const used = round3(item.used / factor);
+            return { ...item, unit: UNIT_LABELS[unit] || unit, purchased, used, balance: round3(purchased - used) };
+        })
+        .sort((a, b) => a.product.localeCompare(b.product) || a.unit.localeCompare(b.unit));
 };
 
 const lotPrefix = (plot) => {

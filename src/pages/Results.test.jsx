@@ -57,7 +57,7 @@ vi.mock('../utils/liveProductRecommendations.js', async (importOriginal) => {
 });
 
 vi.mock('../components/QuickActions', () => ({
-  default: () => <div data-testid="quick-actions" />,
+  default: ({ onShare }) => <div data-testid="quick-actions"><button type="button" onClick={onShare}>Share result</button></div>,
 }));
 
 vi.mock('../components/TabbedResults', () => ({
@@ -113,6 +113,29 @@ describe('Results', () => {
       consultation: null,
       storeUrl: '',
     });
+  });
+
+  it('ends a shared result with a link to the app home page, not to the private result', async () => {
+    getScanByIdMock.mockResolvedValue({
+      id: 'scan-share',
+      disease: 'Leaf Blight',
+      plantType: 'Coconut',
+      healthStatus: 'unhealthy',
+      analysisLanguage: 'en',
+    });
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+
+    render(<Results />);
+    fireEvent.click(await screen.findByText('More details', { selector: 'summary' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Share result' }));
+
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    const { text } = share.mock.calls[0][0];
+    expect(text).toContain('Check your own crops for free with KANB Agropreneur:');
+    expect(text).toContain(`${window.location.origin}/?utm_source=share&utm_medium=result`);
+    expect(text).not.toContain('scan-share');
+    delete navigator.share;
   });
 
   it('passes persisted image URLs into the disease result view', async () => {
