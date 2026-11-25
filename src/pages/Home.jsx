@@ -602,7 +602,7 @@ const Home = () => {
 
                 <RecentActivity />
 
-                <ActionGrid onScan={handleStartScan} />
+                <ActionGrid />
 
                 {/* Farming Notices — logged-in users only */}
                 {user && forecast.length > 0 && (

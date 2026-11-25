@@ -334,3 +334,49 @@
 .history-page .app-empty-state .btn { margin-top: 16px; }
 .history-view-tabs button { min-height: 44px; }
 .history-view-tabs button[aria-pressed="true"] { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; }
+
+/* The list comes first: only search is always visible; the rest folds away. */
+.history-filters {
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+}
+
+.history-filters > label,
+.history-filters > p {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.history-more-filters {
+    grid-column: 1 / -1;
+}
+
+.history-more-filters > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-primary);
+    padding: 6px 0;
+    min-height: 32px;
+}
+
+.history-more-filters__body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    padding-top: 10px;
+}
+
+.history-more-filters__body label {
+    display: grid;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.history-clear-all {
+    margin: 32px auto 8px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: transparent;
+    font-weight: 500;
+}

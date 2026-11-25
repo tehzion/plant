@@ -82,7 +82,7 @@ const FarmScaleSelector = ({ selected, onSelect, quantity, onQuantityChange, dis
             >
               <div className="scale-icon">{scale.icon}</div>
               <div className="scale-info">
-                <div className="scale-name">{scale.name}</div>
+                <div className="scale-name">{String(scale.name).replace(/\s*\/\s*/g, '/\u200b')}</div>
                 <div className="scale-description">{scale.description}</div>
                 <div className="scale-details">{scale.details}</div>
               </div>

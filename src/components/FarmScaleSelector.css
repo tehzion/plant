@@ -195,3 +195,58 @@
     min-height: 120px;
   }
 }
+
+/* Compact layout: farm size is an optional detail for product amounts,
+   so it takes one row instead of a screen and a half. */
+.farm-scale-selector .selector-title {
+  font-size: var(--font-size-lg);
+  text-align: left;
+}
+
+.farm-scale-selector .selector-subtitle {
+  text-align: left;
+  margin-bottom: var(--space-md);
+}
+
+.farm-scale-selector .scale-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.farm-scale-selector .scale-button {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 96px;
+  padding: 12px 6px;
+  border-width: 1.5px;
+  border-radius: var(--radius-lg);
+}
+
+.farm-scale-selector .scale-icon {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+}
+
+.farm-scale-selector .scale-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.farm-scale-selector .scale-name {
+  font-size: var(--font-size-sm);
+  overflow-wrap: break-word;
+}
+
+.farm-scale-selector .scale-description,
+.farm-scale-selector .scale-details {
+  display: none;
+}
+
+.farm-scale-selector .selected-indicator {
+  width: 20px;
+  height: 20px;
+  top: 6px;
+  right: 6px;
+}

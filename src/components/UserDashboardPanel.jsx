@@ -27,7 +27,6 @@ import {
     MapPinned,
     NotebookPen,
     ShieldCheck,
-    ShoppingBag,
     ScanLine,
     User,
     Edit3,
@@ -48,7 +47,6 @@ import OverviewTab  from './dashboard/OverviewTab';
 const ReportsTab = lazyWithRetry(() => import('./dashboard/ReportsTab'), 'dashboard-reports');
 const PlotsTab = lazyWithRetry(() => import('./dashboard/PlotsTab'), 'dashboard-plots');
 const NotesTab = lazyWithRetry(() => import('./dashboard/NotesTab'), 'dashboard-notes');
-const ProductsTab = lazyWithRetry(() => import('./dashboard/ProductsTab'), 'dashboard-products');
 const AlertDetailModal = lazyWithRetry(() => import('./AlertDetailModal'), 'dashboard-alert-detail');
 
 // ─── Helper: friendly relative date ─────────────────────────────────────────
@@ -66,7 +64,7 @@ const TAB_FALLBACK = (
     </div>
 );
 
-const VALID_DASHBOARD_TABS = new Set(['overview', 'reports', 'plots', 'notes', 'products']);
+const VALID_DASHBOARD_TABS = new Set(['overview', 'reports', 'plots', 'notes']);
 
 // ─── Main component ──────────────────────────────────────────────────────────
 const UserDashboardPanel = () => {
@@ -234,7 +232,6 @@ const UserDashboardPanel = () => {
         { id: 'reports',  label: label('profile.tabReports', 'Reports'), icon: BarChart3 },
         { id: 'plots',    label: label('profile.tabPlots', 'Plots'), icon: MapPinned },
         { id: 'notes',    label: label('profile.tabNotes', 'Daily Log'), icon: NotebookPen, badge: hasLoggedToday ? null : '!' },
-        { id: 'products', label: label('profile.tabProducts', 'Products'), icon: ShoppingBag },
     ];
 
     useEffect(() => {
@@ -495,15 +492,10 @@ const UserDashboardPanel = () => {
             </div>
 
             {/* ── Tab content ──────────────────────────────────────────────── */}
-            <details className="app-surface" style={{ padding: 16, margin: '16px 0' }}>
-                <summary>{t('photoPrivacy.title')}</summary>
-                <p>{t('photoPrivacy.accountHint')}</p>
-                <DataConsentToggle />
-            </details>
             <div className="udp-tab-content fade-slide-up udp-tab-content--delayed">
                 {tab === 'overview' && (
                     <>
-                    <FarmOverview scans={scanHistory} plots={plots} />
+                    {/* Next step and logging first; the per-crop summary is detail. */}
                     <OverviewTab
                         t={t}
                         label={label}
@@ -533,6 +525,7 @@ const UserDashboardPanel = () => {
                         aiInsights={aiInsights}
                         onPrefillRecommendedTreatment={handlePrefillRecommendedTreatment}
                     />
+                    <FarmOverview scans={scanHistory} plots={plots} />
                     </>
                 )}
 
@@ -603,12 +596,14 @@ const UserDashboardPanel = () => {
                     </Suspense>
                 )}
 
-                {tab === 'products' && (
-                    <Suspense fallback={TAB_FALLBACK}>
-                        <ProductsTab label={label} />
-                    </Suspense>
-                )}
             </div>
+
+            {/* Settings, not a daily task: below the farm content. */}
+            <details className="app-surface" style={{ padding: 16, margin: '16px 0' }}>
+                <summary>{t('photoPrivacy.title')}</summary>
+                <p>{t('photoPrivacy.accountHint')}</p>
+                <DataConsentToggle />
+            </details>
 
             {/* ── Alert detail modal ────────────────────────────────────────── */}
             {selectedAlert && (
