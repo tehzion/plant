@@ -77,3 +77,35 @@ describe('wooCommerceService filtered product queries', () => {
         }
     });
 });
+
+describe('store text from WooCommerce', () => {
+    it('shows product names and descriptions as plain text', async () => {
+        fetchMock.mockReset();
+        fetchMock.mockResolvedValue({
+            ok: true,
+            json: async () => ([{
+                id: 702,
+                name: 'MULTIGREEN (1KG) &#8211; Baja Organik Pokok Bunga, Buah dan Sayuran',
+                price: '17.50',
+                short_description: '<p>Untuk sayur &amp; buah &#x2014; guna ikut label&hellip;</p>',
+                permalink: 'https://store.example/product/multigreen',
+                stock_status: 'instock',
+                categories: [{ id: 30, name: 'Baja &amp; Nutrien' }],
+                tags: [{ id: 31, name: 'Organik &#8217;' }],
+            }]),
+        });
+        const [product] = await wooCommerceService.getProductsByTagIds([31], [], {});
+        expect(product.name).toBe('MULTIGREEN (1KG) – Baja Organik Pokok Bunga, Buah dan Sayuran');
+        expect(product.description).toBe('Untuk sayur & buah — guna ikut label…');
+        expect(product.categories).toEqual(['Baja & Nutrien']);
+        expect(product.tags).toEqual(['Organik ’']);
+    });
+
+    it('decodes each code once and leaves unknown text alone', () => {
+        const { decodeHtmlEntities } = wooCommerceService;
+        expect(decodeHtmlEntities('A &amp;#8211; B')).toBe('A &#8211; B');
+        expect(decodeHtmlEntities('Fish &chips; 5 &lt; 6')).toBe('Fish &chips; 5 < 6');
+        expect(decodeHtmlEntities('bad &#0; &#99999999;')).toBe('bad  ');
+        expect(decodeHtmlEntities(null)).toBe('');
+    });
+});

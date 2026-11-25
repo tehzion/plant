@@ -1,9 +1,11 @@
 import { STORE_URL } from '../../utils/store.js';
 import React from 'react';
-import { BookOpen, CheckSquare, History, ScanLine, ShoppingBag } from 'lucide-react';
+import { BookOpen, ChevronRight, ClipboardCheck, ExternalLink, History, ScanLine, ShoppingBag, Sprout } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
 import { useNavigate } from 'react-router-dom';
 
+// Plain list of the farmer's other workflows. "Check plant health" keeps its
+// own panel above; it is repeated here only as the first row for consistency.
 const ActionGrid = ({ onScan }) => {
     const { t } = useLanguage();
     const navigate = useNavigate();
@@ -11,62 +13,77 @@ const ActionGrid = ({ onScan }) => {
     const actions = [
         {
             id: 'scan',
-            label: t('nav.scan') || 'Scan',
-            icon: <ScanLine size={20} strokeWidth={2} />,
+            label: t('nav.checkPlant') || 'Check plant health',
+            icon: ScanLine,
             onClick: onScan,
-        },
-        {
-            id: 'shop',
-            label: t('nav.shop') || 'Shop',
-            icon: <ShoppingBag size={20} strokeWidth={2} />,
-            onClick: () => window.open(STORE_URL, '_blank', 'noopener,noreferrer')
-        },
-        {
-            id: 'mygap',
-            label: t('home.mygapTitle') || 'myGAP',
-            icon: <CheckSquare size={20} strokeWidth={2} />,
-            onClick: () => navigate('/mygap')
-        },
-        {
-            id: 'userguide',
-            label: t('settings.guide') || 'User Guide',
-            icon: <BookOpen size={20} strokeWidth={2} />,
-            onClick: () => navigate('/guide')
         },
         {
             id: 'history',
             label: t('nav.history') || 'History',
-            icon: <History size={20} strokeWidth={2} />,
+            description: t('home.historyDesc'),
+            icon: History,
             onClick: () => navigate('/history')
-        }
+        },
+        {
+            id: 'farm',
+            label: t('home.farmRecords') || 'Farm records',
+            description: t('home.farmRecordsDesc'),
+            icon: Sprout,
+            onClick: () => navigate('/profile')
+        },
+        {
+            id: 'mygap',
+            label: t('home.mygapTitle') || 'myGAP',
+            description: t('home.mygapToolDesc'),
+            icon: ClipboardCheck,
+            onClick: () => navigate('/mygap')
+        },
+        {
+            id: 'shop',
+            label: t('nav.products') || 'Products',
+            description: t('home.productsDesc'),
+            icon: ShoppingBag,
+            external: true,
+            onClick: () => window.open(STORE_URL, '_blank', 'noopener,noreferrer')
+        },
+        {
+            id: 'userguide',
+            label: t('settings.guide') || 'User Guide',
+            description: t('home.guideDesc'),
+            icon: BookOpen,
+            onClick: () => navigate('/guide')
+        },
     ];
 
     return (
-        <>
-            <div className="section-header-row home-section-header-row home-action-grid-header">
-                <h3 className="section-title home-section-title home-action-grid-title">
-                    {t('profile.quickActions') || 'Quick Actions'}
+        <section className="home-tools" aria-labelledby="home-tools-title">
+            <div className="section-header-row home-section-header-row">
+                <h3 id="home-tools-title" className="section-title home-section-title">
+                    {t('home.farmTools') || 'Farm tools'}
                 </h3>
             </div>
-            <div className="superapp-shelf-container">
-                {actions.map(action => (
-                    <button
-                        key={action.id}
-                        type="button"
-                        onClick={action.onClick}
-                        className="superapp-utility-card"
-                        aria-label={action.label}
-                    >
-                        <div className="superapp-utility-icon-box">
-                            {action.icon}
-                        </div>
-                        <span className="superapp-utility-label">
-                            {action.label}
-                        </span>
-                    </button>
+            <ul className="home-tools__list">
+                {actions.map(({ id, label, description, icon: Icon, onClick, external }) => (
+                    <li key={id}>
+                        <button
+                            type="button"
+                            onClick={onClick}
+                            className="home-tools__item"
+                            aria-label={label}
+                        >
+                            <span className="home-tools__icon" aria-hidden="true"><Icon size={20} /></span>
+                            <span className="home-tools__text">
+                                <span className="home-tools__label">{label}</span>
+                                {description && <span className="home-tools__desc">{description}</span>}
+                            </span>
+                            {external
+                                ? <ExternalLink size={16} aria-hidden="true" className="home-tools__chevron" />
+                                : <ChevronRight size={18} aria-hidden="true" className="home-tools__chevron" />}
+                        </button>
+                    </li>
                 ))}
-            </div>
-        </>
+            </ul>
+        </section>
     );
 };
 

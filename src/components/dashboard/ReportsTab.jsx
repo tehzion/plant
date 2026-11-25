@@ -20,6 +20,7 @@ import {
     QUALITY_GRADES_CFG,
     EXPENSE_CATEGORIES_CFG,
 } from '../../data/config';
+import { friendlyErrorMessage } from '../../utils/friendlyError.js';
 
 
 
@@ -73,7 +74,7 @@ const ReportsTab = ({
         const reportEndText = [reportEnd.getFullYear(), String(reportEnd.getMonth() + 1).padStart(2, '0'), String(reportEnd.getDate()).padStart(2, '0')].join('-');
         fetchReportSummary({ from: '2000-01-01', to: reportEndText, plotId: selectedPlotId })
             .then((summary) => { if (!cancelled) setServerSummary(summary); })
-            .catch((error) => { if (!cancelled) setServerReportError(error.message || 'Could not load the complete report.'); });
+            .catch((error) => { if (!cancelled) setServerReportError(friendlyErrorMessage(error, t, 'errors.reportLoad')); });
         return () => { cancelled = true; };
     }, [selectedPlotId, userId]);
 
@@ -237,8 +238,7 @@ const ReportsTab = ({
         <div className="udp-reports rep-shell">
             <div className="rep-hero">
                 <div className="rep-hero-copy">
-                    <span className="rep-hero-kicker">{label('profile.tabReports', 'Reports')}</span>
-                    <h3 className="rep-hero-title">{label('profile.financialSummary', 'Financial & Yield Summary')}</h3>
+                    <h2 className="rep-hero-title">{label('profile.financialSummary', 'Financial & Yield Summary')}</h2>
                     <p className="rep-hero-subtitle">{reportPrompt}</p>
                 </div>
                 <div className="rep-hero-pill">

@@ -99,6 +99,7 @@ const UserDashboardPanel = () => {
     const [noteForm,   setNoteForm]   = useState(EMPTY_FORM);
     const [addingNote, setAddingNote] = useState(false);
     const [savingNote, setSavingNote] = useState(false);
+    const [noteSaveError, setNoteSaveError] = useState('');
 
     const [plotForm,       setPlotForm]       = useState({ name: '', cropType: '', area: '', unit: 'acres', soil_ph: '', npk_n: '', npk_p: '', npk_k: '' });
     const [addingPlot,     setAddingPlot]     = useState(false);
@@ -136,6 +137,31 @@ const UserDashboardPanel = () => {
     });
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const profileDialogRef = useRef(null);
+    useEffect(() => {
+        if (!showProfileModal) return;
+        const previousFocus = document.activeElement;
+        const dialog = profileDialogRef.current;
+        const focusable = () => [...(dialog?.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]') || [])].filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true');
+        focusable()[0]?.focus();
+        const handleKey = event => {
+            if (event.key === 'Escape') { event.preventDefault(); setShowProfileModal(false); }
+            if (event.key !== 'Tab') return;
+            const items = focusable();
+            const first = items[0]; const last = items.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        };
+        const retainFocus = event => { if (!dialog?.contains(event.target)) focusable()[0]?.focus(); };
+        document.addEventListener('keydown', handleKey);
+        document.addEventListener('focusin', retainFocus);
+        return () => {
+            document.removeEventListener('keydown', handleKey);
+            document.removeEventListener('focusin', retainFocus);
+            if (previousFocus?.isConnected) previousFocus.focus();
+        };
+    }, [showProfileModal]);
+
     const isVerified = !!(profileInfo.name && profileInfo.contact);
 
     const [tempProfile, setTempProfile] = useState(profileInfo);
@@ -274,73 +300,88 @@ const UserDashboardPanel = () => {
 
     const handleAddNote = async (e) => {
         e.preventDefault();
-        if (!noteForm.note.trim() && !noteForm.chemical_name.trim()) return;
+        if (savingNote) return;
+        setNoteSaveError('');
+        const hasRequiredDetails = ['spray', 'fertilize'].includes(noteForm.activity_type)
+            ? Boolean(noteForm.chemical_name.trim())
+            : noteForm.activity_type === 'scout' ? Boolean(noteForm.disease_name_observed.trim())
+            : noteForm.activity_type === 'harvest' ? Number(noteForm.kg_harvested) > 0
+            : Boolean(noteForm.note.trim());
+        if (!hasRequiredDetails) {
+            setNoteSaveError(label('profile.activityContentRequired', 'Add an observation or activity detail before saving.'));
+            return;
+        }
         setSavingNote(true);
+        try {
 
-        // Photo upload: use Supabase Storage if available, else keep inline base64
-        let photoUrl = null;
-        let photoPath = null;
-        if (noteForm.photo_base64) {
-            if (user?.id && supabase) {
-                try {
-                    const path = `${user.id}/note_${Date.now()}.jpg`;
-                    const upload = await uploadPrivateImage({
-                        base64: noteForm.photo_base64,
-                        userId: user.id,
-                        path,
-                    });
-                    photoUrl = upload.signedUrl || noteForm.photo_base64;
-                    photoPath = upload.path || null;
-                } catch {
+            // Photo upload: use Supabase Storage if available, else keep inline base64
+            let photoUrl = null;
+            let photoPath = null;
+            if (noteForm.photo_base64) {
+                if (user?.id && supabase) {
+                    try {
+                        const path = `${user.id}/note_${Date.now()}.jpg`;
+                        const upload = await uploadPrivateImage({
+                            base64: noteForm.photo_base64,
+                            userId: user.id,
+                            path,
+                        });
+                        photoUrl = upload.signedUrl || noteForm.photo_base64;
+                        photoPath = upload.path || null;
+                    } catch {
+                        photoUrl = noteForm.photo_base64;
+                    }
+                } else {
                     photoUrl = noteForm.photo_base64;
                 }
+            }
+
+            const saved = await saveDailyNote({
+                ...noteForm,
+                plot_id:             noteForm.plot_id             || null,
+                chemical_name:       noteForm.chemical_name       || null,
+                chemical_qty:        noteForm.chemical_qty        || null,
+                application_timing:  noteForm.application_timing  || null,
+                temperature_am:      noteForm.temperature_am !== '' ? Number(noteForm.temperature_am) : null,
+                humidity:            noteForm.humidity       !== '' ? Number(noteForm.humidity)       : null,
+                growth_stage:        noteForm.growth_stage        || null,
+                pest_notes:          noteForm.pest_notes          || null,
+                disease_incidence:   noteForm.disease_incidence   !== '' ? Number(noteForm.disease_incidence)   : null,
+                disease_name_observed: noteForm.disease_name_observed || null,
+                scout_severity:      noteForm.scout_severity       || null,
+                expense_amount:      noteForm.expense_amount       !== '' ? Number(noteForm.expense_amount)       : null,
+                expense_category:    noteForm.expense_category     || null,
+                kg_harvested:        noteForm.kg_harvested         !== '' ? Number(noteForm.kg_harvested)         : null,
+                price_per_kg:        noteForm.price_per_kg         !== '' ? Number(noteForm.price_per_kg)         : null,
+                quality_grade:       noteForm.quality_grade        || null,
+                buyer_name:          noteForm.buyer_name           || null,
+                pruned_count:        noteForm.pruned_count         !== '' ? Number(noteForm.pruned_count)         : null,
+                pruning_type:        noteForm.pruning_type         || null,
+                inspection_type:     noteForm.inspection_type      || null,
+                inspection_status:   noteForm.inspection_status    || null,
+                photo_url:           photoUrl,
+                photo_path:          photoPath,
+            }, user?.id ?? null);
+
+            if (saved) {
+                const cleanupNotice = consumeStorageCleanupNotice();
+                setNotes(prev => [saved, ...prev]);
+                setNoteForm(EMPTY_FORM);
+                setAddingNote(false);
+                if (cleanupNotice) {
+                    notifyWarning(
+                        label('common.storageCleanupNotice', 'Old records were cleaned up to save your latest data.'),
+                    );
+                }
+                notifySuccess(label('common.savedSuccess', 'Activity log saved!'));
             } else {
-                photoUrl = noteForm.photo_base64;
+                setNoteSaveError(label('profile.activitySaveFailed', 'Could not save your activity. Your entry is still here. Please try again.'));
             }
+        } catch {
+            setNoteSaveError(label('profile.activitySaveFailed', 'Could not save your activity. Your entry is still here. Please try again.'));
+        } finally {
+            setSavingNote(false);
         }
-
-        const saved = await saveDailyNote({
-            ...noteForm,
-            plot_id:             noteForm.plot_id             || null,
-            chemical_name:       noteForm.chemical_name       || null,
-            chemical_qty:        noteForm.chemical_qty        || null,
-            application_timing:  noteForm.application_timing  || null,
-            temperature_am:      noteForm.temperature_am !== '' ? Number(noteForm.temperature_am) : null,
-            humidity:            noteForm.humidity       !== '' ? Number(noteForm.humidity)       : null,
-            growth_stage:        noteForm.growth_stage        || null,
-            pest_notes:          noteForm.pest_notes          || null,
-            disease_incidence:   noteForm.disease_incidence   !== '' ? Number(noteForm.disease_incidence)   : null,
-            disease_name_observed: noteForm.disease_name_observed || null,
-            scout_severity:      noteForm.scout_severity       || null,
-            expense_amount:      noteForm.expense_amount       !== '' ? Number(noteForm.expense_amount)       : null,
-            expense_category:    noteForm.expense_category     || null,
-            kg_harvested:        noteForm.kg_harvested         !== '' ? Number(noteForm.kg_harvested)         : null,
-            price_per_kg:        noteForm.price_per_kg         !== '' ? Number(noteForm.price_per_kg)         : null,
-            quality_grade:       noteForm.quality_grade        || null,
-            buyer_name:          noteForm.buyer_name           || null,
-            pruned_count:        noteForm.pruned_count         !== '' ? Number(noteForm.pruned_count)         : null,
-            pruning_type:        noteForm.pruning_type         || null,
-            inspection_type:     noteForm.inspection_type      || null,
-            inspection_status:   noteForm.inspection_status    || null,
-            photo_url:           photoUrl,
-            photo_path:          photoPath,
-        }, user?.id ?? null);
-
-        if (saved) {
-            const cleanupNotice = consumeStorageCleanupNotice();
-            setNotes(prev => [saved, ...prev]);
-            setNoteForm(EMPTY_FORM);
-            setAddingNote(false);
-            if (cleanupNotice) {
-                notifyWarning(
-                    label('common.storageCleanupNotice', 'Old records were cleaned up to save your latest data.'),
-                );
-            }
-            notifySuccess(label('common.savedSuccess', 'Activity log saved!'));
-        } else {
-            notifyError(label('error.saveFailed', 'Failed to save. Please try again.'));
-        }
-        setSavingNote(false);
     };
 
     const handleAddPlot = async (e) => {
@@ -398,18 +439,19 @@ const UserDashboardPanel = () => {
                             <span className="udp-avatar-status udp-avatar-status--compact" />
                         </div>
                         <div className="udp-profile-identity">
-                            <h2 className="udp-display-name udp-display-name--compact">{displayName}</h2>
+                            <h1 className="udp-display-name udp-display-name--compact">{displayName}</h1>
                             <p className="udp-email udp-email--compact"><span className="udp-email-dot" />{email}</p>
                         </div>
                     </div>
                     <div className="udp-profile-actions">
                         <button 
                             className="udp-signout-mini udp-signout-mini--muted"
+                            aria-label={t('profile.editProfile')}
                             onClick={() => setShowProfileModal(true)}
                         >
                             <User size={14} />
                         </button>
-                        <button className="udp-signout-mini" onClick={handleSignOut} disabled={signingOut}>
+                        <button className="udp-signout-mini" aria-label={t('common.signOut')} onClick={handleSignOut} disabled={signingOut}>
                             <LogOut size={14} />
                         </button>
                     </div>
@@ -427,14 +469,12 @@ const UserDashboardPanel = () => {
             </div>
 
             {/* ── Feature Browser (Explore Features) ── */}
-            <div className="udp-category-header udp-category-header--compact">
-                <span className="udp-category-title">{label('profile.browseFeatures', 'Explore Features')}</span>
-            </div>
-            <div className="udp-shelf-container udp-shelf-container--compact">
+            <div className="udp-shelf-container udp-shelf-container--compact farm-workspace-nav" role="group" aria-label={label('profile.browseFeatures', 'Explore Features')}>
                 {TABS.map(t2 => (
                     <button
                         key={t2.id}
                         className={`udp-utility-card ${tab === t2.id ? 'active' : ''}`}
+                        aria-pressed={tab === t2.id}
                         onClick={() => setTab(t2.id)}
                     >
                         <div className={`udp-utility-icon-box ${tab === t2.id ? 'active' : ''}`}>
@@ -549,6 +589,7 @@ const UserDashboardPanel = () => {
                             enhanceText={enhanceText}
                             setEnhanceText={setEnhanceText}
                             savingNote={savingNote}
+                            saveError={noteSaveError}
                             notes={notes}
                             ACTIVITY_BADGE_COLOR={ACTIVITY_BADGE_COLOR}
                             relDate={relDate}
@@ -578,15 +619,15 @@ const UserDashboardPanel = () => {
             {/* ── Farmer Profile / Verification Modal ─────────────────────── */}
             {showProfileModal && (
                 <div className="udp-modal-overlay" onClick={() => setShowProfileModal(false)}>
-                    <div className="udp-profile-modal" onClick={e => e.stopPropagation()}>
+                    <div className="udp-profile-modal" ref={profileDialogRef} role="dialog" aria-modal="true" aria-labelledby="farm-profile-dialog-title" onClick={e => e.stopPropagation()}>
                         <div className="udp-profile-modal-header">
-                            <button className="udp-profile-modal-close" onClick={() => setShowProfileModal(false)}>
+                            <button className="udp-profile-modal-close" aria-label={t('common.close')} onClick={() => setShowProfileModal(false)}>
                                 <X size={20} />
                             </button>
                             <div className="udp-profile-modal-avatar">
                                 {isVerified ? initials : <User size={40} />}
                             </div>
-                            <h3 style={{ marginBottom: '4px' }}>{isVerified ? profileInfo.name : label('profile.completeToVerify', 'Complete Profile')}</h3>
+                            <h3 id="farm-profile-dialog-title" style={{ marginBottom: '4px' }}>{isVerified ? profileInfo.name : label('profile.completeToVerify', 'Complete Profile')}</h3>
                             <p style={{ opacity: 0.8, fontSize: '0.9rem' }}>{email}</p>
                         </div>
                         
@@ -594,10 +635,11 @@ const UserDashboardPanel = () => {
                             {isEditingProfile ? (
                                 <form onSubmit={handleProfileSave}>
                                     <div className="udp-form-group">
-                                        <label className="udp-form-label">{label('profile.plotName', 'Full Name')}</label>
+                                        <label className="udp-form-label" htmlFor="farm-profile-name">{label('profile.plotName', 'Full Name')}</label>
                                         <input 
                                             type="text" 
                                             className="udp-form-input" 
+                                            id="farm-profile-name"
                                             value={tempProfile.name}
                                             onChange={e => setTempProfile({...tempProfile, name: e.target.value})}
                                             placeholder={label('profile.agropreneurPlaceholder', 'e.g. Ahmad Farmer')}
@@ -605,10 +647,11 @@ const UserDashboardPanel = () => {
                                         />
                                     </div>
                                     <div className="udp-form-group">
-                                        <label className="udp-form-label">{label('profile.contactInfo', 'Contact Number')}</label>
+                                        <label className="udp-form-label" htmlFor="farm-profile-contact">{label('profile.contactInfo', 'Contact Number')}</label>
                                         <input 
                                             type="text" 
                                             className="udp-form-input" 
+                                            id="farm-profile-contact"
                                             value={tempProfile.contact}
                                             onChange={e => setTempProfile({...tempProfile, contact: e.target.value})}
                                             placeholder={label('profile.contactPlaceholder', 'e.g. +60 12-345 6789')}
@@ -616,10 +659,11 @@ const UserDashboardPanel = () => {
                                         />
                                     </div>
                                     <div className="udp-form-group">
-                                        <label className="udp-form-label">{label('profile.specializedCrops', 'Specialized Crops')}</label>
+                                        <label className="udp-form-label" htmlFor="farm-profile-crops">{label('profile.specializedCrops', 'Specialized Crops')}</label>
                                         <input 
                                             type="text" 
                                             className="udp-form-input" 
+                                            id="farm-profile-crops"
                                             value={tempProfile.crops}
                                             onChange={e => setTempProfile({...tempProfile, crops: e.target.value})}
                                             placeholder={label('profile.cropsPlaceholder', 'e.g. Durian, Rubber')}

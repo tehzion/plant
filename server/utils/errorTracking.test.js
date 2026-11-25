@@ -30,7 +30,7 @@ describe('server error tracking', () => {
             request: { url: '/api/analyze', data: { image: 'data:image/jpeg;base64,...' }, headers: { authorization: 'Bearer x' }, cookies: 'a=b' },
             user: { id: 'u1', email: 'farmer@example.com', ip_address: '1.2.3.4' },
         });
-        expect(event.request).toEqual({ url: '/api/analyze' });
-        expect(event.user).toEqual({ id: 'u1' });
+        expect(event.request).toBeUndefined();
+        expect(event.user).toBeUndefined();
     });
 });

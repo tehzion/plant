@@ -63,10 +63,10 @@ const DiseaseResultSections = ({ normalized, t }) => {
 
             {!healthy && symptomsList.length > 0 && (
                 <div className="symptoms-section">
-                    <h4 className="subsection-title">
+                    <h3 className="subsection-title">
                         <AlertCircle size={18} className="subsection-icon" />
                         {t('results.symptoms')}
-                    </h4>
+                    </h3>
                     <ul className="symptoms-list">
                         {symptomsList.map((symptom, index) => (
                             <li key={`${symptom}-${index}`} className="symptom-item">{symptom}</li>
@@ -94,10 +94,10 @@ const DiseaseResultSections = ({ normalized, t }) => {
 
             {alternatives.length > 0 && (
                 <div className="differentials-section">
-                    <h4 className="subsection-title">
+                    <h3 className="subsection-title">
                         <AlertTriangle size={18} className="subsection-icon" />
                         {label('assessment.alternativesTitle', 'Other conditions that look similar')}
-                    </h4>
+                    </h3>
                     <p className="differentials-intro">{label('assessment.alternativesIntro', 'These can look alike. Check the differences before acting.')}</p>
                     <ul className="alternative-list">
                         {alternatives.map((item, index) => (

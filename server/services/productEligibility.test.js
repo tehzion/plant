@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { buildRecommendationReason, evaluateProductEligibility, partitionByEligibility } from './productEligibility.js';
+import { buildRecommendationReason, evaluateProductEligibility, partitionByEligibility, selectRecoverySupport } from './productEligibility.js';
 
 const fungalDurian = { disease: 'Anthracnose (Colletotrichum)', diseaseCategory: 'fungal', plantType: 'Durian (Durio zibethinus)' };
 const label = 'Registered product label: contact fungicide for use against leaf spot diseases.';
@@ -68,5 +68,34 @@ describe('product recommendation eligibility', () => {
         expect(split.discovery).toEqual([expect.objectContaining({ id: 2, discoveryOnly: true })]);
         expect(split.excluded).toBe(1);
         expect(buildRecommendationReason({ disease: 'Leaf spot' }, { checks: { curatedRule: true } })).toBe('Listed for Leaf spot; matches an expert-curated rule');
+    });
+});
+
+describe('plant-health products beside a disease result', () => {
+    const riceBrownSpot = { disease: 'Brown Spot', plantType: 'Rice', diseaseCategory: 'fungal' };
+    const catalogue = [
+        { id: 1, name: 'BIO-G 11-11-11', tags: ['Balanced Nutrients', 'Recovery Fertilizer'] },
+        { id: 2, name: 'Oligo Chitosan', tags: ['Anti-Fungal Spray', 'Chitosan', 'Plant Immunity Booster', 'Pest Resilience'] },
+        { id: 3, name: 'COMBOBAC', tags: ['Trichoderma', 'Disease Prevention', 'Root Disease Reduction'] },
+        { id: 4, name: 'Durian Booster', tags: ['Durian Fertilizer', 'Plant Immunity Booster'] },
+        { id: 5, name: 'Sold-out Microbes', tags: ['Beneficial Microbes'], inStock: false },
+        { id: 6, name: 'Compost', tags: ['Soil Conditioner'] },
+    ];
+
+    it('picks in-stock plant-health products that fit the crop, best match first', () => {
+        const picked = selectRecoverySupport(catalogue, riceBrownSpot, 'en');
+        expect(picked.map((product) => product.id)).toEqual([2, 1]);
+        expect(picked.every((product) => product.recoveryOnly)).toBe(true);
+    });
+
+    it('keeps soil and root disease products for root, wilt or rot problems', () => {
+        expect(selectRecoverySupport(catalogue, riceBrownSpot).map((product) => product.id)).not.toContain(3);
+        expect(selectRecoverySupport(catalogue, { disease: 'Bacterial Wilt', plantType: 'Rice' }).map((product) => product.id)).toContain(3);
+    });
+
+    it('never calls a recovery product a cure', () => {
+        const [first] = selectRecoverySupport(catalogue, riceBrownSpot, 'ms');
+        expect(first.recommendationReason).toBe('Membantu kesihatan pokok semasa anda menangani Brown Spot. Ia tidak menyembuhkannya.');
+        expect(selectRecoverySupport(catalogue, riceBrownSpot, 'en', 1)[0].recommendationReason).toMatch(/does not cure/);
     });
 });

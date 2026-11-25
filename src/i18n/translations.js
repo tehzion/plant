@@ -1,3 +1,4 @@
+import errorTranslations from './translations/error.js';
 import commonTranslations from './translations/common.js';
 import footerTranslations from './translations/footer.js';
 import navTranslations from './translations/nav.js';
@@ -18,9 +19,11 @@ import feedbackTranslations from './translations/feedback.js';
 import privacyTranslations from './translations/privacy.js';
 import assessmentTranslations from './translations/assessment.js';
 import assistantTranslations from './translations/assistant.js';
+import errorsTranslations from './translations/errors.js';
 import { scanQualityCopy } from '../../shared/scanQualityCopy.js';
 
 const translationSections = [
+    errorTranslations,
     commonTranslations,
     footerTranslations,
     navTranslations,
@@ -47,6 +50,7 @@ const translationSections = [
     privacyTranslations,
     assessmentTranslations,
     assistantTranslations,
+    errorsTranslations,
 ];
 
 const mergeTranslationSections = (...sections) => {

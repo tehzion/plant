@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import './LegalPages.css';
 
-const LAST_UPDATED = '13 May 2026';
+const LAST_UPDATED = '2 November 2026';
 
 const sections = [
     {
@@ -69,7 +69,7 @@ const sections = [
         title: '6. Intellectual Property and Data Usage',
         points: [
             'The application, its source code, interface design, AI workflows, trained models, and supporting materials remain the exclusive intellectual property of KANB unless otherwise stated.',
-            'By using the application, you consent to KANB using uploaded crop imagery and associated diagnostic outputs to improve, calibrate, validate, and train its machine learning systems, subject to the applicable privacy notice.',
+            'Optional AI-improvement use requires a separate, explicit current-version opt-in. Using the application or accepting these terms does not provide that opt-in. You can change future sharing in Privacy controls and request withdrawal of previously shared copies through the privacy contact.',
             'Personal data handling remains subject to the Personal Data Protection Act 2010 and any applicable amendments, regulations, or binding guidelines in force in Malaysia.',
         ],
     },

@@ -6,7 +6,7 @@ import AdminReviewDashboard from './AdminReviewDashboard.jsx';
 const useAuthMock = vi.hoisted(() => vi.fn());
 const fetchAdminReviewSummaryMock = vi.hoisted(() => vi.fn());
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: useAuthMock,
 }));
 

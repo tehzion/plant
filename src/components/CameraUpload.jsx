@@ -7,10 +7,12 @@ import { getImageQualityGuidance } from '../utils/diseaseDetection';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 import './CameraUpload.css';
 
-const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, captureRole = 'whole' }) => {
+const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, showGuidance = true, required = false, captureRole = 'whole' }) => {
     const { t, language } = useLanguage();
     const qualityCopy = getScanQualityCopy(language);
-    const { notifyError } = useNotifications();
+    const { notifyError, notifyInfo } = useNotifications();
+    // Permission messages explain where to change settings, so keep them up longer.
+    const PERMISSION_TOAST_MS = 9000;
     const [preview, setPreview] = useState(null);
     // True once this component's own quality check accepted the photo.
     const [qualityPassed, setQualityPassed] = useState(false);
@@ -19,8 +21,8 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
         return value && value !== key ? value : fallback;
     };
     const stepLabel = captureRole === 'closeup'
-        ? label('assessment.ux.stepCloseup', 'Step 2 of 2: Close-up of the worst leaf (optional)')
-        : captureRole === 'whole' ? label('assessment.ux.stepWhole', 'Step 1 of 2: Whole plant') : '';
+        ? required ? t('results.retakeCloseup') : label('assessment.ux.stepCloseup', 'Close-up of the worst leaf (optional)')
+        : captureRole === 'whole' ? label('assessment.ux.stepWhole', 'Whole plant') : '';
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
 
@@ -45,6 +47,22 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
         document.addEventListener('keydown', key);
         return () => { document.removeEventListener('keydown', key); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
     }, [isCameraOpen]);
+
+    // A web page cannot see a denied Photos permission: the picker just comes
+    // back empty and the input fires `cancel`. Explain once per screen.
+    const galleryHintShownRef = useRef(false);
+    useEffect(() => {
+        const inputs = [fileInputRef.current, cameraInputRef.current].filter(Boolean);
+        const onCancel = () => {
+            if (galleryHintShownRef.current || typeof notifyInfo !== 'function') return;
+            galleryHintShownRef.current = true;
+            notifyInfo(label('common.galleryNoPhoto', 'No photo was selected. If your photos do not appear, allow photo access for your browser in your phone settings, then try again.'), {
+                duration: PERMISSION_TOAST_MS,
+            });
+        };
+        inputs.forEach((input) => input.addEventListener('cancel', onCancel));
+        return () => inputs.forEach((input) => input.removeEventListener('cancel', onCancel));
+    });
 
     const openFilePicker = (inputRef) => {
         if (inputRef.current) {
@@ -77,6 +95,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
             notifyError(t('common.cameraUnsupported'), {
                 actionLabel: t('common.uploadGallery'),
                 action: openGalleryPicker,
+                duration: PERMISSION_TOAST_MS,
             });
             openGalleryPicker();
             return;
@@ -100,6 +119,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
             notifyError(t(messageKey), {
                 actionLabel: t('common.uploadGallery'),
                 action: openGalleryPicker,
+                duration: PERMISSION_TOAST_MS,
             });
             openGalleryPicker();
         }
@@ -124,7 +144,7 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
             onQualityIssue?.(guidance.code || guidance.messageKey || 'IMAGE_QUALITY', captureRole);
 
-            notifyError(t(guidance.messageKey), {
+            if (!onQualityIssue) notifyError(t(guidance.messageKey), {
                 actionLabel: t('common.uploadGallery'),
                 action: openGalleryPicker,
             });
@@ -232,14 +252,15 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
 
     const clearPreview = () => {
         setPreview(null);
+        onImageCapture?.(null);
         setQualityPassed(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (cameraInputRef.current) cameraInputRef.current.value = '';
     };
 
     return (
-        <div className="camera-upload" aria-describedby={`camera-upload-guidance-${captureRole}`}>
-            {stepLabel && !isCameraOpen && <p className="camera-upload-step">{stepLabel}</p>}
+        <div className="camera-upload" role="group" aria-label={stepLabel}>
+            {stepLabel && captureRole === 'whole' && !isCameraOpen && <p className="camera-upload-step">{stepLabel}</p>}
             {isCameraOpen ? (
                 <div className="camera-modal" ref={cameraDialogRef} role="dialog" aria-modal="true" aria-label={t('common.takePhoto')}>
                     <div className="video-container">
@@ -299,13 +320,12 @@ const CameraUpload = ({ onImageCapture, onQualityIssue, disabled, currentImage, 
                         <Image size={32} className="btn-icon-large" />
                         <span>{t('common.uploadGallery')}</span>
                     </button>
-                    <div id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance">
-                        <strong>{qualityCopy.photoGuidance.tipsTitle}</strong>
-                        <p>{qualityCopy.photoGuidance.intro}</p>
+                    <details id={`camera-upload-guidance-${captureRole}`} className="camera-upload-guidance" hidden={!showGuidance || captureRole !== 'whole'}>
+                        <summary>{qualityCopy.photoGuidance.tipsTitle}</summary>
                         <ul>
                             {qualityCopy.photoGuidance.tips.slice(0, 3).map((tip) => <li key={tip}>{tip}</li>)}
                         </ul>
-                    </div>
+                    </details>
                 </div>
             )}
 

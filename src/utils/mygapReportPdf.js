@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { createPdfTextRenderer } from './pdfTextRenderer';
 import { BRAND, createPdfPageFlow, drawBrandFooters, drawBrandHeader, getPdfTranslation, loadBrandLogo } from './pdfReportLayout';
-import { checklistCompletion, findPhiConflicts, logActivityDate, MYGAP_CHECKLIST_IDS, NOT_APPLICABLE, safeHarvestDateFor } from '../../shared/mygapCompliance.js';
+import { checklistCompletion, computeInputStock, findPhiConflicts, logActivityDate, MYGAP_CHECKLIST_IDS, NOT_APPLICABLE, parseLocalDate, safeHarvestDateFor } from '../../shared/mygapCompliance.js';
 import { isHealthy } from './statusUtils';
 
 export { MYGAP_CHECKLIST_IDS };
@@ -27,7 +27,7 @@ export const mygapReportFileName = (now = new Date()) => `myGAP-records-${now.to
  * Builds the myGAP record report: farm summary, checklist status, the full
  * activity logbook as a table, and a signed declaration block for audits.
  */
-export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, scans = [], language = 'en', translations = {}, now = new Date() } = {}) => {
+export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, scans = [], farmProfile = {}, language = 'en', translations = {}, now = new Date() } = {}) => {
     const doc = new jsPDF();
     const renderer = createPdfTextRenderer(doc);
     const rt = (key, fallback = key) => {
@@ -64,10 +64,17 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, sc
         await flow.writeSectionTitle(title, { fontSize: 12, textColor: BRAND.primaryDark, marginBottom: 4 });
     };
 
-    // Farm details: derived from the records, plus lines to complete by hand.
+    // Farm details from the farm profile and the records; anything missing is
+    // left as a line to complete by hand.
+    const tenureLabels = { owned: ['mygap.landOwned', 'Own land'], leased: ['mygap.landLeased', 'Leased'], tol: ['mygap.landTol', 'Temporary occupation licence (TOL)'], other: ['mygap.landOther', 'Other'] };
+    const tenure = tenureLabels[farmProfile.landTenure];
     const detailRows = [
-        [rt('mygap.farmerName', 'Farmer name'), ''],
-        [rt('mygap.registrationNo', 'myGAP reference no.'), ''],
+        [rt('mygap.farmerName', 'Farmer name'), farmProfile.farmerName || ''],
+        [rt('mygap.farmName', 'Farm name'), farmProfile.farmName || ''],
+        [rt('mygap.farmAddress', 'Farm address'), farmProfile.farmAddress || ''],
+        ...(tenure ? [[rt('mygap.landTenure', 'Land status'), rt(tenure[0], tenure[1])]] : []),
+        [rt('mygap.registrationNo', 'myGAP reference no.'), farmProfile.mygapRef || ''],
+        ...(farmProfile.certExpiry ? [[rt('mygap.certExpiry', 'myGAP certificate expiry'), formatDate(parseLocalDate(farmProfile.certExpiry))]] : []),
         [rt('mygap.plots', 'Farm / plots'), uniqueValues(sortedLogs, 'plot_id').join(', ')],
         [rt('mygap.crops', 'Crops'), uniqueValues(sortedLogs, 'crop').join(', ')],
         [rt('mygap.reportPeriod', 'Records period'), periodText],
@@ -186,14 +193,21 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, sc
                 plot: [log.plot_id, log.crop].filter(Boolean).join(' / ') || '-',
                 product: [
                     [log.product_used, log.quantity].filter(Boolean).join(' – '),
+                    fieldLine('mygap.topic', 'Training topic', log.topic),
+                    log.amount != null && log.amount !== '' ? `${log.amount} ${log.unit || ''}`.trim() : '',
+                    fieldLine('mygap.lotCode', 'Lot code', log.lot_code),
                     fieldLine('mygap.activeIngredient', 'Active ingredient', log.active_ingredient),
                     fieldLine('mygap.lrmpNo', 'LRMP no.', log.registration_no),
                     fieldLine('mygap.areaTreated', 'Area treated', log.area_treated),
+                    fieldLine('mygap.supplier', 'Supplier', log.supplier),
+                    fieldLine('mygap.buyer', 'Buyer', log.buyer),
+                    fieldLine('mygap.price', 'Price (RM)', log.price),
                 ].filter(Boolean).join('\n') || '-',
                 safe: formatDate(safeHarvestDateFor(log)),
                 operator: log.operator || '-',
                 notes: [
                     fieldLine('mygap.targetPest', 'Pest or disease treated', log.target_pest),
+                    fieldLine('mygap.attendees', 'Who attended', log.attendees),
                     log.notes,
                     conflicts.has(log.id) ? rt('mygap.phiConflict', 'Harvested before the waiting period ended (safe from {date}).').replace('{date}', formatDate(conflicts.get(log.id).safeFrom)) : '',
                     log.updated_at ? `(${rt('mygap.edited', 'Edited')})` : '',
@@ -227,45 +241,32 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, sc
         flow.yPos += 8;
     }
 
-    // Pest monitoring: plant scans double as monitoring records (myGAP 4-4).
-    const monitoring = [...scans]
-        .map((scan) => ({ scan, date: parseScanDate(scan) }))
-        .filter(({ date }) => date)
-        .sort((a, b) => b.date - a.date)
-        .slice(0, 40);
-    if (monitoring.length) {
-        await sectionTitle(rt('mygap.monitoringTitle', 'Pest monitoring (from plant scans)'), 26);
-        const monitorColumns = [
-            { key: 'date', label: rt('mygap.colDate', 'Date'), width: 24 },
-            { key: 'crop', label: rt('mygap.colPlotCrop', 'Plot / crop'), width: 46 },
-            { key: 'finding', label: rt('mygap.colFinding', 'Finding'), width: contentWidth - 70 },
-        ];
-        const drawMonitorHeader = async () => {
+    // Simple tables for monitoring, workers and stock, with the header
+    // repeated when a table continues on a new page.
+    const drawTable = async (title, tableColumns, rows) => {
+        if (!rows.length) return;
+        await sectionTitle(title, 26);
+        const drawHeader = async () => {
             doc.setFillColor(...BRAND.primary);
             doc.rect(14, flow.yPos, contentWidth, 7, 'F');
             let x = 14;
-            for (const column of monitorColumns) {
+            for (const column of tableColumns) {
                 await renderer.drawText(column.label, x + cellPadding, flow.yPos + 1.6, { maxWidth: column.width - cellPadding * 2, fontSize: 8, fontStyle: 'bold', color: [255, 255, 255], lineHeight: 1.2 });
                 x += column.width;
             }
             flow.yPos += 7;
         };
-        await drawMonitorHeader();
-        for (const { scan, date } of monitoring) {
-            const cells = {
-                date: formatDate(date),
-                crop: [scan.plotId || scan.plot_id, scan.category || scan.plantType].filter(Boolean).join(' / ') || '-',
-                finding: isHealthy(scan) ? rt('mygap.healthyFinding', 'No disease found') : [scan.disease, scan.severity].filter(Boolean).join(' – ') || '-',
-            };
-            const rowHeight = Math.max(...monitorColumns.map((column) => renderer.measureTextHeight(cells[column.key], column.width - cellPadding * 2, { fontSize: 8, lineHeight: 1.25 }))) + cellPadding * 2;
+        await drawHeader();
+        for (const cells of rows) {
+            const rowHeight = Math.max(...tableColumns.map((column) => renderer.measureTextHeight(cells[column.key] || '-', column.width - cellPadding * 2, { fontSize: 8, lineHeight: 1.25 }))) + cellPadding * 2;
             if (flow.yPos + rowHeight > pageHeight - 22) {
                 doc.addPage();
                 flow.yPos = 20;
-                await drawMonitorHeader();
+                await drawHeader();
             }
             let x = 14;
-            for (const column of monitorColumns) {
-                await renderer.drawText(cells[column.key], x + cellPadding, flow.yPos + cellPadding, { maxWidth: column.width - cellPadding * 2, fontSize: 8, lineHeight: 1.25, color: BRAND.dark });
+            for (const column of tableColumns) {
+                await renderer.drawText(cells[column.key] || '-', x + cellPadding, flow.yPos + cellPadding, { maxWidth: column.width - cellPadding * 2, fontSize: 8, lineHeight: 1.25, color: BRAND.dark });
                 x += column.width;
             }
             doc.setDrawColor(...BRAND.border);
@@ -273,7 +274,45 @@ export const buildMyGapReportPdf = async ({ logs = [], derivedChecklist = {}, sc
             flow.yPos += rowHeight;
         }
         flow.yPos += 8;
-    }
+    };
+
+    // Pest monitoring: plant scans double as monitoring records (myGAP 4-4).
+    const monitoring = [...scans]
+        .map((scan) => ({ scan, date: parseScanDate(scan) }))
+        .filter(({ date }) => date)
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 40);
+    await drawTable(rt('mygap.monitoringTitle', 'Pest monitoring (from plant scans)'), [
+        { key: 'date', label: rt('mygap.colDate', 'Date'), width: 24 },
+        { key: 'crop', label: rt('mygap.colPlotCrop', 'Plot / crop'), width: 46 },
+        { key: 'finding', label: rt('mygap.colFinding', 'Finding'), width: contentWidth - 70 },
+    ], monitoring.map(({ scan, date }) => ({
+        date: formatDate(date),
+        crop: [scan.plotId || scan.plot_id, scan.category || scan.plantType].filter(Boolean).join(' / '),
+        finding: isHealthy(scan) ? rt('mygap.healthyFinding', 'No disease found') : [scan.disease, scan.severity].filter(Boolean).join(' – '),
+    })));
+
+    // Input stock (purchases minus applications).
+    const formatAmount = (value) => Number(value).toLocaleString(locale, { maximumFractionDigits: 3 });
+    await drawTable(rt('mygap.stockTitle', 'Input stock'), [
+        { key: 'product', label: rt('assessment.mygap.productUsed', 'Product'), width: contentWidth - 102 },
+        { key: 'purchased', label: rt('mygap.colPurchased', 'Bought'), width: 34 },
+        { key: 'used', label: rt('mygap.colUsed', 'Used'), width: 34 },
+        { key: 'balance', label: rt('mygap.colBalance', 'Balance'), width: 34 },
+    ], computeInputStock(sortedLogs).map((item) => ({
+        product: item.product,
+        purchased: `${formatAmount(item.purchased)} ${item.unit}`,
+        used: `${formatAmount(item.used)} ${item.unit}`,
+        balance: `${formatAmount(item.balance)} ${item.unit}`,
+    })));
+
+    // Workers (myGAP 4-9); training sessions are in the logbook above.
+    await drawTable(rt('mygap.workersTitle', 'Workers'), [
+        { key: 'name', label: rt('mygap.workerName', 'Name'), width: 56 },
+        { key: 'idNumber', label: rt('mygap.workerId', 'IC / passport no.'), width: 44 },
+        { key: 'nationality', label: rt('mygap.nationality', 'Nationality'), width: 36 },
+        { key: 'role', label: rt('mygap.role', 'Role'), width: contentWidth - 136 },
+    ], (farmProfile.workers || []).map((worker) => ({ ...worker })));
 
     // Declaration and signature, kept together on one page.
     const declarationText = rt('mygap.declarationText', 'I confirm that the records in this report are accurate and complete to the best of my knowledge.');

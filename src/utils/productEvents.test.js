@@ -1,3 +1,4 @@
+import { setAnalyticsConsent } from './privacyChoices.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { insertMock, getUserMock, neonDataRequestMock } = vi.hoisted(() => ({
@@ -80,7 +81,8 @@ describe('product event capture', () => {
         });
     });
 
-    it('saves product events through Supabase without blocking callers', async () => {
+    it('saves optional product events only after consent', async () => {
+        setAnalyticsConsent(true, 'user:user-1');
         const result = await saveProductEvent({
             diagnosis: {
                 scanId: 'scan-456',
@@ -119,4 +121,11 @@ describe('product event capture', () => {
         expect(neonDataRequestMock.mock.calls[0][1].guest_id).toMatch(/^guest_/);
         expect(neonDataRequestMock.mock.calls[0][1].metadata.selectedProductIds).toEqual(['12', '18']);
     });
+});
+
+it('does not disclose product/diagnosis analytics without an explicit choice', async () => {
+    localStorage.clear(); neonDataRequestMock.mockClear();
+    const result = await saveProductEvent({ diagnosis: { disease: 'Private crop issue' } });
+    expect(result).toMatchObject({ skipped: true, reason: 'optional_analytics_not_consented' });
+    expect(neonDataRequestMock).not.toHaveBeenCalled();
 });

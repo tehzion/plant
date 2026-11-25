@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512">
+  <title>KANB app icon</title>
+  <rect width="64" height="64" rx="14" fill="#2e6b3f"/>
+  <g fill="none" stroke="#cfe3cf" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 22v-6a4 4 0 0 1 4-4h6"/>
+    <path d="M42 12h6a4 4 0 0 1 4 4v6"/>
+    <path d="M52 42v6a4 4 0 0 1-4 4h-6"/>
+    <path d="M22 52h-6a4 4 0 0 1-4-4v-6"/>
+  </g>
+  <path d="M21 43C18.5 29.5 29 20 44 20c1.5 14-9 24.5-23 23Z" fill="#ffffff"/>
+  <g stroke="#2e6b3f" stroke-width="2" stroke-linecap="round" fill="none">
+    <path d="M21 43 37 27"/>
+    <path d="M28 36v-6.5M28 36h6.5M33 31v-5M33 31h5"/>
+  </g>
+  <path d="M21 43l-3.5 3.5" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,7 @@
+.scan-service-notice { padding: 16px 0; border-block: 1px solid var(--color-border); color: var(--color-text-primary); }
+.scan-service-notice__title { display: flex; align-items: center; gap: 8px; }
+.scan-service-notice__title svg { flex-shrink: 0; color: var(--color-warning-ink); }
+.scan-service-notice p { margin: 8px 0 12px; line-height: 1.5; }
+.scan-service-notice__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.scan-service-notice__actions .btn { min-height: 44px; white-space: normal; }
+.scan-service-restored { color: var(--color-primary-dark); }

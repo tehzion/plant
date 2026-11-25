@@ -94,9 +94,12 @@ export const missingPesticideFields = (log = {}) => {
     return missing;
 };
 
-const hasTraceabilityBasics = (log) => Boolean(logActivityDate(log) && text(log.plot_id) && text(log.crop));
+// Purchases and training are farm-wide, so they need only a date.
+const FARM_WIDE_TYPES = ['purchase', 'training'];
+const hasTraceabilityBasics = (log) => Boolean(logActivityDate(log)
+    && (FARM_WIDE_TYPES.includes(log.type) || (text(log.plot_id) && text(log.crop))));
 
-const isRecentPestCheck = (entry, now, days) => {
+const isWithinDays = (entry, now, days) => {
     const date = parseLocalDate(entry.activity_date || entry.created_at || entry.timestamp);
     return Boolean(date) && now - date <= days * DAY_MS;
 };
@@ -119,11 +122,16 @@ export const evaluateChecklistEvidence = ({ logs = [], notes = [], scans = [], n
             : { auto: false, reason: 'pesticideRecordsIncomplete', count: incompleteSprays.length };
 
     const pestChecks = [
-        ...scans.filter((scan) => isRecentPestCheck(scan, today, 30)),
-        ...notes.filter((note) => ['scout', 'inspect'].includes(note.activity_type) && isRecentPestCheck(note, today, 30)),
+        ...scans.filter((scan) => isWithinDays(scan, today, 30)),
+        ...notes.filter((note) => ['scout', 'inspect'].includes(note.activity_type) && isWithinDays(note, today, 30)),
     ];
     // Monitoring supports integrated pest management but cannot show farm hygiene.
     evidence.check3 = { auto: false, reason: pestChecks.length ? 'pestChecksRecorded' : 'noRecentPestChecks', count: pestChecks.length };
+
+    const recentTraining = logs.filter((log) => log.type === 'training' && isWithinDays(log, today, 365));
+    evidence.check7 = recentTraining.length
+        ? { auto: true, reason: 'trainingRecorded', count: recentTraining.length }
+        : { auto: false, reason: 'noTrainingRecords' };
 
     const untraceable = logs.filter((log) => !hasTraceabilityBasics(log));
     evidence.check8 = logs.length === 0
@@ -156,4 +164,78 @@ export const checklistCompletion = (resolved = {}) => {
         notApplicable: MYGAP_CHECKLIST_IDS.length - applicable.length,
         percent: applicable.length ? Math.round((completed / applicable.length) * 100) : 0,
     };
+};
+
+// ─── Phase 2: input stock, harvest lots, certificate renewal ────────────────
+
+const STOCK_TYPES = { purchase: 1, pesticide: -1, fertilizer: -1 };
+
+export const normalizeUnit = (unit) => {
+    const value = normalizeKey(unit).replace(/\.$/, '');
+    const aliases = { kilogram: 'kg', kilograms: 'kg', kgs: 'kg', gram: 'g', grams: 'g', litre: 'l', liter: 'l', litres: 'l', liters: 'l', millilitre: 'ml', milliliter: 'ml' };
+    return aliases[value] || value;
+};
+
+const toAmount = (value) => {
+    if (value === '' || value == null) return null;
+    const amount = Number(value);
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+};
+
+/**
+ * Input stock from records: purchases add, pesticide and fertilizer
+ * applications subtract. Only records with a product, amount and unit count;
+ * units are kept separate (no conversion between kg and L).
+ */
+export const computeInputStock = (logs = []) => {
+    const items = new Map();
+    for (const log of logs) {
+        const sign = STOCK_TYPES[log.type];
+        const amount = toAmount(log.amount);
+        const unit = normalizeUnit(log.unit);
+        const product = text(log.product_used);
+        if (!sign || amount === null || !unit || !product) continue;
+        const key = `${normalizeKey(product)}|${unit}`;
+        const item = items.get(key) || { product, unit, purchased: 0, used: 0, lastPurchase: null };
+        if (sign > 0) {
+            item.purchased += amount;
+            const date = logActivityDate(log);
+            if (date && (!item.lastPurchase || date > item.lastPurchase)) item.lastPurchase = date;
+        } else {
+            item.used += amount;
+        }
+        items.set(key, item);
+    }
+    return [...items.values()]
+        .map((item) => ({ ...item, balance: Math.round((item.purchased - item.used) * 1000) / 1000 }))
+        .sort((a, b) => a.product.localeCompare(b.product));
+};
+
+const lotPrefix = (plot) => {
+    const letters = text(plot).toUpperCase().replace(/[^A-Z0-9]+/g, '');
+    return (letters || 'FARM').slice(0, 6);
+};
+
+/** Next lot code for a harvest, e.g. BLOKA-261031-02 (plot, date, sequence that day). */
+export const nextLotCode = (logs = [], { plot, date = new Date() } = {}) => {
+    const day = parseLocalDate(date) || parseLocalDate(new Date());
+    const stamp = `${String(day.getFullYear()).slice(2)}${String(day.getMonth() + 1).padStart(2, '0')}${String(day.getDate()).padStart(2, '0')}`;
+    const base = `${lotPrefix(plot)}-${stamp}`;
+    const used = new Set(logs.map((log) => text(log.lot_code).toUpperCase()).filter(Boolean));
+    for (let sequence = 1; sequence < 100; sequence += 1) {
+        const code = `${base}-${String(sequence).padStart(2, '0')}`;
+        if (!used.has(code)) return code;
+    }
+    return `${base}-${Date.now().toString(36).toUpperCase()}`;
+};
+
+/** Certificate status for the renewal reminder (myGAP certificates last 2 years). */
+export const certificateStatus = (expiry, now = new Date()) => {
+    const expiryDate = parseLocalDate(expiry);
+    if (!expiryDate) return { state: 'unknown', daysLeft: null };
+    const today = parseLocalDate(now);
+    const daysLeft = Math.round((expiryDate - today) / DAY_MS);
+    if (daysLeft < 0) return { state: 'expired', daysLeft };
+    if (daysLeft <= 180) return { state: 'renewSoon', daysLeft };
+    return { state: 'valid', daysLeft };
 };

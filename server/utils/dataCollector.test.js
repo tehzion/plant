@@ -48,10 +48,23 @@ it('treats a lost race with another identity as a failed write', async () => {
     mocks.queryNeon.mockResolvedValue({ rows: [] });
     expect(await logTrainingData({ id: 'scan-1', ownerHash: OWNER, result: {} })).toBe(false);
 });
-it('reports an audit upload failure instead of writing a photo-less record', async () => {
+it('keeps the assessment and marks the photo as failed when the upload fails', async () => {
     mocks.upload.mockResolvedValue({ error: new Error('storage offline') });
-    expect(await logTrainingData({ id: 'scan-1', ownerHash: OWNER, dataConsent: CONSENTED, treeImage: 'data:image/jpeg;base64,/9j/AA==', result: {} })).toBe(false);
-    expect(auditInsert()).toBeUndefined();
+    mocks.queryNeon.mockImplementation(async (sql) => ({ rows: sql.startsWith('select') ? [] : [{ id: 'scan-1' }] }));
+    const result = { disease: 'Leaf spot' };
+    expect(await logTrainingData({ id: 'scan-1', ownerHash: OWNER, dataConsent: CONSENTED, treeImage: 'data:image/jpeg;base64,/9j/AA==', result })).toBe(true);
+    const [, params] = auditInsert();
+    expect(params[3]).toEqual({ tree: null, leaf: null });
+    expect(params[4]).toEqual(result);
+    expect(params[5]).toMatchObject({ dataConsent: CONSENTED, photoUpload: { status: 'failed', reason: 'storage offline' } });
+});
+it('keeps the assessment when photo storage is not configured on the server', async () => {
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', ''); vi.stubEnv('SUPABASE_SECRET_KEY', '');
+    vi.resetModules();
+    const { logTrainingData: freshLog } = await import('./dataCollector.js');
+    mocks.queryNeon.mockImplementation(async (sql) => ({ rows: sql.startsWith('select') ? [] : [{ id: 'scan-2' }] }));
+    expect(await freshLog({ id: 'scan-2', ownerHash: OWNER, dataConsent: CONSENTED, treeImage: 'data:image/jpeg;base64,/9j/AA==', result: {} })).toBe(true);
+    expect(auditInsert()[1][5].photoUpload).toMatchObject({ status: 'failed', reason: expect.stringContaining('server-side Supabase configuration') });
 });
 it('stores feedback with the same scan ID and server-side attribution', async () => {
     const attribution = { source: 'farmer', verifiedBy: 'scan_capability', submitterHash: OWNER };

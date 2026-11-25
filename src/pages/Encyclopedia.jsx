@@ -6,6 +6,7 @@ import { useLanguage } from '../i18n/i18n.jsx';
 import { Search } from 'lucide-react';
 import './Encyclopedia.css';
 import { getUiCopy } from '../utils/uiCopy.js';
+import { setAssistantPageTopic } from '../utils/assistantContext.js';
 
 const Encyclopedia = () => {
   const { t, label, language } = useLanguage();
@@ -42,6 +43,13 @@ const Encyclopedia = () => {
     return getCategoryLabel(a).toLowerCase().localeCompare(getCategoryLabel(b).toLowerCase());
   })], [t, label]);
 
+  // The assistant's starter questions name the category being browsed.
+  const selectedCategoryLabel = selectedCategory === 'all' ? null : getCategoryLabel(selectedCategory);
+  useEffect(() => {
+    setAssistantPageTopic(selectedCategoryLabel);
+    return () => setAssistantPageTopic(null);
+  }, [selectedCategoryLabel]);
+
   const filteredDiseases = useMemo(() => {
     const baseDiseases = selectedCategory !== 'all'
       ? getDiseasesByCategory(selectedCategory)
@@ -64,7 +72,7 @@ const Encyclopedia = () => {
   }, [searchQuery, selectedCategory]);
 
   return (
-    <div className="page encyclopedia-page slide-up">
+    <div className="page encyclopedia-page">
       <div className="encyclopedia-layout">
         <header className="encyclopedia-header">
           <h1 className="encyclopedia-page-title">{t('encyclopedia.title')}</h1>
@@ -91,7 +99,11 @@ const Encyclopedia = () => {
           </div>
 
           <div className="category-wrapper">
-            <div className="superapp-shelf-container encyclopedia-category-shelf">
+            <label className="encyclopedia-category-label" htmlFor="library-category">{t('encyclopedia.categoryLabel')}</label>
+            <select id="library-category" className="encyclopedia-category-select" value={selectedCategory} onChange={event => setSelectedCategory(event.target.value)}>
+              {categories.map(category => <option key={category} value={category}>{getCategoryLabel(category)}</option>)}
+            </select>
+            <div className="encyclopedia-category-shelf">
               {categories.map(category => {
                 const isActive = selectedCategory === category;
                 const labelText = getCategoryLabel(category);

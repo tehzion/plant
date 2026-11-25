@@ -1,0 +1,43 @@
+1
+00:00:00,000 --> 00:00:06,000
+KANB AI Agropreneur: an AI plant doctor for Malaysian farmers.
+
+2
+00:00:06,000 --> 00:00:15,000
+We did not train our own model. We tested a general AI model on 75,000+ labelled photos from public datasets, improved the app around it, and re-tested.
+
+3
+00:00:15,000 --> 00:00:20,000
+The farmer takes a photo. The app checks that it is clear enough.
+
+4
+00:00:20,000 --> 00:00:25,000
+The farmer chooses the crop, here padi.
+
+5
+00:00:25,000 --> 00:00:32,000
+A saved tomato scan: the app names the likely disease, how sure it is, and asks an expert to review when unsure.
+
+6
+00:00:32,000 --> 00:00:39,000
+When unsure, it names the look-alike diseases and what to check for each.
+
+7
+00:00:39,000 --> 00:00:46,000
+Diseased plants get KANB plant-health products, clearly marked as support, not a cure.
+
+8
+00:00:46,000 --> 00:00:55,000
+What testing found, and what we changed.
+
+9
+00:00:55,000 --> 00:01:05,000
+With the chosen model, the right disease is in the top three for 76% of the same photos, up from 49%. Padi 96%, chilli 71%.
+
+10
+00:01:05,000 --> 00:01:16,000
+The more accurate model is more confident when wrong. A second AI check is built for this, and is being measured next.
+
+11
+00:01:16,000 --> 00:01:24,000
+A KANB product now appears on 98 of 100 scans, up from 23.

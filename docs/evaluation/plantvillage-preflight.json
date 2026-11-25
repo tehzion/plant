@@ -1,0 +1,726 @@
+{
+  "manifest": "server/dataset/public-evaluation/plantvillage/manifest.json",
+  "checkedAt": "2026-10-30T20:15:17.666Z",
+  "results": [
+    {
+      "imageId": "19161a6ed06ba39a63b9d421",
+      "localPath": "19161a6ed06ba39a63b9d4217d39e6abe805742a73ec6d09ecf7f39552a6a4b8.jpg",
+      "checksum": "19161a6ed06ba39a63b9d4217d39e6abe805742a73ec6d09ecf7f39552a6a4b8",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "1d714b3c5bee8b27d775a68a",
+      "localPath": "1d714b3c5bee8b27d775a68acdbeb3f3c9ae2f2f3da2f6d941cd125fe71745d8.jpg",
+      "checksum": "1d714b3c5bee8b27d775a68acdbeb3f3c9ae2f2f3da2f6d941cd125fe71745d8",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "6cf6d479aeda092b2df809e1",
+      "localPath": "6cf6d479aeda092b2df809e154aab03d545d848ccd2e0f3463793202231f6254.jpg",
+      "checksum": "6cf6d479aeda092b2df809e154aab03d545d848ccd2e0f3463793202231f6254",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f4c53d1e72fd8e0e553e4e36",
+      "localPath": "f4c53d1e72fd8e0e553e4e36b5af681dcdf1e0bbb4c0ce8fcddc41ff55c3b0f1.jpg",
+      "checksum": "f4c53d1e72fd8e0e553e4e36b5af681dcdf1e0bbb4c0ce8fcddc41ff55c3b0f1",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f0afe956515a5823cc6b79f8",
+      "localPath": "f0afe956515a5823cc6b79f8799e2935ed466c722dc5aa83e51ab3314532c71c.jpg",
+      "checksum": "f0afe956515a5823cc6b79f8799e2935ed466c722dc5aa83e51ab3314532c71c",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b959f2c063b36de54740cceb",
+      "localPath": "b959f2c063b36de54740ccebba820714286e6ee14d5b2fde8927f36b67b9e650.jpg",
+      "checksum": "b959f2c063b36de54740ccebba820714286e6ee14d5b2fde8927f36b67b9e650",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "9ad86d5026b25412adfddffe",
+      "localPath": "9ad86d5026b25412adfddffee3612324a500b9111d474796b1412ca642c2b2db.jpg",
+      "checksum": "9ad86d5026b25412adfddffee3612324a500b9111d474796b1412ca642c2b2db",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b8b8a1b17060db9f8ff5f4e7",
+      "localPath": "b8b8a1b17060db9f8ff5f4e773eb75db46fe7c89d7bed4fc25e073c55634621f.jpg",
+      "checksum": "b8b8a1b17060db9f8ff5f4e773eb75db46fe7c89d7bed4fc25e073c55634621f",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "23a08d1479671acd7989f0dd",
+      "localPath": "23a08d1479671acd7989f0dd7c9c08db210baac89b164bee913580e2b0c46485.jpg",
+      "checksum": "23a08d1479671acd7989f0dd7c9c08db210baac89b164bee913580e2b0c46485",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "35647f8de60c7344b416a818",
+      "localPath": "35647f8de60c7344b416a8180125f727739150961f0e508244889b95c619daf3.jpg",
+      "checksum": "35647f8de60c7344b416a8180125f727739150961f0e508244889b95c619daf3",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "8bffea13c27d50269221d8e1",
+      "localPath": "8bffea13c27d50269221d8e11899ba82a832836c5c0d7b3ae5c3a8ce6f19cfee.jpg",
+      "checksum": "8bffea13c27d50269221d8e11899ba82a832836c5c0d7b3ae5c3a8ce6f19cfee",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "e8a1d6a261bb2473cee4dc6e",
+      "localPath": "e8a1d6a261bb2473cee4dc6e1682134e99a413c0f66b1cd5ef77eea6579dffde.jpg",
+      "checksum": "e8a1d6a261bb2473cee4dc6e1682134e99a413c0f66b1cd5ef77eea6579dffde",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c48f2170a2cc25ba355aeb4a",
+      "localPath": "c48f2170a2cc25ba355aeb4a1fe532b17a317d08e1fcbab0f0f9f086618cc9c3.jpg",
+      "checksum": "c48f2170a2cc25ba355aeb4a1fe532b17a317d08e1fcbab0f0f9f086618cc9c3",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "10071207a5aa001a713c5ac8",
+      "localPath": "10071207a5aa001a713c5ac803bd7e4d961252c31f180a1d53daeecfaea96489.jpg",
+      "checksum": "10071207a5aa001a713c5ac803bd7e4d961252c31f180a1d53daeecfaea96489",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "cd865b319d573c0414cda217",
+      "localPath": "cd865b319d573c0414cda2171848d17a5ecae7b999aadfd29ec8fc3bd34a95a7.jpg",
+      "checksum": "cd865b319d573c0414cda2171848d17a5ecae7b999aadfd29ec8fc3bd34a95a7",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "538cec180d6f8b73bcd30b8a",
+      "localPath": "538cec180d6f8b73bcd30b8ac6ffef5119dc227e053c4656c970be4566b50ad4.jpg",
+      "checksum": "538cec180d6f8b73bcd30b8ac6ffef5119dc227e053c4656c970be4566b50ad4",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "de5f85cc914c83d27910a9df",
+      "localPath": "de5f85cc914c83d27910a9dfa865844bd2eaff3ae1467be71e7dde5e83e81a1c.jpg",
+      "checksum": "de5f85cc914c83d27910a9dfa865844bd2eaff3ae1467be71e7dde5e83e81a1c",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "fdddb5152f54a96eb3b23bbf",
+      "localPath": "fdddb5152f54a96eb3b23bbf4beaf887e71fd977a941c8644ac3c404e5961611.jpg",
+      "checksum": "fdddb5152f54a96eb3b23bbf4beaf887e71fd977a941c8644ac3c404e5961611",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c57812f55c115c6dbff59752",
+      "localPath": "c57812f55c115c6dbff59752afc96bffffb03131e43511cca5eeca1f574a43d5.jpg",
+      "checksum": "c57812f55c115c6dbff59752afc96bffffb03131e43511cca5eeca1f574a43d5",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "94d4f9a469e2b870338ff9eb",
+      "localPath": "94d4f9a469e2b870338ff9eb8f1cc71276017b75fbbbe6025050636a982de082.jpg",
+      "checksum": "94d4f9a469e2b870338ff9eb8f1cc71276017b75fbbbe6025050636a982de082",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b69dc8ecd0a24babb32735fa",
+      "localPath": "b69dc8ecd0a24babb32735faf586810ce57771c56cde3535b329b0d7d0509c65.jpg",
+      "checksum": "b69dc8ecd0a24babb32735faf586810ce57771c56cde3535b329b0d7d0509c65",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "305f61008bf707e6529d93db",
+      "localPath": "305f61008bf707e6529d93db76ad7100773b1d0f0f0ed0c4a6accc7a3c9abd58.jpg",
+      "checksum": "305f61008bf707e6529d93db76ad7100773b1d0f0f0ed0c4a6accc7a3c9abd58",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "46881807a044fb7feb7f781a",
+      "localPath": "46881807a044fb7feb7f781add5f802118ca43a8821eb49e47e2005ec3378eb2.jpg",
+      "checksum": "46881807a044fb7feb7f781add5f802118ca43a8821eb49e47e2005ec3378eb2",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "79b76ef168c0355b35d6c462",
+      "localPath": "79b76ef168c0355b35d6c4628f2addaa3efc1228b4d1262421104eac7a4e7184.jpg",
+      "checksum": "79b76ef168c0355b35d6c4628f2addaa3efc1228b4d1262421104eac7a4e7184",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f9e96413ae05cdbbf7893b6f",
+      "localPath": "f9e96413ae05cdbbf7893b6fe01430aed8684fd8c9943a5ce5ea20eed6cb06f8.jpg",
+      "checksum": "f9e96413ae05cdbbf7893b6fe01430aed8684fd8c9943a5ce5ea20eed6cb06f8",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c2433d9a2616a4ebd3a21444",
+      "localPath": "c2433d9a2616a4ebd3a214443986d0783c1f923e2f45a1fc24ceafd5ad4390f1.jpg",
+      "checksum": "c2433d9a2616a4ebd3a214443986d0783c1f923e2f45a1fc24ceafd5ad4390f1",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b54b1132aa71c3d3baecaa9b",
+      "localPath": "b54b1132aa71c3d3baecaa9bfaf01ee849d089357ebce036b475613a78b62514.jpg",
+      "checksum": "b54b1132aa71c3d3baecaa9bfaf01ee849d089357ebce036b475613a78b62514",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f5b5df701823bee36b50c940",
+      "localPath": "f5b5df701823bee36b50c94027e384f56147cb678c7b02eb4dae9a4cd127c119.jpg",
+      "checksum": "f5b5df701823bee36b50c94027e384f56147cb678c7b02eb4dae9a4cd127c119",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "a813e352ba5c1c8334c0d916",
+      "localPath": "a813e352ba5c1c8334c0d916c9c9e52635716d84cc50eb3482fae64ab11f14e6.jpg",
+      "checksum": "a813e352ba5c1c8334c0d916c9c9e52635716d84cc50eb3482fae64ab11f14e6",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "2d27ed7f9d7d2818ea0f04e7",
+      "localPath": "2d27ed7f9d7d2818ea0f04e7387cc6b6d1b0c50207940f4441a541ff1e94bbcf.jpg",
+      "checksum": "2d27ed7f9d7d2818ea0f04e7387cc6b6d1b0c50207940f4441a541ff1e94bbcf",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "f64d8388ca01503e1447c424",
+      "localPath": "f64d8388ca01503e1447c424cf433f9aab792c4e88858ac4230de4fc3c100b33.jpg",
+      "checksum": "f64d8388ca01503e1447c424cf433f9aab792c4e88858ac4230de4fc3c100b33",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "4c9edf7780c1a9f0de0a4089",
+      "localPath": "4c9edf7780c1a9f0de0a408952e3a27ff38ea378d65ac709797e0c1905096c7f.jpg",
+      "checksum": "4c9edf7780c1a9f0de0a408952e3a27ff38ea378d65ac709797e0c1905096c7f",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "5a5bae174279463dae240c42",
+      "localPath": "5a5bae174279463dae240c424bf6292528ff092aed1a220550d30e63de2e8bea.jpg",
+      "checksum": "5a5bae174279463dae240c424bf6292528ff092aed1a220550d30e63de2e8bea",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "3a60003b831eb64d4c81ab1c",
+      "localPath": "3a60003b831eb64d4c81ab1c352cb966532a46cf30a33d6548e64187f0b86f5d.jpg",
+      "checksum": "3a60003b831eb64d4c81ab1c352cb966532a46cf30a33d6548e64187f0b86f5d",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "00c0608a48002b1182c1c2b5",
+      "localPath": "00c0608a48002b1182c1c2b5a6f8f9bc9ef3dbf2759ecd64c31363d14d24f2c1.jpg",
+      "checksum": "00c0608a48002b1182c1c2b5a6f8f9bc9ef3dbf2759ecd64c31363d14d24f2c1",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "63aecfd80dbce4ee94c2058c",
+      "localPath": "63aecfd80dbce4ee94c2058c9fb681fa5e873b0af9f0ae2fda6bc4bd8fb87f8c.jpg",
+      "checksum": "63aecfd80dbce4ee94c2058c9fb681fa5e873b0af9f0ae2fda6bc4bd8fb87f8c",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "79051328f864bafaf3fca08a",
+      "localPath": "79051328f864bafaf3fca08a1698e72c335f5706642117587a1f345c9420363e.jpg",
+      "checksum": "79051328f864bafaf3fca08a1698e72c335f5706642117587a1f345c9420363e",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "aae21aa0f2a017c4033644a3",
+      "localPath": "aae21aa0f2a017c4033644a364f0bda6c29927a419e709c2a711160136df413f.jpg",
+      "checksum": "aae21aa0f2a017c4033644a364f0bda6c29927a419e709c2a711160136df413f",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "94781d512feb607ea06d2223",
+      "localPath": "94781d512feb607ea06d2223c3f8d27202cc55751577c36f182133e2163a97ee.jpg",
+      "checksum": "94781d512feb607ea06d2223c3f8d27202cc55751577c36f182133e2163a97ee",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c3f33a9657b22a5207fda07f",
+      "localPath": "c3f33a9657b22a5207fda07f1a784d4ce712d014ac084351a9f755adfbadbd3d.jpg",
+      "checksum": "c3f33a9657b22a5207fda07f1a784d4ce712d014ac084351a9f755adfbadbd3d",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "eb7af842e61dd73e878ead17",
+      "localPath": "eb7af842e61dd73e878ead179f396c919f06b27da5c8353b5776b00887f7587d.jpg",
+      "checksum": "eb7af842e61dd73e878ead179f396c919f06b27da5c8353b5776b00887f7587d",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "ff8115cbd65f3704b49c939b",
+      "localPath": "ff8115cbd65f3704b49c939bc78fe92ae1ec1f82e7b12f09c509bfea5cb9b298.jpg",
+      "checksum": "ff8115cbd65f3704b49c939bc78fe92ae1ec1f82e7b12f09c509bfea5cb9b298",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "1e0cef0d3f2041e6e0329936",
+      "localPath": "1e0cef0d3f2041e6e03299363e3aefbd6dc83fde1ad8f32101fa836f1874b8e3.jpg",
+      "checksum": "1e0cef0d3f2041e6e03299363e3aefbd6dc83fde1ad8f32101fa836f1874b8e3",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "a94150006724565e545e3061",
+      "localPath": "a94150006724565e545e3061206db3f4849821c6e8d964c17f65c2bfab6ae697.jpg",
+      "checksum": "a94150006724565e545e3061206db3f4849821c6e8d964c17f65c2bfab6ae697",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "144b0669668c85b9100ff358",
+      "localPath": "144b0669668c85b9100ff35805272ceb0c8f702ea8921adc08f0d412738ee744.jpg",
+      "checksum": "144b0669668c85b9100ff35805272ceb0c8f702ea8921adc08f0d412738ee744",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b654abd6e5f9eea26afd5580",
+      "localPath": "b654abd6e5f9eea26afd5580a87c618ebb7a1212d71ec5142d4b77eef9f6c576.jpg",
+      "checksum": "b654abd6e5f9eea26afd5580a87c618ebb7a1212d71ec5142d4b77eef9f6c576",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "5ac4efd7cee8f3586b7cc641",
+      "localPath": "5ac4efd7cee8f3586b7cc64167a07e99a79868e51abb4a376289cea5961eb407.jpg",
+      "checksum": "5ac4efd7cee8f3586b7cc64167a07e99a79868e51abb4a376289cea5961eb407",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "059dbe8d752f78a6f1b6beac",
+      "localPath": "059dbe8d752f78a6f1b6beac96bd4da5b02ce70fb2e0c166dcfd50767f178f0f.jpg",
+      "checksum": "059dbe8d752f78a6f1b6beac96bd4da5b02ce70fb2e0c166dcfd50767f178f0f",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "c31a22474ebf1f97702d9266",
+      "localPath": "c31a22474ebf1f97702d9266f44ff8f3f04221c18617c94b31489c3d5de67889.jpg",
+      "checksum": "c31a22474ebf1f97702d9266f44ff8f3f04221c18617c94b31489c3d5de67889",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "b4d32e599fa6bd2cbe0daddc",
+      "localPath": "b4d32e599fa6bd2cbe0daddc3afc67af94e0571caafce47ee56d70666b1edece.jpg",
+      "checksum": "b4d32e599fa6bd2cbe0daddc3afc67af94e0571caafce47ee56d70666b1edece",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "d24e853effd0c7b50e781712",
+      "localPath": "d24e853effd0c7b50e7817125b24293e8d5f7e2d3745891c6428d9a7b82aa25d.jpg",
+      "checksum": "d24e853effd0c7b50e7817125b24293e8d5f7e2d3745891c6428d9a7b82aa25d",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "276ac90ad6cc6a441c278602",
+      "localPath": "276ac90ad6cc6a441c27860290124d67ae0a645cec175f6c8ab73adee9b5cf81.jpg",
+      "checksum": "276ac90ad6cc6a441c27860290124d67ae0a645cec175f6c8ab73adee9b5cf81",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "5d35e53f48d8eb6da9c9beb1",
+      "localPath": "5d35e53f48d8eb6da9c9beb1c5c7aa88f3c4f0bffa0157cfce707330e3b9521b.jpg",
+      "checksum": "5d35e53f48d8eb6da9c9beb1c5c7aa88f3c4f0bffa0157cfce707330e3b9521b",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "8fc1318a25d12c094456e31d",
+      "localPath": "8fc1318a25d12c094456e31d6be2c198f0ee0766f86748c0a256c4f2adb5e943.jpg",
+      "checksum": "8fc1318a25d12c094456e31d6be2c198f0ee0766f86748c0a256c4f2adb5e943",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "7de8b5cb0015dbc0df4fa2ee",
+      "localPath": "7de8b5cb0015dbc0df4fa2ee5cfca2b1a3588aa28e0493aa5d1f676bd42cb1fd.jpg",
+      "checksum": "7de8b5cb0015dbc0df4fa2ee5cfca2b1a3588aa28e0493aa5d1f676bd42cb1fd",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "4cf62ac154c7fe4b0f852515",
+      "localPath": "4cf62ac154c7fe4b0f852515c5aeb7d6ad8d63ddad61c37ad32a2c9c32d8e0dc.jpg",
+      "checksum": "4cf62ac154c7fe4b0f852515c5aeb7d6ad8d63ddad61c37ad32a2c9c32d8e0dc",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "cbbf8b140781baf2505eb75e",
+      "localPath": "cbbf8b140781baf2505eb75e6402f45402d95f71e38e6ec2542615940a94069d.jpg",
+      "checksum": "cbbf8b140781baf2505eb75e6402f45402d95f71e38e6ec2542615940a94069d",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "38209945be125dd46c82031a",
+      "localPath": "38209945be125dd46c82031a13a9f8644cd65239a3961f6d90db693abe2631ba.jpg",
+      "checksum": "38209945be125dd46c82031a13a9f8644cd65239a3961f6d90db693abe2631ba",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "2e0409bafde5f393e5dfa7e2",
+      "localPath": "2e0409bafde5f393e5dfa7e2cdef7d07090f6e13ca3659815ad847488e79aeed.jpg",
+      "checksum": "2e0409bafde5f393e5dfa7e2cdef7d07090f6e13ca3659815ad847488e79aeed",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    },
+    {
+      "imageId": "2920a3174dbf4ed29685c2d6",
+      "localPath": "2920a3174dbf4ed29685c2d65f3e72961438ee7c5d5a0951211017239e579118.jpg",
+      "checksum": "2920a3174dbf4ed29685c2d65f3e72961438ee7c5d5a0951211017239e579118",
+      "dimensions": {
+        "width": 256,
+        "height": 256
+      },
+      "status": "manual_review_required",
+      "reasons": [],
+      "review": null
+    }
+  ]
+}

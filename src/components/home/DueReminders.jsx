@@ -1,3 +1,4 @@
+import { useDataOwner } from '../../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import { Bell, CalendarCheck } from 'lucide-react';
 import { useLanguage } from '../../i18n/i18n.jsx';
@@ -22,12 +23,13 @@ const notifyOncePerDay = async (title, body) => {
 
 const DueReminders = ({ scans = [], onOpenScan }) => {
     const { t } = useLanguage();
+    const dataOwner = useDataOwner();
     const label = (key, fallback) => {
         const value = t(key);
         return value && value !== key ? value : fallback;
     };
-    const [harvest, setHarvest] = useState(() => dueHarvestReminders());
-    const [optedIn, setOptedIn] = useState(() => getReminderOptIn());
+    const [harvest, setHarvest] = useState(() => dueHarvestReminders(new Date(), dataOwner));
+    const [optedIn, setOptedIn] = useState(() => getReminderOptIn(dataOwner));
     const [message, setMessage] = useState('');
     const supportsNotifications = typeof window !== 'undefined' && 'Notification' in window;
 
@@ -40,7 +42,7 @@ const DueReminders = ({ scans = [], onOpenScan }) => {
         ...harvest.map((item) => ({
             id: item.id,
             text: label('assessment.ux.reminderHarvest', 'Safe to harvest from today: {name}').replace('{name}', item.name),
-            dismiss: () => { dismissHarvestReminder(item.id); setHarvest(dueHarvestReminders()); },
+            dismiss: () => { dismissHarvestReminder(item.id, dataOwner); setHarvest(dueHarvestReminders(new Date(), dataOwner)); },
         })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [scans, harvest, t]);
@@ -56,7 +58,7 @@ const DueReminders = ({ scans = [], onOpenScan }) => {
     const enable = async () => {
         const permission = await Notification.requestPermission().catch(() => 'denied');
         if (permission === 'granted') {
-            setReminderOptIn(true); setOptedIn(true);
+            setReminderOptIn(true, dataOwner); setOptedIn(true);
             setMessage(label('assessment.ux.remindersEnabled', 'Reminders are on.'));
         } else {
             setMessage(label('assessment.ux.remindersBlocked', 'Notifications are blocked in your browser settings.'));

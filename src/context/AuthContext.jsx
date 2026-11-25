@@ -1,9 +1,18 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useLayoutEffect, useContext } from 'react';
 import { supabase } from '../lib/supabase';
 import { getGuestId, setLocalStorageNamespace } from '../utils/localStorage';
+import { purgeUnownedPrivacyStores } from '../utils/privacyTools.js';
+import { setAssistantScanContext, setAssistantPageTopic } from '../utils/assistantContext.js';
 import { migrateLegacyCollection } from '../utils/indexedDbStorage.js';
 
 const AuthContext = createContext(null);
+
+// Standalone components fail closed while authentication is loading.
+export const useDataOwner = () => {
+    const auth = useContext(AuthContext);
+    if (!auth) return 'guest:local';
+    return auth.user?.id ? `user:${auth.user.id}` : auth.user === null && auth.guestId ? `guest:${auth.guestId}` : null;
+};
 
 const DEMO_USER_ID = 'demo-user-123';
 const DEMO_EMAIL = 'test@test.com';
@@ -26,8 +35,11 @@ const getAuthResetRedirectUrl = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(undefined); // undefined = loading, null = guest
     const [guestId, setGuestId] = useState(null);
+    const dataOwner = user?.id ? `user:${user.id}` : user === null && guestId ? `guest:${guestId}` : 'loading';
+    useLayoutEffect(() => { setAssistantScanContext(null); setAssistantPageTopic(null); }, [dataOwner]);
 
     useEffect(() => {
+        purgeUnownedPrivacyStores();
         // ── Demo / test account bypass ────────────────────────────────────────
         if (DEMO_AUTH_ENABLED && localStorage.getItem('plant_demo_session') === 'true') {
             setLocalStorageNamespace('demo');
@@ -61,15 +73,14 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
-        const migrateForUser = async (currentUser) => {
+        const flushForUser = async (currentUser) => {
             if (!currentUser) return;
             try {
-                const { migrateLocalStorageToNeon } = await import('../utils/migrations');
-                await migrateLocalStorageToNeon(currentUser.id);
+                // Guest records are never silently attached to the signed-in account.
                 const { flushAuthenticatedSyncQueue } = await import('../utils/cloudSync.js');
                 await flushAuthenticatedSyncQueue(currentUser.id);
             } catch (e) {
-                console.warn('Migration skipped:', e.message);
+                console.warn('Sync queue deferred:', e.message);
             }
         };
 
@@ -78,7 +89,7 @@ export const AuthProvider = ({ children }) => {
             .then(({ data: { session } }) => {
                 const currentUser = session?.user ?? null;
                 setUser(currentUser);
-                migrateForUser(currentUser);
+                flushForUser(currentUser);
             })
             .catch((error) => {
                 console.warn('Supabase session initialization failed; continuing in guest mode:', error.message);
@@ -91,7 +102,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(currentUser);
                 setLocalStorageNamespace('guest');
                 // Run cloud requests after Supabase releases its auth lock.
-                setTimeout(() => migrateForUser(currentUser), 0);
+                setTimeout(() => flushForUser(currentUser), 0);
             }
         );
 
@@ -217,7 +228,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ user, guestId, signIn, signUp, signOut, resetPasswordForEmail, updatePassword, signInWithGoogle, isGoogleAuthEnabled: false, demoAuthEnabled: DEMO_AUTH_ENABLED }}>
-            {children}
+            <React.Fragment key={dataOwner}>{children}</React.Fragment>
         </AuthContext.Provider>
     );
 };

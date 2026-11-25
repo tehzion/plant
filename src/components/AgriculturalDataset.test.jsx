@@ -7,8 +7,9 @@ describe('Agricultural Dataset',()=>{
   render(<AgriculturalDataset/>);
   expect(await screen.findByText('500')).toBeInTheDocument();
   expect(screen.getByText('67% (2/3)')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button',{name:'Apple · healthy · PlantVillage'}));
+  expect(screen.getByText('Apple / Healthy')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'View Apple · healthy · PlantVillage'}));
   expect(screen.getByText('Reference: Apple / healthy')).toBeInTheDocument();
-  expect(screen.getByText(/AI: Apple \/ Healthy/)).toBeInTheDocument();
+  expect(screen.getByText(/AI: Apple \/ Healthy · Match/)).toBeInTheDocument();
  });
 });

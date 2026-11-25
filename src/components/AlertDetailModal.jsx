@@ -234,6 +234,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                             <div className="adm-status-row">
                                 <button
                                     type="button"
+                                    aria-pressed={status === 'in_progress'}
                                     className={`adm-status-btn ${status === 'in_progress' ? 'active-amber' : ''}`}
                                     onClick={() => setStatus('in_progress')}
                                 >
@@ -241,6 +242,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                                 </button>
                                 <button
                                     type="button"
+                                    aria-pressed={status === 'resolved'}
                                     className={`adm-status-btn ${status === 'resolved' ? 'active-green' : ''}`}
                                     onClick={() => setStatus('resolved')}
                                 >
@@ -248,7 +250,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                                 </button>
                             </div>
 
-                            <label>{activityLabel}
+                            <label className="adm-activity-field">{activityLabel}
                                 <select value={activityType} onChange={event => setActivityType(event.target.value)}>
                                     {['scout', 'inspect', 'note', 'fertilize', 'spray'].map(type => <option key={type} value={type}>
                                         {t(`profile.act${type[0].toUpperCase()}${type.slice(1)}`)}
@@ -257,6 +259,7 @@ const AlertDetailModal = ({ scan, onClose, onAcknowledge }) => {
                             </label>
                             <textarea
                                 className="adm-textarea"
+                                aria-label={t('profile.resolutionPlaceholder')}
                                 placeholder={t('profile.resolutionPlaceholder') || 'Describe what was done (pesticide used, quantity, date applied)...'}
                                 value={resolution}
                                 onChange={(event) => setResolution(event.target.value)}

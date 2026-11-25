@@ -21,6 +21,8 @@ describe('myGAP record corrections', () => {
         expect(() => cleanCorrection({ phi_days: '-1' })).toThrow(/PHI/);
         expect(() => cleanCorrection({ type: 'party' })).toThrow(/type/);
         expect(cleanCorrection({ phi_days: '14', product_used: '  Copper  ', user_id: 'someone-else' })).toEqual({ phi_days: 14, product_used: 'Copper' });
+        expect(() => cleanCorrection({ amount: '-2' })).toThrow(/Amount/);
+        expect(cleanCorrection({ type: 'purchase', amount: '2.5', unit: 'kg', lot_code: ' L-1 ' })).toEqual({ type: 'purchase', amount: 2.5, unit: 'kg', lot_code: 'L-1' });
     });
 
     it('updates only changed fields and stores the previous values with the reason', async () => {

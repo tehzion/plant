@@ -50,6 +50,21 @@ describe('myGAP report PDF', () => {
         expect(text).toContain('Leaf spot');
     });
 
+    it('fills farm details from the profile and adds stock and worker tables', async () => {
+        const records = [
+            { id: 'b', type: 'purchase', activity_date: '2026-10-01', product_used: 'Mancozeb', amount: 10, unit: 'kg', supplier: 'Kedai Tani Raub', notes: 'stock' },
+            { id: 's', type: 'pesticide', activity_date: '2026-10-02', plot_id: 'Blok A', crop: 'Durian', product_used: 'Mancozeb', amount: 2, unit: 'kg', notes: 'spray' },
+            { id: 'h', type: 'harvest', activity_date: '2026-10-20', plot_id: 'Blok A', crop: 'Durian', amount: 120, unit: 'kg', lot_code: 'BLOKA-261020-01', buyer: 'FAMA', notes: 'harvest' },
+            { id: 't', type: 'training', activity_date: '2026-10-05', topic: 'Safe spraying', operator: 'DOA officer', attendees: 'Ahmad, Siti', notes: 'course' },
+        ];
+        const farmProfile = { farmerName: 'Ahmad bin Ali', farmName: 'Kebun Durian Raub', mygapRef: 'MYGAP-123', certExpiry: '2027-06-30', workers: [{ id: 'w1', name: 'Siti', role: 'Sprayer', nationality: 'Malaysia' }] };
+        const text = pdfText(await buildMyGapReportPdf({ logs: records, farmProfile, language: 'en', translations }));
+        for (const expected of ['Ahmad bin Ali', 'Kebun Durian Raub', 'MYGAP-123', 'Input stock', 'Workers', 'Sprayer', 'BLOKA-261020-01', 'FAMA', 'Safe spraying', 'Kedai Tani Raub']) {
+            expect(text).toContain(expected);
+        }
+        expect(text).toContain('8 kg');
+    });
+
     it('names the file with the export date', () => {
         expect(mygapReportFileName(new Date('2026-10-31T10:00:00Z'))).toBe('myGAP-records-2026-10-31.pdf');
     });

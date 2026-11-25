@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { findMissingTranslationReferences, scanTranslationReferences } from './translation-references.mjs';
 import translations from '../src/i18n/translations.js';
 
 const strict = process.argv.includes('--strict');
@@ -35,12 +38,20 @@ for (const language of languages) {
     });
 }
 
-const hasIssues = report.some(({ missingKeys, extraKeys }) => missingKeys.length > 0 || extraKeys.length > 0);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const references = scanTranslationReferences(root, Object.keys(translations[baseLanguage]));
+const missingReferences = findMissingTranslationReferences(references, translations);
+const hasIssues = missingReferences.length > 0 || report.some(({ missingKeys, extraKeys }) => missingKeys.length > 0 || extraKeys.length > 0);
 
 console.log(`Base language: ${baseLanguage}`);
+console.log(`Checked ${references.length} static source references (including configuration keys). Computed runtime keys still need UI coverage.`);
+if (missingReferences.length) {
+    console.log(`Missing or empty source translations: ${missingReferences.length}`);
+    for (const { key, file, line, languages } of missingReferences) console.log(`  ${file}:${line}: ${key} [${languages.join(', ')}]`);
+}
 
 if (!hasIssues) {
-    console.log('Translation keys are aligned across all languages.');
+    console.log('Translation keys are aligned and every checked source reference resolves in all languages.');
     process.exit(0);
 }
 

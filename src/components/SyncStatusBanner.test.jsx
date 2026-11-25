@@ -4,7 +4,7 @@ import SyncStatusBanner from './SyncStatusBanner.jsx';
 
 const sync = vi.hoisted(() => ({ getSyncSummary: vi.fn(), retryFailedSync: vi.fn(), SYNC_STATUS_EVENT: 'plant-sync-status' }));
 vi.mock('../utils/syncQueue.js', () => sync);
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local', useAuth: () => ({ user: { id: 'user-1' } }) }));
 vi.mock('../i18n/i18n.jsx', () => ({ useLanguage: () => ({ t: (key) => key }) }));
 
 afterEach(() => vi.restoreAllMocks());

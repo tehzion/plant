@@ -8,7 +8,7 @@ import {
   isNetworkUnavailableError,
   isTimeoutError,
 } from './networkRequest.js';
-import { getDataConsent } from './dataConsent';
+import { normalizeDataConsent } from '../../shared/dataConsent.js';
 // In local dev, we might need localhost:3002 if not using a proxy.
 const API_URL = import.meta.env.VITE_API_URL || '';
 const HEALTH_URL = `${API_URL}/api/health`;
@@ -282,6 +282,7 @@ export const getImageQualityGuidance = async (file, maxWidth = 640) => {
  * @param {string} category - Plant category
  * @param {string} leafImageBase64 - Optional base64 encoded leaf close-up
  * @param {string} language - Language code ('en', 'ms', or 'zh')
+ * @param {{crop?: string}} options - Optional farmer-stated specific crop (English name)
  * @returns {Promise<Object>} Analysis result
  */
 export const analyzePlantDisease = async (
@@ -290,17 +291,19 @@ export const analyzePlantDisease = async (
   leafImageBase64 = null,
   language = 'en',
   location = null,
-  imageQuality = null
+  imageQuality = null,
+  { crop = '', dataConsent = null } = {}
 ) => {
   const payload = {
     scanId: crypto.randomUUID(),
     treeImage: treeImageBase64,
     category,
+    ...(crop ? { crop } : {}),
     leafImage: leafImageBase64,
     language,
     location,
     imageQuality,
-    dataConsent: getDataConsent()
+    dataConsent: normalizeDataConsent(dataConsent)
   };
 
   try {

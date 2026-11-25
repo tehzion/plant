@@ -213,3 +213,26 @@ describe('localStorage utilities', () => {
         expect(localStorageUtils.getScanHistory()).toHaveLength(51);
     });
 });
+
+describe('myGAP farm profile', () => {
+    it('normalizes database rows, JSON worker lists and drops unnamed workers', () => {
+        const profile = localStorageUtils.normalizeFarmProfile({
+            name: 'Ahmad', farm_name: 'Kebun Raub', land_tenure: 'owned', mygap_ref: 'M-1', cert_expiry: '2027-06-30',
+            workers: JSON.stringify([{ id: 'w1', name: 'Siti', role: 'Sprayer' }, { name: '' }]),
+        });
+        expect(profile).toMatchObject({ farmerName: 'Ahmad', farmName: 'Kebun Raub', landTenure: 'owned', mygapRef: 'M-1', certExpiry: '2027-06-30' });
+        expect(profile.workers).toEqual([{ id: 'w1', name: 'Siti', idNumber: '', nationality: '', role: 'Sprayer' }]);
+    });
+
+    it('saves a guest farm profile on the device', async () => {
+        const saved = await localStorageUtils.saveFarmProfile({ farmName: 'Kebun Raub', workers: [{ name: 'Siti' }] }, null);
+        expect(saved.workers).toHaveLength(1);
+        await expect(localStorageUtils.getFarmProfile(null)).resolves.toMatchObject({ farmName: 'Kebun Raub' });
+    });
+
+    it('stores structured amounts on log rows', () => {
+        const row = localStorageUtils.toLogbookRow({ type: 'purchase', amount: '2.5', unit: 'kg', supplier: 'Kedai', lot_code: '' }, 'user-1');
+        expect(row).toMatchObject({ amount: 2.5, unit: 'kg', supplier: 'Kedai', lot_code: null });
+        expect(localStorageUtils.fromLogbookRow({ id: 'x', amount: '3.000' }).amount).toBe(3);
+    });
+});

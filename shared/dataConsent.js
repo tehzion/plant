@@ -5,7 +5,7 @@
 // not stored and the record is excluded from AI improvement datasets.
 
 // Bump when the consent wording changes so earlier answers are asked again.
-export const DATA_CONSENT_VERSION = '2026-11-v1';
+export const DATA_CONSENT_VERSION = '2026-11-v2';
 
 export const normalizeDataConsent = (value) => {
     const consented = value?.aiImprovement === true && value?.version === DATA_CONSENT_VERSION;

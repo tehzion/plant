@@ -61,3 +61,45 @@ describe('shared scan result decisions', () => {
         expect(draft.note).not.toContain('Linked scan:'); expect(draft.note).toContain('test');
     });
 });
+
+describe('saved decision snapshot', () => {
+    it('keeps a result that was shown as needing review from upgrading to treatment under newer rules', () => {
+        const model = buildScanResultModel({ ...strong, decisionSnapshot: { needsReview: true, resultState: 'expert_review_needed' } });
+        expect(model.treatmentEligible).toBe(false);
+        expect(model.treatments).toEqual([]);
+    });
+    it('still lets newer rules make a saved treatment result more cautious', () => {
+        const model = buildScanResultModel({ ...strong, diagnosisConfidence: 40,
+            decisionSnapshot: { needsReview: false, resultState: 'confident_treatment' } });
+        expect(model.needsReview).toBe(true);
+    });
+    it('puts the urgent step first for a serious unconfirmed problem', () => {
+        const model = buildScanResultModel({ ...strong, diagnosisConfidence: 50, severity: 'severe' }, 'ms');
+        expect(model.urgent).toBe(true);
+        expect(model.immediateActions[0]).toMatch(/Pejabat Pertanian Daerah/);
+    });
+});
+
+describe('what to check when the result is unsure', () => {
+    const unsure = { disease: 'No Issues', plantType: 'Rice', healthStatus: 'healthy', confidence: 70, confidenceLevel: 'medium',
+        differentialDiagnoses: [
+            { name: 'Brown Spot', distinguishingFeatures: ['Small oval brown spots with grey centres.'] },
+            { name: 'Rice Blast', distinguishingFeatures: 'Diamond-shaped grey lesions with brown edges' },
+            { name: 'brown spot', distinguishingFeatures: ['duplicate'] },
+            { name: 'Leaf Scald', distinguishingFeatures: [] },
+        ] };
+
+    it('turns the listed look-alikes into concrete checks', () => {
+        expect(buildScanResultModel(unsure, 'en').immediateActions).toEqual([
+            expect.stringMatching(/^Field scouting/),
+            'Check for Brown Spot: Small oval brown spots with grey centres',
+            'Check for Rice Blast: Diamond-shaped grey lesions with brown edges',
+        ]);
+        expect(buildScanResultModel(unsure, 'ms').immediateActions[1]).toBe('Periksa Brown Spot: Small oval brown spots with grey centres');
+    });
+
+    it('asks only for a new photo when a retake is needed', () => {
+        const model = buildScanResultModel({ ...unsure, requiresRetake: true, status: 'retake_required' }, 'en');
+        expect(model.immediateActions.some((line) => line.startsWith('Check for'))).toBe(false);
+    });
+});

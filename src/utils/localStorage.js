@@ -318,9 +318,15 @@ const optionalText = (value, max = 200) => {
     return text ? text.slice(0, max) : null;
 };
 
+const optionalAmount = (value) => {
+    if (value === '' || value == null) return null;
+    const amount = Number(value);
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+};
+
 // Structured myGAP record fields. Quantity is recorded exactly as the farmer
 // entered it; the app never calculates or suggests chemical dosages.
-export const LOGBOOK_DETAIL_FIELDS = ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'updated_at'];
+export const LOGBOOK_DETAIL_FIELDS = ['activity_date', 'plot_id', 'crop', 'product_used', 'quantity', 'operator', 'active_ingredient', 'registration_no', 'area_treated', 'target_pest', 'phi_days', 'linked_scan_id', 'updated_at', 'amount', 'unit', 'supplier', 'price', 'buyer', 'lot_code', 'topic', 'attendees'];
 
 export const toLogbookRow = (log = {}, userId) => ({
     id: String(log.id ?? crypto.randomUUID()),
@@ -339,6 +345,14 @@ export const toLogbookRow = (log = {}, userId) => ({
     target_pest: optionalText(log.target_pest, 200),
     phi_days: parsePHIDays(log.phi_days),
     linked_scan_id: optionalText(log.linked_scan_id, 200),
+    amount: optionalAmount(log.amount),
+    unit: optionalText(log.unit, 20),
+    supplier: optionalText(log.supplier, 200),
+    price: optionalText(log.price, 60),
+    buyer: optionalText(log.buyer, 200),
+    lot_code: optionalText(log.lot_code, 60),
+    topic: optionalText(log.topic, 200),
+    attendees: optionalText(log.attendees, 1000),
     created_at: log.timestamp || log.created_at || new Date().toISOString(),
 });
 
@@ -349,6 +363,7 @@ export const fromLogbookRow = (row = {}) => ({
     notes: row.notes,
     ...Object.fromEntries(LOGBOOK_DETAIL_FIELDS.map((field) => [field, row[field] ?? null])),
     activity_date: row.activity_date ? String(row.activity_date).slice(0, 10) : null,
+    amount: optionalAmount(row.amount),
     ...(row.syncStatus ? { syncStatus: row.syncStatus } : {}),
 });
 
@@ -430,6 +445,66 @@ export const getProfileInfo = async (userId = null) => {
     }
 
     return fallback;
+};
+
+// myGAP farm profile: farm details, certificate and workers (myGAP 4-9).
+// Stored on the profile row but saved separately, so editing it never
+// overwrites the name and contact edited on the dashboard.
+const FARM_PROFILE_KEY = 'sea_plant_farm_profile';
+
+export const normalizeWorker = (worker = {}) => ({
+    id: String(worker.id || crypto.randomUUID()),
+    name: optionalText(worker.name, 120) || '',
+    idNumber: optionalText(worker.idNumber, 40) || '',
+    nationality: optionalText(worker.nationality, 60) || '',
+    role: optionalText(worker.role, 80) || '',
+});
+
+export const normalizeFarmProfile = (profile = {}) => {
+    let workers = profile.workers ?? [];
+    if (typeof workers === 'string') {
+        try { workers = JSON.parse(workers); } catch { workers = []; }
+    }
+    return {
+        farmerName: profile.farmerName ?? profile.name ?? '',
+        farmName: profile.farmName ?? profile.farm_name ?? '',
+        farmAddress: profile.farmAddress ?? profile.farm_address ?? '',
+        landTenure: profile.landTenure ?? profile.land_tenure ?? '',
+        mygapRef: profile.mygapRef ?? profile.mygap_ref ?? '',
+        certExpiry: String(profile.certExpiry ?? profile.cert_expiry ?? '').slice(0, 10),
+        workers: Array.isArray(workers) ? workers.filter((worker) => worker && worker.name).map(normalizeWorker) : [],
+    };
+};
+
+export const getFarmProfile = async (userId = null) => {
+    if (isCloudUser(userId)) {
+        const [row] = await fetchNeonRows('profiles', { limit: 1 });
+        return normalizeFarmProfile(row || {});
+    }
+    return normalizeFarmProfile(safeRead(FARM_PROFILE_KEY, {}));
+};
+
+export const saveFarmProfile = async (profile = {}, userId = null) => {
+    const normalized = normalizeFarmProfile(profile);
+    if (isCloudUser(userId)) {
+        await neonDataRequest('profiles', {
+            operation: 'upsert',
+            payload: {
+                user_id: userId,
+                farm_name: normalized.farmName || null,
+                farm_address: normalized.farmAddress || null,
+                land_tenure: normalized.landTenure || null,
+                mygap_ref: normalized.mygapRef || null,
+                cert_expiry: normalized.certExpiry || null,
+                // Sent as JSON text: the database driver would turn an array into a Postgres array.
+                workers: JSON.stringify(normalized.workers),
+                updated_at: new Date().toISOString(),
+            },
+        });
+        return normalized;
+    }
+    if (!safeWrite(FARM_PROFILE_KEY, normalized).ok) throw new Error('Could not save the farm profile on this device.');
+    return normalized;
 };
 
 export const saveProfileInfo = async (profileInfo = {}, userId = null) => {
