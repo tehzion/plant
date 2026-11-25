@@ -747,7 +747,7 @@ const buildFewShotExampleObject = (language, type) => {
             pathogenType: 'Fungal',
             symptoms: [
                 translateText(language, { en: 'Circular brown lesions', ms: 'Lesi bulat berwarna perang', zh: '圆形褐色病斑' }),
-                translateText(language, { en: 'Yellow halo around spots', ms: 'Halo kuning di sekeliling tompok', zh: '病斑周围有黄晕' }),
+                translateText(language, { en: 'Yellow ring around spots', ms: 'Lingkaran kuning di sekeliling tompok', zh: '病斑周围有黄晕' }),
             ],
             actions: [
                 translateText(language, { en: 'Prune badly affected leaves', ms: 'Pangkas daun yang teruk terjejas', zh: '修剪受害严重的叶片' }),
@@ -935,7 +935,7 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                     pathogenType: 'None',
                     symptoms: [
                         translateText(language, { en: 'Even green color', ms: 'Warna hijau sekata', zh: '叶色均匀翠绿' }),
-                        translateText(language, { en: 'No lesions or chewing damage', ms: 'Tiada lesi atau kesan gigitan', zh: '未见病斑或啃食痕迹' }),
+                        translateText(language, { en: 'No spots or chewing damage', ms: 'Tiada tompok atau kesan gigitan', zh: '未见病斑或啃食痕迹' }),
                     ],
                     additionalNotes: translateText(language, {
                         en: 'The leaf looks healthy overall, so no treatment is needed right now.',
@@ -948,14 +948,14 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                     diagnosticEvidence: {
                         leafAgeAffected: translateText(language, { en: 'No clear age pattern', ms: 'Tiada corak umur daun yang jelas', zh: '无明显叶龄分布' }),
                         lesionShape: translateText(language, { en: 'None seen', ms: 'Tiada kelihatan', zh: '未见明显病斑' }),
-                        lesionBorderHalo: translateText(language, { en: 'No halo or dark border', ms: 'Tiada halo atau tepi gelap', zh: '无晕圈或深色边缘' }),
+                        lesionBorderHalo: translateText(language, { en: 'No yellow ring or dark border', ms: 'Tiada lingkaran kuning atau tepi gelap', zh: '无晕圈或深色边缘' }),
                         distributionPattern: translateText(language, { en: 'Uniform leaf surface', ms: 'Permukaan daun seragam', zh: '叶面分布均匀' }),
                         colorPattern: translateText(language, { en: 'Consistent green', ms: 'Hijau sekata', zh: '颜色稳定偏绿' }),
                         likelyCauseCategory: 'healthy',
-                        evidenceFor: [translateText(language, { en: 'No disease lesions are visible', ms: 'Tiada lesi penyakit yang kelihatan', zh: '未见病害斑点' })],
+                        evidenceFor: [translateText(language, { en: 'No disease spots are visible', ms: 'Tiada tompok penyakit yang kelihatan', zh: '未见病害斑点' })],
                         evidenceAgainst: [translateText(language, { en: 'No sign of marginal scorch or angular spots', ms: 'Tiada tanda tepi terbakar atau tompok bersegi', zh: '没有叶缘灼伤或角斑迹象' })],
                         rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
-                        rejectedReason: translateText(language, { en: 'No necrotic lesion pattern is visible', ms: 'Corak lesi nekrotik tidak kelihatan', zh: '未见坏死病斑形态' }),
+                        rejectedReason: translateText(language, { en: 'No dead spot pattern is visible', ms: 'Corak tompok mati tidak kelihatan', zh: '未见坏死病斑形态' }),
                     },
                 },
             },
@@ -972,20 +972,20 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                 },
                 diagnosis_assessment: {
                     plantType: translateText(language, { en: 'Durian (Durio zibethinus)', ms: 'Durian (Durio zibethinus)', zh: '榴莲 (Durio zibethinus)' }),
-                    primaryDiagnosis: translateText(language, { en: 'Leaf Spot', ms: 'Bintik Daun', zh: '叶斑病' }),
+                    primaryDiagnosis: translateText(language, { en: 'Anthracnose', ms: 'Antraknos', zh: '炭疽病' }),
                     healthStatus: 'unhealthy',
                     severity: 'moderate',
                     diagnosisConfidence: 82,
                     diseaseCategory: 'fungal',
                     pathogenType: 'Fungal',
                     symptoms: [
-                        translateText(language, { en: 'Circular brown lesions', ms: 'Lesi bulat perang', zh: '圆形褐色病斑' }),
-                        translateText(language, { en: 'Yellow halo around several spots', ms: 'Halo kuning di beberapa tompok', zh: '多处病斑周围有黄晕' }),
+                        translateText(language, { en: 'Circular brown spots', ms: 'Tompok bulat perang', zh: '圆形褐色病斑' }),
+                        translateText(language, { en: 'Yellow ring around several spots', ms: 'Lingkaran kuning di sekeliling beberapa tompok', zh: '多处病斑周围有黄晕' }),
                     ],
                     additionalNotes: translateText(language, {
-                        en: 'The round lesions and dark margins fit a fungal spot better than a nutrient shortage.',
-                        ms: 'Lesi bulat dan tepi gelap lebih sesuai dengan bintik daun kulat berbanding kekurangan nutrien.',
-                        zh: '圆形病斑和深色边缘更符合真菌性叶斑，而不是单纯缺肥。',
+                        en: 'Round brown spots with dark edges and yellow rings fit anthracnose better than a nutrient shortage.',
+                        ms: 'Tompok bulat perang dengan tepi gelap dan lingkaran kuning lebih sesuai dengan antraknos berbanding kekurangan nutrien.',
+                        zh: '带深色边缘和黄晕的圆形褐斑更符合炭疽病，而不是单纯缺肥。',
                     }),
                     needsMoreEvidence: false,
                     abstainReason: '',
@@ -993,20 +993,20 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                         {
                             name: translateText(language, { en: 'Potassium deficiency', ms: 'Kekurangan kalium', zh: '缺钾' }),
                             likelihood: 32,
-                            reason: translateText(language, { en: 'Yellowing is present, but lesion halos point away from pure nutrient stress', ms: 'Walaupun ada kekuningan, halo lesi tidak menyokong tekanan nutrien semata-mata', zh: '虽然有黄化，但病斑晕圈并不支持单纯缺肥' }),
+                            reason: translateText(language, { en: 'Yellowing is present, but yellow rings point away from pure nutrient stress', ms: 'Walaupun ada kekuningan, lingkaran kuning tompok tidak menyokong tekanan nutrien semata-mata', zh: '虽然有黄化，但病斑晕圈并不支持单纯缺肥' }),
                         },
                     ],
                     diagnosticEvidence: {
                         leafAgeAffected: translateText(language, { en: 'Mostly mature leaves', ms: 'Kebanyakannya daun matang', zh: '主要在成熟叶片上' }),
                         lesionShape: translateText(language, { en: 'Circular spots', ms: 'Tompok bulat', zh: '圆形病斑' }),
-                        lesionBorderHalo: translateText(language, { en: 'Dark margin with yellow halo', ms: 'Tepi gelap dengan halo kuning', zh: '深色边缘并带黄晕' }),
+                        lesionBorderHalo: translateText(language, { en: 'Dark margin with yellow ring', ms: 'Tepi gelap dengan lingkaran kuning', zh: '深色边缘并带黄晕' }),
                         distributionPattern: translateText(language, { en: 'Scattered spots', ms: 'Tompok bertaburan', zh: '病斑分散分布' }),
-                        colorPattern: translateText(language, { en: 'Brown center with chlorotic halo', ms: 'Tengah perang dengan halo klorosis', zh: '褐色中心伴黄化晕圈' }),
+                        colorPattern: translateText(language, { en: 'Brown center with yellow ring', ms: 'Tengah perang dengan lingkaran kuning', zh: '褐色中心伴黄化晕圈' }),
                         likelyCauseCategory: 'fungal',
-                        evidenceFor: [translateText(language, { en: 'Classic lesion margins are visible', ms: 'Sempadan lesi klasik kelihatan', zh: '可见典型病斑边缘' })],
+                        evidenceFor: [translateText(language, { en: 'Classic spot margins are visible', ms: 'Sempadan tompok klasik kelihatan', zh: '可见典型病斑边缘' })],
                         evidenceAgainst: [translateText(language, { en: 'Not mainly marginal scorching', ms: 'Bukan corak tepi daun terbakar utama', zh: '并非以叶缘灼伤为主' })],
                         rejectedDiagnosis: translateText(language, { en: 'Potassium deficiency', ms: 'Kekurangan kalium', zh: '缺钾' }),
-                        rejectedReason: translateText(language, { en: 'The lesions are discrete instead of diffuse leaf-edge stress', ms: 'Lesi adalah berasingan, bukan tekanan tepi daun yang merebak', zh: '病斑是离散的，而不是弥散性叶缘失调' }),
+                        rejectedReason: translateText(language, { en: 'The spots are discrete instead of diffuse leaf-edge stress', ms: 'Tompok adalah berasingan, bukan tekanan tepi daun yang merebak', zh: '病斑是离散的，而不是弥散性叶缘失调' }),
                     },
                 },
             },
@@ -1030,12 +1030,12 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                     diseaseCategory: 'bacterial',
                     pathogenType: 'Bacterial',
                     symptoms: [
-                        translateText(language, { en: 'Angular lesions limited by veins', ms: 'Lesi bersudut mengikut urat daun', zh: '病斑受叶脉限制呈角形' }),
+                        translateText(language, { en: 'Angular spots limited by veins', ms: 'Tompok bersudut mengikut urat daun', zh: '病斑受叶脉限制呈角形' }),
                         translateText(language, { en: 'Water-soaked patches', ms: 'Tompok berair', zh: '出现水渍状斑块' }),
                     ],
                     additionalNotes: translateText(language, {
-                        en: 'The vein-limited angular pattern supports a bacterial lesion more than a fungal round spot.',
-                        ms: 'Corak bersudut yang mengikut urat daun lebih menyokong lesi bakteria berbanding bintik kulat bulat.',
+                        en: 'The vein-limited angular pattern supports a bacterial spot more than a fungal round spot.',
+                        ms: 'Corak bersudut yang mengikut urat daun lebih menyokong tompok bakteria berbanding bintik kulat bulat.',
                         zh: '受叶脉限制的角斑更支持细菌性病害，而不是圆形真菌斑。',
                     }),
                     needsMoreEvidence: false,
@@ -1050,14 +1050,14 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                     diagnosticEvidence: {
                         leafAgeAffected: translateText(language, { en: 'Mixed leaf ages', ms: 'Daun pelbagai umur', zh: '不同叶龄均可见' }),
                         lesionShape: translateText(language, { en: 'Angular', ms: 'Bersudut', zh: '角形' }),
-                        lesionBorderHalo: translateText(language, { en: 'Water-soaked edge without a strong halo', ms: 'Tepi berair tanpa halo yang jelas', zh: '水渍边缘，无明显晕圈' }),
+                        lesionBorderHalo: translateText(language, { en: 'Water-soaked edge without a yellow ring', ms: 'Tepi berair tanpa lingkaran kuning yang jelas', zh: '水渍边缘，无明显晕圈' }),
                         distributionPattern: translateText(language, { en: 'Patchy but vein-limited', ms: 'Bertompok tetapi dihadkan urat daun', zh: '分布不均，但受叶脉限制' }),
-                        colorPattern: translateText(language, { en: 'Dark wet-looking lesions', ms: 'Lesi gelap seperti basah', zh: '深色且带湿润感的病斑' }),
+                        colorPattern: translateText(language, { en: 'Dark wet-looking spots', ms: 'Tompok gelap seperti basah', zh: '深色且带湿润感的病斑' }),
                         likelyCauseCategory: 'bacterial',
-                        evidenceFor: [translateText(language, { en: 'Angular water-soaked lesions are visible', ms: 'Lesi berair yang bersudut kelihatan', zh: '可见角形水渍病斑' })],
-                        evidenceAgainst: [translateText(language, { en: 'No strong circular halo pattern', ms: 'Tiada corak halo bulat yang kuat', zh: '没有明显的圆形晕圈模式' })],
+                        evidenceFor: [translateText(language, { en: 'Angular water-soaked spots are visible', ms: 'Tompok berair yang bersudut kelihatan', zh: '可见角形水渍病斑' })],
+                        evidenceAgainst: [translateText(language, { en: 'No strong yellow ring pattern', ms: 'Tiada corak lingkaran kuning bulat yang kuat', zh: '没有明显的圆形晕圈模式' })],
                         rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
-                        rejectedReason: translateText(language, { en: 'The lesions follow veins instead of forming round necrotic spots', ms: 'Lesi mengikut urat daun, bukan tompok nekrotik bulat', zh: '病斑沿叶脉分布，而非圆形坏死斑' }),
+                        rejectedReason: translateText(language, { en: 'The spots follow veins instead of forming round dead spots', ms: 'Tompok mengikut urat daun, bukan tompok mati bulat', zh: '病斑沿叶脉分布，而非圆形坏死斑' }),
                     },
                 },
             },
@@ -1095,20 +1095,20 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                         {
                             name: translateText(language, { en: 'Leaf spot', ms: 'Bintik daun', zh: '叶斑病' }),
                             likelihood: 25,
-                            reason: translateText(language, { en: 'Necrotic areas exist, but they are not discrete fungal lesions', ms: 'Walaupun ada nekrosis, ia bukan lesi kulat yang berasingan', zh: '虽然有坏死区，但不像离散的真菌病斑' }),
+                            reason: translateText(language, { en: 'Dead areas exist, but they are not discrete fungal spots', ms: 'Walaupun ada tisu mati, ia bukan tompok kulat yang berasingan', zh: '虽然有坏死区，但不像离散的真菌病斑' }),
                         },
                     ],
                     diagnosticEvidence: {
                         leafAgeAffected: translateText(language, { en: 'Older leaves first', ms: 'Daun tua dahulu', zh: '先发生在老叶' }),
-                        lesionShape: translateText(language, { en: 'No distinct lesion shape', ms: 'Tiada bentuk lesi yang jelas', zh: '没有明确病斑形态' }),
-                        lesionBorderHalo: translateText(language, { en: 'No halo; margin scorch instead', ms: 'Tiada halo; sebaliknya tepi daun terbakar', zh: '没有晕圈，主要是叶缘焦枯' }),
+                        lesionShape: translateText(language, { en: 'No distinct spot shape', ms: 'Tiada bentuk tompok yang jelas', zh: '没有明确病斑形态' }),
+                        lesionBorderHalo: translateText(language, { en: 'No yellow ring; margin scorch instead', ms: 'Tiada lingkaran kuning; sebaliknya tepi daun terbakar', zh: '没有晕圈，主要是叶缘焦枯' }),
                         distributionPattern: translateText(language, { en: 'Diffuse along the leaf edge', ms: 'Merebak di sepanjang tepi daun', zh: '沿叶缘弥散分布' }),
                         colorPattern: translateText(language, { en: 'Yellow to brown margin stress', ms: 'Tepi kuning ke perang', zh: '叶缘由黄变褐' }),
                         likelyCauseCategory: 'nutrient',
                         evidenceFor: [translateText(language, { en: 'Older leaves are affected first', ms: 'Daun tua terjejas dahulu', zh: '老叶先受影响' })],
-                        evidenceAgainst: [translateText(language, { en: 'No round halo lesions are seen', ms: 'Tiada lesi bulat berhalo kelihatan', zh: '未见圆形带晕圈病斑' })],
+                        evidenceAgainst: [translateText(language, { en: 'No round spots with yellow rings are seen', ms: 'Tiada tompok bulat berlingkaran kuning kelihatan', zh: '未见圆形带晕圈病斑' })],
                         rejectedDiagnosis: translateText(language, { en: 'Fungal leaf spot', ms: 'Bintik daun kulat', zh: '真菌性叶斑病' }),
-                        rejectedReason: translateText(language, { en: 'The pattern is diffuse nutrient stress instead of discrete lesions', ms: 'Corak ini ialah tekanan nutrien yang merebak, bukan lesi berasingan', zh: '该模式更像弥散性缺素，而不是离散病斑' }),
+                        rejectedReason: translateText(language, { en: 'The pattern is diffuse nutrient stress instead of discrete spots', ms: 'Corak ini ialah tekanan nutrien yang merebak, bukan tompok berasingan', zh: '该模式更像弥散性缺素，而不是离散病斑' }),
                     },
                 },
             },
@@ -1155,13 +1155,13 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                     ],
                     diagnosticEvidence: {
                         leafAgeAffected: translateText(language, { en: 'Fruit and nearby canopy', ms: 'Buah dan kanopi berhampiran', zh: '果实及附近冠层' }),
-                        lesionShape: translateText(language, { en: 'Cottony/waxy patches rather than lesions', ms: 'Tompok seperti kapas/berlilin, bukan lesi', zh: '绵状/蜡状斑块，而非病斑' }),
-                        lesionBorderHalo: translateText(language, { en: 'No angular or water-soaked lesion edge', ms: 'Tiada tepi lesi bersudut atau berair', zh: '无角斑或水渍状边缘' }),
+                        lesionShape: translateText(language, { en: 'Cottony/waxy patches rather than spots', ms: 'Tompok seperti kapas/berlilin, bukan tompok', zh: '绵状/蜡状斑块，而非病斑' }),
+                        lesionBorderHalo: translateText(language, { en: 'No angular or water-soaked spot edge', ms: 'Tiada tepi tompok bersudut atau berair', zh: '无角斑或水渍状边缘' }),
                         distributionPattern: translateText(language, { en: 'Clustered on fruit surfaces', ms: 'Berkelompok pada permukaan buah', zh: '集中在果面' }),
                         colorPattern: translateText(language, { en: 'White waxy/cottony residue', ms: 'Sisa putih berlilin/seperti kapas', zh: '白色蜡状/绵状残留' }),
                         likelyCauseCategory: 'pest',
                         evidenceFor: [translateText(language, { en: 'Cottony white residue is a common field sign of mealybug or scale', ms: 'Sisa putih seperti kapas ialah tanda biasa kutu putih atau serangga sisik', zh: '白色绵状残留是粉蚧或介壳虫常见田间特征' })],
-                        evidenceAgainst: [translateText(language, { en: 'No clear sunken rot or circular fungal lesion is visible', ms: 'Tiada reput lekuk atau lesi kulat bulat yang jelas', zh: '未见明显凹陷腐烂或圆形真菌病斑' })],
+                        evidenceAgainst: [translateText(language, { en: 'No clear sunken rot or circular fungal spot is visible', ms: 'Tiada reput lekuk atau tompok kulat bulat yang jelas', zh: '未见明显凹陷腐烂或圆形真菌病斑' })],
                         rejectedDiagnosis: translateText(language, { en: 'Generic pest issue', ms: 'Isu perosak umum', zh: '一般害虫问题' }),
                         rejectedReason: translateText(language, { en: 'A named likely pest group is visible enough to show a suspected diagnosis', ms: 'Kumpulan perosak berkemungkinan dapat dinamakan berdasarkan bukti visual', zh: '可根据可见证据给出较具体的疑似害虫类别' }),
                     },
@@ -1187,12 +1187,12 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                     diseaseCategory: 'fungal',
                     pathogenType: 'Fungal',
                     symptoms: [
-                        translateText(language, { en: 'Elongated brown necrotic leaf lesions', ms: 'Lesi nekrotik perang memanjang pada daun', zh: '叶片上有拉长的褐色坏死斑' }),
+                        translateText(language, { en: 'Elongated brown dead patches on the leaf', ms: 'Tompok mati perang memanjang pada daun', zh: '叶片上有拉长的褐色坏死斑' }),
                         translateText(language, { en: 'Yellowing around damaged tissue', ms: 'Kekuningan sekitar tisu rosak', zh: '受损组织周围发黄' }),
                     ],
                     additionalNotes: translateText(language, {
-                        en: 'The brown necrotic lesions and surrounding yellowing are more consistent with coconut leaf blight than nutrient stress alone.',
-                        ms: 'Lesi perang nekrotik dan kekuningan sekeliling lebih konsisten dengan hawar daun kelapa berbanding tekanan nutrien sahaja.',
+                        en: 'The brown dead spots and surrounding yellowing are more consistent with coconut leaf blight than nutrient stress alone.',
+                        ms: 'Tompok perang mati dan kekuningan sekeliling lebih konsisten dengan hawar daun kelapa berbanding tekanan nutrien sahaja.',
                         zh: '褐色坏死斑及周围发黄更符合椰子叶枯病，而不只是营养胁迫。',
                     }),
                     needsMoreEvidence: false,
@@ -1201,20 +1201,20 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                         {
                             name: translateText(language, { en: 'Potassium deficiency', ms: 'Kekurangan kalium', zh: '缺钾' }),
                             likelihood: 30,
-                            reason: translateText(language, { en: 'Yellowing can overlap, but discrete necrotic lesions favor disease', ms: 'Kekuningan boleh bertindih, tetapi lesi nekrotik berasingan lebih menyokong penyakit', zh: '黄化可能重叠，但离散坏死斑更支持病害' }),
+                            reason: translateText(language, { en: 'Yellowing can overlap, but discrete dead spots favor disease', ms: 'Kekuningan boleh bertindih, tetapi tompok mati berasingan lebih menyokong penyakit', zh: '黄化可能重叠，但离散坏死斑更支持病害' }),
                         },
                     ],
                     diagnosticEvidence: {
                         leafAgeAffected: translateText(language, { en: 'Mature fronds', ms: 'Pelepah matang', zh: '成熟叶片' }),
-                        lesionShape: translateText(language, { en: 'Elongated necrotic lesions', ms: 'Lesi nekrotik memanjang', zh: '拉长坏死斑' }),
+                        lesionShape: translateText(language, { en: 'Elongated dead spots', ms: 'Tompok mati memanjang', zh: '拉长坏死斑' }),
                         lesionBorderHalo: translateText(language, { en: 'Yellowing around brown tissue', ms: 'Kekuningan sekitar tisu perang', zh: '褐色组织周围发黄' }),
                         distributionPattern: translateText(language, { en: 'Patchy along frondlets', ms: 'Bertompok sepanjang anak pelepah', zh: '沿小叶片斑块状分布' }),
-                        colorPattern: translateText(language, { en: 'Brown necrosis with chlorosis', ms: 'Nekrosis perang dengan klorosis', zh: '褐色坏死伴黄化' }),
+                        colorPattern: translateText(language, { en: 'Brown dead tissue with yellowing', ms: 'Tisu perang mati dengan kekuningan', zh: '褐色坏死伴黄化' }),
                         likelyCauseCategory: 'fungal',
-                        evidenceFor: [translateText(language, { en: 'Discrete necrotic lesions are visible', ms: 'Lesi nekrotik berasingan kelihatan', zh: '可见离散坏死病斑' })],
+                        evidenceFor: [translateText(language, { en: 'Discrete dead spots are visible', ms: 'Tompok mati berasingan kelihatan', zh: '可见离散坏死病斑' })],
                         evidenceAgainst: [translateText(language, { en: 'Not a uniform whole-frond deficiency pattern', ms: 'Bukan corak kekurangan nutrien seragam pada seluruh pelepah', zh: '不是整片叶均匀缺素模式' })],
                         rejectedDiagnosis: translateText(language, { en: 'Generic fungal issue', ms: 'Isu kulat umum', zh: '一般真菌问题' }),
-                        rejectedReason: translateText(language, { en: 'The crop and lesion pattern support a named likely blight diagnosis', ms: 'Tanaman dan corak lesi menyokong diagnosis hawar yang lebih khusus', zh: '作物与病斑模式支持更具体的叶枯诊断' }),
+                        rejectedReason: translateText(language, { en: 'The crop and spot pattern support a named likely blight diagnosis', ms: 'Tanaman dan corak tompok menyokong diagnosis hawar yang lebih khusus', zh: '作物与病斑模式支持更具体的叶枯诊断' }),
                     },
                 },
             },
@@ -1262,7 +1262,7 @@ export const buildDiagnosisStageFewShotExamples = (language = 'en') => {
                         colorPattern: translateText(language, { en: 'Unclear', ms: 'Tidak jelas', zh: '不清楚' }),
                         likelyCauseCategory: 'unknown',
                         evidenceFor: [],
-                        evidenceAgainst: [translateText(language, { en: 'Detail is insufficient to see lesions or pests', ms: 'Perincian tidak cukup untuk melihat lesi atau perosak', zh: '细节不足，无法看清病斑或害虫' })],
+                        evidenceAgainst: [translateText(language, { en: 'Detail is insufficient to see spots or pests', ms: 'Perincian tidak cukup untuk melihat tompok atau perosak', zh: '细节不足，无法看清病斑或害虫' })],
                         rejectedDiagnosis: '',
                         rejectedReason: '',
                     },
@@ -1871,6 +1871,19 @@ Rules:
 - Never use confident_treatment unless diagnosis confidence is at least 80, image quality is sufficient, and visible evidence supports a named disease or pest.
 - If visible evidence supports a plausible issue, primaryDiagnosis MUST be a named likely/suspected condition, not only a broad category. Avoid generic labels such as "Potential Pest Infestation", "Possible Disease", "Leaf Problem", or "Further Diagnosis Needed" unless the image is genuinely too unclear.
 - needsMoreEvidence may be true for a likely/suspected condition, but it must not erase the named primaryDiagnosis or make additionalNotes only say that more evidence is needed.
+- Name the specific disease, not the symptom. When the crop is known, "Leaf Spot", "Leaf Blight", "Fungal Leaf Spot", "Chlorosis" or "Rust" alone are not acceptable answers: name that crop's disease that best fits the signs (for example grape Black Rot, strawberry Leaf Scorch, peach or pepper Bacterial Spot, corn Northern Corn Leaf Blight or Gray Leaf Spot, coconut Grey Leaf Blight). Use a symptom-only name only when no disease of this crop fits, and then say so in additionalNotes.
+- primaryDiagnosis is one condition. Do not put hedge words (Likely, Possible, Probable) or a second condition ("X / Y") in it; show doubt with confidenceLevel, diagnosisConfidence and differentialDiagnoses. The suspected pest-group wording described below for papaya is the only exception.
+- plantType is the crop name with its scientific name in brackets, nothing else. Put any doubt about the crop in abstainReason, not in plantType.
+- Look-alike groups. Before naming any member, compare it with the others in its group by the feature that separates them, and list the plausible ones in differentialDiagnoses:
+  - Tomato leaf spots: Early Blight (few large brown spots with concentric rings, older leaves first), Septoria Leaf Spot (many small round spots with pale grey centres, dark edges and tiny black dots), Bacterial Spot (small dark greasy or angular spots, often with yellow halo, no rings), Target Spot (brown spots with faint rings and a light centre, often cracking). Do not default to Early Blight: name it only when concentric rings are clearly visible.
+  - Grape: Black Rot (round tan spots with a dark border and black dots inside), Esca (tiger-stripe yellow or red bands between the veins that dry out), Isariopsis Leaf Spot (irregular dark brown patches without black dots).
+  - Corn: Northern Corn Leaf Blight (long cigar-shaped grey-green lesions), Gray Leaf Spot (narrow rectangular lesions limited by veins), Common Rust (raised brick-red powdery pustules).
+  - Spider mites (fine pale stippling, webbing, tiny moving dots under the leaf) versus Powdery Mildew (white or grey powder that rubs off).
+  - Citrus greening (blotchy yellow mottle that differs on the two halves of the leaf, does not follow the veins) versus zinc or manganese deficiency (yellow between the veins, the same on both halves).
+  - Padi: Brown Spot (oval brown spots with a grey centre, many small spots) versus Blast (diamond or eye-shaped spots with grey centre and brown edge, pointed ends).
+- Confidence anchors: give diagnosisConfidence 80 or more only when the hallmark sign of the named condition is clearly visible AND the look-alikes above (or the closest other condition) are ruled out by a visible feature. If the hallmark sign is visible but a look-alike is not ruled out, stay between 60 and 75.
+- Fit to Malaysia. Prefer conditions known on this crop in hot, humid Malaysian lowlands. Diseases of temperate regions that need a cool season or another host plant (for example Cedar Apple Rust, which needs juniper) are rare here: if the signs point to one, keep confidence below 75, say it is unusual in Malaysia, and list the tropical look-alike.
+- Write for a farmer with little schooling. symptoms, additionalNotes, abstainReason, followUpQuestions, reasons and distinguishingFeatures use short everyday words that describe what the farmer can see (spots, brown, dry, yellow edges, white powder, tiny insects). Do not use technical words such as necrotic, lesion, chlorosis, halo, sporulation or pustule in them; in Bahasa Malaysia avoid nekrotik, lesi, klorosis and halo and say tompok, bintik, mati kering, kekuningan, lingkaran kuning instead. Technical names belong only in scientificName fields.
 - additionalNotes must briefly state the named likely condition and the visible evidence that supports it.
 - Bacterial diagnoses require angular or water-soaked evidence.
 - Nutrient deficiency should match leaf age pattern and diffuse color change, not discrete fungal lesions.
@@ -1996,14 +2009,14 @@ Return STRICT JSON:
     "hasDeficiency": false,
     "severity": "Mild",
     "symptoms": [],
-    "possibleNutrients": ["Magnesium"],
+    "possibleNutrients": ["<nutrient, only if signs support it>"],
     "reasoning": "short note about overlap",
     "deficientNutrients": [
-      { "nutrient": "Potassium", "severity": "Moderate", "symptoms": ["item"], "recommendations": ["item"] }
+      { "nutrient": "<nutrient>", "severity": "Mild | Moderate | Severe", "symptoms": ["item"], "recommendations": ["item"] }
     ]
   },
   "fertilizerRecommendations": [
-    { "fertilizerName": "NPK 15-15-15", "type": "Chemical", "applicationMethod": "how", "frequency": "when", "amount": "how much" }
+    { "fertilizerName": "<specific fertiliser>", "type": "Chemical | Organic", "applicationMethod": "<how>", "frequency": "<when>", "amount": "<follow the product label>" }
   ],
   "malaysianGovernmentSupport": {
     "recommendedAgency": "DOA/MARDI/MPOB/LGM",
@@ -2011,12 +2024,21 @@ Return STRICT JSON:
     "contactInfo": "how to contact"
   },
   "economicImpact": {
-    "estimatedYieldLoss": "short estimate",
-    "treatmentCost": "RM 40 - 120",
-    "roi": "Low/Medium/High"
+    "estimatedYieldLoss": "<short estimate for this case, or Unknown>",
+    "treatmentCost": "<RM range for this crop and case, or Unknown>",
+    "roi": "Low | Medium | High | Unknown"
   },
-  "productSearchTags": ["fungicide", "fertilizer"]
+  "productSearchTags": ["<generic search hint>"]
 }
+
+Rules for every list:
+- Values in angle brackets are placeholders: never copy them or invent figures. When you cannot estimate a cost or loss for this crop and case, write Unknown.
+- Write for a farmer with little schooling: short everyday words, one action per item, at most 4 items per list, the most useful first. Avoid technical words (necrotic, lesion, chlorosis, inoculum, systemic).
+- Fit Malaysian conditions: frequent rain and high humidity, small farms, products from local agriculture shops. Name the DOA, MARDI, MPOB, LGM or RISDA (rubber) office that fits the crop.
+
+Rules for fertiliser:
+- Recommend fertiliser only when nutritionalIssues.status is possible or confirmed, or as routine care for a healthy plant. Never present fertiliser as a cure for a disease or pest; otherwise return an empty fertilizerRecommendations list.
+- Set type to Organic for manure, compost and other organic products, and Chemical for mineral fertilisers.
 
 Rules for nutritionalIssues:
 - Use "status": "confirmed" only when nutrient deficiency evidence is strong. In that case set "hasDeficiency": true and fill "deficientNutrients".
@@ -2206,6 +2228,18 @@ export const mergeDiagnosisResult = ({
             ms: 'Tiada tanda penyakit yang jelas, tetapi AI tidak pasti. Periksa bawah daun untuk hama kecil atau sarang, serbuk putih, kekuningan bertompok atau bintik kecil, dan hantar foto dekat jika ada.',
             zh: '未见明显病害迹象，但AI并不确定。请检查叶背是否有细小螨虫或蛛网、白色粉状物、斑驳黄化或小斑点，如有请发送近照。',
         });
+    }
+
+    // A plan built while the model still called the plant healthy (fertiliser,
+    // "High" return, a cost range) must not survive a later retake or review
+    // decision: without a clear diagnosis there is nothing to feed or price.
+    if (filtered.requiresRetake || assessScanDecision(filtered).needsReview || filtered.healthStatus === 'unknown') {
+        if (!['possible', 'confirmed'].includes(filtered.nutritionalIssues?.status)) filtered.fertilizerRecommendations = [];
+        filtered.economicImpact = {
+            estimatedYieldLoss: translateText(language, { en: 'Unknown until the problem is clearer', ms: 'Belum pasti sehingga masalah lebih jelas', zh: '需待问题更明确后才能评估' }),
+            treatmentCost: translateText(language, { en: 'Unknown', ms: 'Belum pasti', zh: '未知' }),
+            roi: 'Unknown',
+        };
     }
 
     if (assessScanDecision(filtered).needsReview) {

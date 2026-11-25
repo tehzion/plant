@@ -45,3 +45,21 @@ describe('diagnosis merge safeguards', () => {
         expect(merge().status).not.toBe('confirmed');
     });
 });
+
+describe('unclear results carry no feeding or cost advice', () => {
+    it('drops the healthy-plant fertiliser plan and cost guess when the photo must be retaken', () => {
+        const result = merge({ stageOne: { capture_assessment: { imageQualityConfidence: 25, requiresRetake: true, retakeReason: 'Too far away' },
+            diagnosis_assessment: { primaryDiagnosis: 'No Issues', healthStatus: 'healthy', diagnosisConfidence: 28 } } });
+        expect(result.requiresRetake).toBe(true);
+        expect(result.fertilizerRecommendations).toEqual([]);
+        expect(result.economicImpact).toMatchObject({ roi: 'Unknown', treatmentCost: 'Unknown' });
+    });
+
+    it('keeps fertiliser when a nutrient problem is part of an unclear result', () => {
+        const result = merge({
+            stageOne: { capture_assessment: { imageQualityConfidence: 25, requiresRetake: true }, diagnosis_assessment: { primaryDiagnosis: 'Potassium Deficiency', healthStatus: 'unhealthy', diagnosisConfidence: 40 } },
+            stageTwo: { nutritionalIssues: { status: 'possible', possibleNutrients: ['Potassium'] }, fertilizerRecommendations: [{ fertilizerName: 'Muriate of Potash', type: 'Chemical' }] },
+        });
+        expect(result.fertilizerRecommendations.map((item) => item.fertilizerName)).toEqual(['Muriate of Potash']);
+    });
+});
