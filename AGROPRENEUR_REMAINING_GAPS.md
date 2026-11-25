@@ -108,7 +108,7 @@ Based on the DOA myGAP food-crop scheme (MS 1784, myGAP 4 record forms, 6-1 chec
 | Item | Status |
 |---|---|
 | Plant-check critique (Results page) | Done in PR #26. Rechecked on master at 375px in BM: each of the four result types has its own headline and main button, the steps show without opening anything, the page is 1.5–2.2 screens and nothing scrolls sideways. |
-| Account consent, in-app "remove my photos", offline edits/deletes with "keep mine / keep server", verified telemetry identity, translated reviewer screens, review agreement report | In PR #15, brought up to date with master and passing CI. **Not merged.** It needs migration `0005_account_photo_consent.sql` (adds `profiles.data_consent`); until that is applied, signed-in farmers cannot save consent and stay opted out. |
-| Split `aiService.js` (~4,000 lines); inactivity expiry for cached cloud records | Waiting for PR #15, which changes the same files. |
+| Account consent, in-app "remove my photos", offline edits/deletes with "keep mine / keep server", verified telemetry identity, translated reviewer screens, review agreement report | Merged in PR #15 (25 Nov 2026). **Migration `0005_account_photo_consent.sql` (adds `profiles.data_consent`) is not yet applied to production;** until it is, signed-in farmers cannot save consent and stay opted out. |
+| Split `aiService.js` (~4,000 lines); inactivity expiry for cached cloud records | Open — PR #15 is merged, so these can start. |
 | One production host for the API | Still an owner decision. The Vercel Analytics PRs (#1, #2) were closed on the assumption that Render is the host. |
 | Reviewer configuration, PDPA legal review, field accuracy, farmer usability sessions | Unchanged — need people, not code. |
