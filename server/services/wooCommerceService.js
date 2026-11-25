@@ -5,11 +5,11 @@
 
 import NodeCache from 'node-cache';
 import { withAbortableTimeout } from '../utils/requestTimeout.js';
+import { createCatalogCache } from '../utils/catalogCache.js';
 
-// Cache products for 1 hour, tags & categories for 6 hours
+// Filtered product searches are cached for 1 hour. The full product, tag and
+// category lists use the catalogue cache below.
 const productCache = new NodeCache({ stdTTL: 3600 });
-const tagCache = new NodeCache({ stdTTL: 21600 });
-const categoryCache = new NodeCache({ stdTTL: 21600 });
 const WOO_REQUEST_TIMEOUT_MS = Number(process.env.WOO_REQUEST_TIMEOUT_MS) || 15000;
 const WOO_MAX_CATALOG_PAGES = Number(process.env.WOO_MAX_CATALOG_PAGES) || 20;
 
@@ -128,159 +128,109 @@ const requestWoo = (request, { signal = null, ...options } = {}) => {
     );
 };
 
+// Reads every page of a WooCommerce list endpoint.
+const fetchAllPages = async (endpoint, params, label) => {
+    const items = [];
+    let page = 1;
+    while (page <= WOO_MAX_CATALOG_PAGES) {
+        const req = getWooRequestConfig(endpoint, { per_page: 100, ...params, page });
+        if (!req) break;
+        // No caller signal here: one load is shared by every waiting request,
+        // so one farmer leaving must not cancel it. The timeout still applies.
+        const response = await requestWoo(req);
+        if (!response.ok) throw new Error(`WooCommerce ${label} API error: ${response.status}`);
+        const rows = await response.json();
+        if (!Array.isArray(rows) || rows.length === 0) break;
+        items.push(...rows);
+        if (rows.length < 100) break;
+        page += 1;
+    }
+    if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce ${label} catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
+    return items;
+};
+
+const CATALOG_LOADERS = {
+    woo_all_tags: async () => {
+        const tags = await fetchAllPages('products/tags', {}, 'tags');
+        const useful = tags
+            .map((tag) => ({ id: tag.id, name: decodeHtmlEntities(tag.name), count: tag.count }))
+            .filter((tag) => tag.count > 0);
+        console.log(`✅ Cached ${useful.length} product tags from WooCommerce`);
+        return useful;
+    },
+    woo_all_categories: async () => {
+        const categories = await fetchAllPages('products/categories', {}, 'categories');
+        const useful = categories
+            .map((category) => ({
+                id: category.id,
+                name: decodeHtmlEntities(category.name),
+                count: category.count,
+                parent: category.parent,
+            }))
+            .filter((category) => category.count > 0);
+        console.log(`✅ Cached ${useful.length} product categories from WooCommerce`);
+        return useful;
+    },
+    woo_all_products: async () => {
+        const products = (await fetchAllPages('products', { status: 'publish' }, 'products')).map(transformWooProduct);
+        console.log(`✅ Cached ${products.length} products from WooCommerce`);
+        return products;
+    },
+};
+
+const CATALOG_TTL_MS = {
+    woo_all_tags: 6 * 60 * 60 * 1000,
+    woo_all_categories: 6 * 60 * 60 * 1000,
+    woo_all_products: 60 * 60 * 1000,
+};
+
+const logBackgroundError = (key, error) => console.error(`❌ WooCommerce background refresh failed (${key}):`, error.message);
+const catalogCaches = Object.fromEntries(Object.keys(CATALOG_LOADERS)
+    .map((key) => [key, createCatalogCache({ ttlMs: CATALOG_TTL_MS[key], onBackgroundError: logBackgroundError })]));
+
+// Returns the cached list, sharing one load between requests and keeping the
+// last good copy when the store is slow or down. Returns [] only when the
+// store has never answered since the server started.
+const readCatalog = async (key, { signal = null } = {}) => {
+    if (!process.env.WOOCOMMERCE_URL) return [];
+    try {
+        return await catalogCaches[key].get(key, CATALOG_LOADERS[key], { signal });
+    } catch (error) {
+        if (signal?.aborted) throw error;
+        console.error(`❌ WooCommerce ${key} fetch failed:`, error.message);
+        return [];
+    }
+};
+
 /**
  * Fetch all WooCommerce product tags (cached, paginated)
  * @returns {Promise<Array>} Array of { id, name, count }
  */
-export const getAllTags = async ({ signal = null } = {}) => {
-    const cacheKey = 'woo_all_tags';
-    const cached = tagCache.get(cacheKey);
-    if (cached) {
-        console.log('🧠 WooCommerce tags cache HIT');
-        return cached;
-    }
-
-    if (!process.env.WOOCOMMERCE_URL) return [];
-
-    try {
-        console.log('🏷️ Fetching all product tags from WooCommerce...');
-        let allTags = [];
-        let page = 1;
-
-        while (page <= WOO_MAX_CATALOG_PAGES) {
-            const req = getWooRequestConfig('products/tags', { per_page: 100, page });
-            if (!req) break;
-
-            const response = await requestWoo(req, { signal });
-            if (!response.ok) {
-                throw new Error(`WooCommerce Tags API error: ${response.status}`);
-            }
-
-            const tags = await response.json();
-            if (!tags || tags.length === 0) break;
-
-            allTags.push(...tags.map((tag) => ({
-                id: tag.id,
-                name: decodeHtmlEntities(tag.name),
-                count: tag.count,
-            })));
-
-            if (tags.length < 100) break;
-
-            page += 1;
-        }
-
-        if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce tag catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
-        const usefulTags = allTags.filter((tag) => tag.count > 0);
-
-        tagCache.set(cacheKey, usefulTags);
-        console.log(`✅ Cached ${usefulTags.length} product tags from WooCommerce`);
-        return usefulTags;
-    } catch (error) {
-        console.error('❌ WooCommerce tag fetch failed:', error.message);
-        return [];
-    }
-};
+export const getAllTags = (options) => readCatalog('woo_all_tags', options);
 
 /**
  * Fetch all WooCommerce product categories (cached, paginated)
  * @returns {Promise<Array>} Array of { id, name, count, parent }
  */
-export const getAllCategories = async ({ signal = null } = {}) => {
-    const cacheKey = 'woo_all_categories';
-    const cached = categoryCache.get(cacheKey);
-    if (cached) {
-        console.log('🧠 WooCommerce categories cache HIT');
-        return cached;
-    }
-
-    if (!process.env.WOOCOMMERCE_URL) return [];
-
-    try {
-        console.log('📂 Fetching all product categories from WooCommerce...');
-        let allCategories = [];
-        let page = 1;
-
-        while (page <= WOO_MAX_CATALOG_PAGES) {
-            const req = getWooRequestConfig('products/categories', { per_page: 100, page });
-            if (!req) break;
-
-            const response = await requestWoo(req, { signal });
-            if (!response.ok) {
-                throw new Error(`WooCommerce Categories API error: ${response.status}`);
-            }
-
-            const categories = await response.json();
-            if (!categories || categories.length === 0) break;
-
-            allCategories.push(...categories.map((category) => ({
-                id: category.id,
-                name: decodeHtmlEntities(category.name),
-                count: category.count,
-                parent: category.parent,
-            })));
-
-            if (categories.length < 100) break;
-
-            page += 1;
-        }
-
-        if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce category catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
-        const usefulCategories = allCategories.filter((category) => category.count > 0);
-
-        categoryCache.set(cacheKey, usefulCategories);
-        console.log(`✅ Cached ${usefulCategories.length} product categories from WooCommerce`);
-        return usefulCategories;
-    } catch (error) {
-        console.error('❌ WooCommerce category fetch failed:', error.message);
-        return [];
-    }
-};
+export const getAllCategories = (options) => readCatalog('woo_all_categories', options);
 
 /**
  * Fetch all products from WooCommerce (cached, paginated)
  * @returns {Promise<Array>} Array of products
  */
-export const getAllProducts = async ({ signal = null } = {}) => {
-    const cacheKey = 'woo_all_products';
-    const cached = productCache.get(cacheKey);
-    if (cached) {
-        console.log('🧠 WooCommerce products cache HIT');
-        return cached;
-    }
+export const getAllProducts = (options) => readCatalog('woo_all_products', options);
 
-    try {
-        console.log('🛒 Fetching products from WooCommerce...');
-        let allProducts = [];
-        let page = 1;
+// Loads the catalogue once at server start so the first farmer does not wait.
+export const warmCatalogCache = async () => {
+    if (!process.env.WOOCOMMERCE_URL) return;
+    await Promise.all(Object.keys(CATALOG_LOADERS).map((key) => readCatalog(key)));
+};
 
-        while (page <= WOO_MAX_CATALOG_PAGES) {
-            const req = getWooRequestConfig('products', { per_page: 100, status: 'publish', page });
-            if (!req) break;
-
-            const response = await requestWoo(req, { signal });
-            if (!response.ok) {
-                throw new Error(`WooCommerce API error: ${response.status}`);
-            }
-
-            const products = await response.json();
-            if (!products || products.length === 0) break;
-
-            allProducts.push(...products.map(transformWooProduct));
-
-            if (products.length < 100) break;
-            page += 1;
-        }
-
-        if (page > WOO_MAX_CATALOG_PAGES) console.warn(`⚠️ WooCommerce product catalog capped at ${WOO_MAX_CATALOG_PAGES} pages.`);
-        productCache.set(cacheKey, allProducts);
-        console.log(`✅ Cached ${allProducts.length} products from WooCommerce`);
-
-        return allProducts;
-    } catch (error) {
-        console.error('❌ WooCommerce fetch failed:', error.message);
-        return [];
-    }
+// Called when the store reports a product change: drops filtered results and
+// reloads the full lists in the background (old copies serve until then).
+export const refreshCatalogCache = () => {
+    productCache.flushAll();
+    return Object.values(catalogCaches).reduce((count, cache) => count + cache.expireAll(), 0);
 };
 
 /**

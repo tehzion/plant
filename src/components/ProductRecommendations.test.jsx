@@ -355,7 +355,7 @@ describe('ProductRecommendations', () => {
         fireEvent.click(screen.getByRole('button', { name: /add recommended to checkout/i }));
 
         expect(window.open).toHaveBeenCalledWith(
-            'https://example.com/store/checkout/?add-to-cart=1&quantity=1',
+            'https://example.com/store/checkout/?add-to-cart=1&quantity=1&utm_source=kanb-agropreneur&utm_medium=app&utm_campaign=plant-check-checkout',
             '_blank',
             'noopener,noreferrer',
         );
@@ -391,7 +391,7 @@ describe('ProductRecommendations', () => {
         await screen.findByText('Copper Guard');
         const productLink = screen
             .getAllByRole('link', { name: /view product/i })
-            .find((link) => link.getAttribute('href') === 'https://example.com/products/copper-guard');
+            .find((link) => link.getAttribute('href')?.startsWith('https://example.com/products/copper-guard?utm_source=kanb-agropreneur'));
         fireEvent.click(productLink);
 
         expect(saveProductEventMock).toHaveBeenCalledWith(expect.objectContaining({

@@ -26,6 +26,7 @@ vi.mock('./services/wooCommerceService.js', () => ({
     getAllTags: mocks.getAllTags, getAllCategories: mocks.getAllCategories, getAllProducts: mocks.getAllProducts, getProductsByTagIds: mocks.getProductsByTagIds, getStoreUrl: mocks.getStoreUrl,
     createOrder: mocks.createOrder, getOrdersByAppId: mocks.getOrdersByAppId,
     getOrderStatus: mocks.getOrderStatus, getOrdersByIds: mocks.getOrdersByIds, isWooCommerceEnabled: mocks.isWooCommerceEnabled,
+    refreshCatalogCache: vi.fn(() => 0), warmCatalogCache: vi.fn(async () => {}),
 }));
 vi.mock('./utils/dataCollector.js', () => ({ logTrainingData: mocks.logTraining, logFeedback: mocks.logFeedback, logAssistantFeedback: mocks.logAssistantFeedback, withdrawTrainingImages: mocks.withdrawImages }));
 vi.mock('./services/adminAnalyticsService.js', () => ({ getAdminReviewSummary: vi.fn(), verifyAdminRequest: vi.fn() }));
