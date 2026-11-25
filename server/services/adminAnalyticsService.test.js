@@ -192,3 +192,41 @@ describe('adminAnalyticsService', () => {
         expect(summary.topProducts[0]).toEqual({ name: 'Copper Guard', count: 1 });
     });
 });
+
+describe('adminAnalyticsService feedback summary', () => {
+    beforeEach(() => {
+        queryNeonMock.mockReset();
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    it('adds farmer answers and disliked assistant replies to the summary', async () => {
+        queryNeonMock.mockImplementation(async (sql) => {
+            if (sql.includes('diagnosis_feedback') && sql.includes('count(*)')) return { rows: [{ correct: 7, needs_correction: 2 }] };
+            if (sql.includes('diagnosis_feedback')) {
+                return { rows: [{ id: 'f1', scan_id: 'scan-9', created_at: '2026-11-20T00:00:00Z', feedback: { wasCorrect: false, issueType: 'wrong_disease', correctDisease: 'Kekurangan kalium', note: 'Daun tua kuning dulu' } }] };
+            }
+            if (sql.includes('assistant_feedback') && sql.includes('count(*)')) return { rows: [{ up: 4, down: 1 }] };
+            if (sql.includes('assistant_feedback')) return { rows: [{ id: 'a1', language: 'ms', question: 'Bila nak sembur?', answer: 'Sembur pagi.', page: '/results', created_at: '2026-11-21T00:00:00Z' }] };
+            return { rows: [] };
+        });
+
+        const summary = await getAdminReviewSummary({ days: 30, limit: 10 });
+
+        expect(summary.counts).toMatchObject({ diagnosisCorrect: 7, diagnosisNeedsCorrection: 2, assistantUp: 4, assistantDown: 1 });
+        expect(summary.recentCorrections[0]).toMatchObject({ scanId: 'scan-9', issueType: 'wrong_disease', correctDisease: 'Kekurangan kalium', note: 'Daun tua kuning dulu' });
+        expect(summary.recentAssistantComplaints[0]).toMatchObject({ language: 'ms', question: 'Bila nak sembur?' });
+    });
+
+    it('still returns the rest of the dashboard when a feedback table is missing', async () => {
+        queryNeonMock.mockImplementation(async (sql) => {
+            if (sql.includes('assistant_feedback')) throw Object.assign(new Error('relation does not exist'), { code: '42P01' });
+            return { rows: [] };
+        });
+
+        const summary = await getAdminReviewSummary({ days: 30, limit: 10 });
+
+        expect(summary.counts.assistantDown).toBe(0);
+        expect(summary.recentAssistantComplaints).toEqual([]);
+        expect(summary.counts.recentScans).toBe(0);
+    });
+});

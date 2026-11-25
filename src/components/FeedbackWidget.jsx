@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CheckCircle2, MessageSquareWarning, Send } from 'lucide-react';
+import { CheckCircle2, MessageSquareWarning, Send, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { showToast } from '../utils/toast';
 import { getNeonAccessToken } from '../utils/neonApi.js';
@@ -14,10 +14,21 @@ const ISSUE_TYPES = [
   'poor_image',
 ];
 
+// Remembers on this phone which scans already have an answer, so the
+// question is not asked again each time the result is opened.
+const SENT_KEY_PREFIX = 'plant-feedback-sent:';
+const readSent = (scanId) => {
+  try { return Boolean(scanId) && window.localStorage.getItem(`${SENT_KEY_PREFIX}${scanId}`) === '1'; } catch { return false; }
+};
+const rememberSent = (scanId) => {
+  try { if (scanId) window.localStorage.setItem(`${SENT_KEY_PREFIX}${scanId}`, '1'); } catch { /* storage full or blocked */ }
+};
+
 const FeedbackWidget = ({ scanId, scan }) => {
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(() => readSent(scanId));
+  const [sentCorrection, setSentCorrection] = useState(false);
   const [wasCorrect, setWasCorrect] = useState(null);
   const [issueType, setIssueType] = useState('');
   const [correctCrop, setCorrectCrop] = useState('');
@@ -36,8 +47,9 @@ const FeedbackWidget = ({ scanId, scan }) => {
     label: t(`feedback.issueTypes.${value}`),
   })), [t]);
 
-  const handleSubmit = async () => {
-    if (isSubmitting || wasCorrect === null) return;
+  // "Yes, correct" sends at once; "No, it is wrong" opens the short form first.
+  const handleSubmit = async (answer = wasCorrect) => {
+    if (isSubmitting || answer === null) return;
 
     setIsSubmitting(true);
 
@@ -55,14 +67,14 @@ const FeedbackWidget = ({ scanId, scan }) => {
         body: JSON.stringify({
           scanId,
           feedbackToken: scan?.feedbackToken || undefined,
-          rating: wasCorrect ? 5 : 2,
-          comment: wasCorrect ? 'correct' : 'needs_correction',
-          wasCorrect,
-          correctCrop: correctCrop.trim() || undefined,
-          correctDisease: correctDisease.trim() || undefined,
-          issueType: issueType || undefined,
-          note: note.trim() || undefined,
-          correction: note.trim() || undefined,
+          rating: answer ? 5 : 2,
+          comment: answer ? 'correct' : 'needs_correction',
+          wasCorrect: answer,
+          correctCrop: answer ? undefined : correctCrop.trim() || undefined,
+          correctDisease: answer ? undefined : correctDisease.trim() || undefined,
+          issueType: answer ? undefined : issueType || undefined,
+          note: answer ? undefined : note.trim() || undefined,
+          correction: answer ? undefined : note.trim() || undefined,
         }),
       });
 
@@ -77,8 +89,9 @@ const FeedbackWidget = ({ scanId, scan }) => {
         throw new Error('feedback_failed');
       }
 
+      rememberSent(scanId);
+      setSentCorrection(!answer);
       setIsSubmitted(true);
-      showToast(t('feedback.thankYou'), 'success');
     } catch (error) {
       console.error('Failed to submit feedback:', error);
       showToast(t('feedback.submitFailed') || 'Failed to submit feedback. Please try again.', 'error');
@@ -98,20 +111,22 @@ const FeedbackWidget = ({ scanId, scan }) => {
 
   if (isSubmitted) {
     return (
-      <div className="feedback-widget feedback-widget-success">
-        <CheckCircle2 size={18} />
-        <span>{t('feedback.thankYou')}</span>
+      <div className="feedback-widget feedback-widget-success" role="status">
+        <CheckCircle2 size={18} aria-hidden="true" />
+        <span>{sentCorrection
+          ? label('feedback.thankYouCorrection', 'Thank you. Our team will check it.')
+          : t('feedback.thankYou')}</span>
       </div>
     );
   }
 
   return (
-    <div className="feedback-widget">
+    <section className="feedback-widget" aria-labelledby={`feedback-title-${scanId}`}>
       <div className="feedback-header">
-        <MessageSquareWarning size={18} />
+        <MessageSquareWarning size={18} aria-hidden="true" />
         <div>
-          <strong>{t('feedback.title') || 'Review this result'}</strong>
-          <p>{t('feedback.description') || 'Tell us if the diagnosis looks right, or share a correction.'}</p>
+          <h2 className="feedback-title" id={`feedback-title-${scanId}`}>{label('feedback.quickTitle', 'Is this result right?')}</h2>
+          <p>{label('feedback.quickHint', 'One tap helps the app give better answers.')}</p>
         </div>
       </div>
 
@@ -119,16 +134,21 @@ const FeedbackWidget = ({ scanId, scan }) => {
         <button
           type="button"
           className={`feedback-choice ${wasCorrect === true ? 'active' : ''}`}
-          onClick={() => setWasCorrect(true)}
+          onClick={() => { setWasCorrect(true); handleSubmit(true); }}
+          disabled={isSubmitting}
         >
-          {t('feedback.correct') || 'Looks correct'}
+          <ThumbsUp size={18} aria-hidden="true" />
+          <span>{label('feedback.yesCorrect', 'Yes, correct')}</span>
         </button>
         <button
           type="button"
           className={`feedback-choice ${wasCorrect === false ? 'active' : ''}`}
           onClick={() => setWasCorrect(false)}
+          aria-expanded={wasCorrect === false}
+          disabled={isSubmitting}
         >
-          {t('feedback.needsCorrection') || 'Needs correction'}
+          <ThumbsDown size={18} aria-hidden="true" />
+          <span>{label('feedback.noWrong', 'No, it is wrong')}</span>
         </button>
       </div>
 
@@ -176,16 +196,18 @@ const FeedbackWidget = ({ scanId, scan }) => {
         </div>
       )}
 
-      <button
-        type="button"
-        className="btn btn-primary feedback-submit"
-        onClick={handleSubmit}
-        disabled={wasCorrect === null || isSubmitting}
-      >
-        <Send size={16} />
-        <span>{isSubmitting ? (t('feedback.submitting') || 'Submitting...') : (t('feedback.submit') || 'Submit review')}</span>
-      </button>
-    </div>
+      {wasCorrect === false && (
+        <button
+          type="button"
+          className="btn btn-primary feedback-submit"
+          onClick={() => handleSubmit(false)}
+          disabled={isSubmitting}
+        >
+          <Send size={16} aria-hidden="true" />
+          <span>{isSubmitting ? (t('feedback.submitting') || 'Submitting...') : label('feedback.sendCorrection', 'Send correction')}</span>
+        </button>
+      )}
+    </section>
   );
 };
 

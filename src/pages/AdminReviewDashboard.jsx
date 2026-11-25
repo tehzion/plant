@@ -9,6 +9,8 @@ import {
     MousePointerClick,
     RefreshCcw,
     Search,
+    ThumbsDown,
+    ThumbsUp,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { fetchAdminReviewSummary } from '../utils/adminAnalytics.js';
@@ -156,6 +158,9 @@ const AdminReviewDashboard = () => {
                         <StatCard icon={MousePointerClick} label={tr("Product clicks")} value={counts.productClicks || 0} />
                         <StatCard icon={ExternalLink} label={tr("Checkout intent")} value={counts.checkoutClicks || 0} />
                         <StatCard icon={BarChart3} label={tr("Lead conversion")} value={conversionRate} tone="success" />
+                        <StatCard icon={ThumbsUp} label={tr("Results marked correct")} value={counts.diagnosisCorrect || 0} tone="success" />
+                        <StatCard icon={ThumbsDown} label={tr("Results marked wrong")} value={counts.diagnosisNeedsCorrection || 0} tone="warning" />
+                        <StatCard icon={ThumbsDown} label={tr("Assistant answers disliked")} value={counts.assistantDown || 0} tone="warning" />
                     </section>
 
                     <ExpertReviewPanel />
@@ -217,6 +222,47 @@ const AdminReviewDashboard = () => {
                                 </div>
                             ) : (
                                 <EmptyState>{tr("No consultation leads yet.")}</EmptyState>
+                            )}
+                        </div>
+
+                        <div className="admin-panel">
+                            <div className="admin-panel-header">
+                                <h2>{tr("Farmer Corrections")}</h2>
+                                <span>{summary?.recentCorrections?.length || 0}</span>
+                            </div>
+                            {summary?.recentCorrections?.length ? (
+                                <div className="admin-list">
+                                    {summary.recentCorrections.map((item) => (
+                                        <div className="admin-list-item" key={item.id}>
+                                            <strong>{[item.issueType, (item.correctCrop || item.correctDisease) && `${tr("Should be")}: ${[item.correctCrop, item.correctDisease].filter(Boolean).join(' · ')}`].filter(Boolean).join(' — ') || tr("Results marked wrong")}</strong>
+                                            {item.note && <span>{item.note}</span>}
+                                            <span>{formatDate(item.createdAt, tr.locale)}</span>
+                                            {item.scanId && <Link to={`/results/${item.scanId}`}>{tr("Open scan")}</Link>}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState>{tr("No corrections from farmers yet.")}</EmptyState>
+                            )}
+                        </div>
+
+                        <div className="admin-panel">
+                            <div className="admin-panel-header">
+                                <h2>{tr("Disliked Assistant Answers")}</h2>
+                                <span>{summary?.recentAssistantComplaints?.length || 0}</span>
+                            </div>
+                            {summary?.recentAssistantComplaints?.length ? (
+                                <div className="admin-list">
+                                    {summary.recentAssistantComplaints.map((item) => (
+                                        <div className="admin-list-item" key={item.id}>
+                                            <strong>{tr("Question")}: {item.question || '—'}</strong>
+                                            <span lang={item.language}>{item.answer}</span>
+                                            <span>{item.language} · {formatDate(item.createdAt, tr.locale)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState>{tr("No disliked answers yet.")}</EmptyState>
                             )}
                         </div>
 

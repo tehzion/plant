@@ -533,6 +533,8 @@ ${t('pdf.generatedBy')}
           <h2 id="watch-title">{t('results.watchTitle')}</h2>
           <p>{t(healthy ? 'results.watchHealthy' : 'results.watchDisease')}</p>
         </section>}
+        {/* Asked on the main screen: farmers did not open the old folded section. */}
+        {!result.requiresRetake && <Suspense fallback={null}><FeedbackWidget key={id} scanId={id} scan={scan} /></Suspense>}
         <PlantCheckGuide />
         <ScanServiceNotice />
         {!result.requiresRetake && <button type="button" className="btn btn-secondary" onClick={handleLogFollowUp}><ClipboardList size={18} aria-hidden="true" />{t('results.logCare')}</button>}
@@ -693,12 +695,6 @@ ${t('pdf.generatedBy')}
           onSaveHistory={handleSaveHistory}
         />
 
-        {/* Feedback Widget */}
-        <details className="results-feedback-details"><summary>{t('feedback.title')}</summary>
-        <Suspense fallback={RESULTS_SECTION_FALLBACK}>
-          <FeedbackWidget scanId={id} scan={scan} />
-        </Suspense>
-        </details>
         <WithdrawScanPhotos key={scan.id} scan={scan} />
           </details>
         </div>}
