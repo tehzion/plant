@@ -67,7 +67,7 @@ const History = () => {
     const navigate = useNavigate();
     const { state: scanState } = useScanContext();
     const { user } = useAuth();
-    const { notifySuccess } = useNotifications();
+    const { notifySuccess, notifyError } = useNotifications();
     const [groupedScans, setGroupedScans] = useState({ today: [], yesterday: [], thisWeek: [], lastWeek: [], older: [] });
     const [pendingAction, setPendingAction] = useState(null);
     const [historyLoading, setHistoryLoading] = useState(true);
@@ -152,12 +152,15 @@ const History = () => {
     const confirmPendingAction = async () => {
         if (!pendingAction) return;
 
-        if (pendingAction.type === 'delete') {
-            await deleteScan(pendingAction.id, user?.id ?? null);
-            notifySuccess(t('history.scanDeleted') || 'Scan deleted.');
-        } else if (pendingAction.type === 'clear-all') {
-            await clearAllScans(user?.id ?? null);
-            notifySuccess(t('history.scanHistoryCleared') || 'Scan history cleared.');
+        try {
+            const clearing = pendingAction.type === 'clear-all';
+            const removed = clearing
+                ? await clearAllScans(user?.id ?? null)
+                : await deleteScan(pendingAction.id, user?.id ?? null);
+            if (!removed) throw new Error('History removal failed');
+            notifySuccess(t(clearing ? 'history.scanHistoryCleared' : 'history.scanDeleted'));
+        } catch {
+            notifyError(t('history.deleteFailed'));
         }
 
         closePendingAction();
