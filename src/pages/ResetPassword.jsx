@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import { AlertCircle, ArrowRight, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { friendlyErrorKey, friendlyErrorMessage } from '../utils/friendlyError.js';
 import './Login.css';
 
 const ResetPassword = () => {
@@ -36,7 +37,7 @@ const ResetPassword = () => {
             setSuccess(true);
             window.setTimeout(() => navigate('/login'), 1200);
         } catch (err) {
-            setError(err.message || t('login.passwordUpdateFailed'));
+            setError(/should be different|same password/i.test(err.message || '') ? (t('login.passwordSameAsOld') || t('login.passwordUpdateFailed')) : friendlyErrorKey(err) ? friendlyErrorMessage(err, t) : t('login.passwordUpdateFailed'));
         } finally {
             setLoading(false);
         }
