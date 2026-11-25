@@ -8,6 +8,8 @@ it('labels the dialog, traps keyboard focus, closes on Escape, and restores focu
     const onClose = vi.fn();
     const view = render(<CustomModal isOpen onClose={onClose} title="Confirm" message="Details" />);
     expect(screen.getByRole('dialog', { name: 'Confirm' })).toHaveAttribute('aria-modal', 'true');
+    expect(view.container).not.toContainElement(screen.getByRole('dialog'));
+    expect(screen.getByRole('dialog').parentElement).toBe(document.body);
     const close = screen.getByRole('button', { name: 'common.close' });
     const confirm = screen.getByRole('button', { name: 'common.ok' });
     expect(close).toHaveFocus();

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import './CustomModal.css';
 
@@ -48,7 +49,7 @@ const CustomModal = ({ isOpen, onClose, onConfirm, title, message, type = 'alert
     onClose();
   };
 
-  return (
+  return createPortal(
     <>
       <div className="custom-modal-overlay" onClick={handleCancel} />
       <div className="custom-modal-container" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}>
@@ -80,7 +81,7 @@ const CustomModal = ({ isOpen, onClose, onConfirm, title, message, type = 'alert
           </div>
         </div>
       </div>
-    </>
+    </>, document.body
   );
 };
 
