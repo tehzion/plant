@@ -4,6 +4,7 @@ import { getGuestId, setLocalStorageNamespace } from '../utils/localStorage';
 import { purgeUnownedPrivacyStores } from '../utils/privacyTools.js';
 import { setAssistantScanContext, setAssistantPageTopic } from '../utils/assistantContext.js';
 import { migrateLegacyCollection } from '../utils/indexedDbStorage.js';
+import { setConsentAccount } from '../utils/dataConsent.js';
 
 const AuthContext = createContext(null);
 
@@ -37,6 +38,8 @@ export const AuthProvider = ({ children }) => {
     const [guestId, setGuestId] = useState(null);
     const dataOwner = user?.id ? `user:${user.id}` : user === null && guestId ? `guest:${guestId}` : 'loading';
     useLayoutEffect(() => { setAssistantScanContext(null); setAssistantPageTopic(null); }, [dataOwner]);
+
+    useEffect(() => { setConsentAccount(user?.id).catch(() => {}); }, [user?.id]);
 
     useEffect(() => {
         purgeUnownedPrivacyStores();

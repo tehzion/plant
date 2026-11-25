@@ -1,3 +1,4 @@
+import WithdrawScanPhotos from '../components/WithdrawScanPhotos.jsx';
 import { useDataOwner } from '../context/AuthContext';
 import { getEnhancementCopy } from '../utils/enhancementCopy.js';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -693,6 +694,7 @@ ${t('pdf.generatedBy')}
           <FeedbackWidget scanId={id} scan={scan} />
         </Suspense>
         </details>
+        <WithdrawScanPhotos key={scan.id} scan={scan} />
           </details>
         </div>}
         </details>

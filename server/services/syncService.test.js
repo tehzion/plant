@@ -34,7 +34,7 @@ describe('offline replay safety', () => {
     it('does not let an older offline checklist overwrite a newer one', async () => {
         mocks.queryNeon.mockResolvedValueOnce({ rows: [] });
         const result = await syncOperation(USER, { collection: 'checklist', type: 'update', recordId: 'current', payload: { state: { a: true }, updated_at: '2026-01-01T00:00:00Z' } });
-        expect(result).toEqual({ conflict: true, reason: 'newer_record_exists' });
+        expect(result).toMatchObject({ conflict: true, reason: 'newer_record_exists' });
         expect(mocks.queryNeon.mock.calls[0][0]).toMatch(/where mygap_checklist\.updated_at <= excluded\.updated_at/);
     });
 

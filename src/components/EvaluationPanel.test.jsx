@@ -1,3 +1,4 @@
+vi.mock('../utils/reviewerCopy.js', () => ({ useReviewerText: () => phrase => phrase }));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EvaluationPanel from './EvaluationPanel.jsx';
@@ -12,6 +13,12 @@ beforeEach(()=>{api.mockReset();api.mockImplementation(async url=>{
  throw Error('Unexpected request');
 });});
 describe('evaluation dashboard',()=>{
+ it('shows an unavailable state for a malformed summary without crashing the reviewer page',async()=>{
+  api.mockResolvedValue({rows:[],cases:[],scenarios:[]});
+  render(<EvaluationPanel/>);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Evaluation data is unavailable.');
+  expect(screen.getByRole('heading',{name:'AI evaluation & validation'})).toBeInTheDocument();
+ });
  it('shows real empty states rather than fabricated results',async()=>{
   render(<EvaluationPanel/>);
   expect(await screen.findByText('Farmer usability testing: Not yet conducted.')).toBeInTheDocument();

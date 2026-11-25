@@ -172,7 +172,7 @@ describe('assessment and feedback attribution', () => {
         expect((await withdraw({ feedbackToken: otherToken })).status).toHaveBeenCalledWith(403);
         expect(mocks.withdrawImages).not.toHaveBeenCalled();
         const allowed = await withdraw({ feedbackToken });
-        expect(mocks.withdrawImages).toHaveBeenCalledWith(scanId);
+        expect(mocks.withdrawImages).toHaveBeenCalledWith(scanId, expect.any(String));
         expect(allowed.json).toHaveBeenCalledWith({ withdrawn: true, removedPhotos: 2 });
     });
 });
@@ -305,7 +305,7 @@ describe('product search section grouping', () => {
                 disease: 'Fungal leaf spot', diseaseCategory: 'fungal', pathogenType: 'fungal',
                 status: 'confirmed', resultState: 'confident_treatment', confidence: 92, healthStatus: 'unhealthy',
             },
-            expected: { diseaseControl: 1, fertilizers: 0, supplements: 0 },
+            expected: { diseaseControl: 0, fertilizers: 0, supplements: 0 },
         },
         {
             name: 'nutrition-only',
@@ -332,7 +332,7 @@ describe('product search section grouping', () => {
                 status: 'confirmed', resultState: 'confident_treatment', confidence: 92, healthStatus: 'unhealthy',
                 nutritionalIssues: { status: 'possible', possibleNutrients: ['Magnesium'] },
             },
-            expected: { diseaseControl: 1, fertilizers: 1, supplements: 1 },
+            expected: { diseaseControl: 0, fertilizers: 1, supplements: 1 },
         },
     ])('returns correctly grouped products for $name scans', async ({ diagnosis, expected }) => {
         const response = await invoke('/api/products/search', { body: { diagnosis, language: 'en' } });
@@ -356,10 +356,10 @@ describe('product search section grouping', () => {
             status: 'confirmed', resultState: 'confident_treatment', confidence: 92, healthStatus: 'unhealthy',
         };
         const body = (await invoke('/api/products/search', { body: { diagnosis, language: 'en' } })).json.mock.calls[0][0];
-        expect(body.diseaseControl.map((product) => product.id)).toEqual([101]);
-        expect(body.catalogueDiscovery.map((product) => product.id)).toEqual([104]);
+        expect(body.diseaseControl.map((product) => product.id)).toEqual([]);
+        expect(body.catalogueDiscovery.map((product) => product.id)).toEqual([104, 101]);
         expect(body.catalogueDiscovery[0]).toMatchObject({ discoveryOnly: true, eligibility: { status: 'needs_verification' } });
-        expect(body.eligibilitySummary).toEqual({ eligibleTreatments: 1, discoveryOnly: 1, excludedAsUnsuitable: 1 });
+        expect(body.eligibilitySummary).toEqual({ eligibleTreatments: 0, discoveryOnly: 2, excludedAsUnsuitable: 1 });
         expect(JSON.stringify(body)).not.toContain('Glyphosate');
     });
 

@@ -5,6 +5,13 @@ vi.mock('../utils/neonDatabase.js', () => ({ queryNeon: mocks.queryNeon }));
 import { getAssessmentMetrics, summarizeAssessmentMetrics } from './assessmentMetrics.js';
 
 describe('assessment metrics', () => {
+    it('keeps missing duration measurements unavailable rather than inventing zero latency', () => {
+        const summary = summarizeAssessmentMetrics([{ duration_ms: null }, { duration_ms: '', cost_usd: '', total_tokens: '' }, {}]);
+        expect(summary.timedAssessments).toBe(0);
+        expect(summary.durationMs).toEqual({ p50: null, p95: null });
+        expect(summary.aiCostUsd.total).toBeNull();
+        expect(summary.aiTotalTokens.p50).toBeNull();
+    });
     beforeEach(() => vi.clearAllMocks());
 
     it('reports median and 95th percentile time for fresh (uncached) assessments only', () => {
