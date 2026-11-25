@@ -77,7 +77,7 @@
 | ~~P1~~ Fixed | ~170 lines of unused AI product matcher (`recommendProductTags`). | Removed; product matching is rule-based only. |
 | ~~P1~~ Fixed | No error tracking and no AI cost per scan. | Opt-in Sentry (server + browser, scrubbed) via `SENTRY_DSN` / `VITE_SENTRY_DSN`; token usage and OpenRouter cost are stored per scan and reported by `npm run audit:metrics`. |
 | P1 | `aiService.js` is ~3,900 lines. | Split into diagnosis, ask, farm-insights and products modules. |
-| P1 (partly fixed) | No linter in CI. | `npm run lint` added (it found a myGAP PDF crash and duplicate keys, now fixed). The `ci.yml` step must be added by a maintainer: the Claude GitHub App lacks `workflows` permission. 88 warnings (mostly unused variables) remain. |
+| ~~P1~~ Fixed | No linter in CI. | `npm run lint` runs in `ci.yml` (PR #11, merged 25 Nov 2026). 77 warnings (mostly unused variables) remain; there are no errors. |
 | P2 | `.env.production` is tracked although `.gitignore` excludes it (public keys only). | Untrack once the `VITE_*` values are set in the host's build environment. |
 
 ---
@@ -98,5 +98,17 @@ Based on the DOA myGAP food-crop scheme (MS 1784, myGAP 4 record forms, 6-1 chec
 | ~~P1~~ Fixed | Phase 2: purchases and input stock. | 'Purchase' records (supplier, amount, unit, price); spray and fertilizer records take an amount used; stock = purchases − use, per product and unit; negative balances flagged. |
 | ~~P1~~ Fixed | Phase 2: harvest/sales and traceability (myGAP 4-7). | Harvests record amount, buyer and price, and get an automatic lot code (plot-date-sequence); a 100×60 mm label with a plain-text QR code can be printed. |
 | ~~P1~~ Fixed | Phase 2: workers, training, post-harvest (myGAP 4-8, 4-9). | Worker list on the farm profile (ID optional); 'Training' and 'Post-harvest' record types; a training record in the last 12 months completes the training checklist item. Migration `0004` (additive). |
-| P2 | Stock does not convert between units (kg vs g) and relies on farmers entering amounts. | Open — add unit conversion if farmers mix units. |
+| ~~P2~~ Fixed | Stock did not convert between units (kg vs g). | Grams are added to kilograms and millilitres to litres for the same product; a product recorded only in g or mL stays in that unit; litres show as "L". Units that cannot be converted (bags, bottles, kg vs L) stay on separate lines. Stock still relies on farmers entering amounts. |
 | P2 | Phase 3: map to the 17 official elements with evidence, annual internal audit, audit pack in official layouts, registered-pesticide lookup. | Open — needs DOA forms and data. |
+
+---
+
+## Status — 25 November 2026
+
+| Item | Status |
+|---|---|
+| Plant-check critique (Results page) | Done in PR #26. Rechecked on master at 375px in BM: each of the four result types has its own headline and main button, the steps show without opening anything, the page is 1.5–2.2 screens and nothing scrolls sideways. |
+| Account consent, in-app "remove my photos", offline edits/deletes with "keep mine / keep server", verified telemetry identity, translated reviewer screens, review agreement report | In PR #15, brought up to date with master and passing CI. **Not merged.** It needs migration `0005_account_photo_consent.sql` (adds `profiles.data_consent`); until that is applied, signed-in farmers cannot save consent and stay opted out. |
+| Split `aiService.js` (~4,000 lines); inactivity expiry for cached cloud records | Waiting for PR #15, which changes the same files. |
+| One production host for the API | Still an owner decision. The Vercel Analytics PRs (#1, #2) were closed on the assumption that Render is the host. |
+| Reviewer configuration, PDPA legal review, field accuracy, farmer usability sessions | Unchanged — need people, not code. |
