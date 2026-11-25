@@ -64,10 +64,12 @@ try {
   const id=`${runId}:${item.baseline_id || item.checksum.slice(0,16)}`;
   const existing=await client.query('select id from public.agricultural_dataset_assessments where id=$1',[id]);
   if(existing.rows.length){console.log(JSON.stringify({id,status:'already_recorded'}));continue;}
-  const spent=await usage();
-  // Stop once cumulative key usage passes the approved cap (default $0.90; EVALUATION_USAGE_CAP_USD
-  // raises it only with explicit approval). A conservative stop check, not a provider-enforced cap.
-  if(spent>usageCap){console.log(JSON.stringify({stopped:'usage_cap',usage:spent,cap:usageCap}));break;}
+  const spent=await usage()-initial;
+  // Stop once this run's spend passes the approved cap (default $0.90; EVALUATION_USAGE_CAP_USD
+  // raises it only with explicit approval). The key's earlier usage is not counted, so the cap
+  // still works on a key that has been used before. A conservative stop check, not a
+  // provider-enforced cap: the request in flight can overshoot by one assessment.
+  if(spent>usageCap){console.log(JSON.stringify({stopped:'usage_cap',runSpend:spent,cap:usageCap}));break;}
   let image;
   if (item.storage_key) {
    if(item.storage_key!==imageObjectKey(item.source,item.filename))throw Error('Invalid evaluation image reference');

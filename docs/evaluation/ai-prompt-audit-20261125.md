@@ -58,12 +58,49 @@ What works well:
 
 Tests: `server/services/ai/promptRules.test.js` covers the prompt rules and examples. `server/services/diagnosisMerge.test.js` covers the retake safeguard.
 
-## Still to measure
+## Before/after measurement (25 Nov 2026)
 
-These changes follow the observed errors, but their effect is **not yet measured**. Next step: re-run the 40 crop-stated photos of `paired2-20261031-crop` with the same runner (`EVALUATION_RERUN_OF`) on the isolated evaluation branch, and compare:
-- first-choice and top-three agreement;
-- generic-name rate;
-- confident wrong treatment;
-- healthy-on-diseased rate.
+**Method**
+- The same photos ran through the current master prompt and the new prompt on the same day.
+- Model: `openai/gpt-5.4-mini`, crop stated, full API with treatment stage.
+- Database: the isolated evaluation branch.
+- Photos: images from run `paired2-20261031-crop`. 35 of the planned 40 completed before the US$0.90 spending cap. Actual spend was US$0.89.
+- Run IDs: `audit-20261125-base` + `-base-b`, and `audit-20261125-new` + `-new-b`.
+- Compared with `server/evaluation/comparePromptRuns.js`.
 
-Estimated cost is under US$0.90 (the runner's default cap). The dataset images are development data: any prompt tuned on them needs a fresh holdout before claiming accuracy.
+| 35 paired photos (33 diseased, 2 healthy) | Current prompt | New prompt |
+|---|---|---|
+| Correct disease as the main answer | 10 | **15** |
+| Correct disease in the top three | 22 | **24** |
+| Generic name ("Leaf Spot" etc.) | 10 | **2** |
+| Technical words in farmer text | 29 | **0** |
+| Diseased leaf called healthy | 1 | **0** |
+| Healthy leaf called diseased | 0 | 0 |
+| Results sent to review or retake | 30 | 28 |
+| Treatment advice given | 2 | 5 |
+| **Confident treatment for the wrong disease** | **0** | **1** |
+
+**Where it improved**
+- Grape black rot ×2, strawberry leaf scorch, peach bacterial spot and tomato yellow leaf curl virus are now named correctly. Before, they were "Leaf Spot", "Anthracnose" or "Mosaic".
+- A potato early blight that was called late blight is now right.
+- A citrus-greening leaf called "No Issues" is now sent to review.
+
+**Where it got worse**
+- Tomato bacterial spot (once right at 88) became Septoria. It went to review, not treatment.
+- One tomato early blight became late blight, and one tomato Septoria leaf became spider mites. Both went to review.
+- One corn photo labelled Northern Leaf Blight was answered "Common Rust" at 92 with treatment advice:
+  - before, it was "Leaf Spot" at 70, sent to review;
+  - the model explicitly rejected northern leaf blight, describing many small round rust-coloured spots and no long cigar-shaped marks;
+  - this is either a real misreading or a mislabelled public photo, and needs an expert to look at the image.
+
+  A code safeguard was tried and dropped. It required corn rust to be checked against northern leaf blight before treatment. Re-scoring all stored corn results showed it would block 5 correct treatments and 0 wrong ones.
+
+**Limits**
+- 35 photos is a small sample, and these photos were used to find the problems in the first place. Treat this as development evidence, not proof of accuracy.
+- Only 2 healthy leaves were included, so the risk of calling healthy plants sick is barely tested.
+- Public dataset labels are not expert-checked.
+- Before claiming accuracy, run a fresh holdout with healthy controls and an agronomist's labels.
+
+**Runner fix made for this run**
+- `runDatasetLive.js` now caps the spend of the run itself. It used to compare the cap with the key's lifetime usage, which made it unusable on a key that had already been used.
+- The evaluation servers were started with `FREE_SCAN_DAILY_LIMIT=500`, because the 10-a-day farmer limit blocks dataset runs.
