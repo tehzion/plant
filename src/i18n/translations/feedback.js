@@ -1,6 +1,12 @@
 const feedbackTranslations = {
     "en": {
         "feedback": {
+            "quickTitle": "Is this result right?",
+            "quickHint": "One tap helps the app give better answers.",
+            "yesCorrect": "Yes, correct",
+            "noWrong": "No, it is wrong",
+            "sendCorrection": "Send correction",
+            "thankYouCorrection": "Thank you. Our team will check it.",
             "title": "Review this result",
             "description": "Tell us if the diagnosis looks right, or share a correction.",
             "correct": "Looks correct",
@@ -32,6 +38,12 @@ const feedbackTranslations = {
     },
     "ms": {
         "feedback": {
+            "quickTitle": "Betulkah keputusan ini?",
+            "quickHint": "Satu tekan bantu aplikasi beri jawapan lebih tepat.",
+            "yesCorrect": "Ya, betul",
+            "noWrong": "Tidak, salah",
+            "sendCorrection": "Hantar pembetulan",
+            "thankYouCorrection": "Terima kasih. Pasukan kami akan semak.",
             "title": "Semak keputusan ini",
             "description": "Beritahu kami jika diagnosis ini tepat atau kongsikan pembetulan.",
             "correct": "Nampak betul",
@@ -63,6 +75,12 @@ const feedbackTranslations = {
     },
     "zh": {
         "feedback": {
+            "quickTitle": "这个结果对吗？",
+            "quickHint": "点一下，帮助应用给出更准确的答案。",
+            "yesCorrect": "对，正确",
+            "noWrong": "不对",
+            "sendCorrection": "发送修正",
+            "thankYouCorrection": "谢谢，我们的团队会核查。",
             "title": "审核这个结果",
             "description": "如果诊断有误或需要修正，请告诉我们。",
             "correct": "看起来正确",

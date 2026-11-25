@@ -109,3 +109,36 @@ describe('store text from WooCommerce', () => {
         expect(decodeHtmlEntities(null)).toBe('');
     });
 });
+
+describe('wooCommerceService full catalogue cache', () => {
+    const page = (rows) => ({ ok: true, json: async () => rows });
+    const product = (id, name) => ({ id, name, price: '10', permalink: `https://store.example/p/${id}`, stock_status: 'instock', categories: [], tags: [] });
+
+    afterEach(() => vi.clearAllMocks());
+
+    it('shares one download and keeps the last good list when the store fails', async () => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        fetchMock.mockReset();
+        fetchMock.mockResolvedValue(page([product(1, 'Urea')]));
+
+        const [first, second] = await Promise.all([
+            wooCommerceService.getAllProducts(),
+            wooCommerceService.getAllProducts(),
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(first.map((item) => item.name)).toEqual(['Urea']);
+        expect(second).toBe(first);
+
+        fetchMock.mockReset();
+        fetchMock.mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
+        expect(wooCommerceService.refreshCatalogCache()).toBeGreaterThan(0);
+        await vi.waitFor(() => expect(errorSpy).toHaveBeenCalled());
+        expect((await wooCommerceService.getAllProducts()).map((item) => item.name)).toEqual(['Urea']);
+
+        fetchMock.mockReset();
+        fetchMock.mockResolvedValue(page([product(2, 'NPK 15-15-15')]));
+        wooCommerceService.refreshCatalogCache();
+        await vi.waitFor(async () => expect((await wooCommerceService.getAllProducts()).map((item) => item.name)).toEqual(['NPK 15-15-15']));
+        errorSpy.mockRestore();
+    });
+});

@@ -19,6 +19,7 @@ import { saveConsultationLead } from '../utils/consultationLeads.js';
 import { PRODUCT_EVENT_TYPES, saveProductEvent } from '../utils/productEvents.js';
 import { saveFollowUpDraft } from '../utils/scanFollowUpDraft.js';
 import { buildProductPlanDraftFromRecommendations } from '../utils/productPlanDraft.js';
+import { withStoreAttribution } from '../utils/storeLinks';
 
 const sanitizeProductDescription = (value) => {
   if (!value) return '';
@@ -235,7 +236,10 @@ const ProductRecommendations = ({
     const quantities = Array(eligibleIds.length).fill('1').join(',');
     
     // Construct checkout URL using dynamically fetched storeUrl
-    const checkoutUrl = `${storeUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`;
+    const checkoutUrl = withStoreAttribution(
+      `${storeUrl}/checkout/?add-to-cart=${ids}&quantity=${quantities}`,
+      'plant-check-checkout',
+    );
     
     window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
   };
@@ -708,7 +712,7 @@ const ProductRecommendations = ({
           <div className="product-actions">
             {product.cartUrl || product.permalink ? (
               <a
-                href={(canAddToCart ? product.cartUrl : product.permalink) || product.cartUrl}
+                href={withStoreAttribution((canAddToCart ? product.cartUrl : product.permalink) || product.cartUrl, 'plant-check-product')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="add-to-cart-button"

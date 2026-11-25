@@ -212,7 +212,16 @@ View|Lihat|查看
 Match|Sepadan|匹配
 Different|Berbeza|不同
 Unassessed|Belum dinilai|未评估
-Not assessed|Belum dinilai|未评估`;
+Not assessed|Belum dinilai|未评估
+Results marked correct|Keputusan ditanda betul|标记为正确的结果
+Results marked wrong|Keputusan ditanda salah|标记为错误的结果
+Assistant answers disliked|Jawapan pembantu tidak disukai|不满意的助手回答
+Farmer Corrections|Pembetulan Petani|农民修正
+No corrections from farmers yet.|Belum ada pembetulan daripada petani.|暂无农民修正。
+Disliked Assistant Answers|Jawapan Pembantu Tidak Disukai|不满意的助手回答
+No disliked answers yet.|Belum ada jawapan yang tidak disukai.|暂无不满意的回答。
+Should be|Sepatutnya|应为
+Question|Soalan|问题`;
 
 export const REVIEWER_PHRASES = Object.fromEntries(rows.split('\n').map(row => {
     const [en, ms, zh] = row.split('|');

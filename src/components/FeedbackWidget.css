@@ -23,6 +23,12 @@
   color: var(--color-text-primary);
 }
 
+.feedback-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
 .feedback-header p {
   margin: 4px 0 0;
   color: var(--color-text-secondary);
@@ -45,6 +51,15 @@
   font-weight: 600;
   text-align: center;
   white-space: normal;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.feedback-choice:disabled {
+  opacity: 0.6;
 }
 
 .feedback-choice.active {

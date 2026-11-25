@@ -128,6 +128,83 @@ const runSelect = async (table, select, sinceIso, limit) => {
     return Array.isArray(rows) ? rows : [];
 };
 
+// A farmer's answer counts as "correct" when wasCorrect is true, or for older
+// entries without it, when the 1-5 rating is 4 or more. Unknown values count
+// as neither, and text that is not a number never reaches a cast.
+const FEEDBACK_CORRECT_SQL = `case
+    when feedback->>'wasCorrect' in ('true', 'false') then (feedback->>'wasCorrect')::boolean
+    when feedback->>'rating' ~ '^[0-9]+(\\.[0-9]+)?$' then (feedback->>'rating')::numeric >= 4
+end`;
+
+const normalizeCorrection = (row = {}) => {
+    const feedback = row.feedback && typeof row.feedback === 'object' ? row.feedback : {};
+    return {
+        id: row.id,
+        scanId: row.scan_id,
+        issueType: normalizeText(feedback.issueType) || null,
+        correctCrop: normalizeText(feedback.correctCrop) || null,
+        correctDisease: normalizeText(feedback.correctDisease) || null,
+        note: normalizeText(feedback.note || feedback.correction).slice(0, 400) || null,
+        createdAt: row.created_at,
+    };
+};
+
+const normalizeAssistantComplaint = (row = {}) => ({
+    id: row.id,
+    language: row.language,
+    question: normalizeText(row.question).slice(0, 300),
+    answer: normalizeText(row.answer).slice(0, 400),
+    page: row.page || null,
+    createdAt: row.created_at,
+});
+
+// Farmer answers to "Is this result right?" and thumbs on assistant replies.
+// Counts cover the whole window; the lists show the latest entries.
+// A missing table (older database) leaves this section empty instead of
+// failing the whole dashboard.
+const getFeedbackSummary = async (sinceIso, limit) => {
+    const safe = (run) => Promise.resolve().then(run).then(({ rows }) => (Array.isArray(rows) ? rows : [])).catch((error) => {
+        console.warn('Admin feedback summary unavailable:', error?.message || error);
+        return [];
+    });
+    const [diagnosisCounts, corrections, assistantCounts, assistantComplaints] = await Promise.all([
+        safe(() => queryNeon(
+            `select count(*) filter (where ${FEEDBACK_CORRECT_SQL})::int as correct,
+                    count(*) filter (where not ${FEEDBACK_CORRECT_SQL})::int as needs_correction
+             from public.diagnosis_feedback where created_at >= $1`,
+            [sinceIso],
+        )),
+        safe(() => queryNeon(
+            `select id, scan_id, feedback, created_at from public.diagnosis_feedback
+             where created_at >= $1 and not ${FEEDBACK_CORRECT_SQL}
+             order by created_at desc limit $2`,
+            [sinceIso, limit],
+        )),
+        safe(() => queryNeon(
+            `select count(*) filter (where rating = 'up')::int as up,
+                    count(*) filter (where rating = 'down')::int as down
+             from public.assistant_feedback where created_at >= $1`,
+            [sinceIso],
+        )),
+        safe(() => queryNeon(
+            `select id, language, left(question, 300) as question, left(answer, 400) as answer, page, created_at
+             from public.assistant_feedback where rating = 'down' and created_at >= $1
+             order by created_at desc limit $2`,
+            [sinceIso, limit],
+        )),
+    ]);
+    const diagnosis = diagnosisCounts[0] || {};
+    const assistant = assistantCounts[0] || {};
+    return {
+        diagnosisCorrect: Number(diagnosis.correct || 0),
+        diagnosisNeedsCorrection: Number(diagnosis.needs_correction || 0),
+        assistantUp: Number(assistant.up || 0),
+        assistantDown: Number(assistant.down || 0),
+        recentCorrections: corrections.map(normalizeCorrection),
+        recentAssistantComplaints: assistantComplaints.map(normalizeAssistantComplaint),
+    };
+};
+
 export const verifyAdminRequest = async (req) => {
     const token = getBearerToken(req);
     const client = getAdminClient(token);
@@ -172,10 +249,11 @@ export const getAdminReviewSummary = async ({ days = ADMIN_SUMMARY_DEFAULT_DAYS,
     const rowLimit = normalizeAdminLimit(limit);
     const sinceIso = new Date(Date.now() - windowDays * 86400000).toISOString();
 
-    const [scanRows, leadRows, eventRows] = await Promise.all([
+    const [scanRows, leadRows, eventRows, feedback] = await Promise.all([
         runSelect('scan_history', 'id, disease, confidence, severity, category, location_name, result_json, created_at', sinceIso, rowLimit),
         runSelect('consultation_leads', 'id, scan_id, disease, crop, confidence, phone, recommendation_intent, source, created_at', sinceIso, rowLimit),
         runSelect('product_events', 'id, scan_id, event_type, product_id, product_name, recommendation_intent, recommendation_role, crop, disease, metadata, created_at', sinceIso, rowLimit),
+        getFeedbackSummary(sinceIso, rowLimit),
     ]);
 
     const recentScans = scanRows.map(normalizeRecentScan);
@@ -194,7 +272,13 @@ export const getAdminReviewSummary = async ({ days = ADMIN_SUMMARY_DEFAULT_DAYS,
             consultationLeads: recentLeads.length,
             productClicks: productClicks.length,
             checkoutClicks: checkoutClicks.length,
+            diagnosisCorrect: feedback.diagnosisCorrect,
+            diagnosisNeedsCorrection: feedback.diagnosisNeedsCorrection,
+            assistantUp: feedback.assistantUp,
+            assistantDown: feedback.assistantDown,
         },
+        recentCorrections: feedback.recentCorrections,
+        recentAssistantComplaints: feedback.recentAssistantComplaints,
         recentScans,
         uncertainScans,
         recentLeads,

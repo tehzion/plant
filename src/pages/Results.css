@@ -623,4 +623,3 @@ body:has(.results) .assistant-widget:not(.is-open) { display: none; }
 @media (prefers-reduced-motion: reduce) {
  .results *, .scan-followup-tracker * { scroll-behavior: auto; animation: none !important; transition: none !important; }
 }
-.results-feedback-details > summary { min-height: 44px; padding-block: 12px; cursor: pointer; font-weight: 600; }

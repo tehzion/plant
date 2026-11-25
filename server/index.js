@@ -1,4 +1,5 @@
 import { registerPrivacyRoutes } from './routes/privacyRoutes.js';
+import { registerWooWebhookRoutes } from './routes/wooWebhookRoutes.js';
 import { resolveAccountScanConsent } from './services/accountConsentService.js';
 import { enforceRegisteredTreatments } from './services/registrationEligibility.js';
 import { resolveTelemetryIdentity } from './services/telemetryIdentity.js';
@@ -36,7 +37,7 @@ import { claimAnalysis, releaseAnalysis } from './services/analysisRequestServic
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
 import { partitionByEligibility, selectRecoverySupport } from './services/productEligibility.js';
-import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled, warmCatalogCache } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
@@ -175,6 +176,9 @@ app.use('/api/', rateLimit({
         res.status(429).json({ error: 'Too many requests. Please try again later.', requestId: req.requestId });
     },
 }));
+// Store webhooks need the raw body to check their signature, so this route
+// is registered before the JSON parser.
+registerWooWebhookRoutes(app);
 app.use(express.json({ limit: '17mb' }));
 
 // Rate limiting
@@ -1397,6 +1401,8 @@ if (!process.env.VERCEL) {
         console.log(`🛡️ Security Headers: Enabled`);
         console.log(`🧠 AI Cache: Enabled`);
         console.log(`🚀 Ready to accept connections`);
+        // Load the store catalogue now so the first farmer does not wait for it.
+        warmCatalogCache().catch((error) => console.error('❌ WooCommerce warm-up failed:', error.message));
     });
 
     // Graceful Shutdown
