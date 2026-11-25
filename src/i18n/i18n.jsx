@@ -31,6 +31,9 @@ export const LanguageProvider = ({ children }) => {
 
     useEffect(() => {
         localStorage.setItem('appLanguage', language);
+        if (typeof document !== 'undefined') {
+            document.documentElement.lang = language === 'zh' ? 'zh-Hans' : language;
+        }
     }, [language]);
 
     const resolveTranslation = useCallback((key) => {

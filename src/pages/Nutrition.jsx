@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Sprout, History as HistoryIcon } from 'lucide-react';
+import { Sprout, History as HistoryIcon, ScanLine } from 'lucide-react';
+import { SCAN_PATH } from '../components/navItems.js';
 import { fetchScanHistoryPage, getScanById } from '../utils/localStorage';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../i18n/i18n.jsx';
@@ -14,6 +15,8 @@ const Nutrition = () => {
     const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(true);
     const [hasScan, setHasScan] = useState(false);
+    // A named scan that is missing is a different problem from having none yet.
+    const missingNamedScan = Boolean(routeId || searchParams.get('scan'));
 
     useEffect(() => {
         let cancelled = false;
@@ -57,11 +60,18 @@ const Nutrition = () => {
                 <section className="nutrition-empty-state app-surface" role="status">
                     <div className="nutrition-empty-icon"><Sprout size={30} aria-hidden="true" /></div>
                     <h1>{t('results.nutrition') || 'Nutrition'}</h1>
-                    <p>{t('history.noHistoryMessage') || 'Save a plant scan first to view nutrition guidance.'}</p>
-                    <button type="button" className="btn btn-primary" onClick={() => navigate('/history')}>
-                        <HistoryIcon size={18} aria-hidden="true" />
-                        <span>{t('history.scanHistory') || 'Scan history'}</span>
-                    </button>
+                    <p>{missingNamedScan ? t('history.scanNotFoundMessage') : t('history.needScanFirst')}</p>
+                    {missingNamedScan ? (
+                        <button type="button" className="btn btn-primary" onClick={() => navigate('/history')}>
+                            <HistoryIcon size={18} aria-hidden="true" />
+                            <span>{t('nav.history')}</span>
+                        </button>
+                    ) : (
+                        <button type="button" className="btn btn-primary" onClick={() => navigate(SCAN_PATH)}>
+                            <ScanLine size={18} aria-hidden="true" />
+                            <span>{t('nav.checkPlant')}</span>
+                        </button>
+                    )}
                 </section>
             </div>
         </main>

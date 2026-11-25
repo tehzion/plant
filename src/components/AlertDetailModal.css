@@ -19,7 +19,7 @@
 }
 
 .adm-modal {
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 24px 24px 0 0;
   width: 100%;
   max-width: 520px;
@@ -42,7 +42,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 20px 20px 16px;
-  border-bottom: 1.5px solid var(--adm-border, #d1d5db);
+  border-bottom: 1.5px solid var(--adm-border, var(--color-border-strong));
   gap: 12px;
 }
 
@@ -61,14 +61,14 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: var(--adm-soft, #f9fafb);
-  color: var(--adm-accent, #16a34a);
+  background: var(--adm-soft, var(--color-bg-subtle));
+  color: var(--adm-accent, var(--color-primary));
 }
 
 .adm-title {
   font-size: 1.05rem;
-  font-weight: 800;
-  color: #1f2937;
+  font-weight: 700;
+  color: var(--color-text-primary);
   margin: 0 0 6px;
 }
 
@@ -82,25 +82,25 @@
 .adm-sev-badge {
   padding: 2px 9px;
   border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 800;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
-  background: var(--adm-soft, #f9fafb);
-  color: var(--adm-accent, #16a34a);
+  background: var(--adm-soft, var(--color-bg-subtle));
+  color: var(--adm-accent, var(--color-primary));
 }
 
 .adm-cat {
   font-size: 0.78rem;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .adm-close-btn {
-  background: #f3f4f6;
+  background: var(--color-bg-muted);
   border: none;
   border-radius: 8px;
   padding: 6px;
   cursor: pointer;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -108,7 +108,7 @@
 }
 
 .adm-close-btn:hover {
-  background: #e5e7eb;
+  background: var(--color-border);
 }
 
 .adm-body {
@@ -123,17 +123,17 @@
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   flex-wrap: wrap;
 }
 
 .adm-info-row svg {
-  color: #9ca3af;
+  color: var(--color-text-light);
 }
 
 .adm-section {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -149,7 +149,7 @@
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--color-text-primary);
   text-align: left;
 }
 
@@ -166,10 +166,10 @@
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   font-size: 0.85rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--color-text-primary);
 }
 
 .adm-section-header svg {
@@ -191,8 +191,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #f5f3ff;
-  color: #8b5cf6;
+  background: var(--color-earth-tint);
+  color: var(--color-earth);
   border: 1px solid #ddd6fe;
   border-radius: 6px;
   padding: 4px 8px;
@@ -203,7 +203,7 @@
 }
 
 .adm-sop-btn:hover:not(:disabled) {
-  background: #ede9fe;
+  background: #f1eadf;
 }
 
 .adm-sop-btn:disabled {
@@ -232,8 +232,8 @@
   border-radius: 50%;
   background: var(--gradient-primary);
   color: white;
-  font-size: 0.68rem;
-  font-weight: 800;
+  font-size: 0.75rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -243,7 +243,7 @@
 
 .adm-step span:last-child {
   font-size: 0.83rem;
-  color: #374151;
+  color: var(--color-text-primary);
   line-height: 1.4;
 }
 
@@ -260,26 +260,26 @@
   justify-content: center;
   gap: 6px;
   padding: 9px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--color-border);
   border-radius: 10px;
   background: white;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .adm-status-btn.active-amber {
   border-color: #f59e0b;
-  background: #fffbeb;
+  background: var(--color-warning-bg);
   color: #d97706;
 }
 
 .adm-status-btn.active-green {
-  border-color: #22c55e;
-  background: #f0fdf4;
-  color: #16a34a;
+  border-color: var(--color-primary-accent);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .adm-textarea {
@@ -288,10 +288,10 @@
   margin: 0 0 12px;
   padding: 10px 14px;
   border: none;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
   font-size: 0.85rem;
-  color: #1f2937;
+  color: var(--color-text-primary);
   resize: vertical;
   font-family: inherit;
   outline: none;
@@ -312,18 +312,18 @@
   flex: 1;
   padding: 11px;
   background: none;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--color-border);
   border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .adm-ack-btn:hover {
-  border-color: #d1d5db;
-  background: #f9fafb;
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-subtle);
 }
 
 .adm-log-btn {
@@ -353,14 +353,47 @@
   align-items: center;
   gap: 10px;
   padding: 14px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
   border-radius: 12px;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #16a34a;
+  color: var(--color-primary);
 }
 
 .adm-success-icon {
-  color: #16a34a;
+  color: var(--color-primary);
 }
+
+/* Keep the activity selector and notes within the same field rhythm. */
+.adm-activity-field {
+  display: grid;
+  gap: 8px;
+  padding: 4px 14px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+.adm-activity-field select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.adm-status-btn { min-height: 44px; font-size: 1rem; font-weight: 600; }
+.adm-status-btn.active-amber { color: var(--color-warning-ink); border-color: var(--color-warning-border); }
+.adm-textarea { font-size: 1rem; line-height: 1.6; padding-block: 14px; }
+.adm-activity-field select:focus-visible, .adm-textarea:focus-visible, .adm-status-btn:focus-visible {
+  outline: 3px solid var(--color-primary-dark);
+  outline-offset: 2px;
+}
+@media (max-width: 360px) { .adm-status-row { flex-wrap: wrap; } .adm-status-btn { flex-basis: 100%; } }

@@ -34,9 +34,9 @@ const ProductsTab = ({ label: labelProp }) => {
         <section className="udp-card udp-products-tab" data-testid="products-tab">
             <div className="udp-tab-actions">
                 <div>
-                    <h3 className="udp-section-title">
+                    <h2 className="udp-section-title">
                         {label('nav.shop', 'Shop')}
-                    </h3>
+                    </h2>
                     <p className="udp-section-subtitle">
                         {label('profile.productsCatalogSubtitle', 'Browse our catalog for products without leaving your dashboard.')}
                     </p>

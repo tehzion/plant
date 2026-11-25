@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { RotateCcw, Download, Share2, Save, Loader2 } from 'lucide-react';
+import { RotateCcw, Download, Share2, History, Loader2 } from 'lucide-react';
 import './QuickActions.css';
 import { getScanQualityCopy } from '../../shared/scanQualityCopy.js';
 
-const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
+const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory, compact = false }) => {
   const { t, language } = useLanguage();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -18,12 +18,12 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
   };
 
   return (
-    <div className="quick-actions app-surface app-surface--soft">
+    <div className={`quick-actions ${compact ? 'quick-actions--compact' : 'app-surface app-surface--soft'}`}>
       <div className="actions-container">
-        <button onClick={onScanAgain} className="action-btn">
+        {!compact && <button onClick={onScanAgain} className="action-btn">
           <span className="icon"><RotateCcw size={20} /></span>
           <span className="label">{t('results.scanAgain')}</span>
-        </button>
+        </button>}
 
         <button onClick={handleDownload} className="action-btn" disabled={isDownloading}>
           <span className="icon">
@@ -39,10 +39,10 @@ const QuickActions = ({ onScanAgain, onDownload, onShare, onSaveHistory }) => {
           <span className="label">{t('results.share')}</span>
         </button>
 
-        <button onClick={onSaveHistory} className="action-btn">
-          <span className="icon"><Save size={20} /></span>
+        {!compact && <button onClick={onSaveHistory} className="action-btn">
+          <span className="icon"><History size={20} /></span>
           <span className="label">{getScanQualityCopy(language).viewHistory}</span>
-        </button>
+        </button>}
       </div>
     </div>
   );

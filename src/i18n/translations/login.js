@@ -1,12 +1,23 @@
 const loginTranslations = {
     "en": {
         "login": {
+            "demoAccountHint": "Development demo: sign in with test@test.com and Test321@.",
+            "scanFollowUpWaiting": "Your scan follow-up log is ready. Sign in to review and save it.",
+
             "welcomeBack": "Welcome Back",
+            "farmIntroTitle": "My farm",
+            "farmIntroSubtitle": "Sign in to keep your farm records safe and with you on any phone.",
+            "farmIntroPlots": "Your farm plots and crops",
+            "farmIntroLogs": "Activity logs for myGAP",
+            "farmIntroHistory": "Scan history on every device",
+            "farmIntroGuest": "Continue without an account",
+            "farmIntroGuestNote": "Your scans are still saved on this phone.",
             "subtitle": "Sign in to access your farm data",
             "email": "Email Address",
             "password": "Password",
             "signIn": "Sign In",
             "register": "Create Account",
+            "checkEmail": "Check your email for a confirmation link, then sign in. If no email arrives, check your spam folder or try signing in.",
             "forgotPassword": "Forgot Password?",
             "noAccount": "Don't have an account?",
             "placeholderEmail": "Enter your email",
@@ -32,17 +43,31 @@ const loginTranslations = {
             "resetLinkInvalid": "This reset link is invalid or has expired. Request a new link and try again.",
             "passwordTooShort": "Use at least 8 characters for your new password.",
             "passwordMismatch": "The passwords do not match.",
-            "passwordUpdateFailed": "The password could not be updated. Request a new reset link."
+            "passwordUpdateFailed": "The password could not be updated. Request a new reset link.",
+            "passwordSameAsOld": "Choose a password different from your current one.",
+            "errorTooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
+            "errorGeneric": "We could not sign you in. Please try again."
         }
     },
     "ms": {
         "login": {
+            "demoAccountHint": "Demo pembangunan: log masuk menggunakan test@test.com dan Test321@.",
+            "scanFollowUpWaiting": "Log susulan imbasan anda sedia. Log masuk untuk menyemak dan menyimpannya.",
+
             "welcomeBack": "Selamat Kembali",
+            "farmIntroTitle": "Ladang saya",
+            "farmIntroSubtitle": "Log masuk supaya rekod ladang anda selamat dan boleh dibuka di mana-mana telefon.",
+            "farmIntroPlots": "Petak dan tanaman ladang anda",
+            "farmIntroLogs": "Log aktiviti untuk myGAP",
+            "farmIntroHistory": "Sejarah semakan di semua peranti",
+            "farmIntroGuest": "Teruskan tanpa akaun",
+            "farmIntroGuestNote": "Semakan anda masih disimpan dalam telefon ini.",
             "subtitle": "Log masuk untuk akses data ladang anda",
             "email": "Alamat Emel",
             "password": "Kata Laluan",
             "signIn": "Log Masuk",
             "register": "Cipta Akaun",
+            "checkEmail": "Semak e-mel untuk pautan pengesahan, kemudian log masuk. Jika tiada e-mel diterima, semak folder spam atau cuba log masuk.",
             "forgotPassword": "Lupa Kata Laluan?",
             "noAccount": "Tiada akaun?",
             "placeholderEmail": "Masukkan emel anda",
@@ -68,17 +93,31 @@ const loginTranslations = {
             "resetLinkInvalid": "Pautan tetapan semula tidak sah atau telah tamat tempoh. Minta pautan baharu.",
             "passwordTooShort": "Gunakan sekurang-kurangnya 8 aksara untuk kata laluan baharu.",
             "passwordMismatch": "Kata laluan tidak sepadan.",
-            "passwordUpdateFailed": "Kata laluan tidak dapat dikemas kini. Minta pautan tetapan semula baharu."
+            "passwordUpdateFailed": "Kata laluan tidak dapat dikemas kini. Minta pautan tetapan semula baharu.",
+            "passwordSameAsOld": "Pilih kata laluan yang berbeza daripada kata laluan semasa.",
+            "errorTooManyAttempts": "Terlalu banyak percubaan. Sila tunggu beberapa minit dan cuba lagi.",
+            "errorGeneric": "Kami tidak dapat log masuk anda. Sila cuba lagi."
         }
     },
     "zh": {
         "login": {
+            "demoAccountHint": "开发演示：使用 test@test.com 和 Test321@ 登录。",
+            "scanFollowUpWaiting": "扫描跟进日志已准备好。请登录以查看并保存。",
+
             "welcomeBack": "欢迎回来",
+            "farmIntroTitle": "我的农场",
+            "farmIntroSubtitle": "登录后，农场记录会安全保存，并可在任何手机上查看。",
+            "farmIntroPlots": "您的地块和作物",
+            "farmIntroLogs": "myGAP 活动日志",
+            "farmIntroHistory": "所有设备上的检查记录",
+            "farmIntroGuest": "不登录继续使用",
+            "farmIntroGuestNote": "您的检查记录仍保存在这部手机上。",
             "subtitle": "登录以访问您的农场数据",
             "email": "电子邮件地址",
             "password": "密码",
             "signIn": "登录",
             "register": "创建账户",
+            "checkEmail": "请查收电子邮件中的确认链接，确认后再登录。如果没有收到邮件，请检查垃圾邮件夹或尝试登录。",
             "forgotPassword": "忘记密码？",
             "noAccount": "没有账户？",
             "placeholderEmail": "输入您的电子邮件",
@@ -104,7 +143,10 @@ const loginTranslations = {
             "resetLinkInvalid": "此重置链接无效或已过期。请重新申请链接。",
             "passwordTooShort": "新密码至少需要 8 个字符。",
             "passwordMismatch": "两次输入的密码不一致。",
-            "passwordUpdateFailed": "无法更新密码。请重新申请密码重置链接。"
+            "passwordUpdateFailed": "无法更新密码。请重新申请密码重置链接。",
+            "passwordSameAsOld": "请选择与当前密码不同的新密码。",
+            "errorTooManyAttempts": "尝试次数过多，请等待几分钟后再试。",
+            "errorGeneric": "无法登录，请重试。"
         }
     }
 };

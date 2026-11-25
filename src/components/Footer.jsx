@@ -4,7 +4,7 @@ import './Footer.css';
 
 const Footer = () => {
     const location = useLocation();
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const isHome = location.pathname === '/';
 
     return (
@@ -21,6 +21,8 @@ const Footer = () => {
                     <Link to="/terms">{t('nav.terms')}</Link>
                     <span className="separator">•</span>
                     <Link to="/privacy">{t('nav.privacy')}</Link>
+                    <span className="separator">•</span>
+                    <Link to="/privacy-controls">{language === 'ms' ? 'Kawalan data' : 'Data controls'}</Link>
                 </div>
             </div>
         </footer>

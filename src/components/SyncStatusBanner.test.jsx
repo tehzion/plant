@@ -6,7 +6,7 @@ const sync = vi.hoisted(() => ({ getSyncSummary: vi.fn(), listWaitingRecords: vi
 const resolve = vi.hoisted(() => vi.fn());
 vi.mock('../utils/cloudSync.js', () => ({ resolveSyncConflict: resolve }));
 vi.mock('../utils/syncQueue.js', () => sync);
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local', useAuth: () => ({ user: { id: 'user-1' } }) }));
 vi.mock('../i18n/i18n.jsx', () => ({ useLanguage: () => ({ language: 'en', t: (key) => key }) }));
 
 afterEach(() => vi.restoreAllMocks());

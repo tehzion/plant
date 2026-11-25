@@ -28,9 +28,9 @@ const LanguageSelector = () => {
   }, []);
 
   const languages = [
-    { code: 'en', name: isCompact ? 'English' : 'English', flag: '\uD83C\uDDEC\uD83C\uDDE7' },
-    { code: 'ms', name: isCompact ? 'Bahasa MY' : 'Bahasa Malaysia', flag: '\uD83C\uDDF2\uD83C\uDDFE' },
-    { code: 'zh', name: '\u4E2D\u6587', flag: '\uD83C\uDDE8\uD83C\uDDF3' },
+    { code: 'en', name: isCompact ? 'EN' : 'English' },
+    { code: 'ms', name: isCompact ? 'BM' : 'Bahasa Melayu' },
+    { code: 'zh', name: '\u4E2D\u6587' },
   ];
 
   return (
@@ -43,7 +43,7 @@ const LanguageSelector = () => {
       >
         {languages.map((lang) => (
           <option key={lang.code} value={lang.code}>
-            {lang.flag} {lang.name}
+            {lang.name}
           </option>
         ))}
       </select>

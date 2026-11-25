@@ -1,0 +1,7 @@
+.plant-check-guide { border-block: 1px solid var(--color-border); padding-block: 4px; margin-block: 16px; }
+.plant-check-guide > summary { cursor: pointer; min-height: 48px; padding-block: 12px; font-weight: 600; }
+.plant-check-guide > p { color: var(--color-text-secondary); }
+.plant-check-guide section { margin-block: 20px; max-width: 65ch; }
+.plant-check-guide h2 { font-size: 1.125rem; margin-bottom: 8px; }
+.plant-check-guide p { font-size: 1rem; line-height: 1.6; margin-block: 8px; }
+.plant-check-guide summary:focus-visible { outline: 3px solid var(--color-primary-dark); outline-offset: 3px; }

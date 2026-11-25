@@ -3,6 +3,8 @@ import { resolveAccountScanConsent } from './services/accountConsentService.js';
 import { enforceRegisteredTreatments } from './services/registrationEligibility.js';
 import { resolveTelemetryIdentity } from './services/telemetryIdentity.js';
 
+import { hasAnalyticsConsent } from '../shared/privacy.js';
+import { applyDecisionCheck, checkDecisionShadow, resolveDecisionCheckMode } from './services/decisionShadowService.js';
 import express from 'express';
 import { registerEvaluationRoutes } from './evaluation/api.js';
 import cors from 'cors';
@@ -16,13 +18,14 @@ import { buildAnalysisCacheKey } from './utils/analysisCache.js';
 import { isAiProviderConfigured, resolveAiProvider } from './utils/aiProvider.js';
 import { createOrderSession, verifyOrderSession, requireOrderSession, ownsOrder, summarizeOrder } from './utils/orderAccess.js';
 import { validateApiRequest } from './utils/requestValidation.js';
-import { logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
+import { logAssistantFeedback, logTrainingData, logFeedback, withdrawTrainingImages } from './utils/dataCollector.js';
 import { identifyPlantWithPlantNet, identifyPlantWithGPTVision, analyzeWithGPT4Mini, askAI, buildKeywordProductRecommendation, generateAgronomistInsights, generateTreatmentSOP, parseNaturalLanguageLog, generatePredictiveRisk, localizeStoredAnalysisResult, canRecommendTreatmentProducts, enrichRecommendedProducts, getProductRecommendationIntent, buildProductConsultation, PRODUCT_RECOMMENDATION_INTENTS, normalizeFarmerCrop } from './services/aiService.js';
 import { getAdminReviewSummary, verifyAdminRequest } from './services/adminAnalyticsService.js';
 import { getReviewCase, listReviewQueue, submitExpertReview, verifyReviewerRequest } from './services/expertReviewService.js';
 import { registerFarmerReviewRoutes } from './routes/farmerReviewRoutes.js';
 import { getBearerToken, verifyAuthenticatedUser } from './utils/supabaseAuth.js';
 import { consumeAiQuota } from './services/aiQuotaService.js';
+import { consumeFreeScanQuota, scanQuotaMessage } from './services/scanQuotaService.js';
 import { trackAiUsage } from './utils/aiUsage.js';
 import { correctMygapLog, deleteMygapLog, listMygapLogRevisions } from './services/mygapRecordService.js';
 import { buildRecommendationSnapshot, saveRecommendationSnapshot } from './services/recommendationSnapshotService.js';
@@ -32,13 +35,13 @@ import { syncOperation } from './services/syncService.js';
 import { claimAnalysis, releaseAnalysis } from './services/analysisRequestService.js';
 import { createFollowUpEvent, listFollowUpEvents } from './services/followUpService.js';
 import { getDiseaseProductRules } from './services/diseaseProductRuleService.js';
-import { partitionByEligibility } from './services/productEligibility.js';
-import { getAllTags, getAllCategories, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
+import { partitionByEligibility, selectRecoverySupport } from './services/productEligibility.js';
+import { getAllTags, getAllCategories, getAllProducts, getProductsByTagIds, getStoreUrl, createOrder, getOrdersByAppId, getOrderStatus, getOrdersByIds, isWooCommerceEnabled } from './services/wooCommerceService.js';
 import { getScanSectionPolicy } from '../shared/scanResultPolicy.js';
 import { withAbortableTimeout } from './utils/requestTimeout.js';
 import { checkNeonDatabase, queryNeon, withNeonTransaction } from './utils/neonDatabase.js';
 import { createScanCapability, hashIdentity, verifyScanCapability } from './utils/scanCapability.js';
-import { classifyAnalysisFailure } from './utils/analysisErrors.js';
+import { classifyAnalysisFailure, getAiProviderStatus, recordAnalysisSuccess } from './utils/analysisErrors.js';
 import { chatWithAssistant } from './services/assistantService.js';
 import { bulkInsertUserRows, deleteUserRow, getDatasetNames, getTelemetryDatasetNames, getUserRow, insertTelemetryRow, insertUserRow, listUserRows, updateUserRow } from './services/neonDataService.js';
 
@@ -96,7 +99,28 @@ const cacheResult = (key, value, ttl) => {
 };
 
 // Security Headers & Middlewares
-app.use(helmet());
+// The browser talks to Supabase (auth, storage), weather and place lookup directly,
+// shows store and scan photos from other hosts and embeds the store, so helmet's
+// 'self'-only default would block sign-in, those images and the Shop tab.
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            connectSrc: [
+                "'self'",
+                'https://*.supabase.co',
+                'wss://*.supabase.co',
+                'https://api.open-meteo.com',
+                'https://nominatim.openstreetmap.org',
+                'https://fonts.googleapis.com',
+                'https://fonts.gstatic.com',
+            ],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            // The dashboard Shop tab embeds the KANB store catalogue.
+            frameSrc: ["'self'", 'https://www.kanb.coop.my', 'https://kanb.coop.my'],
+            mediaSrc: ["'self'", 'blob:'],
+        },
+    },
+}));
 app.use(compression());
 
 const parseOriginList = (value = '') => String(value || '')
@@ -176,6 +200,7 @@ app.get('/api/health', (req, res) => {
         message: 'Plant Analysis API',
         uptimeSeconds: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
+        ai: getAiProviderStatus(),
         ...(!isProduction && {
             config: {
                 aiProvider: resolveAiProvider().provider,
@@ -208,6 +233,9 @@ app.post('/api/data/:table', async (req, res, next) => {
     try {
         const { table } = req.params;
         if (getTelemetryDatasetNames().includes(table)) {
+            if (table === 'product_events' && !hasAnalyticsConsent((req.body?.payload || req.body)?.metadata?.analyticsConsent)) {
+                return res.status(202).json({ skipped: true, reason: 'optional_analytics_not_consented' });
+            }
             const attribution = await resolveTelemetryIdentity(req);
             const row = await insertTelemetryRow(table, req.body?.payload || req.body, attribution);
             return res.status(201).json({ row, data: row });
@@ -373,6 +401,8 @@ app.use('/api/analyze', async (req, res, next) => {
 app.use(aiRoutes, async (req, res, next) => {
     if (req.method !== 'POST') return next();
     try {
+        // Plant scans have their own allowance; other AI features cannot spend it.
+        if (req.baseUrl === '/api/analyze') return next();
         const quota = await consumeAiQuota({ identity: req.aiIdentity, limit: Number(process.env.AI_IDENTITY_DAILY_LIMIT) || 50 });
         if (!quota.allowed) {
             console.warn(JSON.stringify({ event: 'ai_quota_exceeded', requestId: req.requestId }));
@@ -485,7 +515,11 @@ app.post('/api/ask', async (req, res, next) => {
 
 // Floating help assistant: short answers that link to encyclopedia entries,
 // live store products and the support team.
-app.post('/api/assistant/chat', async (req, res, next) => {
+const assistantBurstLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+    message: { error: 'ASSISTANT_RATE_LIMIT', message: 'Please slow down. You can ask up to 5 questions per minute.' },
+});
+app.post('/api/assistant/chat', assistantBurstLimiter, async (req, res, next) => {
     const requestController = new AbortController();
     const requestDeadline = setTimeout(() => requestController.abort(new Error('Assistant deadline exceeded')), Number(process.env.AI_QUESTION_TIMEOUT_MS) || 45000);
     const abortOnDisconnect = () => requestController.abort(new Error('Assistant request cancelled by client'));
@@ -495,8 +529,8 @@ app.post('/api/assistant/chat', async (req, res, next) => {
         if (!isAiProviderConfigured()) {
             return res.status(503).json({ error: 'ASSISTANT_UNAVAILABLE', message: 'AI provider API key is missing on the server.' });
         }
-        const { messages, language = 'en' } = req.body;
-        res.json(await chatWithAssistant({ messages, language, signal: requestController.signal }));
+        const { messages, language = 'en', scanContext } = req.body;
+        res.json(await chatWithAssistant({ messages, language, scanContext, signal: requestController.signal }));
     } catch (error) {
         if (requestController.signal.aborted) {
             const timeoutError = new Error('Assistant request timed out or was cancelled. Please try again.');
@@ -507,6 +541,21 @@ app.post('/api/assistant/chat', async (req, res, next) => {
         clearTimeout(requestDeadline);
         req.removeListener?.('aborted', abortOnDisconnect);
         res.removeListener?.('close', abortOnDisconnect);
+    }
+});
+
+// Thumbs up/down on assistant answers. Not an AI route, so it does not use
+// the farmer's AI quota; the general API rate limit still applies.
+app.post('/api/assistant-feedback', async (req, res, next) => {
+    try {
+        const { rating, question = '', answer, language = 'en', page, scanStatus } = req.body;
+        if (await logAssistantFeedback({ rating, question, answer, language, page, scanStatus })) {
+            res.json({ message: 'Feedback received' });
+        } else {
+            res.status(500).json({ error: 'Failed to log feedback' });
+        }
+    } catch (error) {
+        next(error);
     }
 });
 
@@ -617,6 +666,7 @@ app.post('/api/analyze', async (req, res, next) => {
         const dataConsent = req.aiIdentity?.startsWith('user:')
             ? await resolveAccountScanConsent(req.aiIdentity.slice(5), submittedConsent)
             : submittedConsent;
+        // Optional farmer-stated crop; when present it replaces the broad category as the crop hint.
         const farmerCrop = normalizeFarmerCrop(req.body.crop);
         const cropHint = farmerCrop || category;
         const analysisStartedAt = Date.now();
@@ -627,8 +677,17 @@ app.post('/api/analyze', async (req, res, next) => {
             return res.status(400).json({ error: 'Image (treeImage) is required' });
         }
 
-        console.log(JSON.stringify({ event: 'analysis_started', requestId: req.requestId }));
+        const scanQuota = await consumeFreeScanQuota(req.aiIdentity || `ip:${req.ip || 'unknown'}`);
+        if (!scanQuota.allowed) {
+            return res.status(429).json({
+                error: scanQuotaMessage(language, scanQuota.limit),
+                code: 'FREE_SCAN_DAILY_LIMIT',
+                limit: scanQuota.limit,
+                resetTimeZone: 'Asia/Kuala_Lumpur',
+            });
+        }
 
+        console.log(JSON.stringify({ event: 'analysis_started', requestId: req.requestId }));
 
         // 1. Generate Image Hash for Caching
         const cacheKey = buildAnalysisCacheKey({ ...req.body, crop: farmerCrop });
@@ -642,7 +701,7 @@ app.post('/api/analyze', async (req, res, next) => {
         if (cachedResult) {
             console.log('🧠 Image Analysis Cache HIT');
             logTrainingData({ id: scanId, ownerHash, treeImage: mainImage, leafImage, category, dataConsent,
-                result: cachedResult, metadata: { language, location, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
+                result: cachedResult, metadata: { language, imageQuality, cached: true, durationMs: Date.now() - analysisStartedAt } })
                 .catch(err => console.error('Data logging failed:', err.message));
             return res.json({ ...cachedResult, id: scanId, feedbackToken, cached: true });
         }
@@ -703,13 +762,14 @@ app.post('/api/analyze', async (req, res, next) => {
                     language,
                     location,
                     imageQuality,
-                    { signal },
+                    { signal, farmerStatedCrop: Boolean(farmerCrop) },
                 ),
                 Number(process.env.AI_ANALYSIS_TIMEOUT_MS) || 120000,
                 { signal: requestController.signal, timeoutMessage: 'AI pipeline stage timed out' },
             ));
             analysisResult = tracked.result;
             analysisUsage = tracked.usage;
+            recordAnalysisSuccess();
         } catch (analysisError) {
             if (requestController.signal.aborted) throw analysisError;
             const failure = classifyAnalysisFailure(analysisError, language);
@@ -725,12 +785,33 @@ app.post('/api/analyze', async (req, res, next) => {
             analysisLanguage: language,
         };
 
+        // Optional second check of the diagnosis (see resolveDecisionCheckMode). In enforce mode it
+        // runs before the farmer sees the result and can only send it to review; in shadow mode it
+        // runs after the response is sent, so research never slows the farmer down.
+        const checkMode = resolveDecisionCheckMode();
+        const runDecisionCheck = (signal) => trackAiUsage(() => checkDecisionShadow({
+            prediction: finalResult, treeImage: mainImage, leafImage, crop: cropHint, dataConsent, signal,
+        })).then(shadow => ({ ...shadow.result, aiUsage: shadow.usage }))
+            .catch(() => ({ status: 'unavailable', reason: 'checker_failed' }));
+        const logDecisionCheck = (check) => {
+            if (check.status === 'skipped') return;
+            console.log(JSON.stringify({ event: 'decision_shadow', requestId: req.requestId, mode: check.mode || checkMode,
+                status: check.status, reason: check.reason || null, wouldAddReview: check.wouldAddReview ?? null,
+                applied: check.applied ?? false, durationMs: check.durationMs ?? null, costUsd: check.costUsd ?? null }));
+        };
+        let decisionShadow = { status: 'skipped', reason: checkMode === 'shadow' ? 'after_response' : 'disabled' };
+        if (checkMode === 'enforce') {
+            decisionShadow = await runDecisionCheck(requestController.signal);
+            if (decisionShadow.applied) applyDecisionCheck(finalResult, decisionShadow, language);
+        }
+
+        if (requestController.signal.aborted) throw new Error('Analysis request cancelled');
+
         // 6. Cache Result (24 Hours)
         cacheResult(cacheKey, finalResult, 86400);
 
         // 7. Log Data for Training (Fire & Forget)
-        // Fix: Pass single object as expected by dataCollector.js
-        logTrainingData({
+        const writeAudit = (check) => logTrainingData({
             id: scanId,
             ownerHash,
             treeImage: mainImage,
@@ -740,7 +821,6 @@ app.post('/api/analyze', async (req, res, next) => {
             result: finalResult,
             metadata: {
                 language,
-                location,
                 farmerCrop: farmerCrop || null,
                 source: identificationSource,
                 imageQuality,
@@ -753,11 +833,20 @@ app.post('/api/analyze', async (req, res, next) => {
                 policyVersion: finalResult.analysisMetadata?.policyVersion || null,
                 durationMs: Date.now() - analysisStartedAt,
                 aiUsage: analysisUsage,
+                decisionShadow: check,
             }
         }).catch(err => console.error('Data logging failed:', err));
         console.log(JSON.stringify({ event: 'analysis_usage', requestId: req.requestId, model: finalResult.analysisMetadata?.model || null, ...analysisUsage }));
 
         res.json({ ...finalResult, id: scanId, feedbackToken });
+
+        if (checkMode === 'shadow') {
+            // The response's close event aborts the request signal, so the check gets its own timeout.
+            void runDecisionCheck(undefined).then((check) => { logDecisionCheck(check); return writeAudit(check); });
+        } else {
+            logDecisionCheck(decisionShadow);
+            writeAudit(decisionShadow);
+        }
 
     } catch (error) {
         if (requestController.signal.aborted) {
@@ -901,6 +990,12 @@ app.post('/api/products/search', async (req, res, next) => {
             ? nutritionList(enrichRecommendedProducts(rawSupplements, diagnosis, 'supplement', diseaseProductRules), 'supplement')
             : [];
         
+        // Disease scans get KANB plant-health products beside, never instead of, the expert advice.
+        const shownIds = new Set([...finalTreatment, ...catalogueDiscovery, ...finalFertilizers, ...finalSupplements].map((product) => String(product.id)));
+        const recoverySupport = sectionPolicy.showRecoveryProducts
+            ? selectRecoverySupport((await getAllProducts({ signal: requestController.signal })).filter((product) => !shownIds.has(String(product.id))), diagnosis, targetLanguage)
+            : [];
+
         // 5. Choose the product/consultation flow. Disease scans no longer receive arbitrary popular products.
         const otherPopular = [];
         const recommendationIntent = getProductRecommendationIntent(diagnosis, {
@@ -911,7 +1006,7 @@ app.post('/api/products/search', async (req, res, next) => {
         const consultation = buildProductConsultation(diagnosis, recommendationIntent, targetLanguage);
         let fallbackMeta = null;
 
-        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${otherPopular.length} popular | intent=${recommendationIntent}`);
+        console.log(`✅ Returning: ${finalTreatment.length} treatment, ${finalFertilizers.length} fertilizers, ${finalSupplements.length} supplements, ${recoverySupport.length} recovery | intent=${recommendationIntent}`);
         
         if (recommendationIntent === PRODUCT_RECOMMENDATION_INTENTS.SUPPORT_ONLY) {
             fallbackMeta = {
@@ -941,6 +1036,7 @@ app.post('/api/products/search', async (req, res, next) => {
             supplements: finalSupplements,
             otherPopular: otherPopular,
             catalogueDiscovery,
+            recoverySupport,
             eligibilitySummary: {
                 eligibleTreatments: finalTreatment.length,
                 discoveryOnly: treatmentSplit.discovery.length,

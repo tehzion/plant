@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>KANB plant scan mark</title>
+  <g fill="none" stroke="#2e6b3f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 20V13a5 5 0 0 1 5-5h7"/>
+    <path d="M44 8h7a5 5 0 0 1 5 5v7"/>
+    <path d="M56 44v7a5 5 0 0 1-5 5h-7"/>
+    <path d="M20 56h-7a5 5 0 0 1-5-5v-7"/>
+  </g>
+  <path d="M18 46C15 29 28 17 47 17c2 18-11 31-29 29Z" fill="#3d7a4c"/>
+  <g stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <path d="M18 46 38 26"/>
+    <path d="M27 37v-8M27 37h8M33 31v-6M33 31h6"/>
+  </g>
+  <path d="M18 46l-4 4" stroke="#3d7a4c" stroke-width="3" stroke-linecap="round"/>
+</svg>

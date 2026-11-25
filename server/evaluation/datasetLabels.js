@@ -27,7 +27,7 @@ const clean = (value) => String(value || '').toLowerCase().replace(/[_-]+/g, ' '
 
 export function referenceTerms(label) {
     const raw = clean(label);
-    if (raw === 'healthy') return { healthy: true, terms: [] };
+    if (raw === 'healthy' || raw.replace(CROP_WORDS, '').replace(/\s+/g, ' ').trim() === 'healthy') return { healthy: true, terms: [] };
     const parts = [raw.replace(/\(.*?\)/g, ''), ...[...raw.matchAll(/\((.*?)\)/g)].map(m => m[1])]
         .map(part => part.replace(CROP_WORDS, '').replace(/[()]/g, '').replace(/\s+/g, ' ').trim())
         .filter(Boolean);

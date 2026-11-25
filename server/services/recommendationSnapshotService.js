@@ -20,6 +20,7 @@ export const buildRecommendationSnapshot = (response = {}, language = 'en') => (
     fertilizer: compactProducts(response.fertilizers),
     supplement: compactProducts(response.supplements),
     discovery: compactProducts(response.catalogueDiscovery),
+    recovery: compactProducts(response.recoverySupport),
     curatedRules: (response.curatedRules || []).map((rule) => rule?.id || rule).filter(Boolean).slice(0, 10),
 });
 

@@ -28,3 +28,4 @@
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
+.data-consent-toggle small a { display: block; width: fit-content; min-height: 44px; padding-block: 12px; }

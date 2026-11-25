@@ -47,10 +47,10 @@ export default function AgriculturalDataset() {
         </div>
         {data && <><div className="admin-table-wrap"><table className="admin-table">
             <thead><tr><th>{tr("Source")}</th><th>{tr("Reference (crop / label)")}</th><th>{tr("AI prediction")}</th><th>{tr("Result")}</th><th></th></tr></thead>
-            <tbody>{data.images.map(row=><tr key={row.checksum}>
+            <tbody>{data.images.map(row=><tr key={row.checksum} className={row.completed && row.agreement !== 'match' ? 'admin-row--differs' : undefined}>
                 <td>{row.source}</td><td>{row.crop} / {row.original_label}</td>
                 <td>{row.completed ? `${row.predicted_crop || 'Unknown'} / ${row.predicted_condition || 'Unknown'}` : 'Not assessed'}</td>
-                <td>{row.completed ? tr(AGREEMENT[row.agreement] || row.agreement) : '–'}</td>
+                <td>{row.completed ? <span className={`admin-agreement admin-agreement--${row.agreement}`}>{tr(AGREEMENT[row.agreement] || row.agreement)}</span> : '–'}</td>
                 <td><button type="button" onClick={()=>setSelected(row)} aria-label={`View ${row.crop} · ${row.original_label} · ${row.source}`}>{tr("View")}</button></td>
             </tr>)}</tbody></table></div>
             <div className="evaluation-pagination"><button type="button" disabled={!offset} onClick={()=>setOffset(Math.max(0,offset-20))}>{tr("Previous")}</button> <span>{tr("Page")}{' '}{offset/20+1}</span> <button type="button" disabled={data.images.length<20} onClick={()=>setOffset(offset+20)}>{tr("Next")}</button></div></>}

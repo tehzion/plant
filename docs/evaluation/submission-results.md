@@ -1,5 +1,3 @@
-> Historical evaluation material recovered from audit-remediation-2026-10 (through 04ef240). These runs were not repeated or independently verified during this recovery. Dataset agreement is not expert-reviewed diagnostic accuracy or Malaysian field performance. No production, savings, certification or adoption claim follows from these figures.
-
 # KANB AI Agropreneur: submission answers
 
 All figures were measured on 31 October 2026 on an isolated Neon database branch, not production.

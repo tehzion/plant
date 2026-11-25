@@ -146,7 +146,7 @@ describe('normalizeDiseaseResult', () => {
         expect(normalized.nutritionPrimary).toBe(false);
         expect(normalized.displayTitle).toBe('Fungal leaf spot');
         expect(normalized.detailItems).toEqual(expect.arrayContaining([
-            expect.objectContaining({ key: 'pathogen', value: 'Fungal' }),
+            expect.objectContaining({ key: 'pathogen', value: 'results.pathogenFungal' }),
         ]));
     });
 });

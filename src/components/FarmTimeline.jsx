@@ -36,7 +36,7 @@ const FarmTimeline = ({ scans = [] }) => {
     const groups = useMemo(() => buildFarmTimeline({ scans, ...records }), [scans, records]);
 
     if (!groups.length) {
-        return <p className="app-empty-state farm-timeline__empty">{label('assessment.ux.timelineEmpty', 'No records yet.')}</p>;
+        return <div className="app-empty-state farm-timeline__empty"><p>{label('assessment.ux.timelineEmpty', 'No records yet.')}</p><p>{t('common.firstScanHint')}</p><Link className="btn btn-primary" to="/?scan=true">{t('common.startCheck')}</Link></div>;
     }
 
     return (

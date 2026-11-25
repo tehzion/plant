@@ -1,11 +1,9 @@
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import { ArrowLeft, CheckCircle, AlertCircle, XCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react';
 import './UserGuide.css';
 
 const UserGuide = () => {
     const { t } = useLanguage();
-    const navigate = useNavigate();
 
     const getList = (key) => {
         const value = t(key);
@@ -74,13 +72,8 @@ const UserGuide = () => {
         <div className="page guide-page">
             <div className="container" style={{ paddingBottom: '100px' }}>
                 <div className="guide-header">
-                    <button onClick={() => navigate(-1)} className="back-btn">
-                        <ArrowLeft size={24} />
-                    </button>
-                    <div>
-                        <h1>{guide.title}</h1>
-                        <p className="guide-intro">{guide.intro}</p>
-                    </div>
+                    <h1>{guide.title}</h1>
+                    <p className="guide-intro">{guide.intro}</p>
                 </div>
 
                 <div className="guide-content">

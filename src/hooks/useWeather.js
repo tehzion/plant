@@ -1,7 +1,9 @@
+import { useDataOwner } from '../context/AuthContext';
+import { coarseLocation } from '../../shared/coarseLocation.js';
 import { useState, useCallback } from 'react';
 import { fetchJsonWithTimeout } from '../utils/networkRequest.js';
 
-const WEATHER_CACHE_PREFIX = 'kanb.weather.v1';
+const WEATHER_CACHE_PREFIX = 'kanb.weather.v2';
 const WEATHER_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 // WMO weather code -> icon name
@@ -29,17 +31,18 @@ const wmoDescKey = (code) => {
     return 'profile.weather.descUnknown';
 };
 
-const buildWeatherCacheKey = (lat, lng) => {
+const buildWeatherCacheKey = (lat, lng, owner) => {
     const safeLat = Number.isFinite(Number(lat)) ? Number(lat).toFixed(2) : '0.00';
     const safeLng = Number.isFinite(Number(lng)) ? Number(lng).toFixed(2) : '0.00';
-    return `${WEATHER_CACHE_PREFIX}:${safeLat}:${safeLng}`;
+    return `${WEATHER_CACHE_PREFIX}:${owner}:${safeLat}:${safeLng}`;
 };
 
-const readWeatherCache = (lat, lng) => {
+const readWeatherCache = (lat, lng, owner) => {
+    if (!owner) return null;
     if (typeof window === 'undefined' || !window.localStorage) return null;
 
     try {
-        const raw = window.localStorage.getItem(buildWeatherCacheKey(lat, lng));
+        const raw = window.localStorage.getItem(buildWeatherCacheKey(lat, lng, owner));
         if (!raw) return null;
 
         const parsed = JSON.parse(raw);
@@ -59,12 +62,13 @@ const readWeatherCache = (lat, lng) => {
     }
 };
 
-const writeWeatherCache = (lat, lng, payload) => {
+const writeWeatherCache = (lat, lng, payload, owner) => {
+    if (!owner) return;
     if (typeof window === 'undefined' || !window.localStorage) return;
 
     try {
         window.localStorage.setItem(
-            buildWeatherCacheKey(lat, lng),
+            buildWeatherCacheKey(lat, lng, owner),
             JSON.stringify({
                 timestamp: Date.now(),
                 weatherTemp: payload.weatherTemp,
@@ -102,6 +106,7 @@ export const deriveFarmingNotice = ({ precip = 0, humidity = 70, uvIndex = 5, te
 };
 
 export const useWeather = () => {
+    const owner = useDataOwner();
     const [weatherTemp, setWeatherTemp] = useState(null);
     const [weatherIcon, setWeatherIcon] = useState('cloud-sun');
     const [forecast, setForecast] = useState([]);
@@ -109,7 +114,9 @@ export const useWeather = () => {
     const [error, setError] = useState(null);
 
     const fetchWeather = useCallback(async (lat, lng) => {
-        if (!lat || !lng) return;
+        const area = coarseLocation({ lat, lng });
+        if (!area) return;
+        ({ lat, lng } = area);
 
         setLoading(true);
         setError(null);
@@ -175,10 +182,10 @@ export const useWeather = () => {
                 weatherTemp: nextTemp,
                 weatherIcon: nextIcon,
                 forecast: nextForecast,
-            });
+            }, owner);
         } catch (e) {
             console.error('Weather fetch failed', e);
-            const cached = readWeatherCache(lat, lng);
+            const cached = readWeatherCache(lat, lng, owner);
             if (cached) {
                 setWeatherTemp(cached.weatherTemp);
                 setWeatherIcon(cached.weatherIcon);
@@ -199,7 +206,7 @@ export const useWeather = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [owner]);
 
     return { weatherTemp, weatherIcon, forecast, loading, error, fetchWeather };
 };

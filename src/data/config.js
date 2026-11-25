@@ -81,14 +81,14 @@ export const PLOT_UNITS_CFG = [
  * Visual metadata for activity badges.
  */
 export const ACTIVITY_BADGE_COLOR = {
-    note:      { bg: '#f3f4f6', color: '#6b7280' },
-    scout:     { bg: '#fee2e2', color: '#b91c1c' },
-    spray:     { bg: '#fef9c3', color: '#b45309' },
-    fertilize: { bg: '#d1fae5', color: '#065f46' },
-    prune:     { bg: '#ede9fe', color: '#6d28d9' },
-    inspect:   { bg: '#dbeafe', color: '#1d4ed8' },
-    harvest:   { bg: '#f0fdf4', color: '#166534' },
-    other:     { bg: '#f3f4f6', color: '#6b7280' },
+    note: { bg: 'var(--color-earth-tint)', color: 'var(--color-earth-dark)' },
+    scout: { bg: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' },
+    spray: { bg: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' },
+    fertilize: { bg: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' },
+    prune: { bg: 'var(--color-earth-tint)', color: 'var(--color-earth-dark)' },
+    inspect: { bg: 'var(--color-primary-light)', color: 'var(--color-primary-dark)' },
+    harvest: { bg: 'var(--color-earth-tint)', color: 'var(--color-earth-dark)' },
+    other: { bg: 'var(--color-earth-tint)', color: 'var(--color-earth-dark)' },
 };
 
 /**

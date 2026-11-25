@@ -3,22 +3,13 @@
  * This file contains data for agriculture products and suppliers.
  */
 
-export const suppliers = {
-    guanChongAgro: {
-        name: "Guan Chong Agro",
-        description: "results.guanChongDesc",
-        address: "75200 Melaka, Malaysia",
-        phone: "+60 6-335 1234",
-        email: "contact@guanchongagro.com"
-    },
-    tanAgro: {
-        name: "Tan Agro",
-        description: "results.tanAgroDesc",
-        address: "81100 Johor Bahru, Johor, Malaysia",
-        phone: "+60 7-355 5678 / +60 12-789 4321",
-        whatsapp: "+60127894321",
-        email: "sales@tanagro.com.my"
-    }
+// KANB's own contact, as published in the privacy policy. Farmers are pointed
+// here for product questions instead of third-party suppliers.
+export const kanbContact = {
+    name: "KANB Agropreneur Nasional",
+    whatsapp: "+60146193328",
+    whatsappDisplay: "+60 14-619 3328",
+    email: "agropreneurnasional@gmail.com"
 };
 
 /**

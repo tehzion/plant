@@ -3,14 +3,15 @@ import { getOrderSession } from './orderSession.js';
 
 const apiBase = () => String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
-export const getNeonAccessToken = async () => {
+export const getNeonAccessToken = async (expectedUserId) => {
     const result = await supabase?.auth?.getSession?.();
+    if (expectedUserId !== undefined && (result?.data?.session?.user?.id || null) !== expectedUserId) throw new Error('Account changed. Retry for the current account.');
     return result?.data?.session?.access_token || '';
 };
 
 export const neonApiRequest = async (path, options = {}) => {
-    const { authRequired = true, guestSession = false, ...requestOptions } = options;
-    let token = await getNeonAccessToken();
+    const { authRequired = true, guestSession = false, expectedUserId, ...requestOptions } = options;
+    let token = await getNeonAccessToken(expectedUserId);
     if (!token && guestSession) token = (await getOrderSession()).accessToken;
     if (!token && authRequired) throw new Error('Your session has expired. Sign in again and retry.');
     const headers = new Headers(requestOptions.headers || {});
@@ -31,6 +32,7 @@ export const neonDataRequest = (table, payload = {}, options = {}) => neonApiReq
     body: JSON.stringify(payload),
     authRequired: options.authRequired !== false,
     guestSession: ['product_events', 'consultation_leads'].includes(table),
+    expectedUserId: options.expectedUserId,
 });
 
 export const neonDataRowRequest = (table, id, payload = {}) => neonApiRequest(`/api/data/${table}/${encodeURIComponent(id)}`, {

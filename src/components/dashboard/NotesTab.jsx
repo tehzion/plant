@@ -64,6 +64,7 @@ const NotesTab = ({
     enhanceText,
     setEnhanceText,
     savingNote,
+    saveError,
     notes,
     ACTIVITY_BADGE_COLOR,
     relDate,
@@ -109,8 +110,7 @@ const NotesTab = ({
         <div className="notes-shell">
             <div className="notes-hero">
                 <div className="notes-hero-copy">
-                    <span className="notes-hero-kicker">{label('profile.tabNotes', 'Daily Log')}</span>
-                    <h3 className="notes-hero-title">{pendingLabel}</h3>
+                    <h2 className="notes-hero-title">{pendingLabel}</h2>
                     <p className="notes-hero-subtitle">{pendingHint}</p>
                 </div>
                 <div className="notes-hero-pill">
@@ -120,7 +120,7 @@ const NotesTab = ({
             </div>
 
             <div className="udp-tab-actions notes-actions">
-                <button className="udp-add-btn" onClick={() => setAddingNote((value) => !value)}>
+                <button className="udp-add-btn" disabled={savingNote} onClick={() => setAddingNote((value) => !value)}>
                     {addingNote ? <X size={16} /> : <Plus size={16} />}
                     {addingNote ? label('common.cancel', 'Cancel') : label('profile.addNote', 'Add Log Entry')}
                 </button>
@@ -141,6 +141,7 @@ const NotesTab = ({
                         onAutoEnhance={onAutoEnhance}
                         onSubmit={handleAddNote}
                         savingNote={savingNote}
+                        saveError={saveError}
                     />
                 </div>
             )}
@@ -149,7 +150,7 @@ const NotesTab = ({
                 {notes.length === 0 && !addingNote && (
                     <div className="udp-empty">
                         <FileText size={32} />
-                        <p>{label('profile.noNotes', 'No log entries yet.')}</p>
+                        <p>{label('profile.noNotes', 'No log entries yet.')}</p><p>{t('common.emptyNoteHint')}</p><button className="btn btn-primary" onClick={() => setAddingNote(true)}>{t('common.addNoteAction')}</button>
                     </div>
                 )}
 

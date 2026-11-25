@@ -1,5 +1,3 @@
-> Historical evaluation material recovered from audit-remediation-2026-10 (through 04ef240). These runs were not repeated or independently verified during this recovery. Dataset agreement is not expert-reviewed diagnostic accuracy or Malaysian field performance. No production, savings, certification or adoption claim follows from these figures.
-
 # Public benchmark foundation — incomplete, not production-ready
 
 This module contains reproducible manifest selection, transparent matching, metrics, a sequential local batch runner, an admin-only result import and review interface, consented usability records, and an exportable preliminary report. It is incomplete and not production-ready. A local, ignored PlantVillage sample has been downloaded as described below; no assessment results, participants or expert reviews are included. A separate Neon migration is provided but has not been applied. The existing farmer expert-review workflow is separate from this module.

@@ -1,4 +1,6 @@
+import { useDataOwner } from '../context/AuthContext';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
 import translations from '../i18n/translations';
 import {
@@ -16,23 +18,25 @@ import { addHarvestReminder, getLogDefaults, localDateKey, rememberLogDefaults }
 import { useAuth } from '../context/AuthContext';
 import { useFarmStats } from '../hooks/useFarmStats';
 import { useLocation } from '../hooks/useLocation';
+import { useScrollEdges } from '../hooks/useScrollEdges.js';
 import { useNotifications } from '../context/NotificationProvider.jsx';
 import ComplianceCalendar from '../components/dashboard/ComplianceCalendar';
 import { calculateSafeHarvestDate, MAX_PHI_DAYS, parsePHIDays } from '../utils/phi.js';
 import './MyGap.css';
 
 const MYGAP_TABS = [
-    { id: 'guide', Icon: BookOpen, labelKey: 'nav.about' },
-    { id: 'checklist', Icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
     { id: 'logbook', Icon: FileText, labelKey: 'mygap.tabLogbook' },
+    { id: 'checklist', Icon: ClipboardCheck, labelKey: 'mygap.tabChecklist' },
     { id: 'farm', Icon: Tractor, labelKey: 'mygap.tabFarm' },
     { id: 'calendar', Icon: Calendar, labelKey: 'mygap.tabCalendar' },
     { id: 'phi', Icon: Calculator, labelKey: 'mygap.tabPhi' },
+    { id: 'guide', Icon: BookOpen, labelKey: 'nav.about' },
 ];
 
 const MyGapPage = () => {
     const { t, language } = useLanguage();
     const { user } = useAuth();
+    const dataOwner = useDataOwner();
     const { notify } = useNotifications();
     const { getLocation } = useLocation();
 
@@ -50,7 +54,17 @@ const MyGapPage = () => {
         plots,
     } = useFarmStats({ userId: user?.id, getLocation, notify, t, maxRows: 200 });
 
-    const [activeTab, setActiveTab] = useState('guide');
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Records are the daily task, so the log opens first. The tab lives in ?tab=
+    // so links into myGAP switch tabs even when the page is already open.
+    const requestedTab = searchParams.get('tab');
+    const activeTab = MYGAP_TABS.some((tab) => tab.id === requestedTab) ? requestedTab : 'logbook';
+    const setActiveTab = (id) => setSearchParams((params) => {
+        const next = new URLSearchParams(params);
+        next.set('tab', id);
+        return next;
+    }, { replace: true });
+    const tabsRef = useScrollEdges();
     // Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
     const handleTabKey = (event) => {
         const ids = MYGAP_TABS.map((tab) => tab.id);
@@ -68,7 +82,7 @@ const MyGapPage = () => {
     const [editingLog, setEditingLog] = useState(null);
     // Plot, crop and operator rarely change between entries, so they are
     // remembered on this device and pre-filled.
-    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults() });
+    const emptyLog = () => ({ type: 'pesticide', notes: '', activity_date: localDateKey(), plot_id: '', crop: '', product_used: '', quantity: '', operator: '', ...getLogDefaults(dataOwner) });
     const [newLog, setNewLog] = useState(emptyLog);
     const [formKey, setFormKey] = useState(0);
     const label = createLabel(t);
@@ -97,7 +111,7 @@ const MyGapPage = () => {
     const handleAddLog = async (values) => {
         const entry = await saveLogEntry(values, user?.id ?? null);
         if (entry) {
-            rememberLogDefaults(values);
+            rememberLogDefaults(values, dataOwner);
             setLogs([entry, ...logs]);
             setIsAddingLog(false);
             setNewLog(emptyLog());
@@ -146,8 +160,8 @@ const MyGapPage = () => {
         type: 'pesticide',
         target_pest: scan.disease || '',
         linked_scan_id: scan.id,
-        crop: scan.category || scan.plantType || getLogDefaults().crop || '',
-        plot_id: scan.plotId || scan.plot_id || getLogDefaults().plot_id || '',
+        crop: scan.category || scan.plantType || getLogDefaults(dataOwner).crop || '',
+        plot_id: scan.plotId || scan.plot_id || getLogDefaults(dataOwner).plot_id || '',
     });
 
     const recentScans = useMemo(() => (scanHistory || [])
@@ -198,7 +212,7 @@ const MyGapPage = () => {
 
     const saveHarvestReminder = () => {
         if (!phiResult) return;
-        const saved = addHarvestReminder({ date: localDateKey(phiResult.date), name: phiResult.pesticideName || t('mygap.safeHarvestDate') });
+        const saved = addHarvestReminder({ date: localDateKey(phiResult.date), name: phiResult.pesticideName || t('mygap.safeHarvestDate') }, dataOwner);
         notify({ type: saved ? 'success' : 'error', title: saved ? label('assessment.ux.harvestReminderSaved', 'Reminder saved') : t('common.error'), message: saved ? phiResult.date.toLocaleDateString() : t('common.error') });
     };
 
@@ -264,10 +278,10 @@ const MyGapPage = () => {
         }
     };
 
-    if (dataLoading) return <div role="status">{t('common.loading')}</div>;
-    if (dataError) return <div role="alert">
+    if (dataLoading) return <div className="mygap-page-container mygap-state" role="status"><span className="loading-spinner-circle" aria-hidden="true" />{t('common.loading')}</div>;
+    if (dataError) return <div className="mygap-page-container mygap-state" role="alert">
         <p>{t('profile.dataLoadFailed')}</p>
-        <button type="button" onClick={reloadData}>{t('common.retry')}</button>
+        <button type="button" className="btn btn-primary" onClick={reloadData}>{t('common.retry')}</button>
     </div>;
     return (
         <div className="mygap-page-container">
@@ -285,17 +299,18 @@ const MyGapPage = () => {
                 </div>
             )}
 
-            <div className="tabs-container" role="tablist">
+            <div ref={tabsRef} className="tabs-container scroll-fade" role="tablist" aria-label={t('mygap.title')}>
                 {MYGAP_TABS.map(({ id, Icon, labelKey }) => (
                     <button
                         key={id}
+                        type="button"
                         role="tab" aria-selected={activeTab === id} aria-controls="mygap-panel" id={`mygap-tab-${id}`}
                         tabIndex={activeTab === id ? 0 : -1}
                         onKeyDown={handleTabKey}
                         className={`tab-btn ${activeTab === id ? 'active' : ''}`}
                         onClick={() => setActiveTab(id)}
                     >
-                        <Icon size={18} />
+                        <Icon size={18} aria-hidden="true" />
                         <span>{t(labelKey)}</span>
                     </button>
                 ))}
@@ -423,12 +438,12 @@ const MyGapPage = () => {
                             <h2 className="section-title">{t('mygap.logbookTitle')}</h2>
                             <button
                                 type="button"
-                                className="add-log-btn"
+                                className="btn btn-primary mygap-add-record"
                                 onClick={() => (isAddingLog ? setIsAddingLog(false) : openAddForm(emptyLog()))}
-                                aria-label={t('mygap.addLog') || 'Add activity log'}
                                 aria-expanded={isAddingLog}
                             >
-                                <Plus size={20} />
+                                <Plus size={18} aria-hidden="true" />
+                                {t('mygap.addLog') || 'Add activity log'}
                             </button>
                         </div>
                         <p className="section-subtitle mb-lg">{t('mygap.logbookSubtitle')}</p>

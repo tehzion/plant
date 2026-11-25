@@ -39,7 +39,7 @@ const MyGapLogCard = ({ t, language, log, conflict = null, onEdit, onDelete, onP
     return (
         <div className="log-card">
             <div className="log-header">
-                <span className={`log-badge ${log.type}`}>{label(`mygap.${log.type}Log`, log.type).split(' ')[0]}</span>
+                <span className={`log-badge ${String(log.type || '').toLowerCase()}`}>{label(`mygap.${String(log.type || '').toLowerCase()}Log`, log.type || '')}</span>
                 <span className="log-date">{new Date(log.activity_date || log.timestamp).toLocaleDateString()}</span>
             </div>
             <div className="log-status-row">

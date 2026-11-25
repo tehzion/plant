@@ -46,3 +46,11 @@ describe('ScanHistoryCard', () => {
         expect(confirmSpy).not.toHaveBeenCalled();
     });
 });
+
+it('replaces a failed thumbnail and offers a fresh-photo check', () => {
+    render(<ScanHistoryCard scan={{id:'broken', disease:'Leaf spot', image:'/missing.jpg'}} onDelete={vi.fn()} />);
+    const image = document.querySelector('.scan-thumbnail');
+    fireEvent.error(image);
+    expect(document.querySelector('img.scan-thumbnail')).toBeNull();
+    expect(screen.getByRole('link', {name:'common.checkAgain'})).toHaveAttribute('href','/?scan=true');
+});

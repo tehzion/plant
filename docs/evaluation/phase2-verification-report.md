@@ -1,5 +1,3 @@
-> Historical evaluation material recovered from audit-remediation-2026-10 (through 04ef240). These runs were not repeated or independently verified during this recovery. Dataset agreement is not expert-reviewed diagnostic accuracy or Malaysian field performance. No production, savings, certification or adoption claim follows from these figures.
-
 # Phase 2 verification report
 
 Date: 2026-10-31 (Asia/Kuala_Lumpur)

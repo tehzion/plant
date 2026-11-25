@@ -9,9 +9,11 @@ const groupScansByDateMock = vi.fn();
 const deleteScanMock = vi.fn();
 const clearAllScansMock = vi.fn();
 const notifySuccessMock = vi.fn();
+const notifyErrorMock = vi.fn();
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => navigateMock,
+    Link: ({to, children, ...props}) => <a href={to} {...props}>{children}</a>,
 }));
 
 vi.mock('../utils/localStorage', () => ({
@@ -28,7 +30,7 @@ vi.mock('../context/ScanContext', () => ({
     }),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/AuthContext', () => ({ useDataOwner: () => 'guest:local',
     useAuth: () => ({
         user: { id: 'user-1' },
     }),
@@ -37,6 +39,7 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../context/NotificationProvider.jsx', () => ({
     useNotifications: () => ({
         notifySuccess: notifySuccessMock,
+        notifyError: notifyErrorMock,
     }),
 }));
 
@@ -80,6 +83,7 @@ describe('History', () => {
         deleteScanMock.mockReset();
         clearAllScansMock.mockReset();
         notifySuccessMock.mockReset();
+        notifyErrorMock.mockReset();
 
         getGroupedScansMock.mockResolvedValue({
             today: [{ id: 'scan-1' }],
@@ -89,8 +93,8 @@ describe('History', () => {
             older: [],
         });
         fetchScanHistoryPageMock.mockResolvedValue(undefined);
-        deleteScanMock.mockResolvedValue();
-        clearAllScansMock.mockResolvedValue();
+        deleteScanMock.mockResolvedValue(true);
+        clearAllScansMock.mockResolvedValue(true);
     });
 
     it('confirms a single delete through the modal before removing a scan', async () => {
@@ -130,6 +134,19 @@ describe('History', () => {
 
         expect(notifySuccessMock).toHaveBeenCalledWith('Scan history cleared.');
     });
+    it.each(['delete', 'clear-all', 'rejected'])('reports a failed %s without claiming success', async (action) => {
+        if (action === 'rejected') deleteScanMock.mockRejectedValue(new Error('offline'));
+        else if (action === 'delete') deleteScanMock.mockResolvedValue(false);
+        else clearAllScansMock.mockResolvedValue(false);
+        render(<History />);
+        await screen.findByText('Trigger delete scan-1');
+        fireEvent.click(action === 'clear-all' ? screen.getByRole('button', { name: 'Clear All' }) : screen.getByText('Trigger delete scan-1'));
+        const buttons = screen.getAllByRole('button', { name: action === 'clear-all' ? 'Clear All' : 'Delete' });
+        fireEvent.click(buttons[buttons.length - 1]);
+        await waitFor(() => expect(notifyErrorMock).toHaveBeenCalledWith('history.deleteFailed'));
+        expect(notifySuccessMock).not.toHaveBeenCalled();
+    });
+
     it('filters saved scans and restores them with reset', async () => {
         getGroupedScansMock.mockResolvedValue({ today: [{ id: 'scan-1', disease: 'Leaf spot', plantType: 'Durian' }], yesterday: [], thisWeek: [], lastWeek: [], older: [] });
         render(<History />);
@@ -137,7 +154,9 @@ describe('History', () => {
         fireEvent.change(screen.getByRole('searchbox', { name: 'Search scans' }), { target: { value: 'missing crop' } });
         expect(screen.queryByText('Trigger delete scan-1')).not.toBeInTheDocument();
         expect(screen.getByText('No scans match these filters.')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+        const resetButtons = screen.getAllByRole('button', { name: 'Reset filters' });
+        expect(resetButtons).toHaveLength(2);
+        fireEvent.click(resetButtons.at(-1));
         expect(screen.getByText('Trigger delete scan-1')).toBeInTheDocument();
     });
 });

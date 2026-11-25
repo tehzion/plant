@@ -1,86 +1,38 @@
-import { STORE_URL } from '../utils/store.js';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/i18n.jsx';
-import {
-    ClipboardList,
-    Home as HomeIcon,
-    ScanLine,
-    ShoppingBag,
-    User,
-} from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { NAV_ITEMS, isNavItemActive } from './navItems.js';
 import './BottomNav.css';
+
+// Scan sits in the centre slot, like a wallet app's scan button.
+const MOBILE_ORDER = ['home', 'history', 'check', 'farm', 'mygap'];
+const MOBILE_ITEMS = MOBILE_ORDER.map((id) => NAV_ITEMS.find((item) => item.id === id)).filter(Boolean);
 
 const BottomNav = () => {
     const location = useLocation();
-    const { t, label: labelFn } = useLanguage();
+    const { label: labelFn } = useLanguage();
     const label = (key, fallback) => (typeof labelFn === 'function' ? labelFn(key, fallback) : fallback);
-    const { user } = useAuth();
-    const initials = user?.email
-        ? user.email.split('@')[0].slice(0, 2).toUpperCase()
-        : null;
-
-    const isActive = (path) => {
-        if (path === '/') {
-            return location.pathname === '/' && !location.search.includes('scan=true');
-        }
-        return location.pathname.startsWith(path);
-    };
-
-    const scanActive = location.pathname === '/' && location.search.includes('scan=true');
 
     return (
-        <nav className="bottom-nav" aria-label={label('nav.primary', 'Primary navigation')}>
-
-
+        <nav className="bottom-nav" aria-label={label('nav.primary', 'Main navigation')}>
             <div className="bottom-nav-shell">
-                <Link to="/" className={`nav-item ${isActive('/') ? 'active' : ''}`} aria-current={isActive('/') ? 'page' : undefined}>
-                    <span className="nav-item-icon">
-                        <HomeIcon size={20} strokeWidth={1.85} />
-                    </span>
-                    <span className="nav-item-label">{label('nav.home', 'Home')}</span>
-                </Link>
-
-                <Link to="/history" className={`nav-item ${isActive('/history') ? 'active' : ''}`} aria-current={isActive('/history') ? 'page' : undefined}>
-                    <span className="nav-item-icon">
-                        <ClipboardList size={20} strokeWidth={1.85} />
-                    </span>
-                    <span className="nav-item-label">{label('nav.history', 'History')}</span>
-                </Link>
-
-                <Link to="/?scan=true" className={`nav-item nav-item--scan ${scanActive ? 'active' : ''}`} aria-current={scanActive ? 'page' : undefined}>
-                    <span className="nav-item-scan-ring" aria-hidden="true" />
-                    <span className="nav-item-icon">
-                        <ScanLine size={24} strokeWidth={2.05} />
-                    </span>
-                    <span className="nav-item-label">{label('nav.scan', 'Scan')}</span>
-                </Link>
-
-                <a
-                    href={STORE_URL}
-                    className="nav-item"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={label('nav.shop', 'Shop')}
-                >
-                    <span className="nav-item-icon">
-                        <ShoppingBag size={20} strokeWidth={1.85} />
-                    </span>
-                    <span className="nav-item-label">{label('nav.shop', 'Shop')}</span>
-                </a>
-
-                <Link to="/profile" className={`nav-item ${isActive('/profile') ? 'active' : ''}`} aria-current={isActive('/profile') ? 'page' : undefined}>
-                    <span className="nav-item-icon nav-item-icon--profile">
-                        {initials ? (
-                            <span className="bottom-nav-avatar">{initials}</span>
-                        ) : (
-                            <User size={20} strokeWidth={1.85} />
-                        )}
-                        {initials && <span className="bottom-nav-auth-dot" />}
-                    </span>
-                    <span className="nav-item-label">{label('nav.profile', 'Profile')}</span>
-                </Link>
+                {MOBILE_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const active = isNavItemActive(item, location);
+                    return (
+                        <Link
+                            key={item.id}
+                            to={item.to}
+                            className={`nav-item ${item.primary ? 'nav-item--scan' : ''} ${active ? 'active' : ''}`}
+                            aria-current={active ? 'page' : undefined}
+                        >
+                            <span className="nav-item-icon">
+                                <Icon size={item.primary ? 28 : 20} strokeWidth={item.primary ? 2.2 : 1.85} aria-hidden="true" />
+                            </span>
+                            <span className="nav-item-label">{label(item.shortKey || item.labelKey, item.fallback)}</span>
+                        </Link>
+                    );
+                })}
             </div>
         </nav>
     );

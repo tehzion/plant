@@ -31,13 +31,26 @@ describe('TodayPlanCard', () => {
         expect(screen.getByRole('button', { name: 'Yes' })).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('suggests a re-check date matched to the result', () => {
-        const onSetRecheck = vi.fn();
-        render(<TodayPlanCard result={{ ...result, treatmentEligible: true }} scanId="scan-1" onSetRecheck={onSetRecheck} />);
-        fireEvent.click(screen.getByRole('button', { name: /Set a re-check date/ }));
-        const expected = new Date(); expected.setDate(expected.getDate() + 5);
-        expect(onSetRecheck.mock.calls[0][0].date).toBe(`${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`);
+    it('keeps action checks and field answers when translated labels change', () => {
+        const source = { ...result, treatmentEligible: true, treatments: ['Original treatment'] };
+        const { rerender } = render(<TodayPlanCard result={source} sourceResult={source} planStarted scanId="scan-language" />);
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Check nearby plants' }));
+        const translated = { ...source, treatments: ['Rawatan asal'], immediateActions: ['Buang daun', 'Periksa pokok berdekatan', 'Kekalkan daun kering'] };
+        rerender(<TodayPlanCard result={translated} sourceResult={source} planStarted scanId="scan-language" />);
+        expect(screen.getByRole('checkbox', { name: 'Periksa pokok berdekatan' })).toBeChecked();
+    });
+
+    it('focuses the first real action when supporting information is also present', () => {
+        render(<TodayPlanCard result={result} planStarted scanId="scan-focus" />);
+        expect(screen.getByRole('checkbox', { name: 'Remove badly affected leaves' })).toHaveFocus();
+        expect(screen.queryByRole('checkbox', { name: 'A close-up of one affected leaf' })).not.toBeInTheDocument();
+    });
+
+    it('uses a consistent recheck interval and does not leak treatment when review is needed', () => {
+        expect(recheckDays({ treatmentEligible: true })).toBe(3);
         expect(recheckDays({ healthy: true })).toBe(14);
         expect(recheckDays({ requiresRetake: true })).toBeNull();
+        render(<TodayPlanCard result={{ treatments: ['Do not show this'], needsReview: true }} scanId="scan-1" />);
+        expect(screen.queryByText('Do not show this')).not.toBeInTheDocument();
     });
 });
